@@ -140,4 +140,21 @@ class MetadataServiceTest {
             java.nio.file.Files.deleteIfExists(file);
         }
     }
+
+    @Test
+    void parsesAssetIndex() {
+        AssetIndexFile index = metadata.parseAssetIndex("""
+                {
+                  "objects": {
+                    "minecraft/sounds/click.ogg": {
+                      "hash": "0123456789abcdef0123456789abcdef01234567",
+                      "size": 42
+                    }
+                  }
+                }
+                """);
+
+        assertEquals(1, index.objects().size());
+        assertEquals(42, index.objects().get("minecraft/sounds/click.ogg").size());
+    }
 }

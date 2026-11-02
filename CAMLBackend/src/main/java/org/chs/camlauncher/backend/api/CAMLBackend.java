@@ -4,8 +4,14 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.chs.camlauncher.backend.config.BackendConfig;
 import org.chs.camlauncher.backend.config.BackendPaths;
+import org.chs.camlauncher.backend.download.AssetDownloadPlanner;
+import org.chs.camlauncher.backend.download.DownloadPlanner;
+import org.chs.camlauncher.backend.download.FileDownloader;
 import org.chs.camlauncher.backend.json.JsonService;
 import org.chs.camlauncher.backend.metadata.MetadataService;
+import org.chs.camlauncher.backend.metadata.VersionManifest;
+import org.chs.camlauncher.backend.metadata.VersionManifestService;
+import org.chs.camlauncher.backend.runtime.JavaLocator;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -19,12 +25,22 @@ public final class CAMLBackend implements AutoCloseable {
     private final BackendConfig config;
     private final JsonService json;
     private final MetadataService metadata;
+    private final JavaLocator javaLocator;
+    private final VersionManifestService versionManifestService;
+    private final DownloadPlanner downloadPlanner;
+    private final AssetDownloadPlanner assetDownloadPlanner;
+    private final FileDownloader fileDownloader;
     private boolean started;
 
     public CAMLBackend(BackendConfig config) {
         this.config = Objects.requireNonNull(config, "config");
         this.json = new JsonService();
         this.metadata = new MetadataService();
+        this.javaLocator = new JavaLocator();
+        this.versionManifestService = new VersionManifestService();
+        this.downloadPlanner = new DownloadPlanner();
+        this.assetDownloadPlanner = new AssetDownloadPlanner();
+        this.fileDownloader = new FileDownloader();
     }
 
     public void start() {
@@ -54,6 +70,33 @@ public final class CAMLBackend implements AutoCloseable {
 
     public MetadataService metadata() {
         return metadata;
+    }
+
+    public JavaLocator javaLocator() {
+        return javaLocator;
+    }
+
+    public VersionManifestService versionManifestService() {
+        return versionManifestService;
+    }
+
+    public VersionManifest fetchVersionManifest() throws java.io.IOException, InterruptedException {
+        return versionManifestService.fetchManifestOrCache(
+                VersionManifestService.DEFAULT_MANIFEST_URI,
+                config.dataDirectory().resolve("cache").resolve("version_manifest_v2.json")
+        );
+    }
+
+    public DownloadPlanner downloadPlanner() {
+        return downloadPlanner;
+    }
+
+    public AssetDownloadPlanner assetDownloadPlanner() {
+        return assetDownloadPlanner;
+    }
+
+    public FileDownloader fileDownloader() {
+        return fileDownloader;
     }
 
     @Override

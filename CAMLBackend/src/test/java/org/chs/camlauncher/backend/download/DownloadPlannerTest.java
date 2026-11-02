@@ -1,0 +1,90 @@
+package org.chs.camlauncher.backend.download;
+
+import org.chs.camlauncher.backend.metadata.MetadataService;
+import org.chs.camlauncher.backend.metadata.RuleEvaluator;
+import org.chs.camlauncher.backend.metadata.VersionInfo;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+
+import java.nio.file.Path;
+import java.util.List;
+import java.util.Map;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+class DownloadPlannerTest {
+    @TempDir
+    Path gameDirectory;
+
+    @Test
+    void plansClientLibrariesNativesAndAssetIndex() throws Exception {
+        VersionInfo version = new MetadataService().parseVersionInfo("""
+                {
+                  "id": "1.20.1",
+                  "downloads": {
+                    "client": {
+                      "sha1": "client-sha1",
+                      "size": 10,
+                      "url": "https://example.com/client.jar"
+                    }
+                  },
+                  "assetIndex": {
+                    "id": "5",
+                    "sha1": "asset-index-sha1",
+                    "size": 11,
+                    "totalSize": 20,
+                    "url": "https://example.com/assets.json"
+                  },
+                  "libraries": [
+                    {
+                      "name": "com.example:lib:1.0",
+                      "downloads": {
+                        "artifact": {
+                          "path": "com/example/lib/1.0/lib-1.0.jar",
+                          "sha1": "lib-sha1",
+                          "size": 12,
+                          "url": "https://example.com/lib.jar"
+                        }
+                      }
+                    },
+                    {
+                      "name": "com.example:native:1.0",
+                      "natives": {"linux": "natives-linux"},
+                      "downloads": {
+                        "classifiers": {
+                          "natives-linux": {
+                            "path": "com/example/native/1.0/native-1.0-natives-linux.jar",
+                            "sha1": "native-sha1",
+                            "size": 13,
+                            "url": "https://example.com/native.jar"
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+                """);
+
+        DownloadPlanner planner = new DownloadPlanner(
+                List.of(OfficialDownloadSource.INSTANCE),
+                new RuleEvaluator("linux", "x86_64", "6.0", Map.of()),
+                "linux",
+                64
+        );
+
+        DownloadPlan plan = planner.plan(version, gameDirectory);
+
+        assertEquals(4, plan.items().size());
+        assertTrue(plan.items().stream().anyMatch(item ->
+                item.destination().endsWith(Path.of("versions", "1.20.1", "1.20.1.jar"))));
+        assertTrue(plan.items().stream().anyMatch(item ->
+                item.destination().endsWith(Path.of("libraries", "com", "example", "lib", "1.0", "lib-1.0.jar"))));
+        assertTrue(plan.items().stream().anyMatch(item ->
+                item.destination().endsWith(Path.of("libraries", "com", "example", "native", "1.0",
+                        "native-1.0-natives-linux.jar"))));
+        assertTrue(plan.items().stream().anyMatch(item ->
+                item.destination().endsWith(Path.of("assets", "indexes", "5.json"))));
+        assertEquals(4, plan.missing().size());
+    }
+}

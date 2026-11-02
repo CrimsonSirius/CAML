@@ -29,12 +29,20 @@ public final class MetadataService {
         return json.read(file, VersionInfo.class);
     }
 
+    public AssetIndexFile readAssetIndex(Path file) throws IOException {
+        return json.read(file, AssetIndexFile.class);
+    }
+
     public VersionManifest parseVersionManifest(String text) {
         return gson.fromJson(text, VersionManifest.class);
     }
 
     public VersionInfo parseVersionInfo(String text) {
         return gson.fromJson(text, VersionInfo.class);
+    }
+
+    public AssetIndexFile parseAssetIndex(String text) {
+        return gson.fromJson(text, AssetIndexFile.class);
     }
 
     private static Gson defaultGson() {
