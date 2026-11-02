@@ -1,0 +1,45 @@
+package org.chs.camlauncher.backend.metadata;
+
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import org.chs.camlauncher.backend.json.JsonService;
+
+import java.io.IOException;
+import java.nio.file.Path;
+import java.util.Objects;
+
+public final class MetadataService {
+    private final Gson gson;
+    private final JsonService json;
+
+    public MetadataService() {
+        this(defaultGson());
+    }
+
+    public MetadataService(Gson gson) {
+        this.gson = Objects.requireNonNull(gson, "gson");
+        this.json = new JsonService(gson);
+    }
+
+    public VersionManifest readVersionManifest(Path file) throws IOException {
+        return json.read(file, VersionManifest.class);
+    }
+
+    public VersionInfo readVersionInfo(Path file) throws IOException {
+        return json.read(file, VersionInfo.class);
+    }
+
+    public VersionManifest parseVersionManifest(String text) {
+        return gson.fromJson(text, VersionManifest.class);
+    }
+
+    public VersionInfo parseVersionInfo(String text) {
+        return gson.fromJson(text, VersionInfo.class);
+    }
+
+    private static Gson defaultGson() {
+        return new GsonBuilder()
+                .registerTypeAdapter(Argument.class, new ArgumentAdapter())
+                .create();
+    }
+}

@@ -1,0 +1,53 @@
+.app-root {
+    -fx-background-color: linear-gradient(to bottom right, #0d1117, #161b22);
+}
+
+.title {
+    -fx-text-fill: #f0f6fc;
+    -fx-font-size: 42px;
+    -fx-font-weight: bold;
+}
+
+.subtitle {
+    -fx-text-fill: #8b949e;
+    -fx-font-size: 16px;
+}
+
+.content {
+    -fx-padding: 32 0 0 0;
+}
+
+.status-ready {
+    -fx-text-fill: #3fb950;
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+}
+
+.status-error {
+    -fx-text-fill: #f85149;
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+}
+
+.info-grid {
+    -fx-padding: 20;
+    -fx-background-color: #161b22;
+    -fx-background-radius: 12;
+    -fx-border-color: #30363d;
+    -fx-border-radius: 12;
+}
+
+.field-label {
+    -fx-text-fill: #8b949e;
+    -fx-font-size: 13px;
+}
+
+.field-value {
+    -fx-text-fill: #c9d1d9;
+    -fx-font-size: 14px;
+}
+
+.footer {
+    -fx-text-fill: #484f58;
+    -fx-font-size: 12px;
+}
