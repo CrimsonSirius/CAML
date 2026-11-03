@@ -157,6 +157,8 @@ CAML
 - Java 9+ 命令行过长时自动使用 `@argfile`。
 - Java 8 或 argfile 失败时使用 manifest classpath jar。
 - 两种回退都失败时抛出明确异常。
+- 启动失败分类：命令行过长、权限不足、找不到 Java、其他进程错误。
+- 提供中文 `userMessage()`。
 
 ## 4. 对外 API
 
@@ -203,7 +205,7 @@ PATH=/usr/lib/jvm/zulu-25/bin:$PATH \
 
 - 后端构建通过。
 - JavaFX 启动冒烟测试通过。
-- 46 个后端测试全部通过。
+- 50 个后端测试全部通过。
 - 集成测试覆盖：
   - 版本清单获取与缓存。
   - 版本 JSON 获取。
@@ -220,11 +222,13 @@ PATH=/usr/lib/jvm/zulu-25/bin:$PATH \
   - 最终命令顺序、进程启动、stdout/stderr 转发和退出码。
   - argfile 转义和 manifest classpath jar。
   - 超长 classpath 的自动回退。
+  - 启动失败分类和用户提示文本。
 
 ## 7. 当前未实现
 
 - 启动器隐藏/保留/关闭策略。
 - 异常退出分类和崩溃分析。
+- CAMLFront 启动错误对话框。
 - 启动脚本导出。
 - 微软账号登录。
 - token 刷新和安全存储。

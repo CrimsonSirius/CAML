@@ -7,7 +7,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 
@@ -28,8 +27,8 @@ public final class ProcessLauncher {
         try {
             return start(command.asList(), command.workingDirectory(), command.environment(), listener, null);
         } catch (IOException firstFailure) {
-            if (!isCommandTooLong(firstFailure)) {
-                throw firstFailure;
+            if (!LaunchException.isCommandTooLong(firstFailure)) {
+                throw LaunchException.from(firstFailure);
             }
 
             IOException argFileFailure = null;
@@ -47,8 +46,9 @@ public final class ProcessLauncher {
                 if (argFileFailure != null) {
                     manifestFailure.addSuppressed(argFileFailure);
                 }
-                throw new IOException(
-                        "Command line is too long and all fallbacks failed",
+                throw new LaunchException(
+                        LaunchFailure.COMMAND_TOO_LONG,
+                        "启动命令过长，已尝试参数文件和 manifest 回退，但仍无法启动。请缩短游戏路径或减少类路径。",
                         manifestFailure
                 );
             }
@@ -140,14 +140,4 @@ public final class ProcessLauncher {
         return "windows".equals(RuleEvaluator.currentOsName());
     }
 
-    private static boolean isCommandTooLong(IOException exception) {
-        String message = exception.getMessage();
-        if (message == null) {
-            return false;
-        }
-        String lower = message.toLowerCase(Locale.ROOT);
-        return lower.contains("too long")
-                || lower.contains("argument list")
-                || lower.contains("error=206");
-    }
 }

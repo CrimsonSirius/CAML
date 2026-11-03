@@ -492,6 +492,17 @@ java [JVM 参数] -cp classpath-manifest.jar mainClass gameArgs
 - 两种方式都失败时抛出明确的 `IOException`。
 - 临时 argfile 和 manifest jar 在进程退出后删除。
 
+启动错误由 `LaunchException` 分类：
+
+| 类型 | 含义 |
+|---|---|
+| `COMMAND_TOO_LONG` | 命令行过长，回退仍失败 |
+| `PERMISSION_DENIED` | 没有权限执行 Java 或访问目录 |
+| `EXECUTABLE_NOT_FOUND` | 找不到 Java 可执行文件 |
+| `PROCESS_START_FAILED` | 其他进程启动失败 |
+
+每种错误都提供中文 `userMessage()`，供前端展示。
+
 对外入口：
 
 ```java
@@ -519,4 +530,6 @@ GameProcess process = backend.processLauncher().launch(plan, classpath, listener
 - `CAMLBackend/src/main/java/org/chs/camlauncher/backend/launch/ProcessListener.java`
 - `CAMLBackend/src/main/java/org/chs/camlauncher/backend/launch/ArgumentFile.java`
 - `CAMLBackend/src/main/java/org/chs/camlauncher/backend/launch/ClasspathManifest.java`
+- `CAMLBackend/src/main/java/org/chs/camlauncher/backend/launch/LaunchFailure.java`
+- `CAMLBackend/src/main/java/org/chs/camlauncher/backend/launch/LaunchException.java`
 - `CAMLBackend/src/main/java/org/chs/camlauncher/backend/launch/`

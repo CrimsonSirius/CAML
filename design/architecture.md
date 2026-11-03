@@ -121,11 +121,14 @@ CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
 - 命令行过长时，Java 9+ 自动使用 `@argfile`。
 - Java 8 或 argfile 失败时使用 manifest classpath jar。
 - 两种回退都失败时抛出明确异常。
+- `LaunchException` 区分命令行过长、权限不足、找不到 Java 和其他启动失败。
+- 每种错误提供用户可读提示文本。
 
 ## 4. 尚未实现的能力
 
 - 启动器隐藏/保留/关闭策略。
 - 异常退出分类和崩溃分析。
+- CAMLFront 启动错误对话框。
 - 微软账号登录。
 - token 刷新和安全存储。
 - Fabric、Quilt、Forge、NeoForge 等加载器安装。
