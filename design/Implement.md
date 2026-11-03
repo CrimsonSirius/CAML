@@ -4,7 +4,7 @@
 
 ## 1. 总体状态
 
-当前项目已经具备**原版安装链路**和**基础进程启动能力**，但还没有完成完整 UI 启动编排和真实客户端端到端验证。
+当前项目已经具备**原版安装链路**和**后端端到端启动能力**，但还没有完成前端启动按钮、错误对话框、日志窗口和真实客户端验证。
 
 已实现：
 
@@ -159,6 +159,7 @@ CAML
 - 两种回退都失败时抛出明确异常。
 - 启动失败分类：命令行过长、权限不足、找不到 Java、其他进程错误。
 - 提供中文 `userMessage()`。
+- `GameLaunchService` 串联安装、离线登录、Java、LaunchPlan、classpath、natives 和进程启动。
 
 ## 4. 对外 API
 
@@ -191,6 +192,9 @@ backend.nativeExtractor().extract(plan);
 plan = backend.virtualAssetInstaller().prepare(plan);
 
 GameProcess process = backend.processLauncher().launch(plan, classpath, listener);
+
+GameLaunch launch = backend.launchGame(
+        "1.21.5", "Steve", LaunchOptions.defaults(), listener, processListener);
 ```
 
 ## 5. 运行方式
@@ -205,7 +209,7 @@ PATH=/usr/lib/jvm/zulu-25/bin:$PATH \
 
 - 后端构建通过。
 - JavaFX 启动冒烟测试通过。
-- 50 个后端测试全部通过。
+- 51 个后端测试全部通过。
 - 集成测试覆盖：
   - 版本清单获取与缓存。
   - 版本 JSON 获取。
@@ -223,12 +227,14 @@ PATH=/usr/lib/jvm/zulu-25/bin:$PATH \
   - argfile 转义和 manifest classpath jar。
   - 超长 classpath 的自动回退。
   - 启动失败分类和用户提示文本。
+  - 本地 HTTP 安装假客户端并完成端到端启动。
 
 ## 7. 当前未实现
 
 - 启动器隐藏/保留/关闭策略。
 - 异常退出分类和崩溃分析。
 - CAMLFront 启动错误对话框。
+- CAMLFront 启动按钮、日志窗口和启动器可见性。
 - 启动脚本导出。
 - 微软账号登录。
 - token 刷新和安全存储。

@@ -20,8 +20,11 @@ import org.chs.camlauncher.backend.launch.LaunchCommandBuilder;
 import org.chs.camlauncher.backend.launch.ProcessLauncher;
 import org.chs.camlauncher.backend.launch.ClasspathBuilder;
 import org.chs.camlauncher.backend.launch.GameArgumentsBuilder;
+import org.chs.camlauncher.backend.launch.GameLaunch;
+import org.chs.camlauncher.backend.launch.GameLaunchService;
 import org.chs.camlauncher.backend.launch.JvmArgumentsBuilder;
 import org.chs.camlauncher.backend.launch.NativeExtractor;
+import org.chs.camlauncher.backend.launch.ProcessListener;
 import org.chs.camlauncher.backend.launch.VirtualAssetInstaller;
 import org.chs.camlauncher.backend.metadata.MetadataService;
 import org.chs.camlauncher.backend.metadata.VersionManifest;
@@ -54,6 +57,7 @@ public final class CAMLBackend implements AutoCloseable {
     private final VirtualAssetInstaller virtualAssetInstaller;
     private final LaunchCommandBuilder launchCommandBuilder;
     private final ProcessLauncher processLauncher;
+    private final GameLaunchService gameLaunchService;
     private boolean started;
 
     public CAMLBackend(BackendConfig config) {
@@ -80,6 +84,18 @@ public final class CAMLBackend implements AutoCloseable {
         this.virtualAssetInstaller = new VirtualAssetInstaller();
         this.launchCommandBuilder = new LaunchCommandBuilder();
         this.processLauncher = new ProcessLauncher();
+        this.gameLaunchService = new GameLaunchService(
+                config.gameDirectory(),
+                VersionManifestService.DEFAULT_MANIFEST_URI,
+                config.dataDirectory().resolve("cache").resolve("version_manifest_v2.json"),
+                versionInstaller,
+                javaLocator,
+                launchPlanner,
+                classpathBuilder,
+                nativeExtractor,
+                virtualAssetInstaller,
+                processLauncher
+        );
     }
 
     public void start() {
@@ -192,6 +208,26 @@ public final class CAMLBackend implements AutoCloseable {
 
     public ProcessLauncher processLauncher() {
         return processLauncher;
+    }
+
+    public GameLaunchService gameLaunchService() {
+        return gameLaunchService;
+    }
+
+    public GameLaunch launchGame(
+            String versionId,
+            String username,
+            LaunchOptions options,
+            DownloadListener downloadListener,
+            ProcessListener processListener
+    ) throws IOException, InterruptedException {
+        return gameLaunchService.launch(
+                versionId,
+                username,
+                options,
+                downloadListener,
+                processListener
+        );
     }
 
     @Override

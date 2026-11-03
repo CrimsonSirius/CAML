@@ -123,6 +123,7 @@ CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
 - 两种回退都失败时抛出明确异常。
 - `LaunchException` 区分命令行过长、权限不足、找不到 Java 和其他启动失败。
 - 每种错误提供用户可读提示文本。
+- `GameLaunchService` 串联安装、离线登录、Java 选择、LaunchPlan、classpath、natives 和进程启动。
 
 ## 4. 尚未实现的能力
 
@@ -172,6 +173,7 @@ backend.nativeExtractor().extract(plan);
 backend.virtualAssetInstaller().prepare(plan);
 backend.launchCommandBuilder().build(plan, classpath);
 backend.processLauncher().launch(plan, classpath, listener);
+backend.launchGame(versionId, username, options, downloadListener, processListener);
 ```
 
 ## 7. 相关文档

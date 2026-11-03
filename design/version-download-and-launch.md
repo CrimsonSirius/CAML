@@ -509,6 +509,36 @@ java [JVM 参数] -cp classpath-manifest.jar mainClass gameArgs
 GameProcess process = backend.processLauncher().launch(plan, classpath, listener);
 ```
 
+### 3.11 GameLaunchService
+
+`GameLaunchService` 是后端统一启动入口：
+
+```text
+安装版本
+→ 离线登录
+→ 选择游戏 Java
+→ 创建 LaunchPlan
+→ 重建 virtual assets
+→ 解压 natives
+→ 构建 classpath
+→ 启动进程
+→ 返回 GameLaunch
+```
+
+对外入口：
+
+```java
+GameLaunch launch = backend.launchGame(
+        versionId,
+        username,
+        LaunchOptions.defaults(),
+        DownloadListener.NONE,
+        processListener
+);
+```
+
+`GameLaunch` 包含安装结果、AuthSession、JavaRuntime、LaunchPlan、classpath 和 GameProcess。
+
 ## 4. 相关源码
 
 - `CAMLBackend/src/main/java/org/chs/camlauncher/backend/instance/VersionInstaller.java`
@@ -532,4 +562,6 @@ GameProcess process = backend.processLauncher().launch(plan, classpath, listener
 - `CAMLBackend/src/main/java/org/chs/camlauncher/backend/launch/ClasspathManifest.java`
 - `CAMLBackend/src/main/java/org/chs/camlauncher/backend/launch/LaunchFailure.java`
 - `CAMLBackend/src/main/java/org/chs/camlauncher/backend/launch/LaunchException.java`
+- `CAMLBackend/src/main/java/org/chs/camlauncher/backend/launch/GameLaunch.java`
+- `CAMLBackend/src/main/java/org/chs/camlauncher/backend/launch/GameLaunchService.java`
 - `CAMLBackend/src/main/java/org/chs/camlauncher/backend/launch/`
