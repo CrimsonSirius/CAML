@@ -44,11 +44,18 @@ public final class VersionManifestService {
     }
 
     public VersionInfo fetchVersionInfo(VersionManifest.Version version) throws IOException, InterruptedException {
-        return fetchVersionInfo(URI.create(version.url()));
+        return metadata.parseVersionInfo(fetchVersionJson(version));
     }
 
     public VersionInfo fetchVersionInfo(URI uri) throws IOException, InterruptedException {
         return metadata.parseVersionInfo(fetchText(uri));
+    }
+
+    public String fetchVersionJson(VersionManifest.Version version) throws IOException, InterruptedException {
+        if (version.url() == null || version.url().isBlank()) {
+            throw new IOException("Version has no metadata URL: " + version.id());
+        }
+        return fetchText(URI.create(version.url()));
     }
 
     public VersionManifest fetchManifestOrCache(URI uri, Path cacheFile)

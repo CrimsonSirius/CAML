@@ -5,8 +5,11 @@ import org.apache.logging.log4j.Logger;
 import org.chs.camlauncher.backend.config.BackendConfig;
 import org.chs.camlauncher.backend.config.BackendPaths;
 import org.chs.camlauncher.backend.download.AssetDownloadPlanner;
+import org.chs.camlauncher.backend.download.DownloadListener;
 import org.chs.camlauncher.backend.download.DownloadPlanner;
 import org.chs.camlauncher.backend.download.FileDownloader;
+import org.chs.camlauncher.backend.instance.InstalledVersion;
+import org.chs.camlauncher.backend.instance.VersionInstaller;
 import org.chs.camlauncher.backend.json.JsonService;
 import org.chs.camlauncher.backend.metadata.MetadataService;
 import org.chs.camlauncher.backend.metadata.VersionManifest;
@@ -30,6 +33,7 @@ public final class CAMLBackend implements AutoCloseable {
     private final DownloadPlanner downloadPlanner;
     private final AssetDownloadPlanner assetDownloadPlanner;
     private final FileDownloader fileDownloader;
+    private final VersionInstaller versionInstaller;
     private boolean started;
 
     public CAMLBackend(BackendConfig config) {
@@ -41,6 +45,13 @@ public final class CAMLBackend implements AutoCloseable {
         this.downloadPlanner = new DownloadPlanner();
         this.assetDownloadPlanner = new AssetDownloadPlanner();
         this.fileDownloader = new FileDownloader();
+        this.versionInstaller = new VersionInstaller(
+                metadata,
+                versionManifestService,
+                downloadPlanner,
+                assetDownloadPlanner,
+                fileDownloader
+        );
     }
 
     public void start() {
@@ -97,6 +108,21 @@ public final class CAMLBackend implements AutoCloseable {
 
     public FileDownloader fileDownloader() {
         return fileDownloader;
+    }
+
+    public VersionInstaller versionInstaller() {
+        return versionInstaller;
+    }
+
+    public InstalledVersion installVersion(String versionId, DownloadListener listener)
+            throws java.io.IOException, InterruptedException {
+        return versionInstaller.install(
+                versionId,
+                config.gameDirectory(),
+                VersionManifestService.DEFAULT_MANIFEST_URI,
+                config.dataDirectory().resolve("cache").resolve("version_manifest_v2.json"),
+                listener
+        );
     }
 
     @Override
