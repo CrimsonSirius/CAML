@@ -18,6 +18,7 @@
 → Java 检测
 → LaunchPlan
 → classpath
+→ JVM/游戏参数
 ```
 
 未实现：
@@ -113,13 +114,21 @@ CAML
 - 客户端 jar 最后追加。
 - 使用平台路径分隔符拼接。
 
-### 3.9 JavaFX 界面
+### 3.9 启动参数
+
+- JVM 参数：内存、版本 JSON 参数、用户参数、`-Djava.library.path`、`-cp`。
+- 游戏参数：版本 JSON 参数、旧版 `minecraftArguments`、用户参数、全屏。
+- 占位符：认证信息、版本、目录、assets、natives、classpath、启动器信息、分辨率。
+- features：`has_custom_resolution`。
+- 过滤空参数。
+
+### 3.10 JavaFX 界面
 
 - 启动时初始化后端。
 - 显示后端状态、版本、数据目录和游戏目录。
 - 样式文件：`CAMLFront/src/main/resources/styles/app.css`。
 
-### 3.10 日志
+### 3.11 日志
 
 - Log4j 控制台输出。
 - 文件日志：`~/.caml/logs/caml.log`。
@@ -146,6 +155,9 @@ LaunchPlan plan = backend.createLaunchPlan(
 );
 
 List<Path> classpath = backend.classpathBuilder().build(plan);
+
+List<String> jvmArgs = backend.jvmArgumentsBuilder().build(plan, classpath);
+List<String> gameArgs = backend.gameArgumentsBuilder().build(plan, classpath);
 ```
 
 ## 5. 运行方式
@@ -160,7 +172,7 @@ PATH=/usr/lib/jvm/zulu-25/bin:$PATH \
 
 - 后端构建通过。
 - JavaFX 启动冒烟测试通过。
-- 30 个后端测试全部通过。
+- 34 个后端测试全部通过。
 - 集成测试覆盖：
   - 版本清单获取与缓存。
   - 版本 JSON 获取。
@@ -170,11 +182,10 @@ PATH=/usr/lib/jvm/zulu-25/bin:$PATH \
   - Java 检测和匹配。
   - LaunchPlan 创建和 Java 要求校验。
   - classpath 过滤、去重、native 排除和客户端 jar 顺序。
+  - JVM/游戏参数、占位符、features 和旧版参数回退。
 
 ## 7. 当前未实现
 
-- JVM 参数和游戏参数构建。
-- `${...}` 占位符替换。
 - natives 解压。
 - 游戏 Log4j 配置写入。
 - 游戏进程启动。

@@ -254,11 +254,8 @@ assetIndexFile
 
 当前还不能真正启动 Minecraft。
 
-`launch` 包目前已经包含 `LaunchPlan`、`LaunchOptions`、`LaunchPlanner` 和 `ClasspathBuilder`。以下内容尚未实现：
+`launch` 包目前已经包含 `LaunchPlan`、`LaunchOptions`、`LaunchPlanner`、`ClasspathBuilder`、`JvmArgumentsBuilder` 和 `GameArgumentsBuilder`。以下内容尚未实现：
 
-- JVM 参数构建。
-- 游戏参数构建。
-- `${...}` 占位符替换。
 - natives 解压。
 - Log4j 配置写入。
 - `ProcessBuilder` 启动。
@@ -285,9 +282,9 @@ JavaRuntime       实际 Java 可执行文件、版本、架构、位数
 → 选择 JavaRuntime
 → 创建 LaunchPlan（已实现）
 → 构建 classpath（已实现）
-→ 构建 JVM 参数
-→ 构建游戏参数
-→ 替换占位符
+→ 构建 JVM 参数（已实现）
+→ 构建游戏参数（已实现）
+→ 替换占位符（已实现）
 → 准备 natives 和日志配置
 → ProcessBuilder 启动
 → 监控 stdout/stderr 和退出码
@@ -379,6 +376,43 @@ List<Path> classpath = backend.classpathBuilder().build(plan);
 String joined = backend.classpathBuilder().join(classpath);
 ```
 
+### 3.8 启动参数构建
+
+`JvmArgumentsBuilder` 负责：
+
+- 添加 `-Xms` / `-Xmx`。
+- 解析版本 JSON 的 `arguments.jvm`。
+- 应用 `rules` 和 `features`。
+- 追加用户 JVM 参数。
+- 缺少时补充 `-Djava.library.path`。
+- 缺少时补充 `-cp` 和 classpath。
+- 过滤空字符串。
+
+`GameArgumentsBuilder` 负责：
+
+- 解析版本 JSON 的 `arguments.game`。
+- 支持旧版 `minecraftArguments`。
+- 替换占位符。
+- 追加用户游戏参数。
+- 添加 `--fullscreen`。
+- 过滤空字符串。
+
+`PlaceholderResolver` 和 `LaunchPlaceholders` 负责：
+
+- 玩家名、UUID、accessToken。
+- 版本名、版本类型、游戏目录。
+- assets 目录、asset index、natives 目录。
+- classpath、libraries 目录。
+- 启动器名称和版本。
+- 分辨率。
+
+对外入口：
+
+```java
+List<String> jvmArgs = backend.jvmArgumentsBuilder().build(plan, classpath);
+List<String> gameArgs = backend.gameArgumentsBuilder().build(plan, classpath);
+```
+
 ## 4. 相关源码
 
 - `CAMLBackend/src/main/java/org/chs/camlauncher/backend/instance/VersionInstaller.java`
@@ -387,4 +421,8 @@ String joined = backend.classpathBuilder().join(classpath);
 - `CAMLBackend/src/main/java/org/chs/camlauncher/backend/download/AssetDownloadPlanner.java`
 - `CAMLBackend/src/main/java/org/chs/camlauncher/backend/download/FileDownloader.java`
 - `CAMLBackend/src/main/java/org/chs/camlauncher/backend/launch/ClasspathBuilder.java`
+- `CAMLBackend/src/main/java/org/chs/camlauncher/backend/launch/PlaceholderResolver.java`
+- `CAMLBackend/src/main/java/org/chs/camlauncher/backend/launch/LaunchPlaceholders.java`
+- `CAMLBackend/src/main/java/org/chs/camlauncher/backend/launch/JvmArgumentsBuilder.java`
+- `CAMLBackend/src/main/java/org/chs/camlauncher/backend/launch/GameArgumentsBuilder.java`
 - `CAMLBackend/src/main/java/org/chs/camlauncher/backend/launch/`

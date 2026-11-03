@@ -17,6 +17,10 @@ public final class RuleEvaluator {
         this(currentOsName(), currentOsArch(), System.getProperty("os.version", ""), Map.of());
     }
 
+    public RuleEvaluator(Map<String, Boolean> features) {
+        this(currentOsName(), currentOsArch(), System.getProperty("os.version", ""), features);
+    }
+
     public RuleEvaluator(String osName, String osArch, String osVersion, Map<String, Boolean> features) {
         this.osName = Objects.requireNonNull(osName, "osName");
         this.osArch = Objects.requireNonNull(osArch, "osArch");

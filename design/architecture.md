@@ -91,10 +91,17 @@ CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
 - 客户端 jar 追加在最后。
 - 使用平台路径分隔符拼接。
 
+### 3.8 启动参数
+
+- 构建 JVM 参数和游戏参数。
+- 支持内存、分辨率、用户自定义参数和环境变量。
+- 替换认证、版本、目录、classpath 等 `${...}` 占位符。
+- 处理 `has_custom_resolution` 等 features 规则。
+- 支持旧版 `minecraftArguments`。
+- 自动补充 `-Djava.library.path` 和 `-cp`。
+
 ## 4. 尚未实现的能力
 
-- JVM 参数和游戏参数构建。
-- `${...}` 占位符替换。
 - natives 解压。
 - 游戏 Log4j 配置写入。
 - 游戏进程启动和日志监控。
@@ -133,6 +140,8 @@ backend.javaLocator();
 backend.fetchVersionManifest();
 backend.createLaunchPlan(installed, auth, java, options);
 backend.classpathBuilder().build(plan);
+backend.jvmArgumentsBuilder().build(plan, classpath);
+backend.gameArgumentsBuilder().build(plan, classpath);
 ```
 
 ## 7. 相关文档

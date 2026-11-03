@@ -17,6 +17,8 @@ import org.chs.camlauncher.backend.launch.LaunchOptions;
 import org.chs.camlauncher.backend.launch.LaunchPlan;
 import org.chs.camlauncher.backend.launch.LaunchPlanner;
 import org.chs.camlauncher.backend.launch.ClasspathBuilder;
+import org.chs.camlauncher.backend.launch.GameArgumentsBuilder;
+import org.chs.camlauncher.backend.launch.JvmArgumentsBuilder;
 import org.chs.camlauncher.backend.metadata.MetadataService;
 import org.chs.camlauncher.backend.metadata.VersionManifest;
 import org.chs.camlauncher.backend.metadata.VersionManifestService;
@@ -42,6 +44,8 @@ public final class CAMLBackend implements AutoCloseable {
     private final VersionInstaller versionInstaller;
     private final LaunchPlanner launchPlanner;
     private final ClasspathBuilder classpathBuilder;
+    private final JvmArgumentsBuilder jvmArgumentsBuilder;
+    private final GameArgumentsBuilder gameArgumentsBuilder;
     private boolean started;
 
     public CAMLBackend(BackendConfig config) {
@@ -62,6 +66,8 @@ public final class CAMLBackend implements AutoCloseable {
         );
         this.launchPlanner = new LaunchPlanner();
         this.classpathBuilder = new ClasspathBuilder();
+        this.jvmArgumentsBuilder = new JvmArgumentsBuilder();
+        this.gameArgumentsBuilder = new GameArgumentsBuilder();
     }
 
     public void start() {
@@ -150,6 +156,14 @@ public final class CAMLBackend implements AutoCloseable {
 
     public ClasspathBuilder classpathBuilder() {
         return classpathBuilder;
+    }
+
+    public JvmArgumentsBuilder jvmArgumentsBuilder() {
+        return jvmArgumentsBuilder;
+    }
+
+    public GameArgumentsBuilder gameArgumentsBuilder() {
+        return gameArgumentsBuilder;
     }
 
     @Override
