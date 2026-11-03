@@ -210,19 +210,24 @@ assetIndexFile
 
 ```text
 ~/.caml/                             启动器数据目录
-├─ cache/
-│  └─ version_manifest_v2.json       版本清单缓存
-└─ minecraft/                        游戏目录
-   ├─ versions/
-   │  └─ <id>/
-   │     ├─ <id>.json                原始版本 JSON
-   │     └─ <id>.jar                 客户端 jar
-   ├─ libraries/                     共享库
-   └─ assets/
-      ├─ indexes/
-      │  └─ <assetIndexId>.json      资源索引
-      └─ objects/
-         └─ <hash 前两位>/<hash>      资源对象
+└─ cache/
+   └─ version_manifest_v2.json       版本清单缓存
+
+游戏目录：
+  Linux/macOS: ~/.minecraft
+  Windows:     <启动器所在目录>/.minecraft
+
+<游戏目录>/
+├─ versions/
+│  └─ <id>/
+│     ├─ <id>.json                   原始版本 JSON
+│     └─ <id>.jar                    客户端 jar
+├─ libraries/                        共享库
+└─ assets/
+   ├─ indexes/
+   │  └─ <assetIndexId>.json         资源索引
+   └─ objects/
+      └─ <hash 前两位>/<hash>         资源对象
 ```
 
 ### 2.11 下载链路关键类

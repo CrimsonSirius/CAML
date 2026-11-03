@@ -50,6 +50,13 @@ CAML
 - JavaFX `25.0.3`。
 - JUnit `6.1.3`。
 
+默认目录：
+
+- 启动器数据：`~/.caml`。
+- 游戏数据：
+  - Linux/macOS：`~/.minecraft`。
+  - Windows：启动器所在目录下的 `.minecraft`。
+
 ## 3. 已实现功能
 
 ### 3.1 版本元数据
@@ -187,7 +194,7 @@ PATH=/usr/lib/jvm/zulu-25/bin:$PATH \
 
 - 后端构建通过。
 - JavaFX 启动冒烟测试通过。
-- 37 个后端测试全部通过。
+- 40 个后端测试全部通过。
 - 集成测试覆盖：
   - 版本清单获取与缓存。
   - 版本 JSON 获取。
@@ -200,6 +207,7 @@ PATH=/usr/lib/jvm/zulu-25/bin:$PATH \
   - JVM/游戏参数、占位符、features 和旧版参数回退。
   - natives 清理、解压和排除规则。
   - virtual assets 重建和 assets 目录替换。
+  - 平台默认游戏目录：Linux 用户目录，Windows 启动器目录。
 
 ## 7. 当前未实现
 

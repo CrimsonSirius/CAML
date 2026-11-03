@@ -124,6 +124,8 @@ CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
 - 版本元数据以官方 `version_manifest_v2.json` 和单版本 JSON 为准。
 - 下载必须校验 SHA-1，先写临时文件，校验通过后再原子移动。
 - 缓存和实例目录必须有明确边界。
+- 启动器数据默认放在 `~/.caml`。
+- 游戏数据默认放在 `~/.minecraft`（Linux/macOS）或启动器目录下的 `.minecraft`（Windows）。
 - 微软登录只使用官方 OAuth 流程，不收集用户密码。
 - refresh token 不得明文保存，不得写入日志。
 - 启动器 JDK 和游戏 Java 是两套运行时，不能混用。
