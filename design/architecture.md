@@ -107,6 +107,8 @@ CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
 - 跳过 `META-INF/` 和 `extract.exclude` 指定内容。
 - 下载游戏 Log4j 配置文件。
 - 在 JVM 参数中注入 `-Dlog4j.configurationFile`。
+- 旧版本 asset index 标记为 virtual 时重建 `assets/virtual/<id>`。
+- `map_to_resources` 时同步写入 `resources`。
 
 ## 4. 尚未实现的能力
 
@@ -149,6 +151,7 @@ backend.classpathBuilder().build(plan);
 backend.jvmArgumentsBuilder().build(plan, classpath);
 backend.gameArgumentsBuilder().build(plan, classpath);
 backend.nativeExtractor().extract(plan);
+backend.virtualAssetInstaller().prepare(plan);
 ```
 
 ## 7. 相关文档

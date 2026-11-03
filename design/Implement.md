@@ -130,6 +130,8 @@ CAML
 - 跳过 `META-INF/` 和 `extract.exclude`。
 - 下载 Log4j 配置到 `assets/log_configs`。
 - 注入 `-Dlog4j.configurationFile`。
+- 旧版本 virtual assets 重建。
+- `map_to_resources` 写入 `resources`。
 
 ### 3.11 JavaFX 界面
 
@@ -169,6 +171,8 @@ List<String> jvmArgs = backend.jvmArgumentsBuilder().build(plan, classpath);
 List<String> gameArgs = backend.gameArgumentsBuilder().build(plan, classpath);
 
 backend.nativeExtractor().extract(plan);
+
+plan = backend.virtualAssetInstaller().prepare(plan);
 ```
 
 ## 5. 运行方式
@@ -183,7 +187,7 @@ PATH=/usr/lib/jvm/zulu-25/bin:$PATH \
 
 - 后端构建通过。
 - JavaFX 启动冒烟测试通过。
-- 36 个后端测试全部通过。
+- 37 个后端测试全部通过。
 - 集成测试覆盖：
   - 版本清单获取与缓存。
   - 版本 JSON 获取。
@@ -195,6 +199,7 @@ PATH=/usr/lib/jvm/zulu-25/bin:$PATH \
   - classpath 过滤、去重、native 排除和客户端 jar 顺序。
   - JVM/游戏参数、占位符、features 和旧版参数回退。
   - natives 清理、解压和排除规则。
+  - virtual assets 重建和 assets 目录替换。
 
 ## 7. 当前未实现
 

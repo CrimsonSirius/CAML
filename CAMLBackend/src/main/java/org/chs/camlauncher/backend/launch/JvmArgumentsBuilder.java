@@ -25,7 +25,7 @@ public final class JvmArgumentsBuilder {
         result.addAll(resolve(plan.manifest().arguments().jvm(), ruleEvaluator, placeholders));
         LoggingInfo logging = plan.manifest().logging().get("client");
         if (logging != null && logging.argument() != null && logging.file() != null && logging.file().id() != null) {
-            String logConfig = plan.assetsDirectory()
+            String logConfig = plan.instance().assetsDirectory()
                     .resolve("log_configs")
                     .resolve(logging.file().id())
                     .toString();

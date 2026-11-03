@@ -28,4 +28,17 @@ public record LaunchPlan(
         Objects.requireNonNull(assetsDirectory, "assetsDirectory");
         Objects.requireNonNull(nativesDirectory, "nativesDirectory");
     }
+
+    public LaunchPlan withAssetsDirectory(Path assetsDirectory) {
+        return new LaunchPlan(
+                instance,
+                manifest,
+                auth,
+                java,
+                options,
+                gameDirectory,
+                assetsDirectory,
+                nativesDirectory
+        );
+    }
 }

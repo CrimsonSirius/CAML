@@ -432,6 +432,17 @@ Log4j 配置由两部分组成：
 backend.nativeExtractor().extract(plan);
 ```
 
+旧版本 virtual assets 由 `VirtualAssetInstaller.prepare(plan)` 处理：
+
+- 读取 asset index 的 `virtual` 和 `map_to_resources`。
+- 把 objects 复制到 `assets/virtual/<assetIndexId>/<逻辑路径>`。
+- `map_to_resources` 时同时复制到 `gameDirectory/resources`。
+- 返回一个 `assetsDirectory` 已替换为 virtual 目录的 `LaunchPlan`。
+
+```java
+LaunchPlan prepared = backend.virtualAssetInstaller().prepare(plan);
+```
+
 ## 4. 相关源码
 
 - `CAMLBackend/src/main/java/org/chs/camlauncher/backend/instance/VersionInstaller.java`
@@ -445,4 +456,5 @@ backend.nativeExtractor().extract(plan);
 - `CAMLBackend/src/main/java/org/chs/camlauncher/backend/launch/JvmArgumentsBuilder.java`
 - `CAMLBackend/src/main/java/org/chs/camlauncher/backend/launch/GameArgumentsBuilder.java`
 - `CAMLBackend/src/main/java/org/chs/camlauncher/backend/launch/NativeExtractor.java`
+- `CAMLBackend/src/main/java/org/chs/camlauncher/backend/launch/VirtualAssetInstaller.java`
 - `CAMLBackend/src/main/java/org/chs/camlauncher/backend/launch/`
