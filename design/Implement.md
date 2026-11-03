@@ -154,6 +154,9 @@ CAML
 - 转发 stdout/stderr。
 - 回调退出码。
 - 支持等待和停止进程。
+- Java 9+ 命令行过长时自动使用 `@argfile`。
+- Java 8 或 argfile 失败时使用 manifest classpath jar。
+- 两种回退都失败时抛出明确异常。
 
 ## 4. 对外 API
 
@@ -200,7 +203,7 @@ PATH=/usr/lib/jvm/zulu-25/bin:$PATH \
 
 - 后端构建通过。
 - JavaFX 启动冒烟测试通过。
-- 43 个后端测试全部通过。
+- 46 个后端测试全部通过。
 - 集成测试覆盖：
   - 版本清单获取与缓存。
   - 版本 JSON 获取。
@@ -215,6 +218,8 @@ PATH=/usr/lib/jvm/zulu-25/bin:$PATH \
   - virtual assets 重建和 assets 目录替换。
   - 平台默认游戏目录：Linux 用户目录，Windows 启动器目录。
   - 最终命令顺序、进程启动、stdout/stderr 转发和退出码。
+  - argfile 转义和 manifest classpath jar。
+  - 超长 classpath 的自动回退。
 
 ## 7. 当前未实现
 

@@ -474,6 +474,24 @@ java 可执行文件
 - 进程退出后回调退出码。
 - 支持 `waitFor`、`exitValue` 和 `stop`。
 
+命令行过长处理：
+
+- 捕获 Windows `CreateProcess error=206` 和 Linux `Argument list too long`。
+- Java 9+ 把 JVM 参数写入 `@argfile`，命令行只保留：
+
+```text
+java @argfile mainClass gameArgs
+```
+
+- Java 8 或 argfile 回退失败时，创建 manifest classpath jar：
+
+```text
+java [JVM 参数] -cp classpath-manifest.jar mainClass gameArgs
+```
+
+- 两种方式都失败时抛出明确的 `IOException`。
+- 临时 argfile 和 manifest jar 在进程退出后删除。
+
 对外入口：
 
 ```java
@@ -499,4 +517,6 @@ GameProcess process = backend.processLauncher().launch(plan, classpath, listener
 - `CAMLBackend/src/main/java/org/chs/camlauncher/backend/launch/ProcessLauncher.java`
 - `CAMLBackend/src/main/java/org/chs/camlauncher/backend/launch/GameProcess.java`
 - `CAMLBackend/src/main/java/org/chs/camlauncher/backend/launch/ProcessListener.java`
+- `CAMLBackend/src/main/java/org/chs/camlauncher/backend/launch/ArgumentFile.java`
+- `CAMLBackend/src/main/java/org/chs/camlauncher/backend/launch/ClasspathManifest.java`
 - `CAMLBackend/src/main/java/org/chs/camlauncher/backend/launch/`

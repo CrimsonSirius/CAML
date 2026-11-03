@@ -10,6 +10,7 @@ import org.junit.jupiter.api.io.TempDir;
 
 import java.io.File;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
@@ -25,12 +26,36 @@ class ProcessLauncherTest {
 
     @Test
     void launchesProcessAndPumpsOutputAndExitCode() throws Exception {
-        Path javaHome = Path.of(System.getProperty("java.home"));
-        String javaName = System.getProperty("os.name").toLowerCase().contains("win")
-                ? "java.exe"
-                : "java";
-        Path javaExecutable = javaHome.resolve("bin").resolve(javaName);
+        RecordingListener listener = new RecordingListener();
 
+        try (GameProcess process = new ProcessLauncher().launch(
+                plan(javaExecutable()), realClasspath(), listener)) {
+            assertTrue(process.waitFor(10, TimeUnit.SECONDS));
+            assertEquals(7, process.exitValue());
+            assertTrue(listener.exited.await(5, TimeUnit.SECONDS));
+            assertTrue(listener.output.toString().contains("fake-main-hello"));
+            assertTrue(listener.output.toString().contains("fake-main-error"));
+        }
+    }
+
+    @Test
+    void fallsBackToArgumentFileForVeryLongClasspath() throws Exception {
+        RecordingListener listener = new RecordingListener();
+        List<Path> classpath = new ArrayList<>(realClasspath());
+        for (int i = 0; i < 10_000; i++) {
+            classpath.add(Path.of("/tmp/caml-long-classpath/library-" + i + ".jar"));
+        }
+
+        try (GameProcess process = new ProcessLauncher().launch(
+                plan(javaExecutable()), List.copyOf(classpath), listener)) {
+            assertTrue(process.waitFor(20, TimeUnit.SECONDS));
+            assertEquals(7, process.exitValue());
+            assertTrue(listener.exited.await(5, TimeUnit.SECONDS));
+            assertTrue(listener.output.toString().contains("fake-main-hello"));
+        }
+    }
+
+    private LaunchPlan plan(Path javaExecutable) {
         VersionInfo manifest = new VersionInfo(
                 "1.20.1", "release", null, FakeMain.class.getName(), "5", null, null, null,
                 null, new JavaVersion("java-runtime-gamma", 17), List.of(), null,
@@ -45,7 +70,7 @@ class ProcessLauncherTest {
                 gameDirectory.resolve("assets"),
                 null
         );
-        LaunchPlan plan = new LaunchPlan(
+        return new LaunchPlan(
                 instance,
                 manifest,
                 new AuthSession("Steve", UUID.randomUUID(), "token", "legacy", "{}"),
@@ -63,30 +88,33 @@ class ProcessLauncherTest {
                 gameDirectory.resolve("assets"),
                 gameDirectory.resolve("versions/1.20.1/natives")
         );
-        List<Path> classpath = Arrays.stream(System.getProperty("java.class.path").split(File.pathSeparator))
+    }
+
+    private static Path javaExecutable() {
+        String javaName = System.getProperty("os.name").toLowerCase().contains("win")
+                ? "java.exe"
+                : "java";
+        return Path.of(System.getProperty("java.home")).resolve("bin").resolve(javaName);
+    }
+
+    private static List<Path> realClasspath() {
+        return Arrays.stream(System.getProperty("java.class.path").split(File.pathSeparator))
                 .map(Path::of)
                 .toList();
+    }
 
-        StringBuffer output = new StringBuffer();
-        CountDownLatch exited = new CountDownLatch(1);
-        ProcessListener listener = new ProcessListener() {
-            @Override
-            public void onLog(String line, boolean error) {
-                output.append(line).append('\n');
-            }
+    private static final class RecordingListener implements ProcessListener {
+        private final StringBuffer output = new StringBuffer();
+        private final CountDownLatch exited = new CountDownLatch(1);
 
-            @Override
-            public void onExit(int exitCode) {
-                exited.countDown();
-            }
-        };
+        @Override
+        public void onLog(String line, boolean error) {
+            output.append(line).append('\n');
+        }
 
-        try (GameProcess process = new ProcessLauncher().launch(plan, classpath, listener)) {
-            assertTrue(process.waitFor(10, TimeUnit.SECONDS));
-            assertEquals(7, process.exitValue());
-            assertTrue(exited.await(5, TimeUnit.SECONDS));
-            assertTrue(output.toString().contains("fake-main-hello"));
-            assertTrue(output.toString().contains("fake-main-error"));
+        @Override
+        public void onExit(int exitCode) {
+            exited.countDown();
         }
     }
 

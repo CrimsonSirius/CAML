@@ -118,6 +118,9 @@ CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
 - 使用 `ProcessBuilder` 启动。
 - 后台线程转发 stdout/stderr。
 - 提供退出码回调和停止能力。
+- 命令行过长时，Java 9+ 自动使用 `@argfile`。
+- Java 8 或 argfile 失败时使用 manifest classpath jar。
+- 两种回退都失败时抛出明确异常。
 
 ## 4. 尚未实现的能力
 
