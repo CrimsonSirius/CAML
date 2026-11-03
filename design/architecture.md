@@ -74,6 +74,7 @@ CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
 - 根据版本 JSON 的 `javaVersion` 生成 `JavaRequirement`。
 - 选择满足要求的 JavaRuntime。
 - Windows 优先使用 `javaw.exe`。
+- 详细说明见 [runtime.md](runtime.md)。
 
 ### 3.6 启动计划
 
@@ -82,9 +83,16 @@ CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
 - 支持内存、分辨率、JVM 参数、游戏参数和环境变量。
 - 启动计划创建时校验 Java 是否满足版本要求。
 
+### 3.7 classpath
+
+- 按规则筛选 libraries。
+- 排除 native-only library。
+- 按目标路径去重并保持顺序。
+- 客户端 jar 追加在最后。
+- 使用平台路径分隔符拼接。
+
 ## 4. 尚未实现的能力
 
-- classpath 构建。
 - JVM 参数和游戏参数构建。
 - `${...}` 占位符替换。
 - natives 解压。
@@ -124,9 +132,12 @@ backend.loginOffline("Steve");
 backend.javaLocator();
 backend.fetchVersionManifest();
 backend.createLaunchPlan(installed, auth, java, options);
+backend.classpathBuilder().build(plan);
 ```
 
 ## 7. 相关文档
 
 - 版本下载和启动链路详见 [version-download-and-launch.md](version-download-and-launch.md)。
+- runtime 包详见 [runtime.md](runtime.md)。
+- 当前实现情况详见 [Implement.md](Implement.md)。
 - 开发任务和阶段计划由本地 `TODO.md` 维护。

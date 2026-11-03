@@ -16,6 +16,7 @@ import org.chs.camlauncher.backend.json.JsonService;
 import org.chs.camlauncher.backend.launch.LaunchOptions;
 import org.chs.camlauncher.backend.launch.LaunchPlan;
 import org.chs.camlauncher.backend.launch.LaunchPlanner;
+import org.chs.camlauncher.backend.launch.ClasspathBuilder;
 import org.chs.camlauncher.backend.metadata.MetadataService;
 import org.chs.camlauncher.backend.metadata.VersionManifest;
 import org.chs.camlauncher.backend.metadata.VersionManifestService;
@@ -40,6 +41,7 @@ public final class CAMLBackend implements AutoCloseable {
     private final FileDownloader fileDownloader;
     private final VersionInstaller versionInstaller;
     private final LaunchPlanner launchPlanner;
+    private final ClasspathBuilder classpathBuilder;
     private boolean started;
 
     public CAMLBackend(BackendConfig config) {
@@ -59,6 +61,7 @@ public final class CAMLBackend implements AutoCloseable {
                 fileDownloader
         );
         this.launchPlanner = new LaunchPlanner();
+        this.classpathBuilder = new ClasspathBuilder();
     }
 
     public void start() {
@@ -143,6 +146,10 @@ public final class CAMLBackend implements AutoCloseable {
             LaunchOptions options
     ) {
         return launchPlanner.create(instance, auth, java, options);
+    }
+
+    public ClasspathBuilder classpathBuilder() {
+        return classpathBuilder;
     }
 
     @Override

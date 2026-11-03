@@ -254,9 +254,8 @@ assetIndexFile
 
 当前还不能真正启动 Minecraft。
 
-`launch` 包目前已经包含 `LaunchPlan`、`LaunchOptions` 和 `LaunchPlanner`。以下内容尚未实现：
+`launch` 包目前已经包含 `LaunchPlan`、`LaunchOptions`、`LaunchPlanner` 和 `ClasspathBuilder`。以下内容尚未实现：
 
-- classpath 构建。
 - JVM 参数构建。
 - 游戏参数构建。
 - `${...}` 占位符替换。
@@ -276,7 +275,7 @@ AuthSession       用户名、UUID、accessToken、userType、userProperties
 JavaRuntime       实际 Java 可执行文件、版本、架构、位数
 ```
 
-这些类型已经存在，但尚未被组合成 `LaunchPlan`。
+这些类型已经存在，并由 `LaunchPlanner` 组合成不可变的 `LaunchPlan`。
 
 ### 3.3 计划中的启动流程
 
@@ -285,7 +284,7 @@ JavaRuntime       实际 Java 可执行文件、版本、架构、位数
 → 读取 AuthSession
 → 选择 JavaRuntime
 → 创建 LaunchPlan（已实现）
-→ 构建 classpath（未实现）
+→ 构建 classpath（已实现）
 → 构建 JVM 参数
 → 构建游戏参数
 → 替换占位符
@@ -294,24 +293,91 @@ JavaRuntime       实际 Java 可执行文件、版本、架构、位数
 → 监控 stdout/stderr 和退出码
 ```
 
-### 3.4 LaunchPlan 包含的数据
+### 3.4 LaunchPlan
+
+`LaunchPlan` 是启动阶段的核心输入对象。它把“安装结果、账号、Java、目录和用户选项”固定在一个不可变对象里，后续 classpath、参数和进程构建都从这里读取。
+
+字段如下：
+
+| 字段 | 类型 | 含义 |
+|---|---|---|
+| `instance` | `InstalledVersion` | 已安装版本及其文件路径 |
+| `manifest` | `VersionInfo` | 解析后的启动 manifest |
+| `auth` | `AuthSession` | 用户名、UUID、token、userType、userProperties |
+| `java` | `JavaRuntime` | 实际使用的游戏 Java |
+| `options` | `LaunchOptions` | 内存、分辨率、自定义参数和环境变量 |
+| `gameDirectory` | `Path` | 游戏目录 |
+| `assetsDirectory` | `Path` | assets 目录 |
+| `nativesDirectory` | `Path` | natives 解压目录 |
+
+构造时会校验所有字段非空。
+
+### 3.5 LaunchOptions
+
+`LaunchOptions` 也是不可变 record，包含：
+
+| 字段 | 含义 | 约束 |
+|---|---|---|
+| `minMemoryMb` | 最小内存 | 可为空；不能为负数 |
+| `maxMemoryMb` | 最大内存 | 可为空；不能为负数且不能小于最小内存 |
+| `width` / `height` | 游戏窗口分辨率 | 可为空；如果存在必须为正数 |
+| `fullscreen` | 是否全屏 | 布尔值 |
+| `jvmArguments` | 用户 JVM 参数 | 复制为不可变列表 |
+| `gameArguments` | 用户游戏参数 | 复制为不可变列表 |
+| `environmentVariables` | 启动环境变量 | 复制为不可变 Map |
+
+`LaunchOptions.defaults()` 返回一个所有可选数值为空、列表和 Map 为空的默认选项。
+
+### 3.6 LaunchPlanner 创建流程
 
 ```text
-InstalledVersion
-VersionInfo resolvedManifest
-AuthSession
-JavaRuntime
-gameDirectory
-assetsDirectory
-nativesDirectory
-memory settings
-JVM arguments
-game arguments
-environment variables
-quick play / server options
+LaunchPlanner.create(instance, auth, java, options)
+→ 校验参数非空
+→ JavaRequirement.from(instance.manifest())
+→ requirement.isSatisfiedBy(java)
+→ 不满足则抛出 IllegalArgumentException
+→ 构造 LaunchPlan
+→ nativesDirectory = versions/<id>/natives
 ```
 
-所有启动参数必须使用 `List<String>` 构造，不拼接 shell 字符串。
+当前 `LaunchPlan` 只负责组织启动所需数据，不负责：
+
+- 生成 JVM/游戏参数。
+- 替换占位符。
+- 解压 natives。
+- 启动进程。
+
+classpath 由 `ClasspathBuilder` 单独生成。Java 检测和匹配细节见 [runtime.md](runtime.md)。
+
+### 3.7 ClasspathBuilder
+
+`ClasspathBuilder.build(LaunchPlan)` 生成 `List<Path>`：
+
+```text
+遍历 resolved manifest 的 libraries
+→ 按 RuleEvaluator 过滤 rules
+→ 排除 native-only library
+→ 读取 downloads.artifact
+→ 解析 libraries/<path> 路径
+→ 去重并保持顺序
+→ 最后追加客户端 jar
+```
+
+规则：
+
+- `downloads.artifact` 存在时才加入 classpath。
+- classifier 为 `natives-*` 的 native-only 库不加入 classpath。
+- 有 native classifier 的普通库仍保留主 artifact。
+- 同一个目标路径只加入一次。
+- 客户端 jar 固定放在最后。
+- `join(List<Path>)` 使用 `File.pathSeparator` 拼接。
+
+对外入口：
+
+```java
+List<Path> classpath = backend.classpathBuilder().build(plan);
+String joined = backend.classpathBuilder().join(classpath);
+```
 
 ## 4. 相关源码
 
@@ -320,4 +386,5 @@ quick play / server options
 - `CAMLBackend/src/main/java/org/chs/camlauncher/backend/download/DownloadPlanner.java`
 - `CAMLBackend/src/main/java/org/chs/camlauncher/backend/download/AssetDownloadPlanner.java`
 - `CAMLBackend/src/main/java/org/chs/camlauncher/backend/download/FileDownloader.java`
+- `CAMLBackend/src/main/java/org/chs/camlauncher/backend/launch/ClasspathBuilder.java`
 - `CAMLBackend/src/main/java/org/chs/camlauncher/backend/launch/`
