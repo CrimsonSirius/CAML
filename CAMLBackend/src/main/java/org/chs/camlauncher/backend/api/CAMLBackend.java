@@ -2,6 +2,8 @@ package org.chs.camlauncher.backend.api;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.chs.camlauncher.backend.auth.AuthSession;
+import org.chs.camlauncher.backend.auth.OfflineAccount;
 import org.chs.camlauncher.backend.config.BackendConfig;
 import org.chs.camlauncher.backend.config.BackendPaths;
 import org.chs.camlauncher.backend.download.AssetDownloadPlanner;
@@ -11,6 +13,9 @@ import org.chs.camlauncher.backend.download.FileDownloader;
 import org.chs.camlauncher.backend.instance.InstalledVersion;
 import org.chs.camlauncher.backend.instance.VersionInstaller;
 import org.chs.camlauncher.backend.json.JsonService;
+import org.chs.camlauncher.backend.launch.LaunchOptions;
+import org.chs.camlauncher.backend.launch.LaunchPlan;
+import org.chs.camlauncher.backend.launch.LaunchPlanner;
 import org.chs.camlauncher.backend.metadata.MetadataService;
 import org.chs.camlauncher.backend.metadata.VersionManifest;
 import org.chs.camlauncher.backend.metadata.VersionManifestService;
@@ -34,6 +39,7 @@ public final class CAMLBackend implements AutoCloseable {
     private final AssetDownloadPlanner assetDownloadPlanner;
     private final FileDownloader fileDownloader;
     private final VersionInstaller versionInstaller;
+    private final LaunchPlanner launchPlanner;
     private boolean started;
 
     public CAMLBackend(BackendConfig config) {
@@ -52,6 +58,7 @@ public final class CAMLBackend implements AutoCloseable {
                 assetDownloadPlanner,
                 fileDownloader
         );
+        this.launchPlanner = new LaunchPlanner();
     }
 
     public void start() {
@@ -123,6 +130,19 @@ public final class CAMLBackend implements AutoCloseable {
                 config.dataDirectory().resolve("cache").resolve("version_manifest_v2.json"),
                 listener
         );
+    }
+
+    public AuthSession loginOffline(String username) {
+        return new OfflineAccount(username).login();
+    }
+
+    public LaunchPlan createLaunchPlan(
+            InstalledVersion instance,
+            AuthSession auth,
+            org.chs.camlauncher.backend.runtime.JavaRuntime java,
+            LaunchOptions options
+    ) {
+        return launchPlanner.create(instance, auth, java, options);
     }
 
     @Override

@@ -7,6 +7,7 @@ import java.nio.file.Path;
 public record InstalledVersion(
         String id,
         VersionInfo manifest,
+        Path gameDirectory,
         Path versionDirectory,
         Path versionJson,
         Path clientJar,

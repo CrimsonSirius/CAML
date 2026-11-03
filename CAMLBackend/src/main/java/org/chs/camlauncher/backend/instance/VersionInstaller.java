@@ -91,6 +91,7 @@ public final class VersionInstaller {
         return new InstalledVersion(
                 versionId,
                 resolved,
+                gameDirectory,
                 versionDirectory,
                 versionFile,
                 clientJar,
