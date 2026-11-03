@@ -36,6 +36,18 @@ class DownloadPlannerTest {
                     "totalSize": 20,
                     "url": "https://example.com/assets.json"
                   },
+                  "logging": {
+                    "client": {
+                      "argument": "-Dlog4j.configurationFile=${path}",
+                      "file": {
+                        "id": "client-1.12.xml",
+                        "sha1": "log-sha1",
+                        "size": 14,
+                        "url": "https://example.com/log.xml"
+                      },
+                      "type": "log4j2-xml"
+                    }
+                  },
                   "libraries": [
                     {
                       "name": "com.example:lib:1.0",
@@ -75,7 +87,7 @@ class DownloadPlannerTest {
 
         DownloadPlan plan = planner.plan(version, gameDirectory);
 
-        assertEquals(4, plan.items().size());
+        assertEquals(5, plan.items().size());
         assertTrue(plan.items().stream().anyMatch(item ->
                 item.destination().endsWith(Path.of("versions", "1.20.1", "1.20.1.jar"))));
         assertTrue(plan.items().stream().anyMatch(item ->
@@ -85,6 +97,8 @@ class DownloadPlannerTest {
                         "native-1.0-natives-linux.jar"))));
         assertTrue(plan.items().stream().anyMatch(item ->
                 item.destination().endsWith(Path.of("assets", "indexes", "5.json"))));
-        assertEquals(4, plan.missing().size());
+        assertTrue(plan.items().stream().anyMatch(item ->
+                item.destination().endsWith(Path.of("assets", "log_configs", "client-1.12.xml"))));
+        assertEquals(5, plan.missing().size());
     }
 }

@@ -3,6 +3,7 @@ package org.chs.camlauncher.backend.download;
 import org.chs.camlauncher.backend.metadata.AssetIndex;
 import org.chs.camlauncher.backend.metadata.DownloadInfo;
 import org.chs.camlauncher.backend.metadata.Library;
+import org.chs.camlauncher.backend.metadata.LoggingInfo;
 import org.chs.camlauncher.backend.metadata.RuleEvaluator;
 import org.chs.camlauncher.backend.metadata.VersionInfo;
 import org.chs.camlauncher.backend.runtime.JavaRuntimeParser;
@@ -83,6 +84,19 @@ public final class DownloadPlanner {
                     gameDirectory.resolve("assets").resolve("indexes").resolve(assetIndex.id() + ".json"));
         }
 
+        LoggingInfo logging = version.logging().get("client");
+        if (logging != null && logging.file() != null) {
+            DownloadInfo file = logging.file();
+            String fileName = file.id();
+            if ((fileName == null || fileName.isBlank()) && file.url() != null) {
+                fileName = fileNameFromUrl(file.url());
+            }
+            if (fileName != null && !fileName.isBlank()) {
+                add(items, "log-config " + fileName, file,
+                        gameDirectory.resolve("assets").resolve("log_configs").resolve(fileName));
+            }
+        }
+
         return new DownloadPlan(items.values().stream().toList());
     }
 
@@ -104,5 +118,10 @@ public final class DownloadPlanner {
             return null;
         }
         return gameDirectory.resolve("libraries").resolve(info.path());
+    }
+
+    private static String fileNameFromUrl(String url) {
+        int slash = url.lastIndexOf('/');
+        return slash >= 0 && slash + 1 < url.length() ? url.substring(slash + 1) : null;
     }
 }

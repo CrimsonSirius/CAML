@@ -19,6 +19,7 @@
 → LaunchPlan
 → classpath
 → JVM/游戏参数
+→ natives/Log4j
 ```
 
 未实现：
@@ -122,13 +123,21 @@ CAML
 - features：`has_custom_resolution`。
 - 过滤空参数。
 
-### 3.10 JavaFX 界面
+### 3.10 natives 与 Log4j
+
+- 清理旧 natives 目录。
+- 解压当前系统 native jar。
+- 跳过 `META-INF/` 和 `extract.exclude`。
+- 下载 Log4j 配置到 `assets/log_configs`。
+- 注入 `-Dlog4j.configurationFile`。
+
+### 3.11 JavaFX 界面
 
 - 启动时初始化后端。
 - 显示后端状态、版本、数据目录和游戏目录。
 - 样式文件：`CAMLFront/src/main/resources/styles/app.css`。
 
-### 3.11 日志
+### 3.12 日志
 
 - Log4j 控制台输出。
 - 文件日志：`~/.caml/logs/caml.log`。
@@ -158,6 +167,8 @@ List<Path> classpath = backend.classpathBuilder().build(plan);
 
 List<String> jvmArgs = backend.jvmArgumentsBuilder().build(plan, classpath);
 List<String> gameArgs = backend.gameArgumentsBuilder().build(plan, classpath);
+
+backend.nativeExtractor().extract(plan);
 ```
 
 ## 5. 运行方式
@@ -172,7 +183,7 @@ PATH=/usr/lib/jvm/zulu-25/bin:$PATH \
 
 - 后端构建通过。
 - JavaFX 启动冒烟测试通过。
-- 34 个后端测试全部通过。
+- 36 个后端测试全部通过。
 - 集成测试覆盖：
   - 版本清单获取与缓存。
   - 版本 JSON 获取。
@@ -183,11 +194,10 @@ PATH=/usr/lib/jvm/zulu-25/bin:$PATH \
   - LaunchPlan 创建和 Java 要求校验。
   - classpath 过滤、去重、native 排除和客户端 jar 顺序。
   - JVM/游戏参数、占位符、features 和旧版参数回退。
+  - natives 清理、解压和排除规则。
 
 ## 7. 当前未实现
 
-- natives 解压。
-- 游戏 Log4j 配置写入。
 - 游戏进程启动。
 - stdout/stderr 和退出码监控。
 - 启动脚本导出。

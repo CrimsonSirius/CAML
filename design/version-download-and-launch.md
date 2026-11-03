@@ -254,10 +254,8 @@ assetIndexFile
 
 当前还不能真正启动 Minecraft。
 
-`launch` 包目前已经包含 `LaunchPlan`、`LaunchOptions`、`LaunchPlanner`、`ClasspathBuilder`、`JvmArgumentsBuilder` 和 `GameArgumentsBuilder`。以下内容尚未实现：
+`launch` 包目前已经包含 `LaunchPlan`、`LaunchOptions`、`LaunchPlanner`、`ClasspathBuilder`、`JvmArgumentsBuilder`、`GameArgumentsBuilder` 和 `NativeExtractor`。以下内容尚未实现：
 
-- natives 解压。
-- Log4j 配置写入。
 - `ProcessBuilder` 启动。
 - stdout/stderr 监控。
 - 退出码和异常退出处理。
@@ -285,7 +283,7 @@ JavaRuntime       实际 Java 可执行文件、版本、架构、位数
 → 构建 JVM 参数（已实现）
 → 构建游戏参数（已实现）
 → 替换占位符（已实现）
-→ 准备 natives 和日志配置
+→ 准备 natives 和日志配置（已实现）
 → ProcessBuilder 启动
 → 监控 stdout/stderr 和退出码
 ```
@@ -413,6 +411,27 @@ List<String> jvmArgs = backend.jvmArgumentsBuilder().build(plan, classpath);
 List<String> gameArgs = backend.gameArgumentsBuilder().build(plan, classpath);
 ```
 
+### 3.9 natives 与 Log4j 配置
+
+`NativeExtractor.extract(plan)`：
+
+- 清理 `versions/<id>/natives`。
+- 按当前 OS 和位数选择 native jar。
+- 支持旧式 `natives` classifier 和新式 `natives-*` library。
+- 跳过目录、`META-INF/` 和 `extract.exclude`。
+- 防止 zip slip 路径逃逸。
+
+Log4j 配置由两部分组成：
+
+- `DownloadPlanner` 下载 `logging.client.file` 到 `assets/log_configs/<id>`。
+- `JvmArgumentsBuilder` 注入 `logging.client.argument`，并把 `${path}` 替换为实际文件路径。
+
+对外入口：
+
+```java
+backend.nativeExtractor().extract(plan);
+```
+
 ## 4. 相关源码
 
 - `CAMLBackend/src/main/java/org/chs/camlauncher/backend/instance/VersionInstaller.java`
@@ -425,4 +444,5 @@ List<String> gameArgs = backend.gameArgumentsBuilder().build(plan, classpath);
 - `CAMLBackend/src/main/java/org/chs/camlauncher/backend/launch/LaunchPlaceholders.java`
 - `CAMLBackend/src/main/java/org/chs/camlauncher/backend/launch/JvmArgumentsBuilder.java`
 - `CAMLBackend/src/main/java/org/chs/camlauncher/backend/launch/GameArgumentsBuilder.java`
+- `CAMLBackend/src/main/java/org/chs/camlauncher/backend/launch/NativeExtractor.java`
 - `CAMLBackend/src/main/java/org/chs/camlauncher/backend/launch/`

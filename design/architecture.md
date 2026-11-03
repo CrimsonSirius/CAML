@@ -100,10 +100,16 @@ CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
 - 支持旧版 `minecraftArguments`。
 - 自动补充 `-Djava.library.path` 和 `-cp`。
 
+### 3.9 natives 与日志配置
+
+- 清理旧 natives 目录。
+- 解压当前系统的 native jar。
+- 跳过 `META-INF/` 和 `extract.exclude` 指定内容。
+- 下载游戏 Log4j 配置文件。
+- 在 JVM 参数中注入 `-Dlog4j.configurationFile`。
+
 ## 4. 尚未实现的能力
 
-- natives 解压。
-- 游戏 Log4j 配置写入。
 - 游戏进程启动和日志监控。
 - 微软账号登录。
 - token 刷新和安全存储。
@@ -142,6 +148,7 @@ backend.createLaunchPlan(installed, auth, java, options);
 backend.classpathBuilder().build(plan);
 backend.jvmArgumentsBuilder().build(plan, classpath);
 backend.gameArgumentsBuilder().build(plan, classpath);
+backend.nativeExtractor().extract(plan);
 ```
 
 ## 7. 相关文档

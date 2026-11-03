@@ -1,6 +1,7 @@
 package org.chs.camlauncher.backend.launch;
 
 import org.chs.camlauncher.backend.metadata.Argument;
+import org.chs.camlauncher.backend.metadata.LoggingInfo;
 import org.chs.camlauncher.backend.metadata.RuleEvaluator;
 
 import java.nio.file.Path;
@@ -22,6 +23,17 @@ public final class JvmArgumentsBuilder {
         }
 
         result.addAll(resolve(plan.manifest().arguments().jvm(), ruleEvaluator, placeholders));
+        LoggingInfo logging = plan.manifest().logging().get("client");
+        if (logging != null && logging.argument() != null && logging.file() != null && logging.file().id() != null) {
+            String logConfig = plan.assetsDirectory()
+                    .resolve("log_configs")
+                    .resolve(logging.file().id())
+                    .toString();
+            result.add(PlaceholderResolver.resolve(
+                    logging.argument(),
+                    Map.of("path", logConfig)
+            ));
+        }
         result.addAll(plan.options().jvmArguments());
 
         if (result.stream().noneMatch(argument -> argument.startsWith("-Djava.library.path="))) {

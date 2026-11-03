@@ -4,7 +4,9 @@ import org.chs.camlauncher.backend.auth.AuthSession;
 import org.chs.camlauncher.backend.instance.InstalledVersion;
 import org.chs.camlauncher.backend.metadata.Argument;
 import org.chs.camlauncher.backend.metadata.Arguments;
+import org.chs.camlauncher.backend.metadata.DownloadInfo;
 import org.chs.camlauncher.backend.metadata.JavaVersion;
+import org.chs.camlauncher.backend.metadata.LoggingInfo;
 import org.chs.camlauncher.backend.metadata.Rule;
 import org.chs.camlauncher.backend.metadata.RuledArgument;
 import org.chs.camlauncher.backend.metadata.StringArgument;
@@ -106,6 +108,29 @@ class LaunchArgumentsBuilderTest {
         assertTrue(result.contains("Steve"));
         assertTrue(result.contains("--gameDir"));
         assertTrue(result.contains(gameDirectory.toString()));
+    }
+
+    @Test
+    void addsLog4jConfigurationArgument() {
+        LoggingInfo logging = new LoggingInfo(
+                "-Dlog4j.configurationFile=${path}",
+                new DownloadInfo("client-1.12.xml", null, "sha1", 1L, "https://example.com/log.xml"),
+                "log4j2-xml"
+        );
+        VersionInfo manifest = new VersionInfo(
+                "1.20.1", "release", null, "net.minecraft.client.main.Main", "5", null,
+                null, new Arguments(List.of(), List.of()), null,
+                new JavaVersion("java-runtime-gamma", 17), List.of(), Map.of("client", logging),
+                null, null, null, null
+        );
+        LaunchPlan plan = plan(manifest, LaunchOptions.defaults());
+
+        List<String> result = new JvmArgumentsBuilder().build(plan, List.of());
+
+        assertTrue(result.contains(
+                "-Dlog4j.configurationFile="
+                        + gameDirectory.resolve("assets/log_configs/client-1.12.xml")
+        ));
     }
 
     private LaunchPlan plan(Arguments arguments, LaunchOptions options) {

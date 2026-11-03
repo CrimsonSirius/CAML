@@ -19,6 +19,7 @@ import org.chs.camlauncher.backend.launch.LaunchPlanner;
 import org.chs.camlauncher.backend.launch.ClasspathBuilder;
 import org.chs.camlauncher.backend.launch.GameArgumentsBuilder;
 import org.chs.camlauncher.backend.launch.JvmArgumentsBuilder;
+import org.chs.camlauncher.backend.launch.NativeExtractor;
 import org.chs.camlauncher.backend.metadata.MetadataService;
 import org.chs.camlauncher.backend.metadata.VersionManifest;
 import org.chs.camlauncher.backend.metadata.VersionManifestService;
@@ -46,6 +47,7 @@ public final class CAMLBackend implements AutoCloseable {
     private final ClasspathBuilder classpathBuilder;
     private final JvmArgumentsBuilder jvmArgumentsBuilder;
     private final GameArgumentsBuilder gameArgumentsBuilder;
+    private final NativeExtractor nativeExtractor;
     private boolean started;
 
     public CAMLBackend(BackendConfig config) {
@@ -68,6 +70,7 @@ public final class CAMLBackend implements AutoCloseable {
         this.classpathBuilder = new ClasspathBuilder();
         this.jvmArgumentsBuilder = new JvmArgumentsBuilder();
         this.gameArgumentsBuilder = new GameArgumentsBuilder();
+        this.nativeExtractor = new NativeExtractor();
     }
 
     public void start() {
@@ -164,6 +167,10 @@ public final class CAMLBackend implements AutoCloseable {
 
     public GameArgumentsBuilder gameArgumentsBuilder() {
         return gameArgumentsBuilder;
+    }
+
+    public NativeExtractor nativeExtractor() {
+        return nativeExtractor;
     }
 
     @Override
