@@ -110,9 +110,19 @@ CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
 - 旧版本 asset index 标记为 virtual 时重建 `assets/virtual/<id>`。
 - `map_to_resources` 时同步写入 `resources`。
 
+### 3.10 进程启动
+
+- 构建最终 `java + JVM 参数 + mainClass + 游戏参数` 命令。
+- 设置工作目录和环境变量。
+- 仅在 Windows 设置 `APPDATA`。
+- 使用 `ProcessBuilder` 启动。
+- 后台线程转发 stdout/stderr。
+- 提供退出码回调和停止能力。
+
 ## 4. 尚未实现的能力
 
-- 游戏进程启动和日志监控。
+- 启动器隐藏/保留/关闭策略。
+- 异常退出分类和崩溃分析。
 - 微软账号登录。
 - token 刷新和安全存储。
 - Fabric、Quilt、Forge、NeoForge 等加载器安装。
@@ -154,6 +164,8 @@ backend.jvmArgumentsBuilder().build(plan, classpath);
 backend.gameArgumentsBuilder().build(plan, classpath);
 backend.nativeExtractor().extract(plan);
 backend.virtualAssetInstaller().prepare(plan);
+backend.launchCommandBuilder().build(plan, classpath);
+backend.processLauncher().launch(plan, classpath, listener);
 ```
 
 ## 7. 相关文档

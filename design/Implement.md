@@ -4,7 +4,7 @@
 
 ## 1. 总体状态
 
-当前项目已经具备一条可用的**原版安装链路**，但还没有真正启动 Minecraft。
+当前项目已经具备**原版安装链路**和**基础进程启动能力**，但还没有完成完整 UI 启动编排和真实客户端端到端验证。
 
 已实现：
 
@@ -20,18 +20,11 @@
 → classpath
 → JVM/游戏参数
 → natives/Log4j
+→ 命令构建
+→ 进程启动/日志
 ```
 
-未实现：
-
-```text
-classpath
-→ JVM/游戏参数
-→ 占位符替换
-→ natives 解压
-→ 进程启动
-→ 日志监控
-```
+尚未完成：微软登录、加载器、崩溃分析、启动器可见性策略和完整 UI 启动编排。
 
 ## 2. 项目结构
 
@@ -151,6 +144,17 @@ CAML
 - Log4j 控制台输出。
 - 文件日志：`~/.caml/logs/caml.log`。
 
+### 3.13 进程启动
+
+- 构建最终启动命令。
+- 设置工作目录。
+- 合并环境变量。
+- Windows 条件设置 `APPDATA`。
+- 启动 `ProcessBuilder`。
+- 转发 stdout/stderr。
+- 回调退出码。
+- 支持等待和停止进程。
+
 ## 4. 对外 API
 
 ```java
@@ -180,6 +184,8 @@ List<String> gameArgs = backend.gameArgumentsBuilder().build(plan, classpath);
 backend.nativeExtractor().extract(plan);
 
 plan = backend.virtualAssetInstaller().prepare(plan);
+
+GameProcess process = backend.processLauncher().launch(plan, classpath, listener);
 ```
 
 ## 5. 运行方式
@@ -194,7 +200,7 @@ PATH=/usr/lib/jvm/zulu-25/bin:$PATH \
 
 - 后端构建通过。
 - JavaFX 启动冒烟测试通过。
-- 40 个后端测试全部通过。
+- 43 个后端测试全部通过。
 - 集成测试覆盖：
   - 版本清单获取与缓存。
   - 版本 JSON 获取。
@@ -208,11 +214,12 @@ PATH=/usr/lib/jvm/zulu-25/bin:$PATH \
   - natives 清理、解压和排除规则。
   - virtual assets 重建和 assets 目录替换。
   - 平台默认游戏目录：Linux 用户目录，Windows 启动器目录。
+  - 最终命令顺序、进程启动、stdout/stderr 转发和退出码。
 
 ## 7. 当前未实现
 
-- 游戏进程启动。
-- stdout/stderr 和退出码监控。
+- 启动器隐藏/保留/关闭策略。
+- 异常退出分类和崩溃分析。
 - 启动脚本导出。
 - 微软账号登录。
 - token 刷新和安全存储。

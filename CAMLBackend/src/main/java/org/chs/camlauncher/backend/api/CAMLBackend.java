@@ -16,6 +16,8 @@ import org.chs.camlauncher.backend.json.JsonService;
 import org.chs.camlauncher.backend.launch.LaunchOptions;
 import org.chs.camlauncher.backend.launch.LaunchPlan;
 import org.chs.camlauncher.backend.launch.LaunchPlanner;
+import org.chs.camlauncher.backend.launch.LaunchCommandBuilder;
+import org.chs.camlauncher.backend.launch.ProcessLauncher;
 import org.chs.camlauncher.backend.launch.ClasspathBuilder;
 import org.chs.camlauncher.backend.launch.GameArgumentsBuilder;
 import org.chs.camlauncher.backend.launch.JvmArgumentsBuilder;
@@ -50,6 +52,8 @@ public final class CAMLBackend implements AutoCloseable {
     private final GameArgumentsBuilder gameArgumentsBuilder;
     private final NativeExtractor nativeExtractor;
     private final VirtualAssetInstaller virtualAssetInstaller;
+    private final LaunchCommandBuilder launchCommandBuilder;
+    private final ProcessLauncher processLauncher;
     private boolean started;
 
     public CAMLBackend(BackendConfig config) {
@@ -74,6 +78,8 @@ public final class CAMLBackend implements AutoCloseable {
         this.gameArgumentsBuilder = new GameArgumentsBuilder();
         this.nativeExtractor = new NativeExtractor();
         this.virtualAssetInstaller = new VirtualAssetInstaller();
+        this.launchCommandBuilder = new LaunchCommandBuilder();
+        this.processLauncher = new ProcessLauncher();
     }
 
     public void start() {
@@ -178,6 +184,14 @@ public final class CAMLBackend implements AutoCloseable {
 
     public VirtualAssetInstaller virtualAssetInstaller() {
         return virtualAssetInstaller;
+    }
+
+    public LaunchCommandBuilder launchCommandBuilder() {
+        return launchCommandBuilder;
+    }
+
+    public ProcessLauncher processLauncher() {
+        return processLauncher;
     }
 
     @Override

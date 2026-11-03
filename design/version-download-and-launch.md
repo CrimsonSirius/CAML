@@ -14,8 +14,8 @@
 当前状态：
 
 - 版本下载链路已经可用。
-- 启动命令构建和游戏进程启动还没有实现。
-- `launch` 包目前只有占位说明。
+- 启动命令构建和基础进程启动已经实现。
+- 完整 UI 启动编排、异常退出处理和真实客户端端到端验证还没有完成。
 
 ## 2. Version 下载链路
 
@@ -259,11 +259,11 @@ assetIndexFile
 
 当前还不能真正启动 Minecraft。
 
-`launch` 包目前已经包含 `LaunchPlan`、`LaunchOptions`、`LaunchPlanner`、`ClasspathBuilder`、`JvmArgumentsBuilder`、`GameArgumentsBuilder` 和 `NativeExtractor`。以下内容尚未实现：
+`launch` 包目前已经包含启动计划、classpath、参数、natives、virtual assets、命令构建和进程启动。以下内容尚未实现：
 
-- `ProcessBuilder` 启动。
-- stdout/stderr 监控。
-- 退出码和异常退出处理。
+- 完整 UI 启动编排。
+- 异常退出分类和崩溃分析。
+- 启动器隐藏/保留/关闭策略。
 
 ### 3.2 已有启动前置数据
 
@@ -289,8 +289,8 @@ JavaRuntime       实际 Java 可执行文件、版本、架构、位数
 → 构建游戏参数（已实现）
 → 替换占位符（已实现）
 → 准备 natives 和日志配置（已实现）
-→ ProcessBuilder 启动
-→ 监控 stdout/stderr 和退出码
+→ ProcessBuilder 启动（已实现）
+→ 监控 stdout/stderr 和退出码（已实现）
 ```
 
 ### 3.4 LaunchPlan
@@ -448,6 +448,38 @@ backend.nativeExtractor().extract(plan);
 LaunchPlan prepared = backend.virtualAssetInstaller().prepare(plan);
 ```
 
+### 3.10 ProcessLauncher
+
+`LaunchCommandBuilder` 组合最终参数：
+
+```text
+java 可执行文件
+→ JVM 参数
+→ mainClass
+→ 游戏参数
+```
+
+`ProcessLauncher.launch(plan, classpath, listener)`：
+
+- 使用 `ProcessBuilder`。
+- 工作目录设置为游戏目录。
+- 合并 `LaunchOptions.environmentVariables()`。
+- 仅在 Windows 设置 `APPDATA` 为游戏目录的父目录。
+- 启动后返回 `GameProcess`。
+
+`GameProcess`：
+
+- 独立线程读取 stdout 和 stderr。
+- 通过 `ProcessListener` 转发日志。
+- 进程退出后回调退出码。
+- 支持 `waitFor`、`exitValue` 和 `stop`。
+
+对外入口：
+
+```java
+GameProcess process = backend.processLauncher().launch(plan, classpath, listener);
+```
+
 ## 4. 相关源码
 
 - `CAMLBackend/src/main/java/org/chs/camlauncher/backend/instance/VersionInstaller.java`
@@ -462,4 +494,9 @@ LaunchPlan prepared = backend.virtualAssetInstaller().prepare(plan);
 - `CAMLBackend/src/main/java/org/chs/camlauncher/backend/launch/GameArgumentsBuilder.java`
 - `CAMLBackend/src/main/java/org/chs/camlauncher/backend/launch/NativeExtractor.java`
 - `CAMLBackend/src/main/java/org/chs/camlauncher/backend/launch/VirtualAssetInstaller.java`
+- `CAMLBackend/src/main/java/org/chs/camlauncher/backend/launch/LaunchCommand.java`
+- `CAMLBackend/src/main/java/org/chs/camlauncher/backend/launch/LaunchCommandBuilder.java`
+- `CAMLBackend/src/main/java/org/chs/camlauncher/backend/launch/ProcessLauncher.java`
+- `CAMLBackend/src/main/java/org/chs/camlauncher/backend/launch/GameProcess.java`
+- `CAMLBackend/src/main/java/org/chs/camlauncher/backend/launch/ProcessListener.java`
 - `CAMLBackend/src/main/java/org/chs/camlauncher/backend/launch/`
