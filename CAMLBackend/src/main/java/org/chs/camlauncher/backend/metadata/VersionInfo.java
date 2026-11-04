@@ -31,4 +31,39 @@ public record VersionInfo(
         libraries = libraries == null ? List.of() : List.copyOf(libraries);
         logging = logging == null ? Map.of() : Map.copyOf(logging);
     }
+
+    /**
+     * 复制一份使用指定 id 的版本信息。
+     *
+     * <p>本地安装目录名就是启动时使用的版本 id。部分第三方启动器或整合包会保留
+     * JSON 内部的原版 id 而重命名目录，因此需要把 id 统一为目录名，保证
+     * {@code versions/<id>/<id>.jar} 等路径一致。</p>
+     *
+     * @param newId 新的版本 id，通常取自版本目录名
+     * @return 替换 id 后的新实例；id 相同时直接返回自身
+     */
+    public VersionInfo withId(String newId) {
+        Objects.requireNonNull(newId, "newId");
+        if (newId.equals(id)) {
+            return this;
+        }
+        return new VersionInfo(
+                newId,
+                type,
+                inheritsFrom,
+                mainClass,
+                assets,
+                assetIndex,
+                minecraftArguments,
+                arguments,
+                downloads,
+                javaVersion,
+                libraries,
+                logging,
+                minimumLauncherVersion,
+                time,
+                releaseTime,
+                complianceLevel
+        );
+    }
 }

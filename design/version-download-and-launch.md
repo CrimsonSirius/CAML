@@ -41,7 +41,39 @@ CAMLBackend.installVersion(...)
 → 返回 InstalledVersion
 ```
 
-### 2.2 获取版本清单
+### 2.2 本地已有版本优先
+
+`VersionsInstaller`（`VersionInstaller`）启动前先检查：
+
+```text
+<游戏目录>/versions/<id>/<id>.json
+```
+
+只要该文件存在，就直接使用**本地版本 JSON**，不会访问官方版本清单。
+因此版本 ID 就是 `versions/` 下的文件夹名，可以是第三方启动器或整合包
+自定义的名称（例如 `1.21.4-DeepSeek`），不要求出现在官方版本清单中。
+
+本地版本分支的调用链：
+
+```text
+VersionInstaller.install(...)
+→ 读取 versions/<id>/<id>.json
+→ 合并 inheritsFrom 父版本
+→ DownloadPlanner.plan(...)
+→ 只补齐缺失文件
+→ 返回 InstalledVersion
+```
+
+规则：
+
+- 本地已安装时不会重写版本 JSON，保持与外部启动器一致。
+- 合并 `inheritsFrom` 时按**文件夹名**查找父版本，兼容 JSON 内部 `id` 与文件夹名不一致的情况。
+- 解析完成后把 manifest 的 `id` 统一为文件夹名，保证 `versions/<id>/<id>.jar` 等路径一致。
+- 本地版本缺库、缺资源或缺客户端 jar 时仍会自动补齐。
+
+只有本地不存在该版本时，才进入下面的官方清单流程。
+
+### 2.3 获取版本清单
 
 `VersionManifestService.fetchManifestOrCache(...)` 默认访问：
 
@@ -61,7 +93,7 @@ https://piston-meta.mojang.com/mc/game/version_manifest_v2.json
 - 获取成功后原子写入缓存。
 - 网络失败时，如果缓存存在，则读取缓存。
 
-### 2.3 选择版本并拉取版本 JSON
+### 2.4 选择版本并拉取版本 JSON
 
 `VersionInstaller` 在清单的 `versions` 列表中按 `id` 查找目标版本。
 
@@ -87,7 +119,7 @@ versions/<id>/<id>.json
 
 这样版本目录保持标准 Minecraft 布局，方便后续启动和外部工具读取。
 
-### 2.4 处理 inheritsFrom
+### 2.5 处理 inheritsFrom
 
 `VersionInstaller.resolve(...)` 检查 `VersionInfo.inheritsFrom()`。
 
@@ -113,7 +145,7 @@ versions/<parentId>/<parentId>.json
 
 当前没有实现从远程自动安装加载器版本，所以加载器版本的 `inheritsFrom` 依赖本地已经存在的父版本。
 
-### 2.5 生成基础下载计划
+### 2.6 生成基础下载计划
 
 `DownloadPlanner.plan(resolved, gameDirectory)` 生成基础文件计划，包含：
 
@@ -129,7 +161,7 @@ versions/<parentId>/<parentId>.json
 - native classifier 中的 `${arch}` 替换为当前位数。
 - 相同目标路径会去重。
 
-### 2.6 执行基础下载
+### 2.7 执行基础下载
 
 `VersionInstaller.downloadPlan(...)` 遍历：
 
@@ -153,7 +185,7 @@ plan.missing()
 
 默认最多重试 3 轮。当前候选 URL 只有官方源。
 
-### 2.7 下载资源对象
+### 2.8 下载资源对象
 
 asset index 下载完成后，`VersionInstaller` 读取：
 
@@ -177,7 +209,7 @@ https://resources.download.minecraft.net/<hash 前两位>/<hash>
 
 资源对象同样经过 `FileDownloader`，即临时文件、SHA-1 和原子移动。
 
-### 2.8 写入版本 JSON
+### 2.9 写入版本 JSON
 
 所有基础文件和资源对象完成后，`VersionInstaller` 才把原始版本 JSON 原子写入：
 
@@ -187,7 +219,7 @@ versions/<id>/<id>.json
 
 这样可以避免下载失败时留下一个看起来已经安装完成的版本目录。
 
-### 2.9 返回结果
+### 2.10 返回结果
 
 `InstalledVersion` 包含：
 
@@ -204,7 +236,7 @@ assetIndexFile
 
 后续启动流程应直接使用这个结果，而不是重新猜测路径。
 
-### 2.10 下载目录布局
+### 2.11 下载目录布局
 
 默认配置：
 
@@ -230,7 +262,7 @@ assetIndexFile
       └─ <hash 前两位>/<hash>         资源对象
 ```
 
-### 2.11 下载链路关键类
+### 2.12 下载链路关键类
 
 | 类 | 职责 |
 |---|---|
@@ -245,7 +277,7 @@ assetIndexFile
 | `DownloadPlan` | 一组下载任务，并提供缺失文件过滤 |
 | `InstalledVersion` | 安装结果和启动所需的基础路径 |
 
-### 2.12 当前下载限制
+### 2.13 当前下载限制
 
 - 只支持原版安装；加载器安装尚未实现。
 - `inheritsFrom` 只读取本地父版本，不会自动安装父版本。
