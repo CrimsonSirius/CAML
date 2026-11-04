@@ -1,0 +1,16 @@
+# 作者身份规范化
+#
+# 本文件只影响展示与统计（git shortlog / git log --use-mailmap / GitHub 贡献者图），
+# 不会改写已有提交，也不会改变提交 SHA。
+#
+# 项目为双人合作：
+#   CrimsonSirius  —— 本地开发（227993016@qq.com）
+#   namelessgod2008 —— 协作开发
+#
+# namelessgod2008 早期提交使用过 GitHub noreply 地址，统一归并到主邮箱，
+# 避免在贡献者统计里被算成两个不同的人。
+namelessgod2008 <3505488164@qq.com> <141160378+namelessgod2008@users.noreply.github.com>
+
+# CrimsonSirius 统一使用的邮箱。
+CrimsonSirius <227993016@qq.com>
+

@@ -199,13 +199,36 @@ info.installedVersions();
 
 | 分支 | 说明 |
 |---|---|
-| `main` | 主分支 |
-| `crimson` | 开发分支 |
-| `namelessgod2008` | 个人开发分支 |
+| `main` | 主分支，保持可构建状态 |
+| `crimson` | CrimsonSirius 的开发分支 |
+| `namelessgod2008` | namelessgod2008 的开发分支 |
+
+---
+
+## 协作约定
+
+本项目为双人合作。
+
+| 成员 | 提交邮箱 | 分支 |
+|---|---|---|
+| CrimsonSirius | `227993016@qq.com` | `crimson` |
+| namelessgod2008 | `3505488164@qq.com` | `namelessgod2008` |
+
+- 各自在自己的分支开发，通过 Pull Request 合入 `main`。
+- 提交前请确认仓库级 Git 身份正确，避免提交错记为他人。
+- 仓库根目录的 `.mailmap` 用于统一作者邮箱；
+  namelessgod2008 早期的 GitHub noreply 地址已归并到主邮箱，
+  使贡献者统计保持为两人。`.mailmap` 只影响展示，不改写历史提交。
+
+---
+
+## 贡献者
+
+- [CrimsonSirius](https://github.com/CrimsonSirius)
+- [namelessgod2008](https://github.com/namelessgod2008)
 
 ---
 
 ## 许可证
 
 本项目基于 [GPL-3.0-only](LICENSE) 发布。
-
