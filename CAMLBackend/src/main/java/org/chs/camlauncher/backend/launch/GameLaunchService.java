@@ -16,7 +16,8 @@ import java.util.List;
 import java.util.Objects;
 
 public final class GameLaunchService {
-    private final Path gameDirectory;
+    /** 未显式指定游戏目录时使用的默认目录。 */
+    private final Path defaultGameDirectory;
     private final URI manifestUri;
     private final Path manifestCacheFile;
     private final VersionInstaller versionInstaller;
@@ -39,7 +40,7 @@ public final class GameLaunchService {
             VirtualAssetInstaller virtualAssetInstaller,
             ProcessLauncher processLauncher
     ) {
-        this.gameDirectory = Objects.requireNonNull(gameDirectory, "gameDirectory");
+        this.defaultGameDirectory = Objects.requireNonNull(gameDirectory, "gameDirectory");
         this.manifestUri = Objects.requireNonNull(manifestUri, "manifestUri");
         this.manifestCacheFile = Objects.requireNonNull(manifestCacheFile, "manifestCacheFile");
         this.versionInstaller = Objects.requireNonNull(versionInstaller, "versionInstaller");
@@ -51,6 +52,9 @@ public final class GameLaunchService {
         this.processLauncher = Objects.requireNonNull(processLauncher, "processLauncher");
     }
 
+    /**
+     * 使用默认游戏目录启动游戏。
+     */
     public GameLaunch launch(
             String versionId,
             String username,
@@ -58,6 +62,30 @@ public final class GameLaunchService {
             DownloadListener downloadListener,
             ProcessListener processListener
     ) throws IOException, InterruptedException {
+        return launch(
+                versionId,
+                defaultGameDirectory,
+                username,
+                options,
+                downloadListener,
+                processListener
+        );
+    }
+
+    /**
+     * 使用指定游戏目录启动游戏。
+     *
+     * <p>目录由前端选择，但安装、登录、Java 选择、natives 解压和进程启动都在后端完成。</p>
+     */
+    public GameLaunch launch(
+            String versionId,
+            Path gameDirectory,
+            String username,
+            LaunchOptions options,
+            DownloadListener downloadListener,
+            ProcessListener processListener
+    ) throws IOException, InterruptedException {
+        Objects.requireNonNull(gameDirectory, "gameDirectory");
         InstalledVersion installed = versionInstaller.install(
                 versionId,
                 gameDirectory,

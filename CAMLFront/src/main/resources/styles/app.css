@@ -51,3 +51,87 @@
     -fx-text-fill: #484f58;
     -fx-font-size: 12px;
 }
+
+/* === 表单控件样式 (输入框、下拉框) === */
+.form-input {
+    -fx-background-color: #21262d;
+    -fx-text-fill: #c9d1d9;
+    -fx-border-color: #30363d;
+    -fx-border-radius: 6px;
+    -fx-background-radius: 6px;
+    -fx-padding: 6px;
+}
+
+.form-input:focused {
+    -fx-border-color: #58a6ff; /* 聚焦时蓝色边框 */
+}
+
+/* 下拉框内部的文字颜色 */
+.form-input .list-cell {
+    -fx-text-fill: #c9d1d9;
+    -fx-background-color: #21262d;
+}
+
+/* === 主按钮样式 === */
+.launch-button {
+    -fx-background-color: #238636;
+    -fx-text-fill: white;
+    -fx-font-weight: bold;
+    -fx-font-size: 14px;
+    -fx-cursor: hand;
+    -fx-background-radius: 6px;
+    -fx-padding: 8 24;
+}
+
+.launch-button:hover {
+    -fx-background-color: #2ea043; /* 鼠标悬停变亮 */
+}
+
+.launch-button:disabled {
+    -fx-opacity: 0.6;
+}
+
+/* === 次要按钮（浏览目录等） === */
+.secondary-button {
+    -fx-background-color: #21262d;
+    -fx-text-fill: #c9d1d9;
+    -fx-font-size: 13px;
+    -fx-cursor: hand;
+    -fx-background-radius: 6px;
+    -fx-border-color: #30363d;
+    -fx-border-radius: 6px;
+    -fx-padding: 6 12;
+}
+
+.secondary-button:hover {
+    -fx-background-color: #30363d;
+}
+
+.secondary-button:pressed {
+    -fx-background-color: #161b22;
+}
+
+/* === 表单辅助提示文字 === */
+.field-hint {
+    -fx-text-fill: #8b949e;
+    -fx-font-size: 11px;
+}
+
+.field-hint-error {
+    -fx-text-fill: #f85149;
+    -fx-font-size: 11px;
+}
+
+/* === 日志框样式 === */
+.log-area {
+    -fx-control-inner-background: #0d1117;
+    -fx-text-fill: #c9d1d9;
+    -fx-font-family: 'Consolas', monospace;
+    -fx-border-color: #30363d;
+    -fx-border-radius: 6px;
+}
+
+/* TextArea 在 JavaFX 内部嵌套很深，需要通过 .content 控制内边距 */
+.log-area .content {
+    -fx-background-color: #0d1117;
+}

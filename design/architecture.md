@@ -30,7 +30,7 @@ CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
 | `auth` | 账号、AuthSession、离线登录 | 已有离线能力 |
 | `runtime` | Java 运行时检测、版本/架构/位数匹配 | 已有 |
 | `launch` | LaunchPlan、classpath、参数、进程启动 | 仅有占位 |
-| `loader` | Fabric、Quilt、Forge、NeoForge 等加载器 | 未实现 |
+| `loader` | Fabric、Quilt���Forge、NeoForge 等加载器 | 未实现 |
 | `json` | 通用 JSON 文件读写 | 已有 |
 
 ## 3. 当前已实现能力
@@ -58,6 +58,8 @@ CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
 ### 3.3 实例安装
 
 - 按版本 ID 安装原版。
+- 本地已安装的版本（包括第三方启动器/整合包的自定义版本 ID）直接复用，不访问官方清单。
+- 复用本地版本时保持版本 JSON 不变，只补齐缺失文件。
 - 基础文件下载完成后才写入版本 JSON。
 - 返回 `InstalledVersion`，包含后续启动需要的路径。
 
@@ -129,7 +131,7 @@ CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
 
 - 启动器隐藏/保留/关闭策略。
 - 异常退出分类和崩溃分析。
-- CAMLFront 启动错误对话框。
+- CAMLFront 启动���误对话框。
 - 微软账号登录。
 - token 刷新和安全存储。
 - Fabric、Quilt、Forge、NeoForge 等加载器安装。

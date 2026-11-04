@@ -55,7 +55,7 @@ CAML
 ### 3.1 版本元数据
 
 - 解析 `version_manifest_v2.json`。
-- 解析单版本 JSON。
+- ��析单版本 JSON。
 - 解析字符串参数和带规则参数。
 - 解析 libraries、asset index、downloads、javaVersion 和 logging。
 - 支持 OS、架构、版本正则和 features 规则。
@@ -82,8 +82,12 @@ CAML
 ### 3.4 版本安装
 
 - 按版本 ID 安装原版。
+- **本地优先**：`versions/<id>/<id>.json` 已存在时直接复用本地版本，不访问官方清单。
+- 版本 ID 即 `versions/` 下的文件夹名，支持第三方启动器/整合包的自定义名称（如 `1.21.4-DeepSeek`）。
+- 解析后把 manifest 的 `id` 统一为文件夹名，`inheritsFrom` 按文件夹名查找父版本。
 - 支持本地已安装父版本。
-- 下载完成后才写入版本 JSON。
+- 下载完成后才写入版本 JSON；复用本地版本时保持原文件不变。
+- 补齐本地版本缺失的库、资源和客户端 jar。
 - 返回 `InstalledVersion`。
 
 ### 3.5 离线账号
@@ -127,7 +131,7 @@ CAML
 
 - 清理旧 natives 目录。
 - 解压当前系统 native jar。
-- 跳过 `META-INF/` 和 `extract.exclude`。
+- 跳过 `META-INF/` �� `extract.exclude`。
 - 下载 Log4j 配置到 `assets/log_configs`。
 - 注入 `-Dlog4j.configurationFile`。
 - 旧版本 virtual assets 重建。
@@ -239,7 +243,7 @@ PATH=/usr/lib/jvm/zulu-25/bin:$PATH \
 - 微软账号登录。
 - token 刷新和安全存储。
 - Fabric、Quilt、Forge、NeoForge 等加载器。
-- 镜像源、并发下载、取消和内容寻址缓存。
+- 镜像��、并发下载、取消和内容寻址缓存。
 - quick play 和服务器直连。
 - 整合包和模组管理。
 

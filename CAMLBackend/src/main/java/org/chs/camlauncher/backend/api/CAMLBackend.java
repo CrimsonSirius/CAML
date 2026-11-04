@@ -33,7 +33,11 @@ import org.chs.camlauncher.backend.runtime.JavaLocator;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.List;
 import java.util.Objects;
+import java.util.stream.Stream;
 
 public final class CAMLBackend implements AutoCloseable {
     public static final String VERSION = "1.0-SNAPSHOT";
@@ -169,6 +173,43 @@ public final class CAMLBackend implements AutoCloseable {
         );
     }
 
+    /**
+     * 探测指定游戏目录，返回目录状态和已安装版本列表。
+     *
+     * <p>CAMLFront 不允许直接读取文件系统，因此“游戏位置”界面在用户选择目录后,
+     * 通过该方法把磁盘探测交给后端完成。</p>
+     *
+     * @param directory 用户选择或使用默认值的游戏目录（通常是 {@code .minecraft}）
+     * @return 规范化后的目录信息；目录不存在时 {@code directoryExists} 为 {@code false}
+     */
+    public GameDirectoryInfo inspectGameDirectory(Path directory) {
+        Objects.requireNonNull(directory, "directory");
+        Path normalized = directory.toAbsolutePath().normalize();
+        if (!Files.isDirectory(normalized)) {
+            return new GameDirectoryInfo(normalized, false, List.of());
+        }
+
+        Path versionsDirectory = normalized.resolve("versions");
+        if (!Files.isDirectory(versionsDirectory)) {
+            return new GameDirectoryInfo(normalized, true, List.of());
+        }
+
+        List<String> versions;
+        try (Stream<Path> entries = Files.list(versionsDirectory)) {
+            versions = entries
+                    .filter(Files::isDirectory)
+                    // 只统计真正安装完成的版本：versions/<id>/<id>.json
+                    .filter(entry -> Files.isRegularFile(
+                            entry.resolve(entry.getFileName().toString() + ".json")))
+                    .map(entry -> entry.getFileName().toString())
+                    .sorted()
+                    .toList();
+        } catch (IOException e) {
+            throw new UncheckedIOException("Failed to inspect game directory: " + normalized, e);
+        }
+        return new GameDirectoryInfo(normalized, true, versions);
+    }
+
     public AuthSession loginOffline(String username) {
         return new OfflineAccount(username).login();
     }
@@ -214,6 +255,9 @@ public final class CAMLBackend implements AutoCloseable {
         return gameLaunchService;
     }
 
+    /**
+     * 使用后端配置中的默认游戏目录启动游戏。
+     */
     public GameLaunch launchGame(
             String versionId,
             String username,
@@ -221,8 +265,33 @@ public final class CAMLBackend implements AutoCloseable {
             DownloadListener downloadListener,
             ProcessListener processListener
     ) throws IOException, InterruptedException {
+        return launchGame(
+                versionId,
+                config.gameDirectory(),
+                username,
+                options,
+                downloadListener,
+                processListener
+        );
+    }
+
+    /**
+     * 使用指定游戏目录启动游戏。
+     *
+     * <p>游戏目录由前端“游戏位置”界面选择，但目录创建、版本安装、Java 选择、
+     * 进程启动等所有磁盘与进程操作仍然全部在后端完成。</p>
+     */
+    public GameLaunch launchGame(
+            String versionId,
+            Path gameDirectory,
+            String username,
+            LaunchOptions options,
+            DownloadListener downloadListener,
+            ProcessListener processListener
+    ) throws IOException, InterruptedException {
         return gameLaunchService.launch(
                 versionId,
+                gameDirectory,
                 username,
                 options,
                 downloadListener,
