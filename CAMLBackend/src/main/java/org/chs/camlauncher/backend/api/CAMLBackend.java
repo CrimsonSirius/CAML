@@ -10,6 +10,7 @@ import org.chs.camlauncher.backend.download.AssetDownloadPlanner;
 import org.chs.camlauncher.backend.download.DownloadListener;
 import org.chs.camlauncher.backend.download.DownloadPlanner;
 import org.chs.camlauncher.backend.download.FileDownloader;
+import org.chs.camlauncher.backend.instance.GameDataLayout;
 import org.chs.camlauncher.backend.instance.InstalledVersion;
 import org.chs.camlauncher.backend.instance.VersionInstaller;
 import org.chs.camlauncher.backend.json.JsonService;
@@ -186,28 +187,37 @@ public final class CAMLBackend implements AutoCloseable {
         Objects.requireNonNull(directory, "directory");
         Path normalized = directory.toAbsolutePath().normalize();
         if (!Files.isDirectory(normalized)) {
-            return new GameDirectoryInfo(normalized, false, List.of());
+            return new GameDirectoryInfo(normalized, false, List.of(), List.of());
         }
 
         Path versionsDirectory = normalized.resolve("versions");
         if (!Files.isDirectory(versionsDirectory)) {
-            return new GameDirectoryInfo(normalized, true, List.of());
+            return new GameDirectoryInfo(normalized, true, List.of(), List.of());
         }
 
         List<String> versions;
+        List<String> isolated;
         try (Stream<Path> entries = Files.list(versionsDirectory)) {
-            versions = entries
+            List<Path> installed = entries
                     .filter(Files::isDirectory)
                     // 只统计真正安装完成的版本：versions/<id>/<id>.json
                     .filter(entry -> Files.isRegularFile(
                             entry.resolve(entry.getFileName().toString() + ".json")))
+                    .toList();
+            versions = installed.stream()
+                    .map(entry -> entry.getFileName().toString())
+                    .sorted()
+                    .toList();
+            // 标记启用“版本隔离”的版本：游戏数据（saves、options.txt 等）位于版本目录内。
+            isolated = installed.stream()
+                    .filter(GameDataLayout::isIsolated)
                     .map(entry -> entry.getFileName().toString())
                     .sorted()
                     .toList();
         } catch (IOException e) {
             throw new UncheckedIOException("Failed to inspect game directory: " + normalized, e);
         }
-        return new GameDirectoryInfo(normalized, true, versions);
+        return new GameDirectoryInfo(normalized, true, versions, isolated);
     }
 
     public AuthSession loginOffline(String username) {

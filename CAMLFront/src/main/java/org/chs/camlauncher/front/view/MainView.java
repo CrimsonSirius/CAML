@@ -32,6 +32,7 @@ public final class MainView extends VBox {
     private final Button browseButton;
     private final Label gamePathHint;
     private final ComboBox<String> versionBox;
+    private final Label savePathHint;
     private final TextField usernameField;
     private final Spinner<Integer> memorySpinner;
     private final Button launchBtn;
@@ -106,6 +107,12 @@ public final class MainView extends VBox {
         versionBox.getStyleClass().add("form-input");
         setVersionValue(DEFAULT_VERSION);
 
+        savePathHint = new Label();
+        savePathHint.getStyleClass().add("field-hint");
+        savePathHint.setWrapText(true);
+        savePathHint.setMaxWidth(controlWidth);
+        VBox versionCell = new VBox(4, versionBox, savePathHint);
+
         Label uLabel = new Label("离线用户名");
         uLabel.getStyleClass().add("field-label");
 
@@ -124,7 +131,7 @@ public final class MainView extends VBox {
         formGrid.add(pathLabel, 0, 0);
         formGrid.add(pathCell, 1, 0);
         formGrid.add(vLabel, 0, 1);
-        formGrid.add(versionBox, 1, 1);
+        formGrid.add(versionCell, 1, 1);
         formGrid.add(uLabel, 0, 2);
         formGrid.add(usernameField, 1, 2);
         formGrid.add(mLabel, 0, 3);
@@ -178,6 +185,15 @@ public final class MainView extends VBox {
         });
 
         controller.setOnGameDirectoryInspected(this::applyGameDirectoryInfo);
+
+        // 版本变化时刷新“存档位置”提示。
+        versionBox.valueProperty().addListener((observable, oldValue, newValue) ->
+                updateSaveLocationHint());
+        if (versionBox.getEditor() != null) {
+            versionBox.getEditor().textProperty().addListener((observable, oldValue, newValue) ->
+                    updateSaveLocationHint());
+        }
+
 
         // 游戏位置切换后，重新探测目录并刷新版本列表。
         gameDirectoryBox.valueProperty().addListener((observable, oldValue, newValue) -> {
@@ -281,6 +297,8 @@ public final class MainView extends VBox {
             setVersionValue(previous.isEmpty() ? DEFAULT_VERSION : previous);
             setGamePathHint("未检测到已安装版本，启动时将自动下载", false);
         }
+
+        updateSaveLocationHint();
     }
 
     /** 读取可编辑版本框中的实际文本。 */
@@ -307,5 +325,29 @@ public final class MainView extends VBox {
     private void setVersionValue(String version) {
         versionBox.setValue(version);
         versionBox.getEditor().setText(version);
+    }
+
+    /**
+     * 刷新“存档位置”提示。
+     *
+     * <p>启用版本隔离的版本（PCL/HMCL 默认行为）存档在 {@code versions/<id>/saves}，
+     * 否则在 {@code .minecraft/saves}。后端负责实际判定，前端只做展示。</p>
+     */
+    private void updateSaveLocationHint() {
+        Path gameDirectory = gameDirectoryBox.getValue();
+        String version = currentVersionInput();
+        if (gameDirectory == null || version.isEmpty()) {
+            savePathHint.setText("");
+            return;
+        }
+
+        boolean isolated = lastGameDirectoryInfo != null && lastGameDirectoryInfo.isIsolated(version);
+        if (isolated) {
+            savePathHint.setText("版本隔离：存档在 versions/" + version + "/saves");
+        } else {
+            savePathHint.setText("存档位置：" + gameDirectory.resolve("saves"));
+        }
+        savePathHint.getStyleClass().removeAll("field-hint", "field-hint-error");
+        savePathHint.getStyleClass().add("field-hint");
     }
 }

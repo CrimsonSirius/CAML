@@ -84,6 +84,9 @@ CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
 - 合并 `InstalledVersion`、`AuthSession`、`JavaRuntime`、目录和 `LaunchOptions`。
 - 支持内存、分辨率、JVM 参数、游戏参数和环境变量。
 - 启动计划创建时校验 Java 是否满足版本要求。
+- **版本隔离**：`GameDataLayout` 检测 `versions/<id>` 内是否存在 `saves`、`options.txt`、
+  `logs`、`mods` 等游戏数据；若存在，则 `--gameDir` 指向该版本目录，
+  `libraries` 与 `assets` 仍来自 `.minecraft` 根目录。
 
 ### 3.7 classpath
 
@@ -183,4 +186,4 @@ backend.launchGame(versionId, username, options, downloadListener, processListen
 - 版本下载和启动链路详见 [version-download-and-launch.md](version-download-and-launch.md)。
 - runtime 包详见 [runtime.md](runtime.md)。
 - 当前实现情况详见 [Implement.md](Implement.md)。
-- 开发任务和阶段计划由本地 `TODO.md` 维护。
+- 开发任务和阶段计划由本地 `TODO.md` 维护.

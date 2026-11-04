@@ -55,7 +55,7 @@ CAML
 ### 3.1 版本元数据
 
 - 解析 `version_manifest_v2.json`。
-- ��析单版本 JSON。
+- ���析单版本 JSON。
 - 解析字符串参数和带规则参数。
 - 解析 libraries、asset index、downloads、javaVersion 和 logging。
 - 支持 OS、架构、版本正则和 features 规则。
@@ -87,7 +87,7 @@ CAML
 - 解析后把 manifest 的 `id` 统一为文件夹名，`inheritsFrom` 按文件夹名查找父版本。
 - 支持本地已安装父版本。
 - 下载完成后才写入版本 JSON；复用本地版本时保持原文件不变。
-- 补齐本地版本缺失的库、资源和客户端 jar。
+- 补齐本地版本缺失的库、资源和��户端 jar。
 - 返回 `InstalledVersion`。
 
 ### 3.5 离线账号
@@ -110,6 +110,9 @@ CAML
 - 合并 `InstalledVersion`、`AuthSession`、`JavaRuntime`、目录和 `LaunchOptions`。
 - 支持内存、分辨率、JVM 参数、游戏参数和环境变量。
 - 创建计划时校验 Java 是否满足版本要求。
+- **版本隔离**：`versions/<id>` 内存在 `saves`、`options.txt` 等游戏数据时，
+  以该版本目录作为 `--gameDir`，否则使用 `.minecraft` 根目录。
+- `.minecraft/libraries` 与 `.minecraft/assets` 始终来自根目录。
 
 ### 3.8 classpath
 

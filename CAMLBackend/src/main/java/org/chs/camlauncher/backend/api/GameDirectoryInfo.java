@@ -12,14 +12,18 @@ import java.util.List;
  * @param directory         规范化后的绝对路径
  * @param directoryExists   目录是否存在且确实是一个目录
  * @param installedVersions 已安装版本 ID 列表（按字典序排序，可能为空）
+ * @param isolatedVersions  启用了版本隔离的版本 ID 列表
+ *                           （游戏数据位于 {@code versions/<id>}，如 PCL、HMCL 的默认行为）
  */
 public record GameDirectoryInfo(
         Path directory,
         boolean directoryExists,
-        List<String> installedVersions
+        List<String> installedVersions,
+        List<String> isolatedVersions
 ) {
     public GameDirectoryInfo {
         installedVersions = List.copyOf(installedVersions);
+        isolatedVersions = List.copyOf(isolatedVersions);
     }
 
     /**
@@ -28,5 +32,12 @@ public record GameDirectoryInfo(
     public boolean hasInstalledVersions() {
         return !installedVersions.isEmpty();
     }
-}
 
+    /**
+     * @param versionId 版本 ID
+     * @return 该版本是否启用了版本隔离
+     */
+    public boolean isIsolated(String versionId) {
+        return isolatedVersions.contains(versionId);
+    }
+}

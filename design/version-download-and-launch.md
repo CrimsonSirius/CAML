@@ -455,7 +455,7 @@ List<String> gameArgs = backend.gameArgumentsBuilder().build(plan, classpath);
 - 清理 `versions/<id>/natives`。
 - 按当前 OS 和位数选择 native jar。
 - 支持旧式 `natives` classifier 和新式 `natives-*` library。
-- 跳过目录、`META-INF/` 和 `extract.exclude`��
+- 跳过目录、`META-INF/` 和 `extract.exclude`。
 - 防止 zip slip 路径逃逸。
 
 Log4j 配置由两部分组成：

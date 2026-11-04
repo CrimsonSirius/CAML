@@ -3,6 +3,7 @@ package org.chs.camlauncher.backend.launch;
 import org.chs.camlauncher.backend.auth.AuthSession;
 import org.chs.camlauncher.backend.auth.OfflineAccount;
 import org.chs.camlauncher.backend.download.DownloadListener;
+import org.chs.camlauncher.backend.instance.GameDataLayout;
 import org.chs.camlauncher.backend.instance.InstalledVersion;
 import org.chs.camlauncher.backend.instance.VersionInstaller;
 import org.chs.camlauncher.backend.runtime.JavaLocator;
@@ -103,7 +104,15 @@ public final class GameLaunchService {
                         null
                 ));
 
-        LaunchPlan plan = launchPlanner.create(installed, auth, java, options);
+        LaunchPlan plan = launchPlanner.create(
+                installed,
+                auth,
+                java,
+                options,
+                // 支持 PCL/HMCL 等启动器的“版本隔离”：游戏数据可能在 versions/<id> 内。
+                GameDataLayout.resolve(installed.gameDirectory(), installed.versionDirectory())
+        );
+
         plan = virtualAssetInstaller.prepare(plan);
         nativeExtractor.extract(plan);
         List<Path> classpath = classpathBuilder.build(plan);

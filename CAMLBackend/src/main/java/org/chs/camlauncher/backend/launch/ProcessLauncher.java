@@ -25,7 +25,7 @@ public final class ProcessLauncher {
             throws IOException {
         LaunchCommand command = commandBuilder.build(plan, classpath);
         try {
-            return start(command.asList(), command.workingDirectory(), command.environment(), listener, null);
+            return start(command.asList(), command.workingDirectory(), command.environment(), listener, null, plan);
         } catch (IOException firstFailure) {
             if (!LaunchException.isCommandTooLong(firstFailure)) {
                 throw LaunchException.from(firstFailure);
@@ -34,14 +34,14 @@ public final class ProcessLauncher {
             IOException argFileFailure = null;
             if (plan.java().majorVersion() >= 9) {
                 try {
-                    return launchWithArgFile(command, listener);
+                    return launchWithArgFile(plan, command, listener);
                 } catch (IOException e) {
                     argFileFailure = e;
                 }
             }
 
             try {
-                return launchWithManifest(command, classpath, listener);
+                return launchWithManifest(plan, command, classpath, listener);
             } catch (IOException manifestFailure) {
                 if (argFileFailure != null) {
                     manifestFailure.addSuppressed(argFileFailure);
@@ -56,7 +56,7 @@ public final class ProcessLauncher {
 
     }
 
-    private GameProcess launchWithArgFile(LaunchCommand command, ProcessListener listener)
+    private GameProcess launchWithArgFile(LaunchPlan plan, LaunchCommand command, ProcessListener listener)
             throws IOException {
         Path argumentFile = ArgumentFile.write(command.jvmArguments());
         try {
@@ -70,7 +70,8 @@ public final class ProcessLauncher {
                     command.workingDirectory(),
                     command.environment(),
                     listener,
-                    argumentFile
+                    argumentFile,
+                    plan
             );
         } catch (IOException e) {
             Files.deleteIfExists(argumentFile);
@@ -79,6 +80,7 @@ public final class ProcessLauncher {
     }
 
     private GameProcess launchWithManifest(
+            LaunchPlan plan,
             LaunchCommand command,
             List<Path> classpath,
             ProcessListener listener
@@ -107,7 +109,8 @@ public final class ProcessLauncher {
                     command.workingDirectory(),
                     command.environment(),
                     listener,
-                    manifestJar
+                    manifestJar,
+                    plan
             );
         } catch (IOException e) {
             Files.deleteIfExists(manifestJar);
@@ -120,20 +123,24 @@ public final class ProcessLauncher {
             Path workingDirectory,
             Map<String, String> environment,
             ProcessListener listener,
-            Path cleanupFile
+            Path cleanupFile,
+            LaunchPlan plan
     ) throws IOException {
         ProcessBuilder builder = new ProcessBuilder(commandLine);
         builder.directory(workingDirectory.toFile());
         builder.environment().putAll(environment);
 
         if (isWindows()) {
-            Path appData = workingDirectory.toAbsolutePath().getParent();
+            // 启用版本隔离时 workingDirectory 是 versions/<id>,
+            // 其父级会是 versions 目录，因此以 .minecraft 根目录为基准计算 APPDATA。
+            Path appData = plan.instance().gameDirectory().toAbsolutePath().getParent();
             if (appData != null) {
                 builder.environment().put("APPDATA", appData.toString());
             }
         }
 
         return new GameProcess(builder.start(), commandLine, listener, cleanupFile);
+
     }
 
     private static boolean isWindows() {

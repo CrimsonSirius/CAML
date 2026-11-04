@@ -101,9 +101,7 @@ public final class MainController {
                 List.of(), List.of(), Map.of()
         );
 
-        DownloadListener downloadListener = progress ->
-                sendLog(String.format("[下载] %s: %d / %d",
-                        progress.label(), progress.downloaded(), progress.total()));
+        DownloadListener downloadListener = new ThrottledDownloadLogger();
 
         ProcessListener processListener = new ProcessListener() {
             @Override
@@ -182,6 +180,44 @@ public final class MainController {
     private void sendStatus(String status) {
         if (onStatusChanged != null) {
             Platform.runLater(() -> onStatusChanged.accept(status));
+        }
+    }
+
+    /**
+     * 下载进度节流器。
+     *
+     * <p>下载器每写入 8KB 就回调一次，如果全部写进日志框会瞬间刷屏。
+     * 这里按“文件切换”和“百分比变化”两个条件输出，最后一帧必定输出。</p>
+     */
+    private final class ThrottledDownloadLogger implements DownloadListener {
+        private String lastLabel;
+        private int lastPercent = -1;
+
+        @Override
+        public void onProgress(DownloadProgress progress) {
+            boolean finished = progress.total() > 0 && progress.downloaded() >= progress.total();
+            boolean labelChanged = lastLabel == null || !lastLabel.equals(progress.label());
+
+            if (labelChanged) {
+                lastLabel = progress.label();
+                lastPercent = -1;
+            } else if (!finished) {
+                int percent = progress.total() > 0
+                        ? (int) (progress.downloaded() * 100 / progress.total())
+                        : -1;
+                // 同一文件内每 10% 才输出一次。
+                if (percent < 0 || percent < lastPercent + 10) {
+                    return;
+                }
+                lastPercent = percent;
+            }
+
+            if (progress.total() > 0) {
+                sendLog(String.format("[下载] %s (%d/%d)",
+                        progress.label(), progress.downloaded(), progress.total()));
+            } else {
+                sendLog(String.format("[下载] %s (%d)", progress.label(), progress.downloaded()));
+            }
         }
     }
 }
