@@ -1,7 +1,9 @@
 package org.chs.camlauncher.front;
 
 import javafx.application.Application;
+import javafx.geometry.Rectangle2D;
 import javafx.scene.Scene;
+import javafx.stage.Screen;
 import javafx.stage.Stage;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -57,8 +59,14 @@ public final class CAMLApplication extends Application {
         controller = new MainController(backend);
         MainView view = new MainView(controller);
 
-        // 3. 设置场景：结构样式内置，配色来自 <data>/themes/*.css
-        Scene scene = new Scene(view, 1180, 760);
+        // 3. 按主屏幕可用区域决定窗口尺寸：小屏不溢出，大屏不过小，默认居中
+        Rectangle2D screen = Screen.getPrimary().getVisualBounds();
+        WindowSizePlanner.WindowMetrics metrics = WindowSizePlanner.compute(
+                screen.getMinX(), screen.getMinY(), screen.getWidth(), screen.getHeight());
+        WindowSizePlanner.WindowGeometry window = metrics.window();
+
+        // 4. 设置场景：结构样式内置，配色来自 <data>/themes/*.css
+        Scene scene = new Scene(view, window.width(), window.height());
         CamlTheme.install(scene);
         if (activeTheme != null) {
             try {
@@ -79,10 +87,18 @@ public final class CAMLApplication extends Application {
         }
 
         stage.setTitle("CAML");
-        stage.setMinWidth(720);
-        stage.setMinHeight(700);
+        stage.setMinWidth(metrics.minWidth());
+        stage.setMinHeight(metrics.minHeight());
         stage.setScene(scene);
+        stage.setWidth(window.width());
+        stage.setHeight(window.height());
+        stage.setX(window.x());
+        stage.setY(window.y());
         stage.show();
+
+        logger.info("窗口尺寸 {}x{}（屏幕可用区域 {}x{}）",
+                (long) window.width(), (long) window.height(),
+                (long) screen.getWidth(), (long) screen.getHeight());
     }
 
     /** 立即应用主题，并把选择写入 ~/.caml/theme.txt。 */
@@ -105,7 +121,7 @@ public final class CAMLApplication extends Application {
 
     @Override
     public void stop() {
-        // 4. 清理资源：先停前端后台线程，再关闭后端
+        // 5. 清理资源：先停前端后台线程，再关闭后端
         if (controller != null) {
             controller.shutdown();
         }

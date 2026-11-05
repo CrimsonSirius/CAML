@@ -39,11 +39,7 @@
     -fx-background-color: -caml-surface-container;
 }
 
-.app-log-area {
-    -fx-pref-height: 460;
-    -fx-min-height: 200;
-}
-
+/* 日志文本区的高度由 MainView 按断点设置：CSS 声明会覆盖代码设置，因此此处不写 -fx-min-height / -fx-pref-height。 */
 .app-workspace {
     -fx-background-color: transparent;
     -fx-background-insets: 0;
