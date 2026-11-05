@@ -34,7 +34,7 @@ CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
 | `runtime` | Java 运行时检测、版本/架构/位数匹配 | 已有 |
 | `launch` | LaunchPlan、classpath、参数、进程启动 | 已有 |
 | `theme` | 主题目录、默认主题复制和当前主题配置 | 已有 |
-| `settings` | 启动器设置持久化（当前为最大内存） | 已有 |
+| `settings` | 启动器设置持久化（游戏位置、最大内存） | 已有 |
 | `system` | 物理内存与可用内存读取 | 已有 |
 | `loader` | Fabric、Quilt、Forge、NeoForge 等加载器 | 未实现 |
 | `json` | 通用 JSON 文件读写 | 已有 |
@@ -146,18 +146,19 @@ CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
 - `CAMLApplication` 初始化后端并创建 `MainView`。
 - `MainView` 只负责壳层：顶栏、主导航、`CamlPageHost` 和底栏。
 - `HomeView` 组合 `LaunchFormView` 与 `LogPaneView`，负责主页分栏和 900px 断点。
-- `LaunchFormView` 负责游戏位置、版本、用户名、状态提示和启动交互。
+- `LaunchFormView` 负责当前实例、用户名、状态提示和启动交互；
+  “浏览游戏实例”打开二级列表，“管理实例”打开空管理页。
+- `GameLocationSettingsView` 负责游戏位置草稿、浏览、显式保存和目录校验。
+- `InstancePickerView` 扫描当前游戏位置并列出全部已安装实例。
 - `DownloadsView` 是空白下载页；`SettingsView` 负责设置页子导航。
 - `GameSettingsView` 负责叠层内存滑块，`LauncherSettingsView` 负责主题选择。
 - `SystemMemoryService` 在 Linux 读取 `/proc/meminfo` 的 `MemAvailable`，避免把
   `MemFree` 误当成任务管理器显示的可用内存。
 - `MainController` 每 500ms 在后台线程读取一次系统内存，并通过 `Platform.runLater`
   立即刷新设置页。
-- 最大内存保存在 `~/.caml/settings.properties`，启动时加载，滑块停止变化后异步保存。
-- `LaunchSettings` 在主页和设置页之间共享最大内存值；`ViewSupport` 提供通用字段与侧边栏布局。
-- 游戏位置支持默认目录和 `DirectoryChooser` 选择本地已有目录。
-- 版本框可编辑，可直接输入第三方启动器/整合包的自定义版本 ID。
-- 版本框下方显示存档位置：隔离版本提示 `versions/<id>/saves`，否则提示 `.minecraft/saves`。
+- 游戏位置和最大内存保存在 `~/.caml/settings.properties`，启动时加载；游戏位置只有点击保存才写入。
+- `LaunchSettings` 在主页和设置页之间共享游戏位置和最大内存值；`ViewSupport` 提供通用字段与侧边栏布局。
+- 当前实例通过共享 `LaunchSettings.selectedVersion` 管理；实例信息下方显示存档位置。
 - `MainController` 使用独立 I/O 线程执行目录探测和启动，不阻塞 JavaFX Application Thread。
 - 下载日志按文件切换和每 10% 进度节流，避免刷屏。
 - 主工作区使用 `SplitPane`：宽度 `< 900` 时上下堆叠，`>= 900` 时左右分栏。

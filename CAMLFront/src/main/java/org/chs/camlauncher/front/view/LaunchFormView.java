@@ -4,46 +4,35 @@ import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
-import javafx.scene.control.TextField;
-import javafx.scene.control.Tooltip;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
-import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
-import javafx.stage.DirectoryChooser;
 import org.chs.camlauncher.backend.api.GameDirectoryInfo;
 import org.chs.camlauncher.front.controller.MainController;
 import org.chs.camlauncher.ui.control.CamlButton;
-import org.chs.camlauncher.ui.control.CamlComboBox;
 import org.chs.camlauncher.ui.control.CamlTextField;
 
-import java.io.File;
 import java.nio.file.Path;
-import java.util.List;
 import java.util.Objects;
 
 /** 主页左侧的启动表单与启动交互。 */
 final class LaunchFormView extends BorderPane {
-    private static final List<String> DEFAULT_VERSIONS = List.of("1.21.11", "1.21.4", "1.20.4");
-    private static final String DEFAULT_VERSION = "1.21.4";
-
     private final MainController controller;
     private final LaunchSettings launchSettings;
     private final Runnable onLaunchStarted;
 
-    private final CamlComboBox<Path> gameDirectoryBox;
-    private final CamlButton browseButton;
-    private final Label gamePathHint;
-    private final CamlComboBox<String> versionBox;
-    private final Label savePathHint;
+    private final Label instanceLabel;
+    private final Label gameLocationLabel;
+    private final Label saveLocationLabel;
     private final CamlTextField usernameField;
     private final CamlButton launchBtn;
     private final Label statusLabel;
 
     private GameDirectoryInfo lastGameDirectoryInfo;
 
-    LaunchFormView(MainController controller, LaunchSettings launchSettings, Runnable onLaunchStarted) {
+    LaunchFormView(MainController controller, LaunchSettings launchSettings,
+                   Runnable onLaunchStarted, Runnable onChooseInstance, Runnable onManageInstances) {
         this.controller = Objects.requireNonNull(controller, "controller");
         this.launchSettings = Objects.requireNonNull(launchSettings, "launchSettings");
         this.onLaunchStarted = Objects.requireNonNull(onLaunchStarted, "onLaunchStarted");
@@ -52,59 +41,70 @@ final class LaunchFormView extends BorderPane {
         setPadding(new Insets(28, 40, 28, 40));
         setMinHeight(320);
 
-        gameDirectoryBox = new CamlComboBox<>();
-        gameDirectoryBox.setMinWidth(0);
-        gameDirectoryBox.setMaxWidth(Double.MAX_VALUE);
-        gameDirectoryBox.setTooltip(new Tooltip("选择 Minecraft 游戏目录，通常是 .minecraft 文件夹"));
+        instanceLabel = new Label();
+        instanceLabel.getStyleClass().add("app-instance-info-current");
+        instanceLabel.setWrapText(true);
 
-        browseButton = CamlButton.outlined("浏览");
-        browseButton.setMinWidth(64);
-        browseButton.setMaxWidth(Region.USE_PREF_SIZE);
-        browseButton.setTooltip(new Tooltip("选择本地已有的游戏目录"));
+        gameLocationLabel = new Label();
+        gameLocationLabel.getStyleClass().add("app-instance-info-detail");
+        gameLocationLabel.setWrapText(true);
 
-        gamePathHint = ViewSupport.hintLabel();
-
-        versionBox = new CamlComboBox<>();
-        versionBox.getItems().addAll(DEFAULT_VERSIONS);
-        versionBox.setEditable(true);
-        versionBox.setMaxWidth(Double.MAX_VALUE);
-        setVersionValue(DEFAULT_VERSION);
-
-        savePathHint = ViewSupport.hintLabel();
+        saveLocationLabel = new Label();
+        saveLocationLabel.getStyleClass().add("app-instance-info-detail");
+        saveLocationLabel.setWrapText(true);
 
         usernameField = new CamlTextField("namelessgod");
         usernameField.setMaxWidth(Double.MAX_VALUE);
 
-        statusLabel = new Label("准备就绪");
+        statusLabel = new Label();
         statusLabel.getStyleClass().addAll("caml-label-large", "status-ready");
         statusLabel.setWrapText(true);
+        statusLabel.setVisible(false);
+        statusLabel.setManaged(false);
 
         launchBtn = CamlButton.filled("启动游戏");
         launchBtn.setMaxWidth(Double.MAX_VALUE);
         launchBtn.setDefaultButton(true);
 
-        buildLayout();
+        buildLayout(onChooseInstance, onManageInstances);
         wireController();
         initializeDefaults();
     }
 
-    private void buildLayout() {
+    private void buildLayout(Runnable onChooseInstance, Runnable onManageInstances) {
         Label heading = new Label("启动游戏");
         heading.getStyleClass().add("caml-headline-small");
 
-        Label subheading = new Label("选择游戏位置、版本与运行参数");
+        Label subheading = new Label("选择游戏实例与运行参数");
         subheading.getStyleClass().addAll("caml-body-medium", "caml-on-surface-muted");
 
         VBox header = new VBox(6, heading, subheading);
 
+        VBox instanceInfo = new VBox(10, instanceLabel, gameLocationLabel, saveLocationLabel);
+        instanceInfo.getStyleClass().add("app-instance-info-group");
         VBox fields = new VBox(16,
-                buildPathField(),
-                ViewSupport.buildField("游戏版本", versionBox, savePathHint),
+                instanceInfo,
                 ViewSupport.buildField("离线用户名", usernameField, null)
         );
         fields.getStyleClass().add("app-fields");
 
-        VBox actions = new VBox(12, statusLabel, launchBtn);
+        CamlButton chooseInstanceButton = CamlButton.outlined("浏览游戏实例");
+        chooseInstanceButton.setMinWidth(0);
+        chooseInstanceButton.setMaxWidth(Double.MAX_VALUE);
+        HBox.setHgrow(chooseInstanceButton, Priority.ALWAYS);
+        chooseInstanceButton.setOnAction(event -> onChooseInstance.run());
+
+        CamlButton manageInstancesButton = CamlButton.outlined("管理实例");
+        manageInstancesButton.setMinWidth(0);
+        manageInstancesButton.setMaxWidth(Double.MAX_VALUE);
+        HBox.setHgrow(manageInstancesButton, Priority.ALWAYS);
+        manageInstancesButton.setOnAction(event -> onManageInstances.run());
+
+        HBox instanceActions = new HBox(8, chooseInstanceButton, manageInstancesButton);
+        instanceActions.setAlignment(Pos.CENTER_LEFT);
+        instanceActions.setMaxWidth(Double.MAX_VALUE);
+
+        VBox actions = new VBox(12, instanceActions, statusLabel, launchBtn);
         actions.getStyleClass().add("app-actions");
 
         ScrollPane fieldScroll = new ScrollPane(fields);
@@ -120,17 +120,6 @@ final class LaunchFormView extends BorderPane {
         BorderPane.setMargin(actions, new Insets(20, 0, 0, 0));
     }
 
-    private VBox buildPathField() {
-        HBox pathRow = new HBox(8, gameDirectoryBox, browseButton);
-        pathRow.setAlignment(Pos.CENTER_LEFT);
-        HBox.setHgrow(gameDirectoryBox, Priority.ALWAYS);
-
-        Label label = ViewSupport.fieldLabel("游戏位置", gameDirectoryBox);
-        VBox field = new VBox(8, label, pathRow, gamePathHint);
-        field.getStyleClass().add("app-field");
-        return field;
-    }
-
     private void wireController() {
         controller.setOnStatusChanged(status ->
                 showStatus(status, status.contains("失败") || status.contains("错误")));
@@ -142,66 +131,40 @@ final class LaunchFormView extends BorderPane {
 
         controller.setOnGameDirectoryInspected(this::applyGameDirectoryInfo);
 
-        versionBox.valueProperty().addListener((observable, oldValue, newValue) ->
-                updateSaveLocationHint());
-        if (versionBox.getEditor() != null) {
-            versionBox.getEditor().textProperty().addListener((observable, oldValue, newValue) ->
-                    updateSaveLocationHint());
-        }
+        launchSettings.selectedVersionProperty().addListener((observable, oldValue, newValue) ->
+                updateInstanceInfo());
 
-        gameDirectoryBox.valueProperty().addListener((observable, oldValue, newValue) -> {
-            if (newValue != null) {
-                gameDirectoryBox.setTooltip(new Tooltip(newValue.toString()));
-                controller.inspectGameDirectory(newValue);
-            }
-        });
-
-        browseButton.setOnAction(event -> chooseGameDirectory());
         launchBtn.setOnAction(event -> launchGame());
     }
 
     private void initializeDefaults() {
-        Path defaultGameDirectory = controller.defaultGameDirectory();
-        gameDirectoryBox.getItems().add(defaultGameDirectory);
-        gameDirectoryBox.setValue(defaultGameDirectory);
+        updateInstanceInfo();
+        refreshGameDirectory(launchSettings.gameDirectory());
     }
 
-    private void chooseGameDirectory() {
-        DirectoryChooser chooser = new DirectoryChooser();
-        chooser.setTitle("选择游戏位置");
-
-        if (lastGameDirectoryInfo != null && lastGameDirectoryInfo.directoryExists()) {
-            chooser.setInitialDirectory(lastGameDirectoryInfo.directory().toFile());
-        }
-
-        File selected = chooser.showDialog(getScene() == null ? null : getScene().getWindow());
-        if (selected == null) {
+    void refreshGameDirectory(Path gameDirectory) {
+        if (gameDirectory == null) {
+            updateInstanceInfo();
             return;
         }
-
-        Path path = selected.toPath().toAbsolutePath().normalize();
-        boolean alreadySelected = path.equals(gameDirectoryBox.getValue());
-        if (!gameDirectoryBox.getItems().contains(path)) {
-            gameDirectoryBox.getItems().add(path);
-        }
-        gameDirectoryBox.setValue(path);
-
-        if (alreadySelected) {
-            controller.inspectGameDirectory(path);
-        }
+        controller.inspectGameDirectory(gameDirectory);
     }
 
     private void launchGame() {
-        Path gameDirectory = gameDirectoryBox.getValue();
-        String version = currentVersionInput();
+        Path gameDirectory = launchSettings.gameDirectory();
+        String version = launchSettings.selectedVersion();
         String username = usernameField.getText().trim();
 
         if (gameDirectory == null) {
-            showStatus("请先选择游戏位置", true);
+            showStatus("请先在设置中保存游戏位置", true);
             return;
         }
-        if (version.isEmpty()) {
-            showStatus("请填写游戏版本", true);
+        if (lastGameDirectoryInfo != null && !lastGameDirectoryInfo.directoryExists()) {
+            showStatus("游戏位置不存在，请到设置中保存有效目录", true);
+            return;
+        }
+        if (version == null || version.isBlank()) {
+            showStatus("请先浏览并选择游戏实例", true);
             return;
         }
         if (username.isEmpty()) {
@@ -220,69 +183,72 @@ final class LaunchFormView extends BorderPane {
         lastGameDirectoryInfo = info;
 
         if (!info.directoryExists()) {
-            setGamePathHint("目录不存在：" + info.directory(), true);
+            updateInstanceInfo();
             return;
         }
 
-        String previous = currentVersionInput();
-
         if (info.hasInstalledVersions()) {
-            versionBox.getItems().setAll(info.installedVersions());
-            String target = info.installedVersions().contains(previous)
-                    ? previous
-                    : info.installedVersions().get(info.installedVersions().size() - 1);
-            setVersionValue(target);
-            setGamePathHint("已检测到 " + info.installedVersions().size()
-                    + " 个已安装版本，可直接启动", false);
+            String current = launchSettings.selectedVersion();
+            if (current == null || current.isBlank() || !info.installedVersions().contains(current)) {
+                launchSettings.setSelectedVersion(
+                        info.installedVersions().get(info.installedVersions().size() - 1));
+            }
         } else {
-            versionBox.getItems().setAll(DEFAULT_VERSIONS);
-            setVersionValue(previous.isEmpty() ? DEFAULT_VERSION : previous);
-            setGamePathHint("未检测到已安装版本，启动时将自动下载", false);
+            launchSettings.setSelectedVersion("");
         }
 
-        updateSaveLocationHint();
+        updateInstanceInfo();
     }
 
-    private String currentVersionInput() {
-        TextField editor = versionBox.getEditor();
-        if (editor == null) {
-            return versionBox.getValue() == null ? "" : versionBox.getValue().trim();
+    private void updateInstanceInfo() {
+        String version = launchSettings.selectedVersion();
+        instanceLabel.setText(version == null || version.isBlank()
+                ? "当前实例：未选择"
+                : "当前实例：" + version);
+        Path gameDirectory = launchSettings.gameDirectory();
+        if (gameDirectory == null) {
+            gameLocationLabel.setText("游戏位置：未设置");
+            styleDetail(gameLocationLabel, true);
+            saveLocationLabel.setText("存档位置：未设置");
+            styleDetail(saveLocationLabel, true);
+            return;
         }
-        return editor.getText() == null ? "" : editor.getText().trim();
-    }
 
-    private void setGamePathHint(String text, boolean error) {
-        gamePathHint.setText(text);
-        gamePathHint.getStyleClass().removeAll("field-hint", "field-hint-error");
-        gamePathHint.getStyleClass().add(error ? "field-hint-error" : "field-hint");
-    }
+        boolean missing = lastGameDirectoryInfo != null && !lastGameDirectoryInfo.directoryExists();
+        gameLocationLabel.setText(missing
+                ? "游戏位置：目录不存在 · " + gameDirectory
+                : "游戏位置：" + gameDirectory);
+        styleDetail(gameLocationLabel, missing);
 
-    private void showStatus(String status, boolean error) {
-        statusLabel.setText(status);
-        statusLabel.getStyleClass().removeAll("status-ready", "status-error");
-        statusLabel.getStyleClass().add(error ? "status-error" : "status-ready");
-    }
-
-    private void setVersionValue(String version) {
-        versionBox.setValue(version);
-        versionBox.getEditor().setText(version);
-    }
-
-    private void updateSaveLocationHint() {
-        Path gameDirectory = gameDirectoryBox.getValue();
-        String version = currentVersionInput();
-        if (gameDirectory == null || version.isEmpty()) {
-            savePathHint.setText("");
+        if (missing) {
+            saveLocationLabel.setText("存档位置：请先修复游戏位置");
+            styleDetail(saveLocationLabel, true);
+            return;
+        }
+        if (version == null || version.isBlank()) {
+            saveLocationLabel.setText("存档位置：请先选择游戏实例");
+            styleDetail(saveLocationLabel, false);
             return;
         }
 
         boolean isolated = lastGameDirectoryInfo != null && lastGameDirectoryInfo.isIsolated(version);
-        if (isolated) {
-            savePathHint.setText("版本隔离：存档在 versions/" + version + "/saves");
-        } else {
-            savePathHint.setText("存档位置：" + gameDirectory.resolve("saves"));
-        }
-        savePathHint.getStyleClass().removeAll("field-hint", "field-hint-error");
-        savePathHint.getStyleClass().add("field-hint");
+        Path savePath = isolated
+                ? gameDirectory.resolve("versions").resolve(version).resolve("saves")
+                : gameDirectory.resolve("saves");
+        saveLocationLabel.setText("存档位置：" + savePath + (isolated ? "（版本隔离）" : ""));
+        styleDetail(saveLocationLabel, false);
+    }
+
+    private void showStatus(String status, boolean error) {
+        statusLabel.setText(status);
+        statusLabel.setVisible(true);
+        statusLabel.setManaged(true);
+        statusLabel.getStyleClass().removeAll("status-ready", "status-error");
+        statusLabel.getStyleClass().add(error ? "status-error" : "status-ready");
+    }
+
+    private void styleDetail(Label label, boolean error) {
+        label.getStyleClass().removeAll("app-instance-info-detail", "app-instance-info-error");
+        label.getStyleClass().add(error ? "app-instance-info-error" : "app-instance-info-detail");
     }
 }

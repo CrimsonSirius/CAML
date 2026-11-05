@@ -43,6 +43,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.stream.Stream;
 
 public final class CAMLBackend implements AutoCloseable {
@@ -163,6 +164,14 @@ public final class CAMLBackend implements AutoCloseable {
 
     public SystemMemoryInfo systemMemory() {
         return systemMemoryService.read();
+    }
+
+    public Optional<Path> savedGameDirectory() throws IOException {
+        return settingsService.gameDirectory();
+    }
+
+    public void setGameDirectory(Path directory) throws IOException {
+        settingsService.setGameDirectory(directory);
     }
 
     public MetadataService metadata() {

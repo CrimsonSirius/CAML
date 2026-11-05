@@ -6,6 +6,7 @@ import javafx.scene.control.Label;
 import javafx.scene.layout.VBox;
 import javafx.util.Duration;
 import org.chs.camlauncher.backend.system.SystemMemoryInfo;
+import org.chs.camlauncher.front.controller.MainController;
 import org.chs.camlauncher.ui.control.CamlMemorySlider;
 
 import java.util.function.IntConsumer;
@@ -13,6 +14,7 @@ import java.util.function.IntConsumer;
 /** 设置页中的“游戏设置”。 */
 final class GameSettingsView extends VBox {
     private final LaunchSettings launchSettings;
+    private final MainController controller;
     private final CamlMemorySlider memorySlider;
     private final Label memorySummary;
     private long totalMemoryMb;
@@ -20,8 +22,10 @@ final class GameSettingsView extends VBox {
     private int usedMemoryMb;
     private final PauseTransition saveDebounce = new PauseTransition(Duration.millis(300));
 
-    GameSettingsView(LaunchSettings launchSettings, IntConsumer onMemoryChanged, SystemMemoryInfo systemMemory) {
+    GameSettingsView(LaunchSettings launchSettings, IntConsumer onMemoryChanged,
+                     SystemMemoryInfo systemMemory, MainController controller) {
         this.launchSettings = launchSettings;
+        this.controller = controller;
 
         totalMemoryMb = systemMemory.totalMb();
         availableMemoryMb = systemMemory.availableMb();
@@ -62,10 +66,10 @@ final class GameSettingsView extends VBox {
     }
 
     private void buildLayout() {
-        Label heading = new Label("游戏设置");
-        heading.getStyleClass().add("caml-title-large");
+        Label heading = new Label("内存");
+        heading.getStyleClass().add("app-settings-group-title");
 
-        Label description = new Label("调整启动游戏时使用的内存。");
+        Label description = new Label("调整游戏启动时使用的内存。");
         description.getStyleClass().addAll("caml-body-medium", "caml-on-surface-muted");
         description.setWrapText(true);
 
@@ -80,12 +84,16 @@ final class GameSettingsView extends VBox {
         hint.getStyleClass().addAll("caml-body-small", "field-hint");
         hint.setWrapText(true);
 
+        VBox group = new VBox(16, heading, description, memoryBlock, hint);
+        group.getStyleClass().add("app-settings-group");
+        group.setMaxWidth(Double.MAX_VALUE);
+
         setSpacing(20);
         setMinWidth(0);
         setPrefWidth(560);
         setMaxWidth(560);
         getStyleClass().add("app-settings-content");
-        getChildren().addAll(new VBox(6, heading, description), memoryBlock, hint);
+        getChildren().addAll(new GameLocationSettingsView(launchSettings, controller), group);
     }
 
     private void updateMemorySummary(int value) {

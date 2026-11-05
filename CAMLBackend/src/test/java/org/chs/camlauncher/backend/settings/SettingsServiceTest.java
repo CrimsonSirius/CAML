@@ -8,6 +8,7 @@ import java.nio.file.Path;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class SettingsServiceTest {
     @TempDir
@@ -40,5 +41,23 @@ class SettingsServiceTest {
         SettingsService service = new SettingsService(dataDirectory);
 
         assertThrows(IllegalArgumentException.class, () -> service.setMaxMemoryMb(511));
+    }
+
+    @Test
+    void persistsGameDirectoryAcrossInstances() throws Exception {
+        Path gameDirectory = dataDirectory.resolve("games").resolve(".minecraft");
+        new SettingsService(dataDirectory).setGameDirectory(gameDirectory);
+
+        assertEquals(
+                gameDirectory.toAbsolutePath().normalize(),
+                new SettingsService(dataDirectory).gameDirectory().orElseThrow()
+        );
+    }
+
+    @Test
+    void missingGameDirectoryReturnsEmpty() throws Exception {
+        SettingsService service = new SettingsService(dataDirectory);
+
+        assertTrue(service.gameDirectory().isEmpty());
     }
 }

@@ -31,7 +31,8 @@ final class SettingsView extends VBox implements SidebarPage {
 
     SettingsView(LaunchSettings launchSettings, IntConsumer onMemoryChanged,
                  SystemMemoryInfo systemMemory, MainController controller) {
-        GameSettingsView gameSettings = new GameSettingsView(launchSettings, onMemoryChanged, systemMemory);
+        GameSettingsView gameSettings = new GameSettingsView(
+                launchSettings, onMemoryChanged, systemMemory, controller);
         controller.setOnSystemMemoryUpdated(gameSettings::updateSystemMemory);
         launcherSettings = new LauncherSettingsView();
 

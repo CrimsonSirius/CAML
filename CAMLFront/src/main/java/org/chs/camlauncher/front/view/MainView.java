@@ -13,6 +13,7 @@ import org.chs.camlauncher.ui.control.CamlTopNav;
 import org.chs.camlauncher.ui.control.CamlTopNavItem;
 
 import java.util.List;
+import java.nio.file.Path;
 import java.util.function.Consumer;
 
 /**
@@ -28,11 +29,12 @@ public final class MainView extends BorderPane {
     private final SettingsView settingsView;
     private final CamlPageHost pageHost;
 
-    public MainView(MainController controller, int initialMaxMemoryMb, SystemMemoryInfo systemMemory) {
+    public MainView(MainController controller, int initialMaxMemoryMb,
+                    SystemMemoryInfo systemMemory, Path initialGameDirectory) {
         this.controller = controller;
         getStyleClass().add("app-root");
 
-        LaunchSettings launchSettings = new LaunchSettings(initialMaxMemoryMb);
+        LaunchSettings launchSettings = new LaunchSettings(initialMaxMemoryMb, initialGameDirectory);
         settingsView = new SettingsView(launchSettings, controller::saveMaxMemoryMbAsync, systemMemory, controller);
         homeView = new HomeView(controller, launchSettings);
         downloadsView = new DownloadsView();

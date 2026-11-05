@@ -17,6 +17,7 @@ import org.chs.camlauncher.front.view.MainView;
 import org.chs.camlauncher.ui.theme.CamlTheme;
 
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
@@ -35,6 +36,7 @@ public final class CAMLApplication extends Application {
     private ThemeInfo activeTheme;
     private int savedMaxMemoryMb = SettingsService.DEFAULT_MAX_MEMORY_MB;
     private SystemMemoryInfo systemMemory;
+    private Path gameDirectory;
 
     @Override
     public void init() throws Exception {
@@ -58,6 +60,12 @@ public final class CAMLApplication extends Application {
         } catch (IOException e) {
             logger.warn("无法读取内存设置，使用默认值 {}", SettingsService.DEFAULT_MAX_MEMORY_MB, e);
         }
+        try {
+            gameDirectory = backend.savedGameDirectory().orElse(config.gameDirectory());
+        } catch (IOException e) {
+            gameDirectory = config.gameDirectory();
+            logger.warn("无法读取游戏位置设置，使用默认目录 {}", gameDirectory, e);
+        }
         systemMemory = backend.systemMemory();
 
         logger.info("CAML frontend initialized");
@@ -67,7 +75,7 @@ public final class CAMLApplication extends Application {
     public void start(Stage stage) {
         // 2. 组装 Controller 和 View
         controller = new MainController(backend);
-        MainView view = new MainView(controller, savedMaxMemoryMb, systemMemory);
+        MainView view = new MainView(controller, savedMaxMemoryMb, systemMemory, gameDirectory);
 
         // 3. 按主屏幕可用区域决定窗口尺寸：小屏不溢出，大屏不过小，默认居中
         Rectangle2D screen = Screen.getPrimary().getVisualBounds();

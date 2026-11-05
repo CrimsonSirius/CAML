@@ -159,6 +159,11 @@ public final class MainController {
      * {@link CompletableFuture} 回到 UI 线程回调。</p>
      */
     public void inspectGameDirectory(Path directory) {
+        inspectGameDirectory(directory, onGameDirectoryInspected);
+    }
+
+    /** 异步探测目录，结果交给指定回调；回调始终在 JavaFX 线程执行。 */
+    public void inspectGameDirectory(Path directory, Consumer<GameDirectoryInfo> callback) {
         if (directory == null) {
             return;
         }
@@ -166,8 +171,8 @@ public final class MainController {
         CompletableFuture
                 .supplyAsync(() -> backend.inspectGameDirectory(directory), ioExecutor)
                 .thenAccept(info -> Platform.runLater(() -> {
-                    if (onGameDirectoryInspected != null) {
-                        onGameDirectoryInspected.accept(info);
+                    if (callback != null) {
+                        callback.accept(info);
                     }
                 }))
                 .exceptionally(ex -> {
@@ -191,6 +196,21 @@ public final class MainController {
                     backend.setMaxMemoryMb(maxMemoryMb);
                 } catch (IOException | RuntimeException e) {
                     LOGGER.warn("保存最大内存设置失败: {}", maxMemoryMb, e);
+                }
+            });
+        } catch (RejectedExecutionException ignored) {
+            // 应用正在退出，不再接受新的持久化任务。
+        }
+    }
+
+    /** 异步保存游戏位置，避免在 JavaFX Application Thread 上写文件。 */
+    public void saveGameDirectoryAsync(Path gameDirectory) {
+        try {
+            ioExecutor.execute(() -> {
+                try {
+                    backend.setGameDirectory(gameDirectory);
+                } catch (IOException | RuntimeException e) {
+                    LOGGER.warn("保存游戏位置失败: {}", gameDirectory, e);
                 }
             });
         } catch (RejectedExecutionException ignored) {

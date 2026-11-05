@@ -41,6 +41,84 @@
     -fx-padding: 0;
 }
 
+.app-settings-group {
+    -fx-background-color: -caml-surface-low;
+    -fx-background-radius: 12;
+    -fx-border-color: -caml-border-subtle;
+    -fx-border-width: 1;
+    -fx-border-radius: 12;
+    -fx-padding: 24;
+}
+
+.app-settings-group-title {
+    -fx-text-fill: -caml-on-surface;
+    -fx-font-size: 28px;
+    -fx-font-weight: bold;
+}
+
+.app-instance-picker {
+    -fx-background-color: -caml-surface;
+}
+
+.app-pill-button {
+    -fx-background-radius: 100;
+    -fx-border-radius: 100;
+    -fx-padding: 8 20;
+}
+
+.app-pill-button:focused {
+    -fx-background-radius: 100;
+    -fx-border-radius: 100;
+}
+
+.app-instance-scroll {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-border-color: transparent;
+    -fx-padding: 0;
+}
+
+.app-instance-scroll > .viewport {
+    -fx-background-color: transparent;
+}
+
+.app-instance-item {
+    -fx-background-color: -caml-surface-container;
+}
+
+.app-instance-item:hover {
+    -fx-background-color: -caml-accent-container;
+}
+
+.app-instance-item:pressed {
+    -fx-background-color: derive(-caml-accent-container, -6%);
+}
+
+.app-instance-info-group {
+    -fx-background-color: -caml-surface-low;
+    -fx-background-radius: 12;
+    -fx-border-color: -caml-border-subtle;
+    -fx-border-width: 1;
+    -fx-border-radius: 12;
+    -fx-padding: 20;
+}
+
+.app-instance-info-current {
+    -fx-text-fill: -caml-on-surface;
+    -fx-font-size: 20px;
+    -fx-font-weight: bold;
+}
+
+.app-instance-info-detail {
+    -fx-text-fill: -caml-on-surface-muted;
+    -fx-font-size: 16px;
+}
+
+.app-instance-info-error {
+    -fx-text-fill: -caml-danger;
+    -fx-font-size: 16px;
+}
+
 .app-memory-summary {
     -fx-text-fill: -caml-accent-text;
     -fx-font-weight: bold;

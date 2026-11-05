@@ -4,6 +4,7 @@ import javafx.scene.Node;
 import javafx.scene.control.Label;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
+import org.chs.camlauncher.ui.control.CamlButton;
 
 /** 跨页面复用的轻量布局工具。 */
 final class ViewSupport {
@@ -45,5 +46,13 @@ final class ViewSupport {
         sidebar.setMaxWidth(180);
         sidebar.setMaxHeight(Double.MAX_VALUE);
         return sidebar;
+    }
+
+    static CamlButton backButton(Runnable onBack) {
+        CamlButton button = CamlButton.outlined("返回");
+        button.getStyleClass().addAll("app-pill-button", "app-instance-item");
+        button.setMinWidth(80);
+        button.setOnAction(event -> onBack.run());
+        return button;
     }
 }

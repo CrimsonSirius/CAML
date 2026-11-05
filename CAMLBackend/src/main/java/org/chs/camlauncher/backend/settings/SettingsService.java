@@ -4,16 +4,19 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.file.Files;
+import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Properties;
 
-/** 启动器设置持久化；当前保存游戏最大内存。 */
+/** 启动器设置持久化：游戏位置和最大内存。 */
 public final class SettingsService {
     public static final int DEFAULT_MAX_MEMORY_MB = 4096;
     public static final int MIN_MAX_MEMORY_MB = 512;
 
     private static final String MAX_MEMORY_KEY = "maxMemoryMb";
+    private static final String GAME_DIRECTORY_KEY = "gameDirectory";
 
     private final Path settingsFile;
 
@@ -42,6 +45,26 @@ public final class SettingsService {
 
         Properties properties = load();
         properties.setProperty(MAX_MEMORY_KEY, Integer.toString(value));
+        store(properties);
+    }
+
+    public Optional<Path> gameDirectory() throws IOException {
+        String raw = load().getProperty(GAME_DIRECTORY_KEY);
+        if (raw == null || raw.isBlank()) {
+            return Optional.empty();
+        }
+        try {
+            return Optional.of(Path.of(raw).toAbsolutePath().normalize());
+        } catch (InvalidPathException ignored) {
+            return Optional.empty();
+        }
+    }
+
+    public void setGameDirectory(Path directory) throws IOException {
+        Objects.requireNonNull(directory, "directory");
+        Properties properties = load();
+        properties.setProperty(GAME_DIRECTORY_KEY,
+                directory.toAbsolutePath().normalize().toString());
         store(properties);
     }
 
