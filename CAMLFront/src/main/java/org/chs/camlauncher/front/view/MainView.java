@@ -22,10 +22,13 @@ import org.chs.camlauncher.backend.theme.ThemeInfo;
 import org.chs.camlauncher.front.controller.MainController;
 import org.chs.camlauncher.ui.control.CamlButton;
 import org.chs.camlauncher.ui.control.CamlComboBox;
+import org.chs.camlauncher.ui.control.CamlPageHost;
 import org.chs.camlauncher.ui.control.CamlSpinner;
 import org.chs.camlauncher.ui.control.CamlTextArea;
 import org.chs.camlauncher.ui.control.CamlTextField;
 import org.chs.camlauncher.ui.control.CamlTopBar;
+import org.chs.camlauncher.ui.control.CamlTopNav;
+import org.chs.camlauncher.ui.control.CamlTopNavItem;
 
 import java.io.File;
 import java.nio.file.Path;
@@ -60,6 +63,10 @@ public final class MainView extends BorderPane {
     private final CamlTextArea logArea;
     private final CamlComboBox<ThemeInfo> themeBox;
     private final SplitPane workspace;
+    private final Node homePage;
+    private final Node downloadsPage;
+    private final Node settingsPage;
+    private final CamlPageHost pageHost;
 
     /** 最近一次后端探测结果，用于决定目录选择器的初始位置。 */
     private GameDirectoryInfo lastGameDirectoryInfo;
@@ -120,8 +127,17 @@ public final class MainView extends BorderPane {
         widthProperty().addListener((observable, oldValue, newValue) ->
                 updateWorkspaceLayout(newValue.doubleValue()));
 
+        homePage = workspace;
+        downloadsPage = buildPlaceholderPage(
+                "下载",
+                "下载功能将在后续步骤接入。当前可以先在主页选择已安装版本并启动。");
+        settingsPage = buildPlaceholderPage(
+                "设置",
+                "设置功能将在后续步骤接入。主题切换暂时保留在顶部栏。");
+        pageHost = new CamlPageHost(homePage);
+
         setTop(buildTopBar());
-        setCenter(workspace);
+        setCenter(pageHost);
         setBottom(buildFooter());
 
         wireController();
@@ -131,6 +147,22 @@ public final class MainView extends BorderPane {
     private CamlTopBar buildTopBar() {
         CamlTopBar bar = new CamlTopBar("CAML", "Minecraft Launcher");
 
+        CamlTopNav navigation = new CamlTopNav();
+        CamlTopNavItem home = navigation.addItem("主页");
+        CamlTopNavItem downloads = navigation.addItem("下载");
+        CamlTopNavItem settings = navigation.addItem("设置");
+        navigation.select(home);
+        navigation.selectedItemProperty().addListener((observable, oldValue, selected) -> {
+            if (selected == home) {
+                showPage(homePage);
+            } else if (selected == downloads) {
+                showPage(downloadsPage);
+            } else if (selected == settings) {
+                showPage(settingsPage);
+            }
+        });
+        bar.addNavigation(navigation);
+
         Label themeLabel = new Label("主题");
         themeLabel.getStyleClass().addAll("caml-label-medium", "caml-on-surface-muted");
         themeLabel.setLabelFor(themeBox);
@@ -139,6 +171,28 @@ public final class MainView extends BorderPane {
         themeSelector.setAlignment(Pos.CENTER_RIGHT);
         bar.addAction(themeSelector);
         return bar;
+    }
+
+    private void showPage(Node page) {
+        pageHost.setPage(page);
+    }
+
+    private VBox buildPlaceholderPage(String title, String description) {
+        Label heading = new Label(title);
+        heading.getStyleClass().add("caml-headline-small");
+
+        Label body = new Label(description);
+        body.getStyleClass().addAll("caml-body-medium", "caml-on-surface-muted");
+        body.setWrapText(true);
+
+        VBox content = new VBox(10, heading, body);
+        content.setMaxWidth(640);
+
+        VBox page = new VBox(content);
+        page.getStyleClass().add("app-placeholder-page");
+        page.setPadding(new Insets(48));
+        page.setAlignment(Pos.TOP_LEFT);
+        return page;
     }
 
     private BorderPane buildFormPane() {

@@ -4,6 +4,10 @@
     -fx-background-color: -caml-background;
 }
 
+.app-placeholder-page {
+    -fx-background-color: -caml-surface;
+}
+
 .app-form-pane {
     -fx-background-color: -caml-surface;
 }

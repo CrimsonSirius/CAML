@@ -152,6 +152,8 @@ CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
 - 启动设置是主区域，日志是支持面板；表单字段采用“标签在上、控件在下”的稳定结构。
 - 启动按钮固定在表单底部，字段过多时只滚动字段区域，主操作始终可见。
 - 顶栏提供主题下拉框，属于即时设置，不额外放保存按钮。
+- 顶栏主导航包含“主页 / 下载 / 设置”，主页承载当前启动界面。
+- 下载和设置目前是诚实的占位页，后续步骤再接入实际功能。
 
 ### 3.12 CAMLUI 组件库与主题
 
@@ -167,7 +169,8 @@ CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
 - 默认主题使用白底、灰色表面、黄色强调色和深色文字。
 - 组件 API 包括 `CamlButton`、`CamlCard`、`CamlTextField`、`CamlTextArea`、
   `CamlComboBox`、`CamlSpinner`、`CamlSwitch`、`CamlCheckBox`、`CamlSlider`、
-  `CamlProgressBar`、`CamlSideNav`、`CamlSideNavItem` 和 `CamlTopBar`。
+  `CamlProgressBar`、`CamlSideNav`、`CamlSideNavItem`、`CamlTopNav`、
+  `CamlTopNavItem`、`CamlPageHost` 和 `CamlTopBar`。
 - `CAMLFront` 依赖 `CAMLUI`，不再把控件外观写死在业务界面里。
 
 ## 4. 尚未实现的能力
