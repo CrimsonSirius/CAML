@@ -395,6 +395,40 @@
     -fx-pref-height: 20;
 }
 
+/* Memory slider: two-tone bold track. */
+.caml-memory-slider {
+    -fx-padding: 4 0;
+    -fx-cursor: hand;
+}
+
+.caml-memory-slider .caml-memory-slider-free {
+    -fx-background-color: -caml-border-subtle;
+    -fx-background-radius: 100;
+}
+
+.caml-memory-slider .caml-memory-slider-used {
+    -fx-background-color: -caml-border;
+    -fx-background-radius: 100;
+}
+
+.caml-memory-slider .caml-memory-slider-fill {
+    -fx-background-color: -caml-accent;
+    -fx-background-radius: 100;
+}
+
+.caml-memory-slider .caml-memory-slider-thumb {
+    -fx-background-color: -caml-surface;
+    -fx-background-radius: 100;
+    -fx-border-color: -caml-accent;
+    -fx-border-width: 1.5;
+    -fx-border-radius: 100;
+}
+
+.caml-memory-slider:hover .caml-memory-slider-thumb,
+.caml-memory-slider:focused .caml-memory-slider-thumb {
+    -fx-background-color: -caml-accent;
+}
+
 /* Progress bar. */
 .caml-progress-bar .track {
     -fx-background-color: -caml-surface-highest;

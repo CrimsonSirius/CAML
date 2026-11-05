@@ -24,7 +24,7 @@ CAML 是一个基于 **Java 25 + JavaFX** 的 Minecraft 启动器，采用前后
 | Java | 扫描 `java.home`、`JAVA_HOME`、`PATH` 及常见 JDK 目录；读取版本、供应商、架构、位数；按版本要求选择运行时；Windows 优先 `javaw.exe` |
 | 启动 | 不可变 `LaunchPlan`、classpath 构建、JVM/游戏参数与 `${...}` 占位符、natives 解压、Log4j 配置、旧版本 virtual assets 重建；版本隔离时 `--gameDir` 自动指向 `versions/<id>` |
 | 进程 | `ProcessBuilder` 启动、工作目录与环境变量、stdout/stderr 转发、退出码回调、停止能力；命令行过长时自动回退 `@argfile` / manifest classpath jar；`LaunchException` 分类错误并提供中文提示 |
-| 界面 | CAML 组件库；外部 CSS 主题（`~/.caml/themes`）；顶部“主页 / 下载 / 设置”导航；窗口尺寸按主屏可用区域自适应并居中（小屏收缩、大屏限幅）；下载页空白侧边栏；设置页“游戏设置 / 启动器设置”侧边栏；内存滑块显示游戏/可用/总内存；宽屏左右分栏、窄屏上下堆叠；后端状态、游戏位置选择、已安装版本列表、存档位置提示、离线用户名、启动按钮、状态提示、日志面板 |
+| 界面 | CAML 组件库；外部 CSS 主题（`~/.caml/themes`）；顶部“主页 / 下载 / 设置”导航；窗口尺寸按主屏可用区域自适应并居中（小屏收缩、大屏限幅）；下载页空白侧边栏；设置页“游戏设置 / 启动器设置”侧边栏；叠层内存滑块（灰色=系统已使用+游戏分配，淡灰=未使用），每 0.5 秒刷新；内存设置持久化；宽屏左右分栏、窄屏上下堆叠；后端状态、游戏位置选择、已安装版本列表、存档位置提示、离线用户名、启动按钮、状态提示、日志面板 |
 
 ### 尚未实现
 
@@ -53,6 +53,8 @@ CAML/
 │  │  ├─ runtime/     Java 运行时检测与匹配
 │  │  ├─ launch/      LaunchPlan、classpath、参数、进程启动
 │  │  ├─ theme/       主题目录、默认主题复制和当前主题配置
+│  │  ├─ settings/    启动器设置持久化
+│  │  ├─ system/      物理内存读取（Linux MemAvailable）
 │  │  └─ json/        通用 JSON 文件读写
 │  ├─ src/main/resources/themes/      打包的默认主题
 │  └─ src/test/java/                  后端单元测试与集成测试
@@ -155,7 +157,7 @@ CamlCard card = new CamlCard(
 
 当前提供：`CamlTheme`、`CamlButton`、`CamlCard`、`CamlTextField`、`CamlTextArea`、
 `CamlComboBox`、`CamlSpinner`、`CamlSwitch`、`CamlCheckBox`、`CamlSlider`、
-`CamlProgressBar`、`CamlSideNav`、`CamlSideNavItem`、`CamlTopNav`、
+`CamlMemorySlider`、`CamlProgressBar`、`CamlSideNav`、`CamlSideNavItem`、`CamlTopNav`、
 `CamlTopNavItem`、`CamlPageHost` 和 `CamlTopBar`。
 
 界面布局、组件映射、无障碍和自审计见 [design/ui.md](design/ui.md)。
@@ -208,6 +210,7 @@ CAMLBackend/src/main/resources/themes/default.css
 | 启动器日志 | `~/.caml/logs/caml.log` |
 | 外部主题 | `~/.caml/themes/*.css` |
 | 当前主题 | `~/.caml/theme.txt` |
+| 启动器设置 | `~/.caml/settings.properties` |
 | 游戏数据（Linux / macOS） | `~/.minecraft` |
 | 游戏数据（Windows） | 启动器所在目录下的 `.minecraft` |
 

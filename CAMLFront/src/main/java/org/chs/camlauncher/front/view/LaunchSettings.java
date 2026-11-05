@@ -2,7 +2,11 @@ package org.chs.camlauncher.front.view;
 
 /** 主页和设置页共享的启动参数。 */
 final class LaunchSettings {
-    private int maxMemoryMb = 4096;
+    private int maxMemoryMb;
+
+    LaunchSettings(int maxMemoryMb) {
+        this.maxMemoryMb = maxMemoryMb;
+    }
 
     int maxMemoryMb() {
         return maxMemoryMb;

@@ -47,25 +47,6 @@
     -fx-padding: 0 0 4 0;
 }
 
-.caml-memory-slider {
-    -fx-padding: 8 0;
-}
-
-.caml-memory-slider .track {
-    -fx-background-color: -caml-border-subtle;
-    -fx-background-radius: 2;
-    -fx-background-insets: 0;
-    -fx-pref-height: 3;
-}
-
-.caml-memory-slider .thumb {
-    -fx-background-color: -caml-accent;
-    -fx-background-radius: 100;
-    -fx-pref-width: 18;
-    -fx-pref-height: 18;
-    -fx-effect: dropshadow(gaussian, -caml-shadow-color, 4, 0, 0, 1);
-}
-
 .app-form-pane {
     -fx-background-color: -caml-surface;
 }

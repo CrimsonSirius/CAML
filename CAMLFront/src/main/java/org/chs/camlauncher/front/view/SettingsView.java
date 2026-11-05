@@ -11,11 +11,14 @@ import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.util.Duration;
 import org.chs.camlauncher.backend.theme.ThemeInfo;
+import org.chs.camlauncher.backend.system.SystemMemoryInfo;
+import org.chs.camlauncher.front.controller.MainController;
 import org.chs.camlauncher.ui.control.CamlSideNav;
 import org.chs.camlauncher.ui.control.CamlSideNavItem;
 
 import java.util.List;
 import java.util.function.Consumer;
+import java.util.function.IntConsumer;
 
 /** 设置页：左侧子导航，右侧游戏/启动器设置内容。 */
 final class SettingsView extends VBox implements SidebarPage {
@@ -26,8 +29,10 @@ final class SettingsView extends VBox implements SidebarPage {
     private final StackPane contentHost;
     private FadeTransition contentTransition;
 
-    SettingsView(LaunchSettings launchSettings) {
-        GameSettingsView gameSettings = new GameSettingsView(launchSettings);
+    SettingsView(LaunchSettings launchSettings, IntConsumer onMemoryChanged,
+                 SystemMemoryInfo systemMemory, MainController controller) {
+        GameSettingsView gameSettings = new GameSettingsView(launchSettings, onMemoryChanged, systemMemory);
+        controller.setOnSystemMemoryUpdated(gameSettings::updateSystemMemory);
         launcherSettings = new LauncherSettingsView();
 
         sideNav = new CamlSideNav();

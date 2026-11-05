@@ -5,6 +5,7 @@ import javafx.scene.control.Label;
 import javafx.scene.layout.BorderPane;
 import org.chs.camlauncher.backend.api.BackendStatus;
 import org.chs.camlauncher.backend.theme.ThemeInfo;
+import org.chs.camlauncher.backend.system.SystemMemoryInfo;
 import org.chs.camlauncher.front.controller.MainController;
 import org.chs.camlauncher.ui.control.CamlPageHost;
 import org.chs.camlauncher.ui.control.CamlTopBar;
@@ -27,12 +28,12 @@ public final class MainView extends BorderPane {
     private final SettingsView settingsView;
     private final CamlPageHost pageHost;
 
-    public MainView(MainController controller) {
+    public MainView(MainController controller, int initialMaxMemoryMb, SystemMemoryInfo systemMemory) {
         this.controller = controller;
         getStyleClass().add("app-root");
 
-        LaunchSettings launchSettings = new LaunchSettings();
-        settingsView = new SettingsView(launchSettings);
+        LaunchSettings launchSettings = new LaunchSettings(initialMaxMemoryMb);
+        settingsView = new SettingsView(launchSettings, controller::saveMaxMemoryMbAsync, systemMemory, controller);
         homeView = new HomeView(controller, launchSettings);
         downloadsView = new DownloadsView();
         pageHost = new CamlPageHost(homeView);

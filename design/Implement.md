@@ -179,13 +179,22 @@ CAML
 - 顶栏主导航提供“主页 / 下载 / 设置”，主页为当前启动界面。
 - 下载页为空白页，并带一个空白侧边栏，不显示标题或说明。
 - 设置页侧边栏提供“游戏设置 / 启动器设置”。
-- 游戏设置使用滑块分配内存，滑块上方显示游戏内存、可用内存和总内存。
+- 游戏设置使用滑块分配内存，并用独立展示条显示系统已使用、游戏分配和空闲内存。
 - 启动器设置提供主题选择；主题切换立即生效。
 - 设置页不显示页面标题或说明，侧边栏从顶栏底部铺到页脚，只用右侧分隔线。
 - 设置子项选中时为不透明橙黄底、白字；未选中时为橙黄边框、橙黄字、透明填充。
-- 内存滑块使用小轨道圆角，避免 JavaFX 轨道因大圆角向左溢出。
+- 内存分配滑块使用 `CamlMemorySlider`，同一条轨道分两层渲染：
+  底层灰色条宽度为 `系统已使用 + 游戏分配`，上层黄色分配线和 `18px` 空心球覆盖左侧；
+  灰色可见部分位于小球右侧并随球移动，剩余未使用部分为半粗淡灰色。
+- 灰色条使用完整系统已使用内存 `T - A` 再加当前游戏分配 `G`，不把灰色段改成 `T - A - G`。
+- `SystemMemoryService` 在 Linux 读取 `/proc/meminfo` 的 `MemAvailable`，而不是
+  `MemFree`；Windows/其他平台回退到 JDK OperatingSystemMXBean。
+- `MainController` 每 500ms 后台读取内存，读取完成后立即在 JavaFX 线程刷新
+  可用/已使用数值和灰色叠层宽度。
+- 最大内存保存到 `~/.caml/settings.properties`；启动时由后端加载，滑块停止变化
+  约 300ms 后通过后端异步写入。
 - 导航切换会保留主页已填写的状态。
-- 界面控件来自 `CAMLUI`：`CamlButton`、`CamlComboBox`、`CamlSlider`、
+- 界面控件来自 `CAMLUI`：`CamlButton`、`CamlComboBox`、`CamlMemorySlider`、
   `CamlTextArea`、`CamlTextField`、`CamlTopBar`、`CamlTopNav`、`CamlTopNavItem`、
   `CamlPageHost`、`CamlSideNav` 和 `CamlSideNavItem`。
 - 主题入口：`CamlTheme.install(scene)` 和 `CamlTheme.applyTheme(scene, path)`。
@@ -277,7 +286,7 @@ PATH=/usr/lib/jvm/zulu-25/bin:$PATH \
 
 - 后端构建通过。
 - JavaFX 启动冒烟测试通过。
-- 62 个后端测试和 11 个前端测试全部通过（共 73 个）。
+- 69 个后端测试和 11 个前端测试全部通过（共 80 个）。
 - 集成测试覆盖：
   - 版本清单获取与缓存。
   - 版本 JSON 获取。
@@ -292,6 +301,8 @@ PATH=/usr/lib/jvm/zulu-25/bin:$PATH \
   - virtual assets 重建和 assets 目录替换。
   - 平台默认游戏目录：Linux 用户目录，Windows 启动器目录。
   - 默认主题首次复制、主题列表排序、主题选择持久化和路径穿越校验。
+  - 最大内存默认值、持久化往返、非法值回退和最小值校验。
+  - Linux `MemAvailable`/`MemFree` 内存解析和回退。
   - 窗口尺寸规划：小屏、全高清、超宽屏、居中和非法输入。
   - 工作区 900px 断点：两侧布局、最小高度、分隔条位置和非法宽度。
   - 最终命令顺序、进程启动、stdout/stderr 转发和退出码。

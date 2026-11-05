@@ -34,6 +34,8 @@ CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
 | `runtime` | Java 运行时检测、版本/架构/位数匹配 | 已有 |
 | `launch` | LaunchPlan、classpath、参数、进程启动 | 已有 |
 | `theme` | 主题目录、默认主题复制和当前主题配置 | 已有 |
+| `settings` | 启动器设置持久化（当前为最大内存） | 已有 |
+| `system` | 物理内存与可用内存读取 | 已有 |
 | `loader` | Fabric、Quilt、Forge、NeoForge 等加载器 | 未实现 |
 | `json` | 通用 JSON 文件读写 | 已有 |
 
@@ -146,7 +148,12 @@ CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
 - `HomeView` 组合 `LaunchFormView` 与 `LogPaneView`，负责主页分栏和 900px 断点。
 - `LaunchFormView` 负责游戏位置、版本、用户名、状态提示和启动交互。
 - `DownloadsView` 是空白下载页；`SettingsView` 负责设置页子导航。
-- `GameSettingsView` 负责内存滑块，`LauncherSettingsView` 负责主题选择。
+- `GameSettingsView` 负责叠层内存滑块，`LauncherSettingsView` 负责主题选择。
+- `SystemMemoryService` 在 Linux 读取 `/proc/meminfo` 的 `MemAvailable`，避免把
+  `MemFree` 误当成任务管理器显示的可用内存。
+- `MainController` 每 500ms 在后台线程读取一次系统内存，并通过 `Platform.runLater`
+  立即刷新设置页。
+- 最大内存保存在 `~/.caml/settings.properties`，启动时加载，滑块停止变化后异步保存。
 - `LaunchSettings` 在主页和设置页之间共享最大内存值；`ViewSupport` 提供通用字段与侧边栏布局。
 - 游戏位置支持默认目录和 `DirectoryChooser` 选择本地已有目录。
 - 版本框可编辑，可直接输入第三方启动器/整合包的自定义版本 ID。
@@ -180,7 +187,7 @@ CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
 - 默认主题使用白底、灰色表面、黄色强调色和深色文字。
 - 组件 API 包括 `CamlButton`、`CamlCard`、`CamlTextField`、`CamlTextArea`、
   `CamlComboBox`、`CamlSpinner`、`CamlSwitch`、`CamlCheckBox`、`CamlSlider`、
-  `CamlProgressBar`、`CamlSideNav`、`CamlSideNavItem`、`CamlTopNav`、
+  `CamlMemorySlider`、`CamlProgressBar`、`CamlSideNav`、`CamlSideNavItem`、`CamlTopNav`、
   `CamlTopNavItem`、`CamlPageHost` 和 `CamlTopBar`。
 - `CAMLFront` 依赖 `CAMLUI`，不再把控件外观写死在业务界面里。
 
