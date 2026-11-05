@@ -416,33 +416,37 @@
 
 .caml-side-nav-item {
     -fx-background-color: transparent;
-    -fx-background-radius: 4;
-    -fx-text-fill: -caml-on-surface-muted;
-    -fx-font-size: 12px;
-    -fx-padding: 12 8;
+    -fx-background-radius: 100;
+    -fx-border-color: -caml-accent;
+    -fx-border-width: 2;
+    -fx-border-radius: 100;
+    -fx-text-fill: -caml-accent;
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+    -fx-padding: 10 16;
+    -fx-min-height: 40;
     -fx-cursor: hand;
     -fx-focus-color: transparent;
     -fx-faint-focus-color: transparent;
 }
 
 .caml-side-nav-item:hover {
-    -fx-background-color: -caml-surface-high;
+    -fx-background-color: transparent;
 }
 
 .caml-side-nav-item:selected {
-    -fx-background-color: -caml-accent-container;
-    -fx-text-fill: -caml-on-accent-container;
+    -fx-background-color: -caml-accent;
+    -fx-border-color: -caml-accent;
+    -fx-text-fill: -caml-inverse-on-surface;
 }
 
 .caml-side-nav-item:focused {
-    -fx-border-color: -caml-accent;
-    -fx-border-width: 2;
-    -fx-border-radius: 4;
+    -fx-effect: dropshadow(gaussian, -caml-accent, 4, 0.4, 0, 0);
 }
 
 /* Top navigation. */
 .caml-top-nav {
-    -fx-spacing: 2;
+    -fx-spacing: 4;
     -fx-alignment: center-left;
 }
 
@@ -450,10 +454,11 @@
     -fx-background-color: transparent;
     -fx-background-radius: 100;
     -fx-text-fill: -caml-on-surface-muted;
-    -fx-font-size: 14px;
+    -fx-font-size: 15px;
     -fx-font-weight: bold;
-    -fx-padding: 8 16;
-    -fx-min-height: 40;
+    -fx-padding: 10 24;
+    -fx-min-width: 92;
+    -fx-min-height: 44;
     -fx-cursor: hand;
     -fx-focus-color: -caml-accent;
     -fx-faint-focus-color: transparent;
