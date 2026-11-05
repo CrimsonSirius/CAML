@@ -611,7 +611,7 @@ command_history.txt
 - 存档、设置、日志和模组路径与外部启动器保持一致。
 
 界面通过 `GameDirectoryInfo.isolatedVersions()` 获取隔离版本列表，
-并在版本框下方显示“版本隔离：存档在 versions/<id>/saves”。
+并在当前实例信息下方显示“版本隔离：存档在 versions/<id>/saves”。
 
 ## 4. 相关源码
 

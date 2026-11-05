@@ -150,11 +150,23 @@ CAML
 ### 3.11 JavaFX 界面
 
 - 启动时初始化后端。
-- 游戏位置下拉框 + 浏览按钮，可切换默认目录或本地已有 `.minecraft`。
-- 版本下拉框可编辑，后端探测到已安装版本时自动填充。
-- 支持直接输入第三方启动器/整合包的自定义版本 ID。
+- `MainView` 只负责应用壳层、导航和页面宿主；页面与表单拆分为独立视图类。
+- 主页由 `HomeView` 组合 `LaunchFormView` 与 `LogPaneView`；设置页由
+  `SettingsView` 组合 `GameSettingsView` 与 `LauncherSettingsView`；
+  `DownloadsView` 负责空白下载页。
+- `LaunchSettings` 共享主页和设置页的游戏位置、最大内存值，`ViewSupport` 提供通用布局工具。
+- 游戏位置从主页移除；设置页新增“游戏位置”圆角分组，包含路径输入、浏览和保存。
+- 只有点击保存并校验目录存在后，才更新共享位置并写入 `~/.caml/settings.properties`。
+- 主页新增“浏览游戏实例”和“管理实例”按钮；前者打开 `InstancePickerView` 二级列表，
+  后者打开内容为空的 `ManageInstancesView`。
+- `InstancePickerView` 扫描当前游戏位置的全部已安装实例，选择后回到启动表单并更新版本。
+- 管理实例页当前只有返回按钮和“管理实例”标题，内容留待后续实现。
+- 启动表单与二级实例列表之间通过 `CamlPageHost` 切换，复用页面淡入/位移动画。
+- 主界面不再显示游戏实例下拉框或版本输入框；当前实例由二级列表选择并共享到启动流程。
+- 当前实例、游戏位置、存档位置以三行信息放入圆角分组，字号放大。
+- “浏览游戏实例”和“管理实例”等宽，并共同占满启动按钮上方一行。
 - 显示存档位置：隔离版本提示 `versions/<id>/saves`，否则提示 `.minecraft/saves`。
-- 离线用户名、最大内存、启动按钮、状态提示和日志窗口。
+- 离线用户名、启动按钮、状态提示和日志窗口；最大内存位于设置 → 游戏设置。
 - `MainController` 用独立 I/O 线程执行目录探测和启动，下载日志每 10% 节流。
 - 主工作区宽屏左右分栏，窄屏上下堆叠；断点为 900px。
 - 断点规则集中在纯计算的 `WorkspaceLayout`：跨过断点时切换 `SplitPane` 方向、放宽最小高度
@@ -174,18 +186,29 @@ CAML
 - 顶栏主导航提供“主页 / 下载 / 设置”，主页为当前启动界面。
 - 下载页为空白页，并带一个空白侧边栏，不显示标题或说明。
 - 设置页侧边栏提供“游戏设置 / 启动器设置”。
-- 游戏设置使用滑块分配内存，滑块上方显示游戏内存、可用内存和总内存。
+- 游戏设置使用圆角分组承载整个内存区域，左上角标题为“内存”；
+  组内使用叠层滑块显示系统已使用、游戏分配和未使用内存。
 - 启动器设置提供主题选择；主题切换立即生效。
 - 设置页不显示页面标题或说明，侧边栏从顶栏底部铺到页脚，只用右侧分隔线。
 - 设置子项选中时为不透明橙黄底、白字；未选中时为橙黄边框、橙黄字、透明填充。
-- 内存滑块使用小轨道圆角，避免 JavaFX 轨道因大圆角向左溢出。
+- 内存分配滑块使用 `CamlMemorySlider`，同一条轨道分两层渲染：
+  底层灰色条宽度为 `系统已使用 + 游戏分配`，上层黄色分配线和 `18px` 空心球覆盖左侧；
+  灰色可见部分位于小球右侧并随球移动，剩余未使用部分为半粗淡灰色。
+- 灰色条使用完整系统已使用内存 `T - A` 再加当前游戏分配 `G`，不把灰色段改成 `T - A - G`。
+- `SystemMemoryService` 在 Linux 读取 `/proc/meminfo` 的 `MemAvailable`，而不是
+  `MemFree`；Windows/其他平台回退到 JDK OperatingSystemMXBean。
+- `MainController` 每 500ms 后台读取内存，读取完成后立即在 JavaFX 线程刷新
+  可用/已使用数值和灰色叠层宽度。
+- 最大内存保存到 `~/.caml/settings.properties`；启动时由后端加载，滑块停止变化
+  约 300ms 后通过后端异步写入。
 - 导航切换会保留主页已填写的状态。
-- 界面控件来自 `CAMLUI`：`CamlButton`、`CamlCard`、`CamlTextField`、`CamlComboBox`、
-  `CamlSpinner`、`CamlTextArea` 和 `CamlTopBar`。
+- 界面控件来自 `CAMLUI`：`CamlButton`、`CamlComboBox`、`CamlMemorySlider`、
+  `CamlTextArea`、`CamlTextField`、`CamlTopBar`、`CamlTopNav`、`CamlTopNavItem`、
+  `CamlPageHost`、`CamlSideNav` 和 `CamlSideNavItem`。
 - 主题入口：`CamlTheme.install(scene)` 和 `CamlTheme.applyTheme(scene, path)`。
 - 结构样式：`CAMLUI/src/main/resources/org/chs/camlauncher/ui/caml.css`，不含固定配色。
 - 默认主题：`CAMLBackend/src/main/resources/themes/default.css`，白底黄灰白配色。
-- 顶栏主题下拉框列出 `~/.caml/themes` 中的 CSS 文件并保存选择。
+- 启动器设置中的主题下拉框列出 `~/.caml/themes` 中的 CSS 文件并保存选择。
 - 布局样式：`CAMLFront/src/main/resources/styles/app.css`。
 
 ### 3.12 外部主题
@@ -194,7 +217,7 @@ CAML
 - 首次启动由 `ThemeService` 把默认主题复制到 `~/.caml/themes/default.css`。
 - 主题文件是普通 JavaFX CSS，覆盖 `.caml-root` 下的 `-caml-*` 颜色令牌。
 - 主题选择写入 `~/.caml/theme.txt`，无效选择回退到默认主题。
-- 用户修改或新增主题文件后，重启即可在顶栏主题下拉框中看到。
+- 用户修改或新增主题文件后，重启即可在启动器设置的主题下拉框中看到。
 
 ### 3.13 日志
 
@@ -271,7 +294,7 @@ PATH=/usr/lib/jvm/zulu-25/bin:$PATH \
 
 - 后端构建通过。
 - JavaFX 启动冒烟测试通过。
-- 62 个后端测试全部通过。
+- 71 个后端测试和 11 个前端测试全部通过（共 82 个）。
 - 集成测试覆盖：
   - 版本清单获取与缓存。
   - 版本 JSON 获取。
@@ -286,6 +309,11 @@ PATH=/usr/lib/jvm/zulu-25/bin:$PATH \
   - virtual assets 重建和 assets 目录替换。
   - 平台默认游戏目录：Linux 用户目录，Windows 启动器目录。
   - 默认主题首次复制、主题列表排序、主题选择持久化和路径穿越校验。
+  - 最大内存默认值、持久化往返、非法值回退和最小值校验。
+  - 游戏位置持久化往返和缺失配置回退。
+  - Linux `MemAvailable`/`MemFree` 内存解析和回退。
+  - 窗口尺寸规划：小屏、全高清、超宽屏、居中和非法输入。
+  - 工作区 900px 断点：两侧布局、最小高度、分隔条位置和非法宽度。
   - 最终命令顺序、进程启动、stdout/stderr 转发和退出码。
   - argfile 转义和 manifest classpath jar。
   - 超长 classpath 的自动回退。

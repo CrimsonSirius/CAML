@@ -31,6 +31,9 @@ import org.chs.camlauncher.backend.metadata.MetadataService;
 import org.chs.camlauncher.backend.metadata.VersionManifest;
 import org.chs.camlauncher.backend.metadata.VersionManifestService;
 import org.chs.camlauncher.backend.runtime.JavaLocator;
+import org.chs.camlauncher.backend.settings.SettingsService;
+import org.chs.camlauncher.backend.system.SystemMemoryInfo;
+import org.chs.camlauncher.backend.system.SystemMemoryService;
 import org.chs.camlauncher.backend.theme.ThemeInfo;
 import org.chs.camlauncher.backend.theme.ThemeService;
 
@@ -40,6 +43,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.stream.Stream;
 
 public final class CAMLBackend implements AutoCloseable {
@@ -66,6 +70,8 @@ public final class CAMLBackend implements AutoCloseable {
     private final ProcessLauncher processLauncher;
     private final GameLaunchService gameLaunchService;
     private final ThemeService themeService;
+    private final SettingsService settingsService;
+    private final SystemMemoryService systemMemoryService;
     private boolean started;
 
     public CAMLBackend(BackendConfig config) {
@@ -93,6 +99,8 @@ public final class CAMLBackend implements AutoCloseable {
         this.launchCommandBuilder = new LaunchCommandBuilder();
         this.processLauncher = new ProcessLauncher();
         this.themeService = new ThemeService(config.dataDirectory());
+        this.settingsService = new SettingsService(config.dataDirectory());
+        this.systemMemoryService = new SystemMemoryService();
         this.gameLaunchService = new GameLaunchService(
                 config.gameDirectory(),
                 VersionManifestService.DEFAULT_MANIFEST_URI,
@@ -144,6 +152,26 @@ public final class CAMLBackend implements AutoCloseable {
 
     public void selectTheme(String id) throws IOException {
         themeService.selectTheme(id);
+    }
+
+    public int maxMemoryMb() throws IOException {
+        return settingsService.maxMemoryMb();
+    }
+
+    public void setMaxMemoryMb(int value) throws IOException {
+        settingsService.setMaxMemoryMb(value);
+    }
+
+    public SystemMemoryInfo systemMemory() {
+        return systemMemoryService.read();
+    }
+
+    public Optional<Path> savedGameDirectory() throws IOException {
+        return settingsService.gameDirectory();
+    }
+
+    public void setGameDirectory(Path directory) throws IOException {
+        settingsService.setGameDirectory(directory);
     }
 
     public MetadataService metadata() {

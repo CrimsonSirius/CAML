@@ -13,8 +13,8 @@ import java.util.Objects;
 /**
  * 带页面切换动画的容器。
  *
- * <p>节奏参考 PCL：旧页面短暂淡出并上移，新页面延迟淡入并从上方向下归位。
- * 动画只用于表达页面切换的方向和连续性，不做装饰性运动。</p>
+ * <p>页面内容向上淡出/淡入；可选侧边栏额外向左淡出，并从左侧淡入。
+ * 动画只表达页面切换方向，不做装饰性运动。</p>
  */
 public final class CamlPageHost extends StackPane {
     private static final Duration EXIT_DURATION = Duration.millis(90);
@@ -22,28 +22,43 @@ public final class CamlPageHost extends StackPane {
     private static final Duration ENTER_DELAY = Duration.millis(30);
     private static final double ENTER_OFFSET_Y = -12;
     private static final double EXIT_OFFSET_Y = -4;
+    private static final double SIDEBAR_EXIT_OFFSET_X = -16;
+    private static final double SIDEBAR_ENTER_OFFSET_X = -16;
+    private static final double SIDEBAR_EXIT_OFFSET_Y = 4;
+    private static final double SIDEBAR_ENTER_OFFSET_Y = 12;
     private static final boolean REDUCE_MOTION = Boolean.getBoolean("caml.reduceMotion");
 
     private Node currentPage;
+    private Node currentSidebar;
     private ParallelTransition running;
 
     public CamlPageHost(Node initialPage) {
         getStyleClass().add("caml-page-host");
-        setPageImmediately(Objects.requireNonNull(initialPage, "initialPage"));
+        setPageImmediately(Objects.requireNonNull(initialPage, "initialPage"), null);
     }
 
-    /** 切换到目标页面；连续快速切换时会先停止上一次动画并回到稳定状态。 */
+    /** 切换到目标页面，不播放侧边栏动画。 */
     public void setPage(Node page) {
+        setPage(page, null);
+    }
+
+    /**
+     * 切换到目标页面；侧边栏可为空。
+     *
+     * @param page    新页面
+     * @param sidebar 新页面的侧边栏节点，没有则传 {@code null}
+     */
+    public void setPage(Node page, Node sidebar) {
         Objects.requireNonNull(page, "page");
         if (REDUCE_MOTION) {
             if (running != null) {
                 running.stop();
                 running = null;
             }
-            setPageImmediately(page);
+            setPageImmediately(page, sidebar);
             return;
         }
-        if (page == currentPage && getChildren().size() == 1) {
+        if (page == currentPage && sidebar == currentSidebar && getChildren().size() == 1) {
             return;
         }
 
@@ -52,58 +67,108 @@ public final class CamlPageHost extends StackPane {
             running = null;
             getChildren().setAll(currentPage);
             reset(currentPage);
+            resetSidebar(currentSidebar);
         }
-        if (page == currentPage) {
+        if (page == currentPage && sidebar == currentSidebar) {
             return;
         }
 
         Node previous = currentPage;
+        Node previousSidebar = currentSidebar;
         previous.setMouseTransparent(true);
 
         page.setOpacity(0);
         page.setTranslateY(ENTER_OFFSET_Y);
+        if (sidebar != null) {
+            sidebar.setOpacity(0);
+            sidebar.setTranslateX(SIDEBAR_ENTER_OFFSET_X);
+            sidebar.setTranslateY(SIDEBAR_ENTER_OFFSET_Y);
+        }
         getChildren().add(page);
 
-        FadeTransition fadeOut = new FadeTransition(EXIT_DURATION, previous);
-        fadeOut.setToValue(0);
+        FadeTransition pageFadeOut = new FadeTransition(EXIT_DURATION, previous);
+        pageFadeOut.setToValue(0);
 
-        TranslateTransition slideOut = new TranslateTransition(EXIT_DURATION, previous);
-        slideOut.setToY(EXIT_OFFSET_Y);
-        slideOut.setInterpolator(Interpolator.EASE_IN);
+        TranslateTransition pageSlideOut = new TranslateTransition(EXIT_DURATION, previous);
+        pageSlideOut.setToY(EXIT_OFFSET_Y);
+        pageSlideOut.setInterpolator(Interpolator.EASE_IN);
 
-        FadeTransition fadeIn = new FadeTransition(ENTER_DURATION, page);
-        fadeIn.setFromValue(0);
-        fadeIn.setToValue(1);
-        fadeIn.setDelay(ENTER_DELAY);
+        FadeTransition pageFadeIn = new FadeTransition(ENTER_DURATION, page);
+        pageFadeIn.setFromValue(0);
+        pageFadeIn.setToValue(1);
+        pageFadeIn.setDelay(ENTER_DELAY);
 
-        TranslateTransition slideIn = new TranslateTransition(ENTER_DURATION, page);
-        slideIn.setFromY(ENTER_OFFSET_Y);
-        slideIn.setToY(0);
-        slideIn.setInterpolator(Interpolator.EASE_OUT);
-        slideIn.setDelay(ENTER_DELAY);
+        TranslateTransition pageSlideIn = new TranslateTransition(ENTER_DURATION, page);
+        pageSlideIn.setFromY(ENTER_OFFSET_Y);
+        pageSlideIn.setToY(0);
+        pageSlideIn.setInterpolator(Interpolator.EASE_OUT);
+        pageSlideIn.setDelay(ENTER_DELAY);
 
-        running = new ParallelTransition(
-                new ParallelTransition(fadeOut, slideOut),
-                new ParallelTransition(fadeIn, slideIn)
-        );
+        ParallelTransition exit = new ParallelTransition(pageFadeOut, pageSlideOut);
+        ParallelTransition enter = new ParallelTransition(pageFadeIn, pageSlideIn);
+
+        if (previousSidebar != null) {
+            FadeTransition sidebarFadeOut = new FadeTransition(EXIT_DURATION, previousSidebar);
+            sidebarFadeOut.setToValue(0);
+
+            TranslateTransition sidebarSlideOut = new TranslateTransition(EXIT_DURATION, previousSidebar);
+            sidebarSlideOut.setToX(SIDEBAR_EXIT_OFFSET_X);
+            // 抵消页面整体上移，让侧边栏只向左淡出。
+            sidebarSlideOut.setToY(SIDEBAR_EXIT_OFFSET_Y);
+            sidebarSlideOut.setInterpolator(Interpolator.EASE_IN);
+
+            exit.getChildren().addAll(sidebarFadeOut, sidebarSlideOut);
+        }
+
+        if (sidebar != null) {
+            FadeTransition sidebarFadeIn = new FadeTransition(ENTER_DURATION, sidebar);
+            sidebarFadeIn.setFromValue(0);
+            sidebarFadeIn.setToValue(1);
+            sidebarFadeIn.setDelay(ENTER_DELAY);
+
+            TranslateTransition sidebarSlideIn = new TranslateTransition(ENTER_DURATION, sidebar);
+            sidebarSlideIn.setFromX(SIDEBAR_ENTER_OFFSET_X);
+            sidebarSlideIn.setToX(0);
+            // 抵消页面从上方进入，让侧边栏保持垂直位置，只从左侧淡入。
+            sidebarSlideIn.setFromY(SIDEBAR_ENTER_OFFSET_Y);
+            sidebarSlideIn.setToY(0);
+            sidebarSlideIn.setInterpolator(Interpolator.EASE_OUT);
+            sidebarSlideIn.setDelay(ENTER_DELAY);
+
+            enter.getChildren().addAll(sidebarFadeIn, sidebarSlideIn);
+        }
+
+        running = new ParallelTransition(exit, enter);
         running.setOnFinished(event -> {
             getChildren().remove(previous);
             reset(page);
+            resetSidebar(sidebar);
             currentPage = page;
+            currentSidebar = sidebar;
             running = null;
         });
         running.play();
     }
 
-    private void setPageImmediately(Node page) {
+    private void setPageImmediately(Node page, Node sidebar) {
         currentPage = page;
+        currentSidebar = sidebar;
         getChildren().setAll(page);
         reset(page);
+        resetSidebar(sidebar);
     }
 
     private static void reset(Node page) {
         page.setOpacity(1);
         page.setTranslateY(0);
         page.setMouseTransparent(false);
+    }
+
+    private static void resetSidebar(Node sidebar) {
+        if (sidebar != null) {
+            sidebar.setOpacity(1);
+            sidebar.setTranslateX(0);
+            sidebar.setTranslateY(0);
+        }
     }
 }

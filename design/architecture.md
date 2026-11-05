@@ -34,6 +34,8 @@ CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
 | `runtime` | Java 运行时检测、版本/架构/位数匹配 | 已有 |
 | `launch` | LaunchPlan、classpath、参数、进程启动 | 已有 |
 | `theme` | 主题目录、默认主题复制和当前主题配置 | 已有 |
+| `settings` | 启动器设置持久化（游戏位置、最大内存） | 已有 |
+| `system` | 物理内存与可用内存读取 | 已有 |
 | `loader` | Fabric、Quilt、Forge、NeoForge 等加载器 | 未实现 |
 | `json` | 通用 JSON 文件读写 | 已有 |
 
@@ -142,14 +144,27 @@ CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
 ### 3.11 前端界面
 
 - `CAMLApplication` 初始化后端并创建 `MainView`。
-- `MainView` 提供游戏位置、版本、离线用户名、最大内存、启动按钮、状态提示和日志窗口。
-- 游戏位置支持默认目录和 `DirectoryChooser` 选择本地已有目录。
-- 版本框可编辑，可直接输入第三方启动器/整合包的自定义版本 ID。
-- 版本框下方显示存档位置：隔离版本提示 `versions/<id>/saves`，否则提示 `.minecraft/saves`。
+- `MainView` 只负责壳层：顶栏、主导航、`CamlPageHost` 和底栏。
+- `HomeView` 组合 `LaunchFormView` 与 `LogPaneView`，负责主页分栏和 900px 断点。
+- `LaunchFormView` 负责当前实例、用户名、状态提示和启动交互；
+  “浏览游戏实例”打开二级列表，“管理实例”打开空管理页。
+- `GameLocationSettingsView` 负责游戏位置草稿、浏览、显式保存和目录校验。
+- `InstancePickerView` 扫描当前游戏位置并列出全部已安装实例。
+- `DownloadsView` 是空白下载页；`SettingsView` 负责设置页子导航。
+- `GameSettingsView` 负责叠层内存滑块，`LauncherSettingsView` 负责主题选择。
+- `SystemMemoryService` 在 Linux 读取 `/proc/meminfo` 的 `MemAvailable`，避免把
+  `MemFree` 误当成任务管理器显示的可用内存。
+- `MainController` 每 500ms 在后台线程读取一次系统内存，并通过 `Platform.runLater`
+  立即刷新设置页。
+- 游戏位置和最大内存保存在 `~/.caml/settings.properties`，启动时加载；游戏位置只有点击保存才写入。
+- `LaunchSettings` 在主页和设置页之间共享游戏位置和最大内存值；`ViewSupport` 提供通用字段与侧边栏布局。
+- 当前实例通过共享 `LaunchSettings.selectedVersion` 管理；实例信息下方显示存档位置。
 - `MainController` 使用独立 I/O 线程执行目录探测和启动，不阻塞 JavaFX Application Thread。
 - 下载日志按文件切换和每 10% 进度节流，避免刷屏。
 - 主工作区使用 `SplitPane`：宽度 `< 900` 时上下堆叠，`>= 900` 时左右分栏。
 - 断点切换时放宽表单和日志的最小高度，表单和日志在堆叠时仍然都能看到。
+- `WindowSizePlanner` 按主屏可用区域计算窗口初始尺寸、最小尺寸和居中位置；
+  `WorkspaceLayout` 负责 900px 断点参数。
 - 启动设置是主区域，日志是支持面板；表单字段采用“标签在上、控件在下”的稳定结构。
 - 启动按钮固定在表单底部，字段过多时只滚动字段区域，主操作始终可见。
 - 顶栏只保留应用身份和“主页 / 下载 / 设置”主导航。
@@ -165,7 +180,7 @@ CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
 - 不引入 JFoenix、AtlantaFX 等第三方主题库。
 - `caml.css` 只定义结构、字体层级、圆角、阴影和控件状态，不包含固定颜色。
 - `CamlTheme.install(scene)` 安装结构样式；`CamlTheme.applyTheme(scene, path)` 加载外部 CSS。
-- 主题文件位于 `~/.caml/themes/*.css`，顶栏提供主题选择器。
+- 主题文件位于 `~/.caml/themes/*.css`，设置 → 启动器设置提供主题选择器。
 - 当前主题记录在 `~/.caml/theme.txt`，下次启动自动恢复。
 - 后端 `ThemeService` 负责扫描主题、首次复制默认主题和保存选择。
 - 默认主题作为 `CAMLBackend/src/main/resources/themes/default.css` 打包，
@@ -173,7 +188,7 @@ CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
 - 默认主题使用白底、灰色表面、黄色强调色和深色文字。
 - 组件 API 包括 `CamlButton`、`CamlCard`、`CamlTextField`、`CamlTextArea`、
   `CamlComboBox`、`CamlSpinner`、`CamlSwitch`、`CamlCheckBox`、`CamlSlider`、
-  `CamlProgressBar`、`CamlSideNav`、`CamlSideNavItem`、`CamlTopNav`、
+  `CamlMemorySlider`、`CamlProgressBar`、`CamlSideNav`、`CamlSideNavItem`、`CamlTopNav`、
   `CamlTopNavItem`、`CamlPageHost` 和 `CamlTopBar`。
 - `CAMLFront` 依赖 `CAMLUI`，不再把控件外观写死在业务界面里。
 

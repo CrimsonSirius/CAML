@@ -1,13 +1,17 @@
 package org.chs.camlauncher.front.controller;
 
 import javafx.application.Platform;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.chs.camlauncher.backend.api.BackendStatus;
 import org.chs.camlauncher.backend.api.CAMLBackend;
 import org.chs.camlauncher.backend.api.GameDirectoryInfo;
 import org.chs.camlauncher.backend.download.DownloadListener;
 import org.chs.camlauncher.backend.launch.LaunchOptions;
 import org.chs.camlauncher.backend.launch.ProcessListener;
+import org.chs.camlauncher.backend.system.SystemMemoryInfo;
 
+import java.io.IOException;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
@@ -15,6 +19,9 @@ import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
 /**
@@ -28,6 +35,7 @@ import java.util.function.Consumer;
  * </ul>
  */
 public final class MainController {
+    private static final Logger LOGGER = LogManager.getLogger(MainController.class);
 
     private final CAMLBackend backend;
 
@@ -42,6 +50,16 @@ public final class MainController {
         thread.setDaemon(true);
         return thread;
     });
+
+    private final ScheduledExecutorService memoryExecutor =
+            Executors.newSingleThreadScheduledExecutor(runnable -> {
+                Thread thread = new Thread(runnable, "caml-memory-monitor");
+                thread.setDaemon(true);
+                return thread;
+            });
+
+    private volatile Consumer<SystemMemoryInfo> onSystemMemoryUpdated;
+    private boolean memoryMonitorStarted;
 
     /** UI 回调：收到一行日志。 */
     private Consumer<String> onLogReceived;
@@ -141,6 +159,11 @@ public final class MainController {
      * {@link CompletableFuture} 回到 UI 线程回调。</p>
      */
     public void inspectGameDirectory(Path directory) {
+        inspectGameDirectory(directory, onGameDirectoryInspected);
+    }
+
+    /** 异步探测目录，结果交给指定回调；回调始终在 JavaFX 线程执行。 */
+    public void inspectGameDirectory(Path directory, Consumer<GameDirectoryInfo> callback) {
         if (directory == null) {
             return;
         }
@@ -148,8 +171,8 @@ public final class MainController {
         CompletableFuture
                 .supplyAsync(() -> backend.inspectGameDirectory(directory), ioExecutor)
                 .thenAccept(info -> Platform.runLater(() -> {
-                    if (onGameDirectoryInspected != null) {
-                        onGameDirectoryInspected.accept(info);
+                    if (callback != null) {
+                        callback.accept(info);
                     }
                 }))
                 .exceptionally(ex -> {
@@ -162,6 +185,55 @@ public final class MainController {
     /** 关闭后台线程池，由应用退出流程调用。 */
     public void shutdown() {
         ioExecutor.shutdownNow();
+        memoryExecutor.shutdownNow();
+    }
+
+    /** 异步保存最大内存，避免在 JavaFX Application Thread 上写文件。 */
+    public void saveMaxMemoryMbAsync(int maxMemoryMb) {
+        try {
+            ioExecutor.execute(() -> {
+                try {
+                    backend.setMaxMemoryMb(maxMemoryMb);
+                } catch (IOException | RuntimeException e) {
+                    LOGGER.warn("保存最大内存设置失败: {}", maxMemoryMb, e);
+                }
+            });
+        } catch (RejectedExecutionException ignored) {
+            // 应用正在退出，不再接受新的持久化任务。
+        }
+    }
+
+    /** 异步保存游戏位置，避免在 JavaFX Application Thread 上写文件。 */
+    public void saveGameDirectoryAsync(Path gameDirectory) {
+        try {
+            ioExecutor.execute(() -> {
+                try {
+                    backend.setGameDirectory(gameDirectory);
+                } catch (IOException | RuntimeException e) {
+                    LOGGER.warn("保存游戏位置失败: {}", gameDirectory, e);
+                }
+            });
+        } catch (RejectedExecutionException ignored) {
+            // 应用正在退出，不再接受新的持久化任务。
+        }
+    }
+
+    /**
+     * 每 500ms 读取一次系统内存，并立即在 JavaFX 线程刷新监听者。
+     */
+    public void setOnSystemMemoryUpdated(Consumer<SystemMemoryInfo> listener) {
+        onSystemMemoryUpdated = listener;
+        if (memoryMonitorStarted) {
+            return;
+        }
+        memoryMonitorStarted = true;
+        memoryExecutor.scheduleAtFixedRate(() -> {
+            SystemMemoryInfo memory = backend.systemMemory();
+            Consumer<SystemMemoryInfo> current = onSystemMemoryUpdated;
+            if (current != null) {
+                Platform.runLater(() -> current.accept(memory));
+            }
+        }, 0, 500, TimeUnit.MILLISECONDS);
     }
 
     /** 恢复启动按钮；无论回调来自哪个线程，都切回 UI 线程。 */

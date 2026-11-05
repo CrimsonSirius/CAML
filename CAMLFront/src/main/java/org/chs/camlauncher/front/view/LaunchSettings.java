@@ -1,0 +1,52 @@
+package org.chs.camlauncher.front.view;
+
+import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.SimpleObjectProperty;
+import javafx.beans.property.SimpleStringProperty;
+import javafx.beans.property.StringProperty;
+
+import java.nio.file.Path;
+
+/** 主页和设置页共享的启动参数。 */
+final class LaunchSettings {
+    private final ObjectProperty<Path> gameDirectory = new SimpleObjectProperty<>(this, "gameDirectory");
+    private final StringProperty selectedVersion = new SimpleStringProperty(this, "selectedVersion", "1.21.4");
+    private int maxMemoryMb;
+
+    LaunchSettings(int maxMemoryMb, Path gameDirectory) {
+        this.maxMemoryMb = maxMemoryMb;
+        this.gameDirectory.set(gameDirectory);
+    }
+
+    int maxMemoryMb() {
+        return maxMemoryMb;
+    }
+
+    void setMaxMemoryMb(int maxMemoryMb) {
+        this.maxMemoryMb = maxMemoryMb;
+    }
+
+    Path gameDirectory() {
+        return gameDirectory.get();
+    }
+
+    void setGameDirectory(Path gameDirectory) {
+        this.gameDirectory.set(gameDirectory);
+    }
+
+    ObjectProperty<Path> gameDirectoryProperty() {
+        return gameDirectory;
+    }
+
+    String selectedVersion() {
+        return selectedVersion.get();
+    }
+
+    void setSelectedVersion(String selectedVersion) {
+        this.selectedVersion.set(selectedVersion);
+    }
+
+    StringProperty selectedVersionProperty() {
+        return selectedVersion;
+    }
+}
