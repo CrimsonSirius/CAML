@@ -9,10 +9,10 @@
 
 ## 2. 布局与自适应
 
-- 顶栏：`CAML` 标题、副标题、主导航“主页 / 下载 / 设置”、主题选择器。
+- 顶栏：`CAML` 标题、副标题、主导航“主页 / 下载 / 设置”。
 - 主页：当前启动设置和运行日志工作区。
 - 下载页：占位页，后续步骤接入实际下载功能。
-- 设置页：占位页，后续步骤接入实际设置功能。
+- 设置页：外观（主题）和运行（最大内存）设置。
 - 主工作区：左侧启动设置，右侧运行日志。
 - 窗口宽度 `>= 900`：左右分栏，日志作为持续可见的支持面板。
 - 窗口宽度 `< 900`：上下堆叠，表单在上、日志在下。
@@ -29,10 +29,10 @@
 | 游戏位置 | `CamlComboBox` + outlined `CamlButton` |
 | 游戏版本 | 可编辑 `CamlComboBox` |
 | 离线用户名 | `CamlTextField` |
-| 最大内存 | `CamlSpinner` |
+| 最大内存 | `CamlSpinner`（设置页） |
 | 启动游戏 | filled `CamlButton` |
 | 运行日志 | `CamlTextArea` |
-| 主题选择 | `CamlComboBox<ThemeInfo>` |
+| 主题选择 | `CamlComboBox<ThemeInfo>`（设置页） |
 | 分区标题 | `caml-headline-small` / `caml-title-large` |
 
 ## 4. 主题角色

@@ -442,7 +442,7 @@
 
 /* Top navigation. */
 .caml-top-nav {
-    -fx-spacing: 2;
+    -fx-spacing: 4;
     -fx-alignment: center-left;
 }
 
@@ -450,10 +450,11 @@
     -fx-background-color: transparent;
     -fx-background-radius: 100;
     -fx-text-fill: -caml-on-surface-muted;
-    -fx-font-size: 14px;
+    -fx-font-size: 15px;
     -fx-font-weight: bold;
-    -fx-padding: 8 16;
-    -fx-min-height: 40;
+    -fx-padding: 10 24;
+    -fx-min-width: 92;
+    -fx-min-height: 44;
     -fx-cursor: hand;
     -fx-focus-color: -caml-accent;
     -fx-faint-focus-color: transparent;

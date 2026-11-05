@@ -158,9 +158,10 @@ CAML
 - `MainController` 用独立 I/O 线程执行目录探测和启动，下载日志每 10% 节流。
 - 主工作区宽屏左右分栏，窄屏上下堆叠；断点为 900px。
 - 启动按钮固定在表单底部，字段区域独立滚动。
-- 表单标签位于控件上方，主题选择器位于顶栏并即时生效。
+- 表单标签位于控件上方。
 - 顶栏主导航提供“主页 / 下载 / 设置”，主页为当前启动界面。
-- 下载和设置页面当前为占位内容，导航切换会保留主页已填写的状态。
+- 设置页提供主题选择和最大内存选择；主题切换立即生效。
+- 下载页面当前为占位内容，导航切换会保留主页已填写的状态。
 - 界面控件来自 `CAMLUI`：`CamlButton`、`CamlCard`、`CamlTextField`、`CamlComboBox`、
   `CamlSpinner`、`CamlTextArea` 和 `CamlTopBar`。
 - 主题入口：`CamlTheme.install(scene)` 和 `CamlTheme.applyTheme(scene, path)`。

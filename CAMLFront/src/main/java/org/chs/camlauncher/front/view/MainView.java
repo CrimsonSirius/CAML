@@ -118,7 +118,7 @@ public final class MainView extends BorderPane {
         VBox.setVgrow(logArea, Priority.ALWAYS);
 
         themeBox = new CamlComboBox<>();
-        themeBox.setPrefWidth(150);
+        themeBox.setMaxWidth(Double.MAX_VALUE);
         themeBox.setAccessibleText("主题");
 
         workspace = new SplitPane(buildFormPane(), buildLogPane());
@@ -131,9 +131,7 @@ public final class MainView extends BorderPane {
         downloadsPage = buildPlaceholderPage(
                 "下载",
                 "下载功能将在后续步骤接入。当前可以先在主页选择已安装版本并启动。");
-        settingsPage = buildPlaceholderPage(
-                "设置",
-                "设置功能将在后续步骤接入。主题切换暂时保留在顶部栏。");
+        settingsPage = buildSettingsPage();
         pageHost = new CamlPageHost(homePage);
 
         setTop(buildTopBar());
@@ -162,14 +160,6 @@ public final class MainView extends BorderPane {
             }
         });
         bar.addNavigation(navigation);
-
-        Label themeLabel = new Label("主题");
-        themeLabel.getStyleClass().addAll("caml-label-medium", "caml-on-surface-muted");
-        themeLabel.setLabelFor(themeBox);
-
-        HBox themeSelector = new HBox(8, themeLabel, themeBox);
-        themeSelector.setAlignment(Pos.CENTER_RIGHT);
-        bar.addAction(themeSelector);
         return bar;
     }
 
@@ -204,14 +194,10 @@ public final class MainView extends BorderPane {
 
         VBox header = new VBox(6, heading, subheading);
 
-        Label memoryHint = new Label("分配给游戏进程的最大堆内存");
-        memoryHint.getStyleClass().addAll("caml-body-small", "field-hint");
-
         VBox fields = new VBox(16,
                 buildPathField(),
                 buildField("游戏版本", versionBox, savePathHint),
-                buildField("离线用户名", usernameField, null),
-                buildField("最大内存 (MB)", memorySpinner, memoryHint)
+                buildField("离线用户名", usernameField, null)
         );
         fields.getStyleClass().add("app-fields");
 
@@ -234,6 +220,49 @@ public final class MainView extends BorderPane {
         BorderPane.setMargin(header, new Insets(0, 0, 20, 0));
         BorderPane.setMargin(actions, new Insets(20, 0, 0, 0));
         return pane;
+    }
+
+    private VBox buildSettingsPage() {
+        Label heading = new Label("设置");
+        heading.getStyleClass().add("caml-headline-small");
+
+        Label subheading = new Label("管理外观与游戏运行参数");
+        subheading.getStyleClass().addAll("caml-body-medium", "caml-on-surface-muted");
+
+        VBox header = new VBox(6, heading, subheading);
+
+        Label appearanceTitle = new Label("外观");
+        appearanceTitle.getStyleClass().add("caml-title-medium");
+
+        Label themeHint = new Label("主题来自 ~/.caml/themes，切换后立即生效");
+        themeHint.getStyleClass().addAll("caml-body-small", "field-hint");
+        themeHint.setWrapText(true);
+
+        VBox appearance = new VBox(12,
+                appearanceTitle,
+                buildField("主题", themeBox, themeHint)
+        );
+
+        Label runtimeTitle = new Label("运行");
+        runtimeTitle.getStyleClass().add("caml-title-medium");
+
+        Label memoryHint = new Label("启动游戏时使用该最大堆内存");
+        memoryHint.getStyleClass().addAll("caml-body-small", "field-hint");
+        memoryHint.setWrapText(true);
+
+        VBox runtime = new VBox(12,
+                runtimeTitle,
+                buildField("最大内存 (MB)", memorySpinner, memoryHint)
+        );
+
+        VBox content = new VBox(28, header, appearance, runtime);
+        content.setMaxWidth(560);
+
+        VBox page = new VBox(content);
+        page.getStyleClass().add("app-settings-page");
+        page.setPadding(new Insets(48));
+        page.setAlignment(Pos.TOP_LEFT);
+        return page;
     }
 
     private VBox buildPathField() {

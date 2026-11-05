@@ -4,7 +4,8 @@
     -fx-background-color: -caml-background;
 }
 
-.app-placeholder-page {
+.app-placeholder-page,
+.app-settings-page {
     -fx-background-color: -caml-surface;
 }
 
