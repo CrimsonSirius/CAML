@@ -21,6 +21,15 @@ public final class CamlSideNavItem extends Button {
         setFocusTraversable(true);
     }
 
+    public CamlSideNavItem(String label) {
+        super(label);
+        getStyleClass().add("caml-side-nav-item");
+        setContentDisplay(ContentDisplay.LEFT);
+        setAlignment(Pos.CENTER_LEFT);
+        setMaxWidth(Double.MAX_VALUE);
+        setFocusTraversable(true);
+    }
+
     public boolean isSelected() {
         return selected;
     }

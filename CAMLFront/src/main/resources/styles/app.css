@@ -4,9 +4,66 @@
     -fx-background-color: -caml-background;
 }
 
-.app-placeholder-page,
 .app-settings-page {
     -fx-background-color: -caml-surface;
+}
+
+.app-download-page {
+    -fx-background-color: -caml-surface;
+}
+
+.app-sidebar,
+.app-settings-sidebar {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent -caml-border-subtle transparent transparent;
+    -fx-border-width: 0 1 0 0;
+}
+
+.app-sidebar {
+    -fx-min-width: 180;
+    -fx-pref-width: 180;
+    -fx-max-width: 180;
+}
+
+.app-settings-sidebar {
+    -fx-min-width: 180;
+    -fx-pref-width: 180;
+    -fx-max-width: 180;
+    -fx-padding: 12 8;
+}
+
+.app-settings-sidebar .caml-side-nav-item {
+    -fx-alignment: center-left;
+    -fx-padding: 10 16;
+}
+
+.app-settings-body {
+    -fx-padding: 0;
+}
+
+.app-memory-summary {
+    -fx-text-fill: -caml-accent-text;
+    -fx-font-weight: bold;
+    -fx-padding: 0 0 4 0;
+}
+
+.caml-memory-slider {
+    -fx-padding: 8 0;
+}
+
+.caml-memory-slider .track {
+    -fx-background-color: -caml-border-subtle;
+    -fx-background-radius: 2;
+    -fx-background-insets: 0;
+    -fx-pref-height: 3;
+}
+
+.caml-memory-slider .thumb {
+    -fx-background-color: -caml-accent;
+    -fx-background-radius: 100;
+    -fx-pref-width: 18;
+    -fx-pref-height: 18;
+    -fx-effect: dropshadow(gaussian, -caml-shadow-color, 4, 0, 0, 1);
 }
 
 .app-form-pane {

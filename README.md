@@ -24,7 +24,7 @@ CAML 是一个基于 **Java 25 + JavaFX** 的 Minecraft 启动器，采用前后
 | Java | 扫描 `java.home`、`JAVA_HOME`、`PATH` 及常见 JDK 目录；读取版本、供应商、架构、位数；按版本要求选择运行时；Windows 优先 `javaw.exe` |
 | 启动 | 不可变 `LaunchPlan`、classpath 构建、JVM/游戏参数与 `${...}` 占位符、natives 解压、Log4j 配置、旧版本 virtual assets 重建；版本隔离时 `--gameDir` 自动指向 `versions/<id>` |
 | 进程 | `ProcessBuilder` 启动、工作目录与环境变量、stdout/stderr 转发、退出码回调、停止能力；命令行过长时自动回退 `@argfile` / manifest classpath jar；`LaunchException` 分类错误并提供中文提示 |
-| 界面 | CAML 组件库；外部 CSS 主题（`~/.caml/themes`）；顶部“主页 / 下载 / 设置”导航；设置页管理主题与最大内存；宽屏左右分栏、窄屏上下堆叠；后端状态、游戏位置选择、已安装版本列表、存档位置提示、离线用户名、启动按钮、状态提示、日志面板 |
+| 界面 | CAML 组件库；外部 CSS 主题（`~/.caml/themes`）；顶部“主页 / 下载 / 设置”导航；下载页空白侧边栏；设置页“游戏设置 / 启动器设置”侧边栏；内存滑块显示游戏/可用/总内存；宽屏左右分栏、窄屏上下堆叠；后端状态、游戏位置选择、已安装版本列表、存档位置提示、离线用户名、启动按钮、状态提示、日志面板 |
 
 ### 尚未实现
 

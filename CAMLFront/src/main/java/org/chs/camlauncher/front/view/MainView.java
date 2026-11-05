@@ -13,6 +13,7 @@ import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
+import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.stage.DirectoryChooser;
 import javafx.util.StringConverter;
@@ -23,7 +24,9 @@ import org.chs.camlauncher.front.controller.MainController;
 import org.chs.camlauncher.ui.control.CamlButton;
 import org.chs.camlauncher.ui.control.CamlComboBox;
 import org.chs.camlauncher.ui.control.CamlPageHost;
-import org.chs.camlauncher.ui.control.CamlSpinner;
+import org.chs.camlauncher.ui.control.CamlSideNav;
+import org.chs.camlauncher.ui.control.CamlSideNavItem;
+import org.chs.camlauncher.ui.control.CamlSlider;
 import org.chs.camlauncher.ui.control.CamlTextArea;
 import org.chs.camlauncher.ui.control.CamlTextField;
 import org.chs.camlauncher.ui.control.CamlTopBar;
@@ -31,6 +34,7 @@ import org.chs.camlauncher.ui.control.CamlTopNav;
 import org.chs.camlauncher.ui.control.CamlTopNavItem;
 
 import java.io.File;
+import java.lang.management.ManagementFactory;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.function.Consumer;
@@ -57,7 +61,10 @@ public final class MainView extends BorderPane {
     private final CamlComboBox<String> versionBox;
     private final Label savePathHint;
     private final CamlTextField usernameField;
-    private final CamlSpinner memorySpinner;
+    private final CamlSlider memorySlider;
+    private final Label memorySummary;
+    private final long totalMemoryMb;
+    private final long availableMemoryMb;
     private final CamlButton launchBtn;
     private final Label statusLabel;
     private final CamlTextArea logArea;
@@ -96,9 +103,26 @@ public final class MainView extends BorderPane {
         usernameField = new CamlTextField("namelessgod");
         usernameField.setMaxWidth(Double.MAX_VALUE);
 
-        memorySpinner = new CamlSpinner(1024, 32768, 4096, 1024);
-        memorySpinner.setEditable(true);
-        memorySpinner.setMaxWidth(Double.MAX_VALUE);
+        MemorySnapshot memory = readSystemMemory();
+        totalMemoryMb = memory.totalMb();
+        availableMemoryMb = memory.availableMb();
+
+        int maxMemoryMb = (int) Math.max(1024L, Math.min(Integer.MAX_VALUE, totalMemoryMb));
+        int initialMemoryMb = Math.min(4096, maxMemoryMb);
+        memorySlider = new CamlSlider(512, maxMemoryMb, initialMemoryMb);
+        memorySlider.setBlockIncrement(256);
+        memorySlider.setShowTickMarks(false);
+        memorySlider.setShowTickLabels(false);
+        memorySlider.setMaxWidth(Double.MAX_VALUE);
+        memorySlider.getStyleClass().add("caml-memory-slider");
+
+        memorySummary = new Label();
+        memorySummary.getStyleClass().addAll("caml-body-medium", "app-memory-summary");
+        memorySummary.setAlignment(Pos.CENTER);
+        memorySummary.setMaxWidth(Double.MAX_VALUE);
+        updateMemorySummary(memorySlider.getValue());
+        memorySlider.valueProperty().addListener((observable, oldValue, newValue) ->
+                updateMemorySummary(newValue.doubleValue()));
 
         statusLabel = new Label("准备就绪");
         statusLabel.getStyleClass().addAll("caml-label-large", "status-ready");
@@ -128,9 +152,7 @@ public final class MainView extends BorderPane {
                 updateWorkspaceLayout(newValue.doubleValue()));
 
         homePage = workspace;
-        downloadsPage = buildPlaceholderPage(
-                "下载",
-                "下载功能将在后续步骤接入。当前可以先在主页选择已安装版本并启动。");
+        downloadsPage = buildDownloadsPage();
         settingsPage = buildSettingsPage();
         pageHost = new CamlPageHost(homePage);
 
@@ -167,22 +189,24 @@ public final class MainView extends BorderPane {
         pageHost.setPage(page);
     }
 
-    private VBox buildPlaceholderPage(String title, String description) {
-        Label heading = new Label(title);
-        heading.getStyleClass().add("caml-headline-small");
+    private HBox buildDownloadsPage() {
+        Region content = new Region();
+        HBox.setHgrow(content, Priority.ALWAYS);
 
-        Label body = new Label(description);
-        body.getStyleClass().addAll("caml-body-medium", "caml-on-surface-muted");
-        body.setWrapText(true);
-
-        VBox content = new VBox(10, heading, body);
-        content.setMaxWidth(640);
-
-        VBox page = new VBox(content);
-        page.getStyleClass().add("app-placeholder-page");
-        page.setPadding(new Insets(48));
-        page.setAlignment(Pos.TOP_LEFT);
+        HBox page = new HBox(emptySidebar(), content);
+        page.getStyleClass().add("app-download-page");
+        page.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
         return page;
+    }
+
+    private VBox emptySidebar() {
+        VBox sidebar = new VBox();
+        sidebar.getStyleClass().add("app-sidebar");
+        sidebar.setMinWidth(180);
+        sidebar.setPrefWidth(180);
+        sidebar.setMaxWidth(180);
+        sidebar.setMaxHeight(Double.MAX_VALUE);
+        return sidebar;
     }
 
     private BorderPane buildFormPane() {
@@ -223,46 +247,92 @@ public final class MainView extends BorderPane {
     }
 
     private VBox buildSettingsPage() {
-        Label heading = new Label("设置");
-        heading.getStyleClass().add("caml-headline-small");
+        VBox gameSettings = buildGameSettings();
+        VBox launcherSettings = buildLauncherSettings();
 
-        Label subheading = new Label("管理外观与游戏运行参数");
-        subheading.getStyleClass().addAll("caml-body-medium", "caml-on-surface-muted");
+        CamlSideNav sideNav = new CamlSideNav();
+        sideNav.getStyleClass().add("app-settings-sidebar");
+        sideNav.setMaxHeight(Double.MAX_VALUE);
+        CamlSideNavItem gameItem = new CamlSideNavItem("游戏设置");
+        CamlSideNavItem launcherItem = new CamlSideNavItem("启动器设置");
+        sideNav.addItem(gameItem);
+        sideNav.addItem(launcherItem);
+        sideNav.select(gameItem);
 
-        VBox header = new VBox(6, heading, subheading);
+        StackPane contentHost = new StackPane(gameSettings);
+        contentHost.setAlignment(Pos.TOP_LEFT);
+        contentHost.setMaxHeight(Double.MAX_VALUE);
+        contentHost.setPadding(new Insets(32, 40, 32, 40));
+        HBox.setHgrow(contentHost, Priority.ALWAYS);
+        sideNav.selectedItemProperty().addListener((observable, oldValue, selected) ->
+                contentHost.getChildren().setAll(selected == launcherItem ? launcherSettings : gameSettings));
 
-        Label appearanceTitle = new Label("外观");
-        appearanceTitle.getStyleClass().add("caml-title-medium");
+        HBox body = new HBox(24, sideNav, contentHost);
+        body.setAlignment(Pos.TOP_LEFT);
+        body.setMaxHeight(Double.MAX_VALUE);
+        body.getStyleClass().add("app-settings-body");
+        VBox.setVgrow(body, Priority.ALWAYS);
+
+        VBox page = new VBox(body);
+        page.getStyleClass().add("app-settings-page");
+        page.setPadding(Insets.EMPTY);
+        page.setAlignment(Pos.TOP_LEFT);
+        page.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
+        return page;
+    }
+
+    private VBox buildGameSettings() {
+        Label heading = new Label("游戏设置");
+        heading.getStyleClass().add("caml-title-large");
+
+        Label description = new Label("调整启动游戏时使用的内存。");
+        description.getStyleClass().addAll("caml-body-medium", "caml-on-surface-muted");
+        description.setWrapText(true);
+
+        Label memoryLabel = new Label("内存分配");
+        memoryLabel.getStyleClass().add("caml-label-medium");
+        memoryLabel.setLabelFor(memorySlider);
+
+        VBox memoryBlock = new VBox(10, memoryLabel, memorySummary, memorySlider);
+        memoryBlock.getStyleClass().add("app-memory-block");
+
+        Label hint = new Label("拖动小球调整，启动游戏时生效。可用内存为当前系统快照。");
+        hint.getStyleClass().addAll("caml-body-small", "field-hint");
+        hint.setWrapText(true);
+
+        VBox content = new VBox(20,
+                new VBox(6, heading, description),
+                memoryBlock,
+                hint
+        );
+        content.setMinWidth(0);
+        content.setPrefWidth(560);
+        content.setMaxWidth(560);
+        content.getStyleClass().add("app-settings-content");
+        return content;
+    }
+
+    private VBox buildLauncherSettings() {
+        Label heading = new Label("启动器设置");
+        heading.getStyleClass().add("caml-title-large");
+
+        Label description = new Label("调整启动器自身的外观。");
+        description.getStyleClass().addAll("caml-body-medium", "caml-on-surface-muted");
+        description.setWrapText(true);
 
         Label themeHint = new Label("主题来自 ~/.caml/themes，切换后立即生效");
         themeHint.getStyleClass().addAll("caml-body-small", "field-hint");
         themeHint.setWrapText(true);
 
-        VBox appearance = new VBox(12,
-                appearanceTitle,
+        VBox content = new VBox(20,
+                new VBox(6, heading, description),
                 buildField("主题", themeBox, themeHint)
         );
-
-        Label runtimeTitle = new Label("运行");
-        runtimeTitle.getStyleClass().add("caml-title-medium");
-
-        Label memoryHint = new Label("启动游戏时使用该最大堆内存");
-        memoryHint.getStyleClass().addAll("caml-body-small", "field-hint");
-        memoryHint.setWrapText(true);
-
-        VBox runtime = new VBox(12,
-                runtimeTitle,
-                buildField("最大内存 (MB)", memorySpinner, memoryHint)
-        );
-
-        VBox content = new VBox(28, header, appearance, runtime);
+        content.setMinWidth(0);
+        content.setPrefWidth(560);
         content.setMaxWidth(560);
-
-        VBox page = new VBox(content);
-        page.getStyleClass().add("app-settings-page");
-        page.setPadding(new Insets(48));
-        page.setAlignment(Pos.TOP_LEFT);
-        return page;
+        content.getStyleClass().add("app-settings-content");
+        return content;
     }
 
     private VBox buildPathField() {
@@ -459,7 +529,44 @@ public final class MainView extends BorderPane {
         launchBtn.setText("启动中...");
         logArea.clear();
 
-        controller.startGame(version, username, memorySpinner.getValue(), gameDirectory);
+        controller.startGame(version, username, currentMemoryMb(), gameDirectory);
+    }
+
+    private int currentMemoryMb() {
+        return roundMemory(memorySlider.getValue());
+    }
+
+    private int roundMemory(double value) {
+        int max = (int) memorySlider.getMax();
+        int rounded = (int) Math.round(value / 256.0) * 256;
+        return Math.max(512, Math.min(max, rounded));
+    }
+
+    private void updateMemorySummary(double value) {
+        memorySummary.setText(String.format(
+                "游戏 %d MB / 可用 %d MB / 总内存 %d MB",
+                roundMemory(value), availableMemoryMb, totalMemoryMb));
+    }
+
+    private static MemorySnapshot readSystemMemory() {
+        try {
+            java.lang.management.OperatingSystemMXBean bean = ManagementFactory.getOperatingSystemMXBean();
+            if (bean instanceof com.sun.management.OperatingSystemMXBean os) {
+                long total = os.getTotalMemorySize() / (1024 * 1024);
+                long free = os.getFreeMemorySize() / (1024 * 1024);
+                if (total > 0) {
+                    return new MemorySnapshot(total, Math.max(0, free));
+                }
+            }
+        } catch (RuntimeException ignored) {
+        }
+
+        long total = Runtime.getRuntime().maxMemory() / (1024 * 1024);
+        long free = Runtime.getRuntime().freeMemory() / (1024 * 1024);
+        return new MemorySnapshot(Math.max(1024, total), Math.max(0, free));
+    }
+
+    private record MemorySnapshot(long totalMb, long availableMb) {
     }
 
     private void applyGameDirectoryInfo(GameDirectoryInfo info) {
