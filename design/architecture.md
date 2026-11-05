@@ -142,8 +142,12 @@ CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
 ### 3.11 前端界面
 
 - `CAMLApplication` 初始化后端并创建 `MainView`。
-- `MainView` 提供游戏位置、版本、离线用户名、启动按钮、状态提示和日志窗口；
-  最大内存和主题选择位于设置页。
+- `MainView` 只负责壳层：顶栏、主导航、`CamlPageHost` 和底栏。
+- `HomeView` 组合 `LaunchFormView` 与 `LogPaneView`，负责主页分栏和 900px 断点。
+- `LaunchFormView` 负责游戏位置、版本、用户名、状态提示和启动交互。
+- `DownloadsView` 是空白下载页；`SettingsView` 负责设置页子导航。
+- `GameSettingsView` 负责内存滑块，`LauncherSettingsView` 负责主题选择。
+- `LaunchSettings` 在主页和设置页之间共享最大内存值；`ViewSupport` 提供通用字段与侧边栏布局。
 - 游戏位置支持默认目录和 `DirectoryChooser` 选择本地已有目录。
 - 版本框可编辑，可直接输入第三方启动器/整合包的自定义版本 ID。
 - 版本框下方显示存档位置：隔离版本提示 `versions/<id>/saves`，否则提示 `.minecraft/saves`。

@@ -150,6 +150,11 @@ CAML
 ### 3.11 JavaFX 界面
 
 - 启动时初始化后端。
+- `MainView` 只负责应用壳层、导航和页面宿主；页面与表单拆分为独立视图类。
+- 主页由 `HomeView` 组合 `LaunchFormView` 与 `LogPaneView`；设置页由
+  `SettingsView` 组合 `GameSettingsView` 与 `LauncherSettingsView`；
+  `DownloadsView` 负责空白下载页。
+- `LaunchSettings` 共享主页和设置页的最大内存值，`ViewSupport` 提供通用布局工具。
 - 游戏位置下拉框 + 浏览按钮，可切换默认目录或本地已有 `.minecraft`。
 - 版本下拉框可编辑，后端探测到已安装版本时自动填充。
 - 支持直接输入第三方启动器/整合包的自定义版本 ID。

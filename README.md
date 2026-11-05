@@ -67,7 +67,16 @@ CAML/
 │  │  ├─ WindowSizePlanner.java       窗口尺寸与居中计算
 │  │  ├─ controller/                  MainController
 │  │  └─ view/
-│  │     ├─ MainView.java             主界面与页面导航
+│  │     ├─ MainView.java             应用壳层、顶部导航和页面宿主
+│  │     ├─ HomeView.java             主页分栏与自适应
+│  │     ├─ LaunchFormView.java       启动表单与启动交互
+│  │     ├─ LogPaneView.java          运行日志面板
+│  │     ├─ DownloadsView.java        空白下载页
+│  │     ├─ SettingsView.java         设置页侧边栏
+│  │     ├─ GameSettingsView.java     游戏设置与内存滑块
+│  │     ├─ LauncherSettingsView.java 启动器设置与主题
+│  │     ├─ LaunchSettings.java       主页/设置页共享参数
+│  │     ├─ ViewSupport.java          通用布局工具
 │  │     └─ WorkspaceLayout.java      900px 断点布局规则
 │  ├─ src/main/resources/styles/app.css
 │  └─ src/test/java/                  前端布局与窗口尺寸测试
@@ -83,6 +92,7 @@ CAML/
 - `CAMLUI` 只依赖 JavaFX 和自身 CSS，不依赖 `CAMLBackend` 或 `CAMLFront`。
 - `CAMLUI` 不内置任何固定配色；所有颜色令牌来自外部主题文件。
 - `CAMLFront` 只通过 CAMLUI 组件搭建界面，不直接读写文件、不直接发 HTTP、不直接启动进程。
+- `MainView` 只负责壳层和页面切换；各页面、表单、日志和设置内容独立成类。
 - 前后端通过 facade、DTO、事件和 `CompletableFuture` 交互。
 - 网络、磁盘、进程和认证操作不得在 JavaFX Application Thread 执行。
 
