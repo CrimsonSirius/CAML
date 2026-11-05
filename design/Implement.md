@@ -154,7 +154,7 @@ CAML
 - 版本下拉框可编辑，后端探测到已安装版本时自动填充。
 - 支持直接输入第三方启动器/整合包的自定义版本 ID。
 - 显示存档位置：隔离版本提示 `versions/<id>/saves`，否则提示 `.minecraft/saves`。
-- 离线用户名、最大内存、启动按钮、状态提示和日志窗口。
+- 离线用户名、启动按钮、状态提示和日志窗口；最大内存位于设置 → 游戏设置。
 - `MainController` 用独立 I/O 线程执行目录探测和启动，下载日志每 10% 节流。
 - 主工作区宽屏左右分栏，窄屏上下堆叠；断点为 900px。
 - 断点规则集中在纯计算的 `WorkspaceLayout`：跨过断点时切换 `SplitPane` 方向、放宽最小高度
@@ -180,12 +180,13 @@ CAML
 - 设置子项选中时为不透明橙黄底、白字；未选中时为橙黄边框、橙黄字、透明填充。
 - 内存滑块使用小轨道圆角，避免 JavaFX 轨道因大圆角向左溢出。
 - 导航切换会保留主页已填写的状态。
-- 界面控件来自 `CAMLUI`：`CamlButton`、`CamlCard`、`CamlTextField`、`CamlComboBox`、
-  `CamlSpinner`、`CamlTextArea` 和 `CamlTopBar`。
+- 界面控件来自 `CAMLUI`：`CamlButton`、`CamlComboBox`、`CamlSlider`、
+  `CamlTextArea`、`CamlTextField`、`CamlTopBar`、`CamlTopNav`、`CamlTopNavItem`、
+  `CamlPageHost`、`CamlSideNav` 和 `CamlSideNavItem`。
 - 主题入口：`CamlTheme.install(scene)` 和 `CamlTheme.applyTheme(scene, path)`。
 - 结构样式：`CAMLUI/src/main/resources/org/chs/camlauncher/ui/caml.css`，不含固定配色。
 - 默认主题：`CAMLBackend/src/main/resources/themes/default.css`，白底黄灰白配色。
-- 顶栏主题下拉框列出 `~/.caml/themes` 中的 CSS 文件并保存选择。
+- 启动器设置中的主题下拉框列出 `~/.caml/themes` 中的 CSS 文件并保存选择。
 - 布局样式：`CAMLFront/src/main/resources/styles/app.css`。
 
 ### 3.12 外部主题
@@ -194,7 +195,7 @@ CAML
 - 首次启动由 `ThemeService` 把默认主题复制到 `~/.caml/themes/default.css`。
 - 主题文件是普通 JavaFX CSS，覆盖 `.caml-root` 下的 `-caml-*` 颜色令牌。
 - 主题选择写入 `~/.caml/theme.txt`，无效选择回退到默认主题。
-- 用户修改或新增主题文件后，重启即可在顶栏主题下拉框中看到。
+- 用户修改或新增主题文件后，重启即可在启动器设置的主题下拉框中看到。
 
 ### 3.13 日志
 
@@ -271,7 +272,7 @@ PATH=/usr/lib/jvm/zulu-25/bin:$PATH \
 
 - 后端构建通过。
 - JavaFX 启动冒烟测试通过。
-- 62 个后端测试全部通过。
+- 62 个后端测试和 11 个前端测试全部通过（共 73 个）。
 - 集成测试覆盖：
   - 版本清单获取与缓存。
   - 版本 JSON 获取。
@@ -286,6 +287,8 @@ PATH=/usr/lib/jvm/zulu-25/bin:$PATH \
   - virtual assets 重建和 assets 目录替换。
   - 平台默认游戏目录：Linux 用户目录，Windows 启动器目录。
   - 默认主题首次复制、主题列表排序、主题选择持久化和路径穿越校验。
+  - 窗口尺寸规划：小屏、全高清、超宽屏、居中和非法输入。
+  - 工作区 900px 断点：两侧布局、最小高度、分隔条位置和非法宽度。
   - 最终命令顺序、进程启动、stdout/stderr 转发和退出码。
   - argfile 转义和 manifest classpath jar。
   - 超长 classpath 的自动回退。

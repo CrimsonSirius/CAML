@@ -142,7 +142,8 @@ CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
 ### 3.11 前端界面
 
 - `CAMLApplication` 初始化后端并创建 `MainView`。
-- `MainView` 提供游戏位置、版本、离线用户名、最大内存、启动按钮、状态提示和日志窗口。
+- `MainView` 提供游戏位置、版本、离线用户名、启动按钮、状态提示和日志窗口；
+  最大内存和主题选择位于设置页。
 - 游戏位置支持默认目录和 `DirectoryChooser` 选择本地已有目录。
 - 版本框可编辑，可直接输入第三方启动器/整合包的自定义版本 ID。
 - 版本框下方显示存档位置：隔离版本提示 `versions/<id>/saves`，否则提示 `.minecraft/saves`。
@@ -150,6 +151,8 @@ CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
 - 下载日志按文件切换和每 10% 进度节流，避免刷屏。
 - 主工作区使用 `SplitPane`：宽度 `< 900` 时上下堆叠，`>= 900` 时左右分栏。
 - 断点切换时放宽表单和日志的最小高度，表单和日志在堆叠时仍然都能看到。
+- `WindowSizePlanner` 按主屏可用区域计算窗口初始尺寸、最小尺寸和居中位置；
+  `WorkspaceLayout` 负责 900px 断点参数。
 - 启动设置是主区域，日志是支持面板；表单字段采用“标签在上、控件在下”的稳定结构。
 - 启动按钮固定在表单底部，字段过多时只滚动字段区域，主操作始终可见。
 - 顶栏只保留应用身份和“主页 / 下载 / 设置”主导航。
@@ -165,7 +168,7 @@ CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
 - 不引入 JFoenix、AtlantaFX 等第三方主题库。
 - `caml.css` 只定义结构、字体层级、圆角、阴影和控件状态，不包含固定颜色。
 - `CamlTheme.install(scene)` 安装结构样式；`CamlTheme.applyTheme(scene, path)` 加载外部 CSS。
-- 主题文件位于 `~/.caml/themes/*.css`，顶栏提供主题选择器。
+- 主题文件位于 `~/.caml/themes/*.css`，设置 → 启动器设置提供主题选择器。
 - 当前主题记录在 `~/.caml/theme.txt`，下次启动自动恢复。
 - 后端 `ThemeService` 负责扫描主题、首次复制默认主题和保存选择。
 - 默认主题作为 `CAMLBackend/src/main/resources/themes/default.css` 打包，

@@ -87,10 +87,13 @@ public final class MainView extends BorderPane {
         getStyleClass().add("app-root");
 
         gameDirectoryBox = new CamlComboBox<>();
+        gameDirectoryBox.setMinWidth(0);
         gameDirectoryBox.setMaxWidth(Double.MAX_VALUE);
         gameDirectoryBox.setTooltip(new Tooltip("选择 Minecraft 游戏目录，通常是 .minecraft 文件夹"));
 
-        browseButton = CamlButton.outlined("浏览...");
+        browseButton = CamlButton.outlined("浏览");
+        browseButton.setMinWidth(64);
+        browseButton.setMaxWidth(Region.USE_PREF_SIZE);
         browseButton.setTooltip(new Tooltip("选择本地已有的游戏目录"));
 
         gamePathHint = hintLabel();

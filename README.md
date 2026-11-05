@@ -24,7 +24,7 @@ CAML 是一个基于 **Java 25 + JavaFX** 的 Minecraft 启动器，采用前后
 | Java | 扫描 `java.home`、`JAVA_HOME`、`PATH` 及常见 JDK 目录；读取版本、供应商、架构、位数；按版本要求选择运行时；Windows 优先 `javaw.exe` |
 | 启动 | 不可变 `LaunchPlan`、classpath 构建、JVM/游戏参数与 `${...}` 占位符、natives 解压、Log4j 配置、旧版本 virtual assets 重建；版本隔离时 `--gameDir` 自动指向 `versions/<id>` |
 | 进程 | `ProcessBuilder` 启动、工作目录与环境变量、stdout/stderr 转发、退出码回调、停止能力；命令行过长时自动回退 `@argfile` / manifest classpath jar；`LaunchException` 分类错误并提供中文提示 |
-| 界面 | CAML 组件库；外部 CSS 主题（`~/.caml/themes`）；顶部“主页 / 下载 / 设置”导航；窗口尺寸按主屏可用区域自适应并居中（小屏收缩、大屏限幅）；下载页空白侧边栏；设置页“游戏设置 / 启动器设置”侧边栏；内存滑块显示游戏/可用/总内存；宽屏左右分栏、窄屏上下堆叠；后端状态、游戏位置选择、已安装版本列表、存档位置提示、离线用户名、最大内存、启动按钮、状态提示、日志面板 |
+| 界面 | CAML 组件库；外部 CSS 主题（`~/.caml/themes`）；顶部“主页 / 下载 / 设置”导航；窗口尺寸按主屏可用区域自适应并居中（小屏收缩、大屏限幅）；下载页空白侧边栏；设置页“游戏设置 / 启动器设置”侧边栏；内存滑块显示游戏/可用/总内存；宽屏左右分栏、窄屏上下堆叠；后端状态、游戏位置选择、已安装版本列表、存档位置提示、离线用户名、启动按钮、状态提示、日志面板 |
 
 ### 尚未实现
 
@@ -32,7 +32,7 @@ CAML 是一个基于 **Java 25 + JavaFX** 的 Minecraft 启动器，采用前后
 - Fabric / Quilt / Forge / NeoForge 等加载器安装
 - CAMLFront 启动错误对话框、停止按钮、启动器隐藏 / 保留 / 关闭策略
 - 崩溃分析、异常退出分类和真实 Minecraft 客户端端到端验证
-- 下载页的实际功能（当前为顶部导航占位页）
+- 下载页的实际功能（当前为空白导航页）
 - 镜像源、并发下载、取消与内容寻址缓存
 - quick play、服务器直连、整合包与模组管理
 
@@ -64,9 +64,13 @@ CAML/
 ├─ CAMLFront/                         JavaFX 界面（不直接读写文件/发 HTTP/启动进程）
 │  ├─ src/main/java/org/chs/camlauncher/front/
 │  │  ├─ CAMLApplication.java         应用入口
+│  │  ├─ WindowSizePlanner.java       窗口尺寸与居中计算
 │  │  ├─ controller/                  MainController
-│  │  └─ view/                        MainView
-│  └─ src/main/resources/styles/app.css
+│  │  └─ view/
+│  │     ├─ MainView.java             主界面与页面导航
+│  │     └─ WorkspaceLayout.java      900px 断点布局规则
+│  ├─ src/main/resources/styles/app.css
+│  └─ src/test/java/                  前端布局与窗口尺寸测试
 ├─ design/                            设计文档
 ├─ gradle/                            版本目录与 Gradle wrapper
 ├─ build.gradle.kts
@@ -112,10 +116,16 @@ CAML/
 ./gradlew :CAMLFront:run
 ```
 
-运行后端测试：
+运行测试：
 
 ```bash
+# Windows
 .\gradlew.bat :CAMLBackend:test
+.\gradlew.bat :CAMLFront:test
+
+# Linux / macOS
+./gradlew :CAMLBackend:test
+./gradlew :CAMLFront:test
 ```
 
 ### CAMLUI 组件库
@@ -152,7 +162,7 @@ CAMLBackend/src/main/resources/themes/default.css
 ```
 
 首次启动时，后端把默认主题复制到 `~/.caml/themes/default.css`。之后用户可以直接
-修改它，或新增其他 `.css` 文件。顶栏的“主题”下拉框会列出主题目录中的文件，
+修改它，或新增其他 `.css` 文件。设置 → 启动器设置中的“主题”下拉框会列出主题目录中的文件，
 当前选择记录在 `~/.caml/theme.txt`。
 
 主题文件只需要覆盖 `.caml-root` 下的颜色令牌，例如：
@@ -223,8 +233,9 @@ command_history.txt
 
 1. 启动 CAML，主界面显示后端状态与数据目录。
 2. 在 **游戏位置** 选择默认路径或手动添加本地游戏目录。
-3. 选择或输入 **游戏版本**、填写 **离线用户名**、设置 **最大内存**。
-4. 点击 **启动游戏**。
+3. 选择或输入 **游戏版本**、填写 **离线用户名**。
+4. 如需调整主题或内存，进入 **设置 → 启动器设置 / 游戏设置**。
+5. 点击 **启动游戏**。
    - 本地已有该版本时直接复用，不访问官方清单。
    - 本地没有该版本时，从官方清单安装并补齐文件。
 
@@ -276,6 +287,7 @@ info.isolatedVersions();
 ## 文档
 
 - [总体架构](design/architecture.md)
+- [界面设计](design/ui.md)
 - [版本下载与启动链路](design/version-download-and-launch.md)
 - [runtime 包](design/runtime.md)
 - [当前实现情况](design/Implement.md)
