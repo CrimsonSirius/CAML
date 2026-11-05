@@ -3,6 +3,7 @@
 CAML 是一个基于 **Java 25 + JavaFX** 的 Minecraft 启动器，采用前后端分离的多模块结构。
 
 - **CAMLBackend** —— 纯 Java 核心，负责元数据、下载、账号、Java 检测与游戏启动。
+- **CAMLUI** —— 纯 JavaFX + CSS 的 CAML 组件库，不依赖后端。
 - **CAMLFront** —— JavaFX 界面，只负责展示和交互。
 
 许可证：[GPL-3.0-only](LICENSE)
@@ -18,18 +19,19 @@ CAML 是一个基于 **Java 25 + JavaFX** 的 Minecraft 启动器，采用前后
 | 元数据 | 解析 `version_manifest_v2.json`、单版本 JSON、字符串/带规则参数、libraries、asset index、downloads、javaVersion、logging；处理 OS / 架构 / 版本正则 / features 规则；合并 `inheritsFrom` 父版本 |
 | 远程元数据 | 拉取官方版本清单与单版本 JSON，本地缓存，网络失败时回退缓存 |
 | 下载 | 客户端 jar、libraries、natives、asset index、assets objects 下载计划；SHA-1 校验；`.part` 临时文件 + 原子移动；失败重试；已有有效文件跳过 |
-| 版本安装 | 本地已安装版本直接复用（支持第三方启动器/整合包的自定义版本 ID），缺失文件自动补齐；基础文件完成后才写入版本 JSON |
+| 版本安装 | 本地已安装版本直接复用（支持第三方启动器/整合包的自定义版本 ID），缺失文件自动补齐；兼容 PCL/HMCL 版本隔离布局；基础文件完成后才写入版本 JSON |
 | 账号 | 离线登录，稳定离线 UUID，生成 `AuthSession` |
 | Java | 扫描 `java.home`、`JAVA_HOME`、`PATH` 及常见 JDK 目录；读取版本、供应商、架构、位数；按版本要求选择运行时；Windows 优先 `javaw.exe` |
-| 启动 | 不可变 `LaunchPlan`、classpath 构建、JVM/游戏参数与 `${...}` 占位符、natives 解压、Log4j 配置、旧版本 virtual assets 重建 |
+| 启动 | 不可变 `LaunchPlan`、classpath 构建、JVM/游戏参数与 `${...}` 占位符、natives 解压、Log4j 配置、旧版本 virtual assets 重建；版本隔离时 `--gameDir` 自动指向 `versions/<id>` |
 | 进程 | `ProcessBuilder` 启动、工作目录与环境变量、stdout/stderr 转发、退出码回调、停止能力；命令行过长时自动回退 `@argfile` / manifest classpath jar；`LaunchException` 分类错误并提供中文提示 |
-| 界面 | 后端状态、游戏位置选择、版本、离线用户名、最大内存、状态提示、日志窗口 |
+| 界面 | CAML 组件库；外部 CSS 主题（`~/.caml/themes`）；宽屏左右分栏、窄屏上下堆叠；后端状态、游戏位置选择、已安装版本列表、存档位置提示、离线用户名、最大内存、启动按钮、状态提示、日志面板 |
 
 ### 尚未实现
 
 - 微软账号登录、token 刷新与安全存储
 - Fabric / Quilt / Forge / NeoForge 等加载器安装
-- 启动器隐藏 / 保留 / 关闭策略、崩溃分析与异常退出分类
+- CAMLFront 启动错误对话框、停止按钮、启动器隐藏 / 保留 / 关闭策略
+- 崩溃分析、异常退出分类和真实 Minecraft 客户端端到端验证
 - 镜像源、并发下载、取消与内容寻址缓存
 - quick play、服务器直连、整合包与模组管理
 
@@ -44,13 +46,20 @@ CAML/
 │  │  ├─ api/         后端 facade 与状态 DTO
 │  │  ├─ config/      配置与目录约定
 │  │  ├─ metadata/    版本清单、版本 JSON、规则、继承合并
-│  │  ├─ instance/    实例模型与版本安装
+│  │  ├─ instance/    实例模型、版本安装与版本隔离判定
 │  │  ├─ download/    下载源、下载计划、SHA-1、原子落盘
 │  │  ├─ auth/        账号与离线登录
 │  │  ├─ runtime/     Java 运行时检测与匹配
 │  │  ├─ launch/      LaunchPlan、classpath、参数、进程启动
+│  │  ├─ theme/       主题目录、默认主题复制和当前主题配置
 │  │  └─ json/        通用 JSON 文件读写
+│  ├─ src/main/resources/themes/      打包的默认主题
 │  └─ src/test/java/                  后端单元测试与集成测试
+├─ CAMLUI/                            纯 JavaFX + CSS 的 CAML 组件库
+│  ├─ src/main/java/org/chs/camlauncher/ui/
+│  │  ├─ theme/       CamlTheme（安装结构样式、加载外部主题）
+│  │  └─ control/     CamlButton、CamlCard、CamlTextField、CamlSwitch 等
+│  └─ src/main/resources/org/chs/camlauncher/ui/caml.css（只含结构，不含配色）
 ├─ CAMLFront/                         JavaFX 界面（不直接读写文件/发 HTTP/启动进程）
 │  ├─ src/main/java/org/chs/camlauncher/front/
 │  │  ├─ CAMLApplication.java         应用入口
@@ -66,7 +75,9 @@ CAML/
 ### 架构约束
 
 - `CAMLBackend` 是纯 Java，不 import JavaFX，也不依赖 `CAMLFront`。
-- `CAMLFront` 不直接读写文件、不直接发 HTTP、不直接启动进程。
+- `CAMLUI` 只依赖 JavaFX 和自身 CSS，不依赖 `CAMLBackend` 或 `CAMLFront`。
+- `CAMLUI` 不内置任何固定配色；所有颜色令牌来自外部主题文件。
+- `CAMLFront` 只通过 CAMLUI 组件搭建界面，不直接读写文件、不直接发 HTTP、不直接启动进程。
 - 前后端通过 facade、DTO、事件和 `CompletableFuture` 交互。
 - 网络、磁盘、进程和认证操作不得在 JavaFX Application Thread 执行。
 
@@ -79,6 +90,7 @@ CAML/
 | Java toolchain | 25 |
 | Gradle | 9.8.2 |
 | JavaFX | 25.0.3 |
+| CAMLUI | 项目内模块，纯 JavaFX + CSS |
 | Gson | 2.15.0 |
 | Log4j | 2.26.1 |
 | JUnit | 6.1.3 |
@@ -105,6 +117,62 @@ CAML/
 .\gradlew.bat :CAMLBackend:test
 ```
 
+### CAMLUI 组件库
+
+`CAMLUI` 不引入第三方主题库。`caml.css` 只包含布局、字体层级、圆角和
+控件结构，不包含任何固定颜色。颜色令牌由外部主题文件提供。
+
+```java
+CamlTheme.install(scene);
+CamlTheme.applyTheme(scene, Path.of(System.getProperty("user.home"), ".caml/themes/default.css"));
+
+CamlCard card = new CamlCard(
+        new Label("启动游戏"),
+        CamlButton.filled("开始")
+);
+```
+
+当前提供：`CamlTheme`、`CamlButton`、`CamlCard`、`CamlTextField`、`CamlTextArea`、
+`CamlComboBox`、`CamlSpinner`、`CamlSwitch`、`CamlCheckBox`、`CamlSlider`、
+`CamlProgressBar`、`CamlSideNav`、`CamlSideNavItem` 和 `CamlTopBar`。
+
+界面布局、组件映射、无障碍和自审计见 [design/ui.md](design/ui.md)。
+
+### 主题系统
+
+主题是普通的 JavaFX CSS 文件，放在 `~/.caml/themes/*.css`。启动器本体不定义
+任何固定主题；打包时只携带一个白底默认主题：
+
+```text
+CAMLBackend/src/main/resources/themes/default.css
+```
+
+首次启动时，后端把默认主题复制到 `~/.caml/themes/default.css`。之后用户可以直接
+修改它，或新增其他 `.css` 文件。顶栏的“主题”下拉框会列出主题目录中的文件，
+当前选择记录在 `~/.caml/theme.txt`。
+
+主题文件只需要覆盖 `.caml-root` 下的颜色令牌，例如：
+
+```css
+.caml-root {
+    -caml-accent: #f99e1a;
+    -caml-background: #ffffff;
+    -caml-surface-container: #f0f0f0;
+    -caml-on-surface: #1a1a1a;
+}
+```
+
+### IDEA 运行配置
+
+项目根目录的 `.run/` 提供两个共享运行配置：
+
+| 配置 | 作用 |
+|---|---|
+| `runLauncher` | 执行 `:CAMLFront:run`，可直接使用 IDEA 调试 JavaFX 前端 |
+| `build` | 执行 Gradle `build`，构建后端、前端和测试 |
+
+`build` 当前只生成 Gradle 构建产物，还不是单文件启动器。单文件打包需要先确定 Windows/Linux 目标，再接入 `jpackage`。
+
 ---
 
 ## 默认目录
@@ -114,11 +182,36 @@ CAML/
 | 启动器数据 | `~/.caml` |
 | 版本清单缓存 | `~/.caml/cache/version_manifest_v2.json` |
 | 启动器日志 | `~/.caml/logs/caml.log` |
+| 外部主题 | `~/.caml/themes/*.css` |
+| 当前主题 | `~/.caml/theme.txt` |
 | 游戏数据（Linux / macOS） | `~/.minecraft` |
 | 游戏数据（Windows） | 启动器所在目录下的 `.minecraft` |
 
 游戏目录可以在界面中切换：默认使用上述路径，也可以通过 **游戏位置 → 浏览...** 选择本地已有目录。
 选择后会扫描 `versions/<id>/<id>.json` 列出已安装版本，可直接启动。
+
+### 版本隔离
+
+CAML 兼容 PCL/HMCL 等启动器的版本隔离布局。后端会检查 `versions/<id>` 中是否存在：
+
+```text
+saves
+options.txt
+logs
+mods
+config
+resourcepacks
+shaderpacks
+usercache.json
+command_history.txt
+```
+
+命中任意一项时：
+
+- `--gameDir` 指向 `versions/<id>`，以便读取原有存档和设置。
+- `libraries`、`assets` 仍然来自 `.minecraft` 根目录，不会重复下载。
+- 界面在版本框下方显示“版本隔离：存档在 `versions/<id>/saves`”。
+- Windows 的 `APPDATA` 仍按 `.minecraft` 根目录计算，不会误指向版本目录。
 
 ---
 
@@ -171,6 +264,7 @@ GameLaunch launch = backend.launchGame(
 GameDirectoryInfo info = backend.inspectGameDirectory(Path.of("D:/games/.minecraft"));
 info.directoryExists();
 info.installedVersions();
+info.isolatedVersions();
 ```
 
 ---
@@ -189,7 +283,6 @@ info.installedVersions();
 - 部分测试用例使用 POSIX 路径（如 `/tmp/a.jar`）作为断言，在 Windows 上会因路径分隔符不同而失败：
   - `LaunchCommandBuilderTest#placesMainClassBetweenJvmAndGameArguments`
   - `LaunchArgumentsBuilderTest#buildsJvmArgumentsWithMemoryDefaultsAndClasspath`
-  - `GameLaunchServiceTest#installsAndLaunchesFakeClientEndToEnd`
 
   这与功能实现无关，属于测试本身的跨平台问题。
 

@@ -1,0 +1,481 @@
+/*
+ * CAML 组件结构与排版。
+ * 所有颜色令牌由 <data>/themes/*.css 提供，本文件不定义固定配色。
+ */
+
+.caml-root {
+    -fx-background-color: -caml-background;
+    -fx-text-background-color: -caml-on-background;
+    -fx-text-fill: -caml-on-background;
+    -fx-accent: -caml-accent;
+    -fx-focus-color: -caml-accent;
+    -fx-faint-focus-color: transparent;
+    -fx-control-inner-background: -caml-surface-lowest;
+    -fx-control-inner-background-alt: -caml-surface-low;
+}
+
+/* CAML type scale. */
+.caml-display-large {
+    -fx-font-size: 57px;
+}
+
+.caml-display-medium {
+    -fx-font-size: 45px;
+}
+
+.caml-headline-large {
+    -fx-font-size: 32px;
+}
+
+.caml-headline-medium {
+    -fx-font-size: 28px;
+}
+
+.caml-headline-small {
+    -fx-font-size: 24px;
+}
+
+.caml-title-large {
+    -fx-font-size: 22px;
+    -fx-font-weight: bold;
+}
+
+.caml-title-medium {
+    -fx-font-size: 16px;
+    -fx-font-weight: bold;
+}
+
+.caml-title-small {
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+}
+
+.caml-body-large {
+    -fx-font-size: 16px;
+}
+
+.caml-body-medium {
+    -fx-font-size: 14px;
+}
+
+.caml-body-small {
+    -fx-font-size: 12px;
+}
+
+.caml-label-large {
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+}
+
+.caml-label-medium {
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+}
+
+.caml-label-small {
+    -fx-font-size: 11px;
+    -fx-font-weight: bold;
+}
+
+.caml-on-surface-muted {
+    -fx-text-fill: -caml-on-surface-muted;
+}
+
+.caml-on-surface {
+    -fx-text-fill: -caml-on-surface;
+}
+
+/* Buttons. */
+.caml-button {
+    -fx-background-insets: 0;
+    -fx-background-radius: 4;
+    -fx-min-height: 44;
+    -fx-padding: 10 24;
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+    -fx-cursor: hand;
+    -fx-focus-color: -caml-accent;
+    -fx-faint-focus-color: transparent;
+}
+
+.caml-button:focused {
+    -fx-border-color: -caml-on-surface;
+    -fx-border-width: 2;
+    -fx-border-radius: 4;
+}
+
+.caml-button-filled {
+    -fx-background-color: -caml-accent;
+    -fx-text-fill: -caml-on-accent;
+}
+
+.caml-button-filled:hover {
+    -fx-background-color: derive(-caml-accent, 10%);
+}
+
+.caml-button-filled:pressed {
+    -fx-background-color: derive(-caml-accent, -10%);
+}
+
+.caml-button-tonal {
+    -fx-background-color: -caml-neutral-container;
+    -fx-text-fill: -caml-on-neutral-container;
+}
+
+.caml-button-tonal:hover {
+    -fx-background-color: derive(-caml-neutral-container, 8%);
+}
+
+.caml-button-outlined {
+    -fx-background-color: transparent;
+    -fx-border-color: -caml-border;
+    -fx-border-width: 1;
+    -fx-border-radius: 4;
+    -fx-text-fill: -caml-accent-text;
+}
+
+.caml-button-outlined:hover {
+    -fx-background-color: -caml-surface-high;
+}
+
+.caml-button-text {
+    -fx-background-color: transparent;
+    -fx-padding: 10 12;
+    -fx-text-fill: -caml-accent-text;
+}
+
+.caml-button-text:hover {
+    -fx-background-color: -caml-surface-high;
+}
+
+.caml-button-elevated {
+    -fx-background-color: -caml-surface-low;
+    -fx-text-fill: -caml-accent-text;
+    -fx-effect: dropshadow(gaussian, -caml-shadow-color, 8, 0, 0, 2);
+}
+
+.caml-button-elevated:hover {
+    -fx-background-color: -caml-surface-container;
+}
+
+.caml-button:disabled {
+    -fx-opacity: 0.38;
+}
+
+/* Cards. */
+.caml-card {
+    -fx-background-color: -caml-surface-container;
+    -fx-background-radius: 8;
+    -fx-padding: 24;
+}
+
+.caml-card-elevated {
+    -fx-effect: dropshadow(gaussian, -caml-shadow-color, 16, 0, 0, 4);
+}
+
+.caml-card-filled {
+    -fx-background-color: -caml-surface-highest;
+}
+
+.caml-card-outlined {
+    -fx-background-color: transparent;
+    -fx-border-color: -caml-border-subtle;
+    -fx-border-width: 1;
+    -fx-border-radius: 8;
+}
+
+/* Chips. */
+.caml-chip {
+    -fx-background-color: -caml-accent-container;
+    -fx-text-fill: -caml-on-accent-container;
+    -fx-background-radius: 4;
+    -fx-padding: 6 12;
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+}
+
+/* Text field. */
+.caml-text-field {
+    -fx-min-height: 40;
+    -fx-background-color: -caml-surface-highest;
+    -fx-background-radius: 4 4 0 0;
+    -fx-border-color: transparent transparent -caml-on-surface-muted transparent;
+    -fx-border-width: 0 0 1 0;
+    -fx-text-fill: -caml-on-surface;
+    -fx-prompt-text-fill: -caml-on-surface-muted;
+    -fx-highlight-fill: -caml-accent;
+    -fx-highlight-text-fill: -caml-on-accent;
+    -fx-padding: 12 16;
+    -fx-font-size: 14px;
+}
+
+.caml-text-field:focused {
+    -fx-border-color: transparent transparent -caml-accent transparent;
+    -fx-border-width: 0 0 2 0;
+}
+
+/* Combo box. */
+.caml-combo-box {
+    -fx-min-height: 40;
+    -fx-background-color: -caml-surface-highest;
+    -fx-background-radius: 4;
+    -fx-border-color: -caml-border-subtle;
+    -fx-border-width: 1;
+    -fx-border-radius: 4;
+    -fx-padding: 2 4;
+}
+
+.caml-combo-box:focused {
+    -fx-border-color: -caml-accent;
+    -fx-border-width: 2;
+}
+
+.caml-combo-box .list-cell {
+    -fx-background-color: transparent;
+    -fx-text-fill: -caml-on-surface;
+    -fx-padding: 8 12;
+}
+
+.caml-combo-box .arrow-button {
+    -fx-background-color: transparent;
+}
+
+.caml-combo-box .arrow {
+    -fx-background-color: -caml-on-surface-muted;
+}
+
+.caml-combo-box .text-field {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-text-fill: -caml-on-surface;
+    -fx-padding: 6 8;
+}
+
+/* Combo box popup. */
+.combo-box-popup .list-view {
+    -fx-background-color: -caml-surface-container;
+    -fx-background-radius: 6;
+    -fx-effect: dropshadow(gaussian, -caml-shadow-color, 12, 0, 0, 3);
+}
+
+.combo-box-popup .list-cell {
+    -fx-background-color: transparent;
+    -fx-text-fill: -caml-on-surface;
+    -fx-padding: 10 16;
+}
+
+.combo-box-popup .list-cell:hover {
+    -fx-background-color: -caml-surface-high;
+}
+
+.combo-box-popup .list-cell:filled:selected {
+    -fx-background-color: -caml-accent-container;
+    -fx-text-fill: -caml-on-accent-container;
+}
+
+/* Spinner. */
+.caml-spinner {
+    -fx-min-height: 40;
+    -fx-background-color: -caml-surface-highest;
+    -fx-background-radius: 4;
+    -fx-border-color: -caml-border-subtle;
+    -fx-border-radius: 4;
+}
+
+.caml-spinner:focused {
+    -fx-border-color: -caml-accent;
+}
+
+.caml-spinner .text-field {
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-text-fill: -caml-on-surface;
+    -fx-padding: 8 12;
+}
+
+.caml-spinner .increment-arrow-button,
+.caml-spinner .decrement-arrow-button {
+    -fx-background-color: transparent;
+}
+
+.caml-spinner .increment-arrow,
+.caml-spinner .decrement-arrow {
+    -fx-background-color: -caml-on-surface-muted;
+}
+
+/* Text area. */
+.caml-text-area {
+    -fx-min-height: 160;
+    -fx-background-color: -caml-surface-lowest;
+    -fx-background-radius: 4;
+    -fx-border-color: -caml-border-subtle;
+    -fx-border-width: 1;
+    -fx-border-radius: 4;
+    -fx-text-fill: -caml-on-surface;
+    -fx-highlight-fill: -caml-accent;
+    -fx-highlight-text-fill: -caml-on-accent;
+    -fx-font-family: "Monospaced";
+    -fx-font-size: 12px;
+}
+
+.caml-text-area .content {
+    -fx-background-color: -caml-surface-lowest;
+}
+
+.caml-text-area:focused {
+    -fx-border-color: -caml-accent;
+}
+
+/* Switch. */
+.caml-switch {
+    -fx-cursor: hand;
+    -fx-background-color: transparent;
+}
+
+.caml-switch .caml-switch-track {
+    -fx-background-color: -caml-surface-highest;
+    -fx-background-radius: 100;
+    -fx-border-color: -caml-border;
+    -fx-border-width: 2;
+    -fx-border-radius: 100;
+}
+
+.caml-switch:selected .caml-switch-track {
+    -fx-background-color: -caml-accent;
+    -fx-border-color: -caml-accent;
+}
+
+.caml-switch .caml-switch-thumb {
+    -fx-background-color: -caml-border;
+    -fx-background-radius: 100;
+}
+
+.caml-switch:selected .caml-switch-thumb {
+    -fx-background-color: -caml-on-accent;
+}
+
+.caml-switch:focused .caml-switch-track {
+    -fx-effect: dropshadow(gaussian, -caml-accent, 6, 0.45, 0, 0);
+}
+
+/* Check box. */
+.caml-check-box {
+    -fx-text-fill: -caml-on-surface;
+    -fx-font-size: 14px;
+}
+
+.caml-check-box .box {
+    -fx-background-color: transparent;
+    -fx-border-color: -caml-border;
+    -fx-border-width: 2;
+    -fx-border-radius: 2;
+    -fx-background-radius: 2;
+}
+
+.caml-check-box:selected .box {
+    -fx-background-color: -caml-accent;
+    -fx-border-color: -caml-accent;
+}
+
+.caml-check-box:selected .mark {
+    -fx-background-color: -caml-on-accent;
+}
+
+/* Slider. */
+.caml-slider .track {
+    -fx-background-color: -caml-surface-highest;
+    -fx-background-radius: 100;
+    -fx-pref-height: 4;
+}
+
+.caml-slider .thumb {
+    -fx-background-color: -caml-accent;
+    -fx-background-radius: 100;
+    -fx-pref-width: 20;
+    -fx-pref-height: 20;
+}
+
+/* Progress bar. */
+.caml-progress-bar .track {
+    -fx-background-color: -caml-surface-highest;
+    -fx-background-radius: 100;
+}
+
+.caml-progress-bar .bar {
+    -fx-background-color: -caml-accent;
+    -fx-background-radius: 100;
+    -fx-background-insets: 0;
+}
+
+/* Side navigation. */
+.caml-side-nav {
+    -fx-background-color: -caml-surface-low;
+    -fx-min-width: 88;
+    -fx-pref-width: 88;
+}
+
+.caml-side-nav-item {
+    -fx-background-color: transparent;
+    -fx-background-radius: 4;
+    -fx-text-fill: -caml-on-surface-muted;
+    -fx-font-size: 12px;
+    -fx-padding: 12 8;
+    -fx-cursor: hand;
+    -fx-focus-color: transparent;
+    -fx-faint-focus-color: transparent;
+}
+
+.caml-side-nav-item:hover {
+    -fx-background-color: -caml-surface-high;
+}
+
+.caml-side-nav-item:selected {
+    -fx-background-color: -caml-accent-container;
+    -fx-text-fill: -caml-on-accent-container;
+}
+
+.caml-side-nav-item:focused {
+    -fx-border-color: -caml-accent;
+    -fx-border-width: 2;
+    -fx-border-radius: 4;
+}
+
+/* Top bar. */
+.caml-top-bar {
+    -fx-background-color: -caml-surface;
+    -fx-padding: 16 24;
+    -fx-border-color: transparent transparent -caml-border-subtle transparent;
+    -fx-border-width: 0 0 1 0;
+}
+
+/* Scroll pane and scrollbar. */
+.scroll-pane {
+    -fx-background-color: transparent;
+}
+
+.scroll-pane > .viewport {
+    -fx-background-color: transparent;
+}
+
+.scroll-bar:vertical,
+.scroll-bar:horizontal {
+    -fx-background-color: transparent;
+}
+
+.scroll-bar .thumb {
+    -fx-background-color: -caml-border-subtle;
+    -fx-background-radius: 100;
+}
+
+.scroll-bar .track {
+    -fx-background-color: transparent;
+}
+
+/* Tooltip uses theme-provided inverse colors. */
+.tooltip {
+    -fx-background-color: -caml-inverse-surface;
+    -fx-text-fill: -caml-inverse-on-surface;
+    -fx-background-radius: 4;
+    -fx-padding: 6 10;
+    -fx-font-size: 12px;
+}

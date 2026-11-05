@@ -1,137 +1,83 @@
+/* CAML 主界面布局。颜色与控件外观由外部 CAML 主题提供。 */
+
 .app-root {
-    -fx-background-color: linear-gradient(to bottom right, #0d1117, #161b22);
+    -fx-background-color: -caml-background;
 }
 
-.title {
-    -fx-text-fill: #f0f6fc;
-    -fx-font-size: 42px;
-    -fx-font-weight: bold;
+.app-form-pane {
+    -fx-background-color: -caml-surface;
 }
 
-.subtitle {
-    -fx-text-fill: #8b949e;
-    -fx-font-size: 16px;
+.app-fields {
+    -fx-spacing: 16;
 }
 
-.content {
-    -fx-padding: 32 0 0 0;
+.app-field {
+    -fx-spacing: 8;
+}
+
+.app-field-scroll {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-border-color: transparent;
+    -fx-padding: 0;
+}
+
+.app-field-scroll > .viewport {
+    -fx-background-color: transparent;
+}
+
+.app-actions {
+    -fx-padding: 0;
+}
+
+.app-log-pane {
+    -fx-background-color: -caml-surface-container;
+}
+
+.app-log-area {
+    -fx-pref-height: 460;
+    -fx-min-height: 200;
+}
+
+.app-workspace {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-padding: 0;
+}
+
+.app-workspace > .split-pane-divider {
+    -fx-background-color: -caml-border-subtle;
+}
+
+.app-workspace:horizontal > .split-pane-divider {
+    -fx-padding: 0 1 0 1;
+}
+
+.app-workspace:vertical > .split-pane-divider {
+    -fx-padding: 1 0 1 0;
+}
+
+.app-footer-bar {
+    -fx-background-color: -caml-surface;
+    -fx-text-fill: -caml-on-surface-muted;
+    -fx-padding: 10 24;
+    -fx-border-color: -caml-border-subtle transparent transparent transparent;
+    -fx-border-width: 1 0 0 0;
 }
 
 .status-ready {
-    -fx-text-fill: #3fb950;
-    -fx-font-size: 14px;
-    -fx-font-weight: bold;
+    -fx-text-fill: -caml-accent-text;
 }
 
 .status-error {
-    -fx-text-fill: #f85149;
-    -fx-font-size: 14px;
-    -fx-font-weight: bold;
+    -fx-text-fill: -caml-danger;
 }
 
-.info-grid {
-    -fx-padding: 20;
-    -fx-background-color: #161b22;
-    -fx-background-radius: 12;
-    -fx-border-color: #30363d;
-    -fx-border-radius: 12;
-}
-
-.field-label {
-    -fx-text-fill: #8b949e;
-    -fx-font-size: 13px;
-}
-
-.field-value {
-    -fx-text-fill: #c9d1d9;
-    -fx-font-size: 14px;
-}
-
-.footer {
-    -fx-text-fill: #484f58;
-    -fx-font-size: 12px;
-}
-
-/* === 表单控件样式 (输入框、下拉框) === */
-.form-input {
-    -fx-background-color: #21262d;
-    -fx-text-fill: #c9d1d9;
-    -fx-border-color: #30363d;
-    -fx-border-radius: 6px;
-    -fx-background-radius: 6px;
-    -fx-padding: 6px;
-}
-
-.form-input:focused {
-    -fx-border-color: #58a6ff; /* 聚焦时蓝色边框 */
-}
-
-/* 下拉框内部的文字颜色 */
-.form-input .list-cell {
-    -fx-text-fill: #c9d1d9;
-    -fx-background-color: #21262d;
-}
-
-/* === 主按钮样式 === */
-.launch-button {
-    -fx-background-color: #238636;
-    -fx-text-fill: white;
-    -fx-font-weight: bold;
-    -fx-font-size: 14px;
-    -fx-cursor: hand;
-    -fx-background-radius: 6px;
-    -fx-padding: 8 24;
-}
-
-.launch-button:hover {
-    -fx-background-color: #2ea043; /* 鼠标悬停变亮 */
-}
-
-.launch-button:disabled {
-    -fx-opacity: 0.6;
-}
-
-/* === 次要按钮（浏览目录等） === */
-.secondary-button {
-    -fx-background-color: #21262d;
-    -fx-text-fill: #c9d1d9;
-    -fx-font-size: 13px;
-    -fx-cursor: hand;
-    -fx-background-radius: 6px;
-    -fx-border-color: #30363d;
-    -fx-border-radius: 6px;
-    -fx-padding: 6 12;
-}
-
-.secondary-button:hover {
-    -fx-background-color: #30363d;
-}
-
-.secondary-button:pressed {
-    -fx-background-color: #161b22;
-}
-
-/* === 表单辅助提示文字 === */
 .field-hint {
-    -fx-text-fill: #8b949e;
-    -fx-font-size: 11px;
+    -fx-text-fill: -caml-on-surface-muted;
 }
 
 .field-hint-error {
-    -fx-text-fill: #f85149;
-    -fx-font-size: 11px;
-}
-
-/* === 日志框样式 === */
-.log-area {
-    -fx-control-inner-background: #0d1117;
-    -fx-text-fill: #c9d1d9;
-    -fx-font-family: 'Consolas', monospace;
-    -fx-border-color: #30363d;
-    -fx-border-radius: 6px;
-}
-
-/* TextArea 在 JavaFX 内部嵌套很深，需要通过 .content 控制内边距 */
-.log-area .content {
-    -fx-background-color: #0d1117;
+    -fx-text-fill: -caml-danger;
 }

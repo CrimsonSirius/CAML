@@ -1,12 +1,13 @@
 # CAML 总体架构
 
-更新日期：2026-11-03
+更新日期：2026-11-05
 
 ## 1. 架构目标
 
 CAML 采用前后端分离的多模块结构：
 
 ```text
+CAMLUI      JavaFX + CSS 的 CAML 组件库
 CAMLFront   JavaFX 界面，只负责展示和交互
 CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
 ```
@@ -15,6 +16,8 @@ CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
 
 - `CAMLBackend` 是纯 Java，不 import JavaFX。
 - `CAMLBackend` 不依赖 `CAMLFront`。
+- `CAMLUI` 只依赖 JavaFX 和自身 CSS，不依赖 `CAMLBackend` 或 `CAMLFront`。
+- `CAMLUI` 不定义固定配色；组件颜色全部来自外部主题文件。
 - `CAMLFront` 不直接读写文件、不直接发 HTTP、不直接启动进程。
 - 前后端通过 facade、DTO、事件和 `CompletableFuture` 交互。
 
@@ -25,12 +28,13 @@ CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
 | `api` | 后端 facade 和状态 DTO | 已有 |
 | `config` | 配置、目录约定和路径初始化 | 已有 |
 | `metadata` | 版本清单、版本 JSON、参数、规则、库、继承合并 | 已有 |
-| `instance` | 实例模型和版本安装编排 | 已有基础能力 |
+| `instance` | 实例模型、本地版本复用、版本安装和隔离判定 | 已有 |
 | `download` | 下载源、下载计划、SHA-1、临时文件和原子落盘 | 已有基础能力 |
 | `auth` | 账号、AuthSession、离线登录 | 已有离线能力 |
 | `runtime` | Java 运行时检测、版本/架构/位数匹配 | 已有 |
-| `launch` | LaunchPlan、classpath、参数、进程启动 | 仅有占位 |
-| `loader` | Fabric、Quilt���Forge、NeoForge 等加载器 | 未实现 |
+| `launch` | LaunchPlan、classpath、参数、进程启动 | 已有 |
+| `theme` | 主题目录、默认主题复制和当前主题配置 | 已有 |
+| `loader` | Fabric、Quilt、Forge、NeoForge 等加载器 | 未实现 |
 | `json` | 通用 JSON 文件读写 | 已有 |
 
 ## 3. 当前已实现能力
@@ -60,8 +64,11 @@ CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
 - 按版本 ID 安装原版。
 - 本地已安装的版本（包括第三方启动器/整合包的自定义版本 ID）直接复用，不访问官方清单。
 - 复用本地版本时保持版本 JSON 不变，只补齐缺失文件。
+- 本地版本以 `versions/<id>` 文件夹名作为版本 ID；`inheritsFrom` 也按文件夹名查找父版本。
+- 安装完成后把 manifest 的 `id` 统一为文件夹名，保证客户端 jar 路径一致。
 - 基础文件下载完成后才写入版本 JSON。
 - 返回 `InstalledVersion`，包含后续启动需要的路径。
+- `CAMLBackend.inspectGameDirectory` 扫描 `versions/<id>/<id>.json`，返回已安装版本和隔离版本列表。
 
 ### 3.4 账号
 
@@ -86,7 +93,8 @@ CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
 - 启动计划创建时校验 Java 是否满足版本要求。
 - **版本隔离**：`GameDataLayout` 检测 `versions/<id>` 内是否存在 `saves`、`options.txt`、
   `logs`、`mods` 等游戏数据；若存在，则 `--gameDir` 指向该版本目录，
-  `libraries` 与 `assets` 仍来自 `.minecraft` 根目录。
+  `libraries` 与 `assets` 仍来自 `.minecraft` 根目录。`LaunchPlanner` 提供显式
+  `gameDataDirectory` 的创建重载，`GameLaunchService` 负责调用 `GameDataLayout.resolve`。
 
 ### 3.7 classpath
 
@@ -129,12 +137,47 @@ CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
 - `LaunchException` 区分命令行过长、权限不足、找不到 Java 和其他启动失败。
 - 每种错误提供用户可读提示文本。
 - `GameLaunchService` 串联安装、离线登录、Java 选择、LaunchPlan、classpath、natives 和进程启动。
+- 版本隔离时 `workingDirectory` 是 `versions/<id>`，但 Windows `APPDATA` 仍按 `.minecraft` 根目录计算。
+
+### 3.11 前端界面
+
+- `CAMLApplication` 初始化后端并创建 `MainView`。
+- `MainView` 提供游戏位置、版本、离线用户名、最大内存、启动按钮、状态提示和日志窗口。
+- 游戏位置支持默认目录和 `DirectoryChooser` 选择本地已有目录。
+- 版本框可编辑，可直接输入第三方启动器/整合包的自定义版本 ID。
+- 版本框下方显示存档位置：隔离版本提示 `versions/<id>/saves`，否则提示 `.minecraft/saves`。
+- `MainController` 使用独立 I/O 线程执行目录探测和启动，不阻塞 JavaFX Application Thread。
+- 下载日志按文件切换和每 10% 进度节流，避免刷屏。
+- 主工作区使用 `SplitPane`：宽度 `< 900` 时上下堆叠，`>= 900` 时左右分栏。
+- 启动设置是主区域，日志是支持面板；表单字段采用“标签在上、控件在下”的稳定结构。
+- 启动按钮固定在表单底部，字段过多时只滚动字段区域，主操作始终可见。
+- 顶栏提供主题下拉框，属于即时设置，不额外放保存按钮。
+
+### 3.12 CAMLUI 组件库与主题
+
+- 独立 Gradle 模块 `CAMLUI`，只依赖 JavaFX controls。
+- 不引入 JFoenix、AtlantaFX 等第三方主题库。
+- `caml.css` 只定义结构、字体层级、圆角、阴影和控件状态，不包含固定颜色。
+- `CamlTheme.install(scene)` 安装结构样式；`CamlTheme.applyTheme(scene, path)` 加载外部 CSS。
+- 主题文件位于 `~/.caml/themes/*.css`，顶栏提供主题选择器。
+- 当前主题记录在 `~/.caml/theme.txt`，下次启动自动恢复。
+- 后端 `ThemeService` 负责扫描主题、首次复制默认主题和保存选择。
+- 默认主题作为 `CAMLBackend/src/main/resources/themes/default.css` 打包，
+  首次启动复制到 `~/.caml/themes/default.css`。
+- 默认主题使用白底、灰色表面、黄色强调色和深色文字。
+- 组件 API 包括 `CamlButton`、`CamlCard`、`CamlTextField`、`CamlTextArea`、
+  `CamlComboBox`、`CamlSpinner`、`CamlSwitch`、`CamlCheckBox`、`CamlSlider`、
+  `CamlProgressBar`、`CamlSideNav`、`CamlSideNavItem` 和 `CamlTopBar`。
+- `CAMLFront` 依赖 `CAMLUI`，不再把控件外观写死在业务界面里。
 
 ## 4. 尚未实现的能力
 
 - 启动器隐藏/保留/关闭策略。
 - 异常退出分类和崩溃分析。
-- CAMLFront 启动���误对话框。
+- CAMLFront 启动错误对话框。
+- CAMLFront 停止游戏按钮。
+- 真实 Minecraft 客户端端到端验证。
+- 启动脚本导出。
 - 微软账号登录。
 - token 刷新和安全存储。
 - Fabric、Quilt、Forge、NeoForge 等加载器安装。
@@ -147,6 +190,7 @@ CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
 - 下载必须校验 SHA-1，先写临时文件，校验通过后再原子移动。
 - 缓存和实例目录必须有明确边界。
 - 启动器数据默认放在 `~/.caml`。
+- 外部主题放在 `~/.caml/themes`，启动器不覆盖用户已有主题。
 - 游戏数据默认放在 `~/.minecraft`（Linux/macOS）或启动器目录下的 `.minecraft`（Windows）。
 - 微软登录只使用官方 OAuth 流程，不收集用户密码。
 - refresh token 不得明文保存，不得写入日志。
@@ -178,7 +222,11 @@ backend.nativeExtractor().extract(plan);
 backend.virtualAssetInstaller().prepare(plan);
 backend.launchCommandBuilder().build(plan, classpath);
 backend.processLauncher().launch(plan, classpath, listener);
-backend.launchGame(versionId, username, options, downloadListener, processListener);
+backend.launchGame(versionId, gameDirectory, username, options, downloadListener, processListener);
+
+GameDirectoryInfo info = backend.inspectGameDirectory(gameDirectory);
+info.installedVersions();
+info.isolatedVersions();
 ```
 
 ## 7. 相关文档
@@ -186,4 +234,4 @@ backend.launchGame(versionId, username, options, downloadListener, processListen
 - 版本下载和启动链路详见 [version-download-and-launch.md](version-download-and-launch.md)。
 - runtime 包详见 [runtime.md](runtime.md)。
 - 当前实现情况详见 [Implement.md](Implement.md)。
-- 开发任务和阶段计划由本地 `TODO.md` 维护.
+- 开发任务和阶段计划由本地 `TODO.md` 维护。
