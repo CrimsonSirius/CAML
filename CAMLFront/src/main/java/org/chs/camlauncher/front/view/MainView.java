@@ -47,7 +47,6 @@ public final class MainView extends BorderPane {
     /** 没有检测到本地版本时给出的常用版本建议。 */
     private static final List<String> DEFAULT_VERSIONS = List.of("1.21.11", "1.21.4", "1.20.4");
     private static final String DEFAULT_VERSION = "1.21.4";
-    private static final double COMPACT_BREAKPOINT = 900;
 
     private final MainController controller;
 
@@ -62,6 +61,8 @@ public final class MainView extends BorderPane {
     private final Label statusLabel;
     private final CamlTextArea logArea;
     private final CamlComboBox<ThemeInfo> themeBox;
+    private final BorderPane formPane;
+    private final VBox logPane;
     private final SplitPane workspace;
     private final Node homePage;
     private final Node downloadsPage;
@@ -70,6 +71,8 @@ public final class MainView extends BorderPane {
 
     /** 最近一次后端探测结果，用于决定目录选择器的初始位置。 */
     private GameDirectoryInfo lastGameDirectoryInfo;
+    /** 当前生效的自适应布局；只有跨越断点时才重新应用，避免缩放时改动用户拖动的分隔条。 */
+    private WorkspaceLayout.Plan appliedLayout;
 
     public MainView(MainController controller) {
         this.controller = controller;
@@ -112,7 +115,6 @@ public final class MainView extends BorderPane {
         logArea.setEditable(false);
         logArea.setWrapText(false);
         logArea.setMaxHeight(Double.MAX_VALUE);
-        logArea.setMinHeight(200);
         logArea.setAccessibleText("运行日志");
         logArea.getStyleClass().add("app-log-area");
         VBox.setVgrow(logArea, Priority.ALWAYS);
@@ -121,11 +123,20 @@ public final class MainView extends BorderPane {
         themeBox.setPrefWidth(150);
         themeBox.setAccessibleText("主题");
 
-        workspace = new SplitPane(buildFormPane(), buildLogPane());
+        formPane = buildFormPane();
+        logPane = buildLogPane();
+        workspace = new SplitPane(formPane, logPane);
         workspace.getStyleClass().add("app-workspace");
-        workspace.setDividerPositions(0.56);
+        // 首帧宽度尚未确定，先按宽屏规则摆放；宽度可用后由 updateWorkspaceLayout 校正。
+        applyWorkspaceLayout(WorkspaceLayout.WIDE);
         widthProperty().addListener((observable, oldValue, newValue) ->
                 updateWorkspaceLayout(newValue.doubleValue()));
+        // 从占位页切回主页或重新挂载场景时，按当前宽度重新确认布局。
+        sceneProperty().addListener((observable, oldValue, newValue) -> {
+            if (newValue != null) {
+                updateWorkspaceLayout(getWidth());
+            }
+        });
 
         homePage = workspace;
         downloadsPage = buildPlaceholderPage(
@@ -227,7 +238,6 @@ public final class MainView extends BorderPane {
         BorderPane pane = new BorderPane();
         pane.getStyleClass().add("app-form-pane");
         pane.setPadding(new Insets(28, 40, 28, 40));
-        pane.setMinHeight(320);
         pane.setTop(header);
         pane.setCenter(fieldScroll);
         pane.setBottom(actions);
@@ -279,7 +289,6 @@ public final class MainView extends BorderPane {
         pane.getStyleClass().add("app-log-pane");
         pane.setPadding(new Insets(32));
         pane.setMinWidth(320);
-        pane.setMinHeight(220);
         VBox.setVgrow(logArea, Priority.ALWAYS);
         return pane;
     }
@@ -304,18 +313,32 @@ public final class MainView extends BorderPane {
         return label;
     }
 
-    /** 宽屏左右分栏；窗口变窄时改为上下堆叠，保证表单不被压扁。 */
+    /** 宽屏左右分栏；窗口变窄时改为上下堆叠，并放宽最小高度，避免小屏上内容被裁切。 */
     private void updateWorkspaceLayout(double width) {
         if (width <= 0) {
             return;
         }
-        Orientation target = width < COMPACT_BREAKPOINT
-                ? Orientation.VERTICAL
-                : Orientation.HORIZONTAL;
+        applyWorkspaceLayout(WorkspaceLayout.plan(width));
+    }
+
+    /** 应用工作区布局；只在跨越断点切换方案时改动方向、最小高度和分隔条位置。 */
+    private void applyWorkspaceLayout(WorkspaceLayout.Plan plan) {
+        if (plan.equals(appliedLayout)) {
+            return;
+        }
+        appliedLayout = plan;
+
+        formPane.setMinHeight(plan.formMinHeight());
+        logPane.setMinHeight(plan.logMinHeight());
+        logArea.setMinHeight(plan.logAreaMinHeight());
+        logArea.setPrefHeight(plan.logAreaPrefHeight());
+
+        Orientation target = plan.compact() ? Orientation.VERTICAL : Orientation.HORIZONTAL;
         if (workspace.getOrientation() != target) {
             workspace.setOrientation(target);
-            workspace.setDividerPositions(target == Orientation.VERTICAL ? 0.62 : 0.56);
         }
+        // 只在跨断点切换方案时重置分隔条，用户手动拖动的位置在缩放过程中保持不变。
+        workspace.setDividerPositions(plan.dividerPosition());
     }
 
     /** 填充主题选择器；切换时由应用入口负责加载 CSS 并持久化。 */
