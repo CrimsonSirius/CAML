@@ -1,3 +1,3 @@
 rootProject.name = "CAML"
 
-include("CAMLBackend", "CAMLFront")
+include("CAMLBackend", "CAMLUI", "CAMLFront")

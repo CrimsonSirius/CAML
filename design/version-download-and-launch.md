@@ -1,6 +1,6 @@
 # CAML 版本下载与启动链路
 
-更新日期：2026-11-03
+更新日期：2026-11-05
 
 ## 1. 文档范围
 
@@ -15,7 +15,8 @@
 
 - 版本下载链路已经可用。
 - 启动命令构建和基础进程启动已经实现。
-- 完整 UI 启动编排、异常退出处理和真实客户端端到端验证还没有完成。
+- JavaFX 界面已经可以选目录、选版本、启动和查看日志。
+- 启动错误对话框、停止按钮、异常退出处理和真实客户端端到端验证还没有完成。
 
 ## 2. Version 下载链路
 
@@ -43,7 +44,7 @@ CAMLBackend.installVersion(...)
 
 ### 2.2 本地已有版本优先
 
-`VersionsInstaller`（`VersionInstaller`）启动前先检查：
+`VersionInstaller` 启动前先检查：
 
 ```text
 <游戏目录>/versions/<id>/<id>.json
@@ -289,13 +290,13 @@ assetIndexFile
 
 ### 3.1 当前状态
 
-当前还不能真正启动 Minecraft。
+底层已经可以启动 Minecraft 进程，前端也已经接入启动按钮和日志窗口。以下内容尚未完成：
 
-`launch` 包目前已经包含启动计划、classpath、参数、natives、virtual assets、命令构建和进程启动。以下内容尚未实现：
-
-- 完整 UI 启动编排。
+- 启动错误对话框。
+- CAMLFront 停止游戏按钮。
 - 异常退出分类和崩溃分析。
 - 启动器隐藏/保留/关闭策略。
+- 真实 Minecraft 客户端端到端验证。
 
 ### 3.2 已有启动前置数据
 
@@ -315,6 +316,7 @@ JavaRuntime       实际 Java 可执行文件、版本、架构、位数
 读取 InstalledVersion
 → 读取 AuthSession
 → 选择 JavaRuntime
+→ 通过 GameDataLayout 判断版本隔离
 → 创建 LaunchPlan（已实现）
 → 构建 classpath（已实现）
 → 构建 JVM 参数（已实现）
@@ -338,10 +340,12 @@ JavaRuntime       实际 Java 可执行文件、版本、架构、位数
 | `auth` | `AuthSession` | 用户名、UUID、token、userType、userProperties |
 | `java` | `JavaRuntime` | 实际使用的游戏 Java |
 | `options` | `LaunchOptions` | 内存、分辨率、自定义参数和环境变量 |
-| `gameDirectory` | `Path` | 游戏目录 |
+| `gameDirectory` | `Path` | 实际 `--gameDir`：版本隔离时为 `versions/<id>`，否则为 `.minecraft` 根目录 |
 | `assetsDirectory` | `Path` | assets 目录 |
 | `nativesDirectory` | `Path` | natives 解压目录 |
 
+`gameDirectory` 是实际传给 `--gameDir` 的目录：隔离版本为 `versions/<id>`，
+否则为 `.minecraft` 根目录。`assetsDirectory` 和 `libraries` 始终来自根目录。
 构造时会校验所有字段非空。
 
 ### 3.5 LaunchOptions
@@ -371,6 +375,15 @@ LaunchPlanner.create(instance, auth, java, options)
 → 构造 LaunchPlan
 → nativesDirectory = versions/<id>/natives
 ```
+
+`LaunchPlanner` 还提供：
+
+```java
+create(instance, auth, java, options, gameDataDirectory)
+```
+
+用于显式指定游戏数据目录。`GameLaunchService` 会调用
+`GameDataLayout.resolve(...)`，自动选择 `.minecraft` 根目录或 `versions/<id>`。
 
 当前 `LaunchPlan` 只负责组织启动所需数据，不负责：
 
@@ -496,7 +509,8 @@ java 可执行文件
 - 使用 `ProcessBuilder`。
 - 工作目录设置为游戏目录。
 - 合并 `LaunchOptions.environmentVariables()`。
-- 仅在 Windows 设置 `APPDATA` 为游戏目录的父目录。
+- 仅在 Windows 设置 `APPDATA`，并以 `.minecraft` 根目录为基准计算；
+  版本隔离时不会误用 `versions/<id>` 的父目录。
 - 启动后返回 `GameProcess`。
 
 `GameProcess`：
@@ -549,6 +563,7 @@ GameProcess process = backend.processLauncher().launch(plan, classpath, listener
 安装版本
 → 离线登录
 → 选择游戏 Java
+→ GameDataLayout.resolve 判断版本隔离
 → 创建 LaunchPlan
 → 重建 virtual assets
 → 解压 natives
@@ -562,6 +577,7 @@ GameProcess process = backend.processLauncher().launch(plan, classpath, listener
 ```java
 GameLaunch launch = backend.launchGame(
         versionId,
+        gameDirectory,
         username,
         LaunchOptions.defaults(),
         DownloadListener.NONE,
@@ -571,9 +587,37 @@ GameLaunch launch = backend.launchGame(
 
 `GameLaunch` 包含安装结果、AuthSession、JavaRuntime、LaunchPlan、classpath 和 GameProcess。
 
+### 3.12 版本隔离
+
+PCL/HMCL 等启动器默认开启版本隔离，游戏数据位于 `versions/<id>` 内。
+CAML 通过 `GameDataLayout` 检测以下标记：
+
+```text
+options.txt
+saves
+logs
+mods
+config
+resourcepacks
+shaderpacks
+usercache.json
+command_history.txt
+```
+
+命中任意一项时：
+
+- `--gameDir` 指向 `versions/<id>`。
+- `libraries` 和 `assets` 仍来自 `.minecraft` 根目录。
+- 存档、设置、日志和模组路径与外部启动器保持一致。
+
+界面通过 `GameDirectoryInfo.isolatedVersions()` 获取隔离版本列表，
+并在版本框下方显示“版本隔离：存档在 versions/<id>/saves”。
+
 ## 4. 相关源码
 
 - `CAMLBackend/src/main/java/org/chs/camlauncher/backend/instance/VersionInstaller.java`
+- `CAMLBackend/src/main/java/org/chs/camlauncher/backend/instance/GameDataLayout.java`
+- `CAMLBackend/src/main/java/org/chs/camlauncher/backend/api/GameDirectoryInfo.java`
 - `CAMLBackend/src/main/java/org/chs/camlauncher/backend/metadata/VersionManifestService.java`
 - `CAMLBackend/src/main/java/org/chs/camlauncher/backend/download/DownloadPlanner.java`
 - `CAMLBackend/src/main/java/org/chs/camlauncher/backend/download/AssetDownloadPlanner.java`

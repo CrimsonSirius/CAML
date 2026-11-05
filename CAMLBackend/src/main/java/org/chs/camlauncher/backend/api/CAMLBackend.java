@@ -31,6 +31,8 @@ import org.chs.camlauncher.backend.metadata.MetadataService;
 import org.chs.camlauncher.backend.metadata.VersionManifest;
 import org.chs.camlauncher.backend.metadata.VersionManifestService;
 import org.chs.camlauncher.backend.runtime.JavaLocator;
+import org.chs.camlauncher.backend.theme.ThemeInfo;
+import org.chs.camlauncher.backend.theme.ThemeService;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -63,6 +65,7 @@ public final class CAMLBackend implements AutoCloseable {
     private final LaunchCommandBuilder launchCommandBuilder;
     private final ProcessLauncher processLauncher;
     private final GameLaunchService gameLaunchService;
+    private final ThemeService themeService;
     private boolean started;
 
     public CAMLBackend(BackendConfig config) {
@@ -89,6 +92,7 @@ public final class CAMLBackend implements AutoCloseable {
         this.virtualAssetInstaller = new VirtualAssetInstaller();
         this.launchCommandBuilder = new LaunchCommandBuilder();
         this.processLauncher = new ProcessLauncher();
+        this.themeService = new ThemeService(config.dataDirectory());
         this.gameLaunchService = new GameLaunchService(
                 config.gameDirectory(),
                 VersionManifestService.DEFAULT_MANIFEST_URI,
@@ -110,6 +114,7 @@ public final class CAMLBackend implements AutoCloseable {
 
         try {
             BackendPaths.ensure(config);
+            themeService.ensureDefaultTheme();
         } catch (IOException e) {
             throw new UncheckedIOException("Failed to prepare CAML directories", e);
         }
@@ -118,6 +123,7 @@ public final class CAMLBackend implements AutoCloseable {
         LOGGER.info("CAML backend {} started", VERSION);
         LOGGER.info("Data directory: {}", config.dataDirectory());
         LOGGER.info("Game directory: {}", config.gameDirectory());
+        LOGGER.info("Themes directory: {}", themeService.themesDirectory());
     }
 
     public BackendStatus status() {
@@ -126,6 +132,18 @@ public final class CAMLBackend implements AutoCloseable {
 
     public JsonService json() {
         return json;
+    }
+
+    public List<ThemeInfo> listThemes() throws IOException {
+        return themeService.listThemes();
+    }
+
+    public ThemeInfo activeTheme() throws IOException {
+        return themeService.activeTheme();
+    }
+
+    public void selectTheme(String id) throws IOException {
+        themeService.selectTheme(id);
     }
 
     public MetadataService metadata() {

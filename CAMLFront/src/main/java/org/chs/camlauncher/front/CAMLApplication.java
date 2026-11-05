@@ -7,10 +7,15 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.chs.camlauncher.backend.api.CAMLBackend;
 import org.chs.camlauncher.backend.config.BackendConfig;
+import org.chs.camlauncher.backend.theme.ThemeInfo;
 import org.chs.camlauncher.front.controller.MainController;
 import org.chs.camlauncher.front.view.MainView;
+import org.chs.camlauncher.ui.theme.CamlTheme;
 
+import java.io.IOException;
+import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * JavaFX 应用入口。
@@ -22,6 +27,8 @@ public final class CAMLApplication extends Application {
     private CAMLBackend backend;
     private MainController controller;
     private Logger logger;
+    private List<ThemeInfo> themes = List.of();
+    private ThemeInfo activeTheme;
 
     @Override
     public void init() throws Exception {
@@ -34,6 +41,13 @@ public final class CAMLApplication extends Application {
         backend = new CAMLBackend(config);
         backend.start();
 
+        try {
+            themes = backend.listThemes();
+            activeTheme = backend.activeTheme();
+        } catch (IOException e) {
+            logger.warn("无法加载主题，将使用组件默认结构样式", e);
+        }
+
         logger.info("CAML frontend initialized");
     }
 
@@ -43,8 +57,17 @@ public final class CAMLApplication extends Application {
         controller = new MainController(backend);
         MainView view = new MainView(controller);
 
-        // 3. 设置场景
-        Scene scene = new Scene(view, 960, 720);
+        // 3. 设置场景：结构样式内置，配色来自 <data>/themes/*.css
+        Scene scene = new Scene(view, 1180, 760);
+        CamlTheme.install(scene);
+        if (activeTheme != null) {
+            try {
+                CamlTheme.applyTheme(scene, activeTheme.file());
+            } catch (RuntimeException e) {
+                logger.warn("无法应用主题: {}", activeTheme.file(), e);
+            }
+        }
+        view.configureThemes(themes, activeTheme, theme -> switchTheme(scene, theme));
 
         // 加载全局样式；资源缺失时退化为内联样式，避免影响启动。
         try {
@@ -56,10 +79,28 @@ public final class CAMLApplication extends Application {
         }
 
         stage.setTitle("CAML");
-        stage.setMinWidth(800);
-        stage.setMinHeight(560);
+        stage.setMinWidth(720);
+        stage.setMinHeight(700);
         stage.setScene(scene);
         stage.show();
+    }
+
+    /** 立即应用主题，并把选择写入 ~/.caml/theme.txt。 */
+    private void switchTheme(Scene scene, ThemeInfo theme) {
+        try {
+            CamlTheme.applyTheme(scene, theme.file());
+        } catch (RuntimeException e) {
+            logger.warn("无法应用主题: {}", theme.file(), e);
+            return;
+        }
+
+        CompletableFuture.runAsync(() -> {
+            try {
+                backend.selectTheme(theme.id());
+            } catch (IOException e) {
+                logger.warn("保存主题选择失败: {}", theme.id(), e);
+            }
+        });
     }
 
     @Override

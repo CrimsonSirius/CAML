@@ -6,6 +6,7 @@ plugins {
 
 dependencies {
     implementation(project(":CAMLBackend"))
+    implementation(project(":CAMLUI"))
     implementation(libs.log4j.api)
     runtimeOnly(libs.log4j.core)
 
