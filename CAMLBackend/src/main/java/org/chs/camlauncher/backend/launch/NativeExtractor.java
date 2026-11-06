@@ -1,8 +1,10 @@
 package org.chs.camlauncher.backend.launch;
 
 import org.chs.camlauncher.backend.metadata.DownloadInfo;
+import org.chs.camlauncher.backend.metadata.Argument;
 import org.chs.camlauncher.backend.metadata.Library;
 import org.chs.camlauncher.backend.metadata.RuleEvaluator;
+import org.chs.camlauncher.backend.metadata.VersionInfo;
 import org.chs.camlauncher.backend.runtime.JavaRuntimeParser;
 
 import java.io.IOException;
@@ -49,8 +51,13 @@ public final class NativeExtractor {
 
     public void extract(LaunchPlan plan) throws IOException {
         Path nativesDirectory = plan.nativesDirectory().toAbsolutePath().normalize();
+        Path extractionDirectory = resolveExtractionDirectory(
+                nativesDirectory,
+                plan.manifest(),
+                ruleEvaluator
+        );
         cleanDirectory(nativesDirectory);
-        Files.createDirectories(nativesDirectory);
+        Files.createDirectories(extractionDirectory);
 
         Set<NativeJar> nativeJars = new LinkedHashSet<>();
         for (Library library : plan.manifest().libraries()) {
@@ -61,9 +68,40 @@ public final class NativeExtractor {
 
         for (NativeJar jar : nativeJars) {
             if (Files.isRegularFile(jar.path())) {
-                extractJar(jar.path(), nativesDirectory, jar.extract());
+                extractJar(jar.path(), extractionDirectory, jar.extract());
             }
         }
+    }
+
+    /**
+     * 26.3 起版本 JSON 可能把 java.library.path 指向
+     * {@code ${natives_directory}/java}，原生库必须解压到对应子目录。
+     */
+    static Path resolveExtractionDirectory(Path nativesDirectory, VersionInfo manifest,
+                                           RuleEvaluator ruleEvaluator) {
+        Path base = nativesDirectory.toAbsolutePath().normalize();
+        String placeholder = "${natives_directory}";
+        for (Argument argument : manifest.arguments().jvm()) {
+            for (String value : argument.resolve(ruleEvaluator)) {
+                String prefix = "-Djava.library.path=";
+                if (!value.startsWith(prefix)) {
+                    continue;
+                }
+
+                String path = value.substring(prefix.length());
+                if (!path.startsWith(placeholder + "/")) {
+                    return base;
+                }
+
+                String subdirectory = path.substring(placeholder.length() + 1);
+                if (subdirectory.isBlank()) {
+                    return base;
+                }
+                Path candidate = base.resolve(subdirectory).normalize();
+                return candidate.startsWith(base) ? candidate : base;
+            }
+        }
+        return base;
     }
 
     private List<NativeJar> nativeJars(Path librariesDirectory, Library library) {

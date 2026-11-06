@@ -12,6 +12,80 @@
     -fx-background-color: -caml-surface;
 }
 
+.app-download-content {
+    -fx-background-color: -caml-surface;
+}
+
+.app-download-content .caml-body-small {
+    -fx-font-size: 16px;
+}
+
+.app-download-version-item {
+    -fx-alignment: center-left;
+    -fx-font-size: 16px;
+    -fx-padding: 12 16;
+    -fx-background-radius: 10;
+    -fx-border-radius: 10;
+}
+
+.app-download-version-id {
+    -fx-font-size: 16px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -caml-on-surface;
+}
+
+.app-download-version-date {
+    -fx-font-size: 16px;
+    -fx-text-fill: -caml-on-surface-muted;
+}
+
+.app-download-setup-page {
+    -fx-background-color: -caml-surface;
+}
+
+.app-download-setup-page .caml-text-field {
+    -fx-font-size: 16px;
+}
+
+.app-download-option-bar {
+    -fx-background-color: -caml-surface-low;
+    -fx-background-radius: 12;
+    -fx-border-color: -caml-border-subtle;
+    -fx-border-width: 1;
+    -fx-border-radius: 12;
+    -fx-padding: 16 20;
+    -fx-min-height: 64;
+}
+
+.app-download-option-title {
+    -fx-font-size: 18px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -caml-on-surface;
+}
+
+.app-download-option-value {
+    -fx-font-size: 16px;
+    -fx-text-fill: -caml-on-surface-muted;
+}
+
+.app-download-option-bar .caml-combo-box {
+    -fx-font-size: 16px;
+    -fx-min-width: 280;
+    -fx-pref-width: 280;
+}
+
+.app-download-primary-button {
+    -fx-min-height: 52;
+    -fx-font-size: 18px;
+}
+
+.app-download-concurrency-value {
+    -fx-font-size: 16px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -caml-accent-text;
+    -fx-padding: 0 0 4 0;
+}
+
 .app-sidebar,
 .app-settings-sidebar {
     -fx-background-color: transparent;
@@ -56,8 +130,40 @@
     -fx-font-weight: bold;
 }
 
+.app-settings-group .caml-body-medium {
+    -fx-font-size: 16px;
+}
+
+.app-settings-group .caml-body-small {
+    -fx-font-size: 16px;
+}
+
+.app-settings-group .caml-label-medium {
+    -fx-font-size: 16px;
+}
+
+.app-settings-group .caml-text-field {
+    -fx-font-size: 16px;
+}
+
+.app-settings-group .caml-radio-button {
+    -fx-font-size: 16px;
+}
+
+.app-settings-group .caml-button {
+    -fx-font-size: 15px;
+}
+
+.app-settings-group .app-memory-summary {
+    -fx-font-size: 17px;
+}
+
 .app-instance-picker {
     -fx-background-color: -caml-surface;
+}
+
+.app-instance-picker .caml-body-small {
+    -fx-font-size: 16px;
 }
 
 .app-pill-button {

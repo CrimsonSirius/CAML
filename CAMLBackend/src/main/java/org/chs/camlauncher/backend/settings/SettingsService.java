@@ -1,5 +1,8 @@
 package org.chs.camlauncher.backend.settings;
 
+import org.chs.camlauncher.backend.download.DownloadConcurrency;
+import org.chs.camlauncher.backend.instance.VersionIsolationMode;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -10,13 +13,19 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Properties;
 
-/** 启动器设置持久化：游戏位置和最大内存。 */
+/** 启动器设置持久化：游戏位置、最大内存、版本隔离和下载并发数。 */
 public final class SettingsService {
     public static final int DEFAULT_MAX_MEMORY_MB = 4096;
     public static final int MIN_MAX_MEMORY_MB = 512;
+    public static final VersionIsolationMode DEFAULT_VERSION_ISOLATION = VersionIsolationMode.FULL;
+    public static final int MIN_DOWNLOAD_CONCURRENCY = DownloadConcurrency.MIN;
+    public static final int MAX_DOWNLOAD_CONCURRENCY = DownloadConcurrency.MAX;
+    public static final int DEFAULT_DOWNLOAD_CONCURRENCY = DownloadConcurrency.DEFAULT;
 
     private static final String MAX_MEMORY_KEY = "maxMemoryMb";
     private static final String GAME_DIRECTORY_KEY = "gameDirectory";
+    private static final String VERSION_ISOLATION_KEY = "versionIsolation";
+    private static final String DOWNLOAD_CONCURRENCY_KEY = "downloadConcurrency";
 
     private final Path settingsFile;
 
@@ -65,6 +74,54 @@ public final class SettingsService {
         Properties properties = load();
         properties.setProperty(GAME_DIRECTORY_KEY,
                 directory.toAbsolutePath().normalize().toString());
+        store(properties);
+    }
+
+    public VersionIsolationMode versionIsolationMode() throws IOException {
+        String raw = load().getProperty(VERSION_ISOLATION_KEY);
+        if (raw == null) {
+            return DEFAULT_VERSION_ISOLATION;
+        }
+        return switch (raw.trim().toLowerCase()) {
+            case "full" -> VersionIsolationMode.FULL;
+            case "none" -> VersionIsolationMode.NONE;
+            default -> DEFAULT_VERSION_ISOLATION;
+        };
+    }
+
+    public void setVersionIsolationMode(VersionIsolationMode mode) throws IOException {
+        Objects.requireNonNull(mode, "mode");
+        if (mode == VersionIsolationMode.AUTO) {
+            throw new IllegalArgumentException("界面设置不能持久化自动隔离模式");
+        }
+        Properties properties = load();
+        properties.setProperty(VERSION_ISOLATION_KEY, mode.name().toLowerCase());
+        store(properties);
+    }
+
+    public int downloadConcurrency() throws IOException {
+        String raw = load().getProperty(DOWNLOAD_CONCURRENCY_KEY);
+        if (raw == null) {
+            return DEFAULT_DOWNLOAD_CONCURRENCY;
+        }
+        try {
+            int value = Integer.parseInt(raw.trim());
+            return value >= MIN_DOWNLOAD_CONCURRENCY && value <= MAX_DOWNLOAD_CONCURRENCY
+                    ? value
+                    : DEFAULT_DOWNLOAD_CONCURRENCY;
+        } catch (NumberFormatException ignored) {
+            return DEFAULT_DOWNLOAD_CONCURRENCY;
+        }
+    }
+
+    public void setDownloadConcurrency(int value) throws IOException {
+        if (value < MIN_DOWNLOAD_CONCURRENCY || value > MAX_DOWNLOAD_CONCURRENCY) {
+            throw new IllegalArgumentException(
+                    "下载并发数必须在 " + MIN_DOWNLOAD_CONCURRENCY + " 到 "
+                            + MAX_DOWNLOAD_CONCURRENCY + " 之间");
+        }
+        Properties properties = load();
+        properties.setProperty(DOWNLOAD_CONCURRENCY_KEY, Integer.toString(value));
         store(properties);
     }
 

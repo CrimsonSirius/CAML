@@ -10,8 +10,9 @@ import org.chs.camlauncher.backend.download.OfficialDownloadSource;
 import org.chs.camlauncher.backend.metadata.MetadataService;
 import org.chs.camlauncher.backend.metadata.RuleEvaluator;
 import org.chs.camlauncher.backend.metadata.VersionManifestService;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -33,8 +34,13 @@ class VersionInstallerTest {
     @TempDir
     Path gameDirectory;
 
-    @Test
-    void installsVanillaVersionFromRemoteMetadataAndFiles() throws Exception {
+    @ParameterizedTest
+    @CsvSource(value = {
+            "1.21.5|1.21.5",
+            "1.21.5|我的 1.21.5"
+    }, delimiter = '|')
+    void installsVanillaVersionFromRemoteMetadataAndFiles(String officialVersionId, String instanceId)
+            throws Exception {
         byte[] content = "hello".getBytes(StandardCharsets.UTF_8);
         String contentSha1 = sha1(content);
         String assetIndexJson = """
@@ -134,14 +140,20 @@ class VersionInstallerTest {
             );
 
             InstalledVersion installed = installer.install(
-                    "1.21.5",
+                    officialVersionId,
+                    instanceId,
                     gameDirectory,
                     URI.create("http://127.0.0.1:" + port + "/version_manifest_v2.json"),
                     gameDirectory.resolve("cache/version_manifest_v2.json"),
                     DownloadListener.NONE
             );
 
-            assertEquals("1.21.5", installed.id());
+            assertEquals(instanceId, installed.id());
+            assertEquals(instanceId, installed.manifest().id());
+            assertEquals(
+                    gameDirectory.resolve("versions").resolve(instanceId).resolve(instanceId + ".json"),
+                    installed.versionJson()
+            );
             assertTrue(Files.isRegularFile(installed.versionJson()));
             assertArrayEquals(content, Files.readAllBytes(installed.clientJar()));
             assertArrayEquals(content, Files.readAllBytes(

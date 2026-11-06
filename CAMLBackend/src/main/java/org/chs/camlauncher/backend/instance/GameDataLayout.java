@@ -61,9 +61,26 @@ public final class GameDataLayout {
      * @return 隔离布局返回版本目录，否则返回根目录
      */
     public static Path resolve(Path gameDirectory, Path versionDirectory) {
+        return resolve(gameDirectory, versionDirectory, VersionIsolationMode.AUTO);
+    }
+
+    /**
+     * 按显式隔离策略解析启动时应使用的游戏数据目录。
+     *
+     * @param gameDirectory    {@code .minecraft} 根目录
+     * @param versionDirectory {@code <gameDirectory>/versions/<id>}
+     * @param mode             隔离策略
+     * @return 完全隔离返回版本目录，不隔离返回根目录，自动模式按目录内容判断
+     */
+    public static Path resolve(Path gameDirectory, Path versionDirectory, VersionIsolationMode mode) {
         Objects.requireNonNull(gameDirectory, "gameDirectory");
         Objects.requireNonNull(versionDirectory, "versionDirectory");
-        return isIsolated(versionDirectory) ? versionDirectory : gameDirectory;
+        Objects.requireNonNull(mode, "mode");
+        return switch (mode) {
+            case FULL -> versionDirectory;
+            case NONE -> gameDirectory;
+            case AUTO -> isIsolated(versionDirectory) ? versionDirectory : gameDirectory;
+        };
     }
 }
 

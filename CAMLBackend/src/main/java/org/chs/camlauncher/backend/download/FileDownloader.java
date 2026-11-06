@@ -45,8 +45,10 @@ public final class FileDownloader {
         }
 
         IOException lastFailure = null;
+        URI lastUri = null;
         for (int attempt = 0; attempt < maxAttempts; attempt++) {
             for (URI uri : item.candidates()) {
+                lastUri = uri;
                 try {
                     downloadOnce(uri, item, progress);
                     return;
@@ -54,11 +56,16 @@ public final class FileDownloader {
                     lastFailure = e;
                 }
             }
+            if (attempt + 1 < maxAttempts) {
+                Thread.sleep(200L * (attempt + 1));
+            }
         }
 
-        throw lastFailure != null
-                ? lastFailure
-                : new IOException("No download candidates for " + item.label());
+        String location = lastUri == null ? "" : "，最后地址: " + lastUri;
+        throw new IOException(
+                "无法下载 " + item.label() + "（已尝试 " + maxAttempts + " 次" + location + "）",
+                lastFailure
+        );
     }
 
     private void downloadOnce(URI uri, DownloadItem item, DownloadListener listener)
@@ -123,6 +130,7 @@ public final class FileDownloader {
 
     private static HttpClient defaultClient() {
         return HttpClient.newBuilder()
+                .version(HttpClient.Version.HTTP_1_1)
                 .followRedirects(HttpClient.Redirect.NORMAL)
                 .connectTimeout(Duration.ofSeconds(15))
                 .build();

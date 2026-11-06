@@ -1,6 +1,8 @@
 package org.chs.camlauncher.backend.instance;
 
 import org.chs.camlauncher.backend.download.AssetDownloadPlanner;
+import org.chs.camlauncher.backend.download.DownloadConcurrency;
+import org.chs.camlauncher.backend.download.DownloadExecutor;
 import org.chs.camlauncher.backend.download.DownloadItem;
 import org.chs.camlauncher.backend.download.DownloadListener;
 import org.chs.camlauncher.backend.download.DownloadPlan;
@@ -31,6 +33,7 @@ public final class VersionInstaller {
     private final AssetDownloadPlanner assetDownloadPlanner;
     private final FileDownloader fileDownloader;
     private final ManifestResolver manifestResolver = new ManifestResolver();
+    private volatile int downloadConcurrency = DownloadConcurrency.DEFAULT;
 
     public VersionInstaller() {
         this(
@@ -78,12 +81,31 @@ public final class VersionInstaller {
             Path manifestCacheFile,
             DownloadListener listener
     ) throws IOException, InterruptedException {
-        Path localVersionFile = versionFile(versionId, gameDirectory);
+        return install(versionId, versionId, gameDirectory, manifestUri, manifestCacheFile, listener);
+    }
+
+    /**
+     * 使用单独的原版版本 ID 和实例 ID 安装。
+     *
+     * <p>官方版本 ID 用于查询远程元数据，实例 ID 用作 {@code versions/<id>} 目录名。
+     * 因此实例可以命名为“我的生存”，同时仍下载官方 {@code 1.21.4}。</p>
+     */
+    public InstalledVersion install(
+            String versionId,
+            String instanceId,
+            Path gameDirectory,
+            URI manifestUri,
+            Path manifestCacheFile,
+            DownloadListener listener
+    ) throws IOException, InterruptedException {
+        Objects.requireNonNull(versionId, "versionId");
+        instanceId = validateInstanceId(instanceId);
+        Path localVersionFile = versionFile(instanceId, gameDirectory);
 
         // 1. 本地已安装：直接读取本地版本 JSON。
         if (Files.isRegularFile(localVersionFile)) {
             String localJson = Files.readString(localVersionFile, StandardCharsets.UTF_8);
-            return complete(versionId, gameDirectory, localJson, listener, false);
+            return complete(instanceId, gameDirectory, localJson, listener, false);
         }
 
         // 2. 本地没有该版本，才需要访问官方版本清单。
@@ -96,7 +118,7 @@ public final class VersionInstaller {
                                 + " (本地未安装，官方版本清单中也不存在该版本 ID)"));
 
         String versionJson = manifestService.fetchVersionJson(remoteVersion);
-        return complete(versionId, gameDirectory, versionJson, listener, true);
+        return complete(instanceId, gameDirectory, versionJson, listener, true);
     }
 
     /**
@@ -152,9 +174,38 @@ public final class VersionInstaller {
 
     private void downloadPlan(DownloadPlan plan, DownloadListener listener)
             throws IOException, InterruptedException {
-        for (DownloadItem item : plan.missing()) {
-            fileDownloader.download(item, listener);
+        DownloadExecutor.download(
+                plan.missing(),
+                downloadConcurrency,
+                listener,
+                fileDownloader::download
+        );
+    }
+
+    public void setDownloadConcurrency(int downloadConcurrency) {
+        this.downloadConcurrency = DownloadConcurrency.clamp(downloadConcurrency);
+    }
+
+    private static String validateInstanceId(String instanceId) {
+        String value = Objects.requireNonNull(instanceId, "instanceId").trim();
+        if (value.isEmpty()) {
+            throw new IllegalArgumentException("实例名字不能为空");
         }
+        if (value.equals(".") || value.equals("..")) {
+            throw new IllegalArgumentException("实例名字不能是 . 或 ..");
+        }
+        if (value.endsWith(".") || value.endsWith(" ")) {
+            throw new IllegalArgumentException("实例名字不能以点或空格结尾");
+        }
+
+        String invalidChars = "<>:\"/\\|?*";
+        for (int index = 0; index < value.length(); index++) {
+            char character = value.charAt(index);
+            if (Character.isISOControl(character) || invalidChars.indexOf(character) >= 0) {
+                throw new IllegalArgumentException("实例名字包含非法字符: " + character);
+            }
+        }
+        return value;
     }
 
     /**

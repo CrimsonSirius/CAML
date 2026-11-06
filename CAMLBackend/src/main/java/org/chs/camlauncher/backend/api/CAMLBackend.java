@@ -8,10 +8,12 @@ import org.chs.camlauncher.backend.config.BackendConfig;
 import org.chs.camlauncher.backend.config.BackendPaths;
 import org.chs.camlauncher.backend.download.AssetDownloadPlanner;
 import org.chs.camlauncher.backend.download.DownloadListener;
+import org.chs.camlauncher.backend.download.DownloadConcurrency;
 import org.chs.camlauncher.backend.download.DownloadPlanner;
 import org.chs.camlauncher.backend.download.FileDownloader;
 import org.chs.camlauncher.backend.instance.GameDataLayout;
 import org.chs.camlauncher.backend.instance.InstalledVersion;
+import org.chs.camlauncher.backend.instance.VersionIsolationMode;
 import org.chs.camlauncher.backend.instance.VersionInstaller;
 import org.chs.camlauncher.backend.json.JsonService;
 import org.chs.camlauncher.backend.launch.LaunchOptions;
@@ -72,6 +74,7 @@ public final class CAMLBackend implements AutoCloseable {
     private final ThemeService themeService;
     private final SettingsService settingsService;
     private final SystemMemoryService systemMemoryService;
+    private volatile int downloadConcurrency = DownloadConcurrency.DEFAULT;
     private boolean started;
 
     public CAMLBackend(BackendConfig config) {
@@ -126,6 +129,13 @@ public final class CAMLBackend implements AutoCloseable {
         } catch (IOException e) {
             throw new UncheckedIOException("Failed to prepare CAML directories", e);
         }
+        try {
+            downloadConcurrency = settingsService.downloadConcurrency();
+        } catch (IOException e) {
+            LOGGER.warn("无法读取下载并发设置，使用默认值 {}", DownloadConcurrency.DEFAULT, e);
+            downloadConcurrency = DownloadConcurrency.DEFAULT;
+        }
+        versionInstaller.setDownloadConcurrency(downloadConcurrency);
 
         started = true;
         LOGGER.info("CAML backend {} started", VERSION);
@@ -174,6 +184,24 @@ public final class CAMLBackend implements AutoCloseable {
         settingsService.setGameDirectory(directory);
     }
 
+    public VersionIsolationMode versionIsolationMode() throws IOException {
+        return settingsService.versionIsolationMode();
+    }
+
+    public void setVersionIsolationMode(VersionIsolationMode mode) throws IOException {
+        settingsService.setVersionIsolationMode(mode);
+    }
+
+    public int downloadConcurrency() {
+        return downloadConcurrency;
+    }
+
+    public void setDownloadConcurrency(int value) throws IOException {
+        settingsService.setDownloadConcurrency(value);
+        downloadConcurrency = value;
+        versionInstaller.setDownloadConcurrency(value);
+    }
+
     public MetadataService metadata() {
         return metadata;
     }
@@ -211,9 +239,34 @@ public final class CAMLBackend implements AutoCloseable {
 
     public InstalledVersion installVersion(String versionId, DownloadListener listener)
             throws java.io.IOException, InterruptedException {
+        return installVersion(versionId, config.gameDirectory(), listener);
+    }
+
+    /**
+     * 在指定游戏目录安装官方版本。
+     */
+    public InstalledVersion installVersion(
+            String versionId,
+            Path gameDirectory,
+            DownloadListener listener
+    ) throws java.io.IOException, InterruptedException {
+        return installVersion(versionId, versionId, gameDirectory, listener);
+    }
+
+    /**
+     * 使用指定实例名安装官方版本。
+     */
+    public InstalledVersion installVersion(
+            String versionId,
+            String instanceId,
+            Path gameDirectory,
+            DownloadListener listener
+    ) throws java.io.IOException, InterruptedException {
+        Objects.requireNonNull(gameDirectory, "gameDirectory");
         return versionInstaller.install(
                 versionId,
-                config.gameDirectory(),
+                instanceId,
+                gameDirectory,
                 VersionManifestService.DEFAULT_MANIFEST_URI,
                 config.dataDirectory().resolve("cache").resolve("version_manifest_v2.json"),
                 listener
@@ -326,6 +379,7 @@ public final class CAMLBackend implements AutoCloseable {
                 config.gameDirectory(),
                 username,
                 options,
+                VersionIsolationMode.AUTO,
                 downloadListener,
                 processListener
         );
@@ -345,11 +399,35 @@ public final class CAMLBackend implements AutoCloseable {
             DownloadListener downloadListener,
             ProcessListener processListener
     ) throws IOException, InterruptedException {
+        return launchGame(
+                versionId,
+                gameDirectory,
+                username,
+                options,
+                VersionIsolationMode.AUTO,
+                downloadListener,
+                processListener
+        );
+    }
+
+    /**
+     * 使用指定游戏目录和版本隔离策略启动游戏。
+     */
+    public GameLaunch launchGame(
+            String versionId,
+            Path gameDirectory,
+            String username,
+            LaunchOptions options,
+            VersionIsolationMode isolationMode,
+            DownloadListener downloadListener,
+            ProcessListener processListener
+    ) throws IOException, InterruptedException {
         return gameLaunchService.launch(
                 versionId,
                 gameDirectory,
                 username,
                 options,
+                isolationMode,
                 downloadListener,
                 processListener
         );

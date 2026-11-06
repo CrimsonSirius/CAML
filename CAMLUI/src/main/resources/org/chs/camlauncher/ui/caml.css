@@ -381,18 +381,63 @@
     -fx-background-color: -caml-on-accent;
 }
 
-/* Slider. */
-.caml-slider .track {
-    -fx-background-color: -caml-surface-highest;
-    -fx-background-radius: 100;
-    -fx-pref-height: 4;
+/* Radio button. */
+.caml-radio-button {
+    -fx-text-fill: -caml-on-surface;
+    -fx-font-size: 14px;
+    -fx-cursor: hand;
 }
 
-.caml-slider .thumb {
+.caml-radio-button > .radio,
+.caml-radio-button:focused > .radio {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-background-radius: 100;
+    -fx-border-color: -caml-border;
+    -fx-border-width: 2;
+    -fx-border-radius: 100;
+    -fx-padding: 0.333333em;
+}
+
+.caml-radio-button:hover > .radio,
+.caml-radio-button:selected > .radio,
+.caml-radio-button:focused > .radio {
+    -fx-border-color: -caml-accent;
+}
+
+.caml-radio-button > .radio > .dot {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-background-radius: 100;
+    -fx-padding: 0.333333em;
+}
+
+.caml-radio-button:selected > .radio > .dot {
+    -fx-background-color: -caml-accent;
+}
+
+/* Integer slider. */
+.caml-slider {
+    -fx-cursor: hand;
+}
+
+.caml-slider .caml-slider-track {
+    -fx-background-color: -caml-surface-highest;
+    -fx-background-radius: 100;
+}
+
+.caml-slider .caml-slider-fill {
     -fx-background-color: -caml-accent;
     -fx-background-radius: 100;
-    -fx-pref-width: 20;
-    -fx-pref-height: 20;
+}
+
+.caml-slider .caml-slider-thumb {
+    -fx-background-color: -caml-accent;
+    -fx-background-radius: 100;
+}
+
+.caml-slider:focused .caml-slider-thumb {
+    -fx-effect: dropshadow(gaussian, -caml-accent, 6, 0.4, 0, 0);
 }
 
 /* Memory slider: two-tone bold track. */

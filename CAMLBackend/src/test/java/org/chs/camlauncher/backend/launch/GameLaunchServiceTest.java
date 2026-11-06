@@ -7,6 +7,7 @@ import org.chs.camlauncher.backend.download.DownloadListener;
 import org.chs.camlauncher.backend.download.DownloadPlanner;
 import org.chs.camlauncher.backend.download.FileDownloader;
 import org.chs.camlauncher.backend.download.HashVerifier;
+import org.chs.camlauncher.backend.instance.VersionIsolationMode;
 import org.chs.camlauncher.backend.instance.VersionInstaller;
 import org.chs.camlauncher.backend.metadata.MetadataService;
 import org.chs.camlauncher.backend.metadata.VersionManifestService;
@@ -117,14 +118,22 @@ class GameLaunchServiceTest {
 
             GameLaunch launch = service.launch(
                     "test-version",
+                    gameDirectory,
                     "Steve",
                     LaunchOptions.defaults(),
+                    VersionIsolationMode.FULL,
                     DownloadListener.NONE,
                     listener
             );
 
             assertTrue(launch.process().waitFor(15, TimeUnit.SECONDS));
             assertEquals(5, launch.process().exitValue());
+            assertEquals(
+                    gameDirectory.resolve("versions").resolve("test-version"),
+                    launch.plan().gameDirectory()
+            );
+            assertTrue(output.toString().contains(
+                    "fake-game-user-dir=" + gameDirectory.resolve("versions/test-version")));
             assertTrue(exited.await(5, TimeUnit.SECONDS));
             assertTrue(output.toString().contains("fake-game-hello"));
             launch.process().close();

@@ -3,9 +3,11 @@ package org.chs.camlauncher.backend.launch;
 import org.chs.camlauncher.backend.auth.AuthSession;
 import org.chs.camlauncher.backend.instance.InstalledVersion;
 import org.chs.camlauncher.backend.metadata.DownloadInfo;
+import org.chs.camlauncher.backend.metadata.Arguments;
 import org.chs.camlauncher.backend.metadata.JavaVersion;
 import org.chs.camlauncher.backend.metadata.Library;
 import org.chs.camlauncher.backend.metadata.RuleEvaluator;
+import org.chs.camlauncher.backend.metadata.StringArgument;
 import org.chs.camlauncher.backend.metadata.VersionInfo;
 import org.chs.camlauncher.backend.runtime.JavaRuntime;
 import org.junit.jupiter.api.Test;
@@ -20,6 +22,7 @@ import java.util.UUID;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -92,6 +95,29 @@ class NativeExtractorTest {
         assertFalse(Files.exists(nativesDirectory.resolve("stale.txt")));
         assertFalse(Files.exists(nativesDirectory.resolve("META-INF")));
         assertFalse(Files.exists(nativesDirectory.resolve("excluded")));
+    }
+
+    @Test
+    void usesJavaSubdirectoryRequestedByManifest() {
+        VersionInfo manifest = new VersionInfo(
+                "26.3", "release", null, "net.minecraft.client.main.Main", "5", null, null,
+                new Arguments(
+                        List.of(),
+                        List.of(new StringArgument("-Djava.library.path=${natives_directory}/java"))
+                ),
+                null, new JavaVersion("java-runtime-gamma", 25), List.of(), null,
+                null, null, null, null
+        );
+        Path nativesDirectory = gameDirectory.resolve("versions/26.3/natives");
+
+        assertEquals(
+                nativesDirectory.resolve("java"),
+                NativeExtractor.resolveExtractionDirectory(
+                        nativesDirectory,
+                        manifest,
+                        new RuleEvaluator("linux", "x86_64", "6.0", Map.of())
+                )
+        );
     }
 
     private static void addEntry(ZipOutputStream zip, String name, String content) throws Exception {

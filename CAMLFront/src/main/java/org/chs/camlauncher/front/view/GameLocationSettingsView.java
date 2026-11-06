@@ -47,9 +47,11 @@ final class GameLocationSettingsView extends VBox {
         saveButton.setMaxWidth(javafx.scene.layout.Region.USE_PREF_SIZE);
         saveButton.setOnAction(event -> saveDirectory());
 
-        statusLabel = new Label("修改后点击保存才会生效");
+        statusLabel = new Label();
         statusLabel.getStyleClass().addAll("caml-body-small", "field-hint");
         statusLabel.setWrapText(true);
+        statusLabel.setVisible(false);
+        statusLabel.setManaged(false);
 
         HBox row = new HBox(8, pathField, browseButton, saveButton);
         row.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
@@ -114,6 +116,8 @@ final class GameLocationSettingsView extends VBox {
 
     private void showStatus(String text, boolean error) {
         statusLabel.setText(text);
+        statusLabel.setVisible(true);
+        statusLabel.setManaged(true);
         statusLabel.getStyleClass().removeAll("field-hint", "field-hint-error");
         statusLabel.getStyleClass().add(error ? "field-hint-error" : "field-hint");
     }

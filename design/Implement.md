@@ -20,7 +20,7 @@
 → classpath
 → JVM/游戏参数
 → natives/Log4j
-→ 版本隔离判定
+→ 读取版本隔离策略
 → 命令构建
 → 进程启动/日志
 ```
@@ -80,12 +80,17 @@ CAML
 - SHA-1 校验。
 - `.part` 临时文件。
 - 校验通过后原子移动。
-- 下载重试。
+- 下载使用 HTTP/1.1，失败后重试并短暂退避，避免部分 CDN 的 HTTP/2 连接 EOF。
+- 最终失败信息包含下载项、尝试次数和最后请求地址。
+- `DownloadExecutor` 使用有界线程池并发下载，并发数为 1–256（默认 8）。
+- 下载并发数持久化到 `~/.caml/settings.properties`，并同时用于实例安装和启动前补文件。
 - 已有有效文件时跳过。
 
 ### 3.4 版本安装
 
 - 按版本 ID 安装原版。
+- 远程安装支持单独的实例 ID：官方版本 ID 拉取元数据，实例 ID 作为 `versions/<id>` 目录名。
+- 下载页实例名默认官方版本号，并校验空名、路径分隔符和 Windows 非法字符。
 - **本地优先**：`versions/<id>/<id>.json` 已存在时直接复用本地版本，不访问官方清单。
 - 版本 ID 即 `versions/` 下的文件夹名，支持第三方启动器/整合包的自定义名称（如 `1.21.4-DeepSeek`）。
 - 解析后把 manifest 的 `id` 统一为文件夹名，`inheritsFrom` 按文件夹名查找父版本。
@@ -114,11 +119,12 @@ CAML
 - 合并 `InstalledVersion`、`AuthSession`、`JavaRuntime`、目录和 `LaunchOptions`。
 - 支持内存、分辨率、JVM 参数、游戏参数和环境变量。
 - 创建计划时校验 Java 是否满足版本要求。
-- **版本隔离**：`GameDataLayout` 检查 `versions/<id>` 下的 `saves`、`options.txt`、
-  `logs`、`mods`、`config`、`resourcepacks`、`shaderpacks`、`usercache.json`、
-  `command_history.txt`；命中任意一项时以该版本目录作为 `--gameDir`。
+- **版本隔离**：设置页把 `VersionIsolationMode.FULL` 或 `NONE` 持久化到
+  `~/.caml/settings.properties`。`FULL` 始终以 `versions/<id>` 作为 `--gameDir`，
+  `NONE` 始终以 `.minecraft` 根目录作为 `--gameDir`。旧 API 的 `AUTO` 模式仍检查
+  `saves`、`options.txt`、`logs`、`mods` 等标记。
 - `LaunchPlanner.create(..., gameDataDirectory)` 支持显式指定游戏数据目录，
-  `GameLaunchService` 负责解析隔离布局。
+  `GameLaunchService` 接收隔离模式并解析实际游戏数据目录。
 - `.minecraft/libraries` 与 `.minecraft/assets` 始终来自根目录。
 
 ### 3.8 classpath
@@ -141,6 +147,7 @@ CAML
 
 - 清理旧 natives 目录。
 - 解压当前系统 native jar。
+- 26.3 起如果版本 JSON 指定 `-Djava.library.path=${natives_directory}/java`，解压到对应子目录。
 - 跳过 `META-INF/` 和 `extract.exclude`。
 - 下载 Log4j 配置到 `assets/log_configs`。
 - 注入 `-Dlog4j.configurationFile`。
@@ -153,8 +160,8 @@ CAML
 - `MainView` 只负责应用壳层、导航和页面宿主；页面与表单拆分为独立视图类。
 - 主页由 `HomeView` 组合 `LaunchFormView` 与 `LogPaneView`；设置页由
   `SettingsView` 组合 `GameSettingsView` 与 `LauncherSettingsView`；
-  `DownloadsView` 负责空白下载页。
-- `LaunchSettings` 共享主页和设置页的游戏位置、最大内存值，`ViewSupport` 提供通用布局工具。
+  `DownloadsView` 负责下载页侧边栏和内部页面。
+- `LaunchSettings` 共享主页和设置页的游戏位置、版本隔离和最大内存值，`ViewSupport` 提供通用布局工具。
 - 游戏位置从主页移除；设置页新增“游戏位置”圆角分组，包含路径输入、浏览和保存。
 - 只有点击保存并校验目录存在后，才更新共享位置并写入 `~/.caml/settings.properties`。
 - 主页新增“浏览游戏实例”和“管理实例”按钮；前者打开 `InstancePickerView` 二级列表，
@@ -165,7 +172,7 @@ CAML
 - 主界面不再显示游戏实例下拉框或版本输入框；当前实例由二级列表选择并共享到启动流程。
 - 当前实例、游戏位置、存档位置以三行信息放入圆角分组，字号放大。
 - “浏览游戏实例”和“管理实例”等宽，并共同占满启动按钮上方一行。
-- 显示存档位置：隔离版本提示 `versions/<id>/saves`，否则提示 `.minecraft/saves`。
+- 显示存档位置：选择完全版本隔离时提示 `versions/<id>/saves`，否则提示 `.minecraft/saves`。
 - 离线用户名、启动按钮、状态提示和日志窗口；最大内存位于设置 → 游戏设置。
 - `MainController` 用独立 I/O 线程执行目录探测和启动，下载日志每 10% 节流。
 - 主工作区宽屏左右分栏，窄屏上下堆叠；断点为 900px。
@@ -184,10 +191,19 @@ CAML
 - 启动按钮固定在表单底部，字段区域独立滚动。
 - 表单标签位于控件上方。
 - 顶栏主导航提供“主页 / 下载 / 设置”，主页为当前启动界面。
-- 下载页为空白页，并带一个空白侧边栏，不显示标题或说明。
-- 设置页侧边栏提供“游戏设置 / 启动器设置”。
+- 下载页侧边栏提供“添加游戏实例”胶囊；`DownloadVersionsView` 通过后端异步获取官方
+  版本清单，只保留 `type=release`，按 `releaseTime` 从新到旧排列。
+- 点击正式版后进入 `DownloadVersionSetupView`，页面由版本信息、Forge、Fabric、
+  NeoForge 四条组成；顶部实例名输入框默认官方版本号。加载器下拉框当前没有选项，也不参与安装。取消位于左上角，
+  底部“下载实例”通过后端 `VersionInstaller` 安装当前选中的原版游戏，并使用设置中的
+  游戏位置；完成后把实例名设为当前实例。
+- 设置页侧边栏提供“游戏设置 / 下载设置 / 启动器设置”。
+- 下载设置使用“设定下载并发数”圆角组和 1–256 整数滑块，文字大小与游戏设置一致。
 - 游戏设置使用圆角分组承载整个内存区域，左上角标题为“内存”；
   组内使用叠层滑块显示系统已使用、游戏分配和未使用内存。
+- 游戏位置、版本隔离和内存三个分组按设置内容区宽度拉齐，组内灰色辅助文字统一放大，
+  内存摘要保持单行显示。版本隔离组使用 `CamlRadioButton` 提供“完全版本隔离”和
+  “不进行版本隔离”两个单选项；选择立即同步到共享状态并异步持久化。
 - 启动器设置提供主题选择；主题切换立即生效。
 - 设置页不显示页面标题或说明，侧边栏从顶栏底部铺到页脚，只用右侧分隔线。
 - 设置子项选中时为不透明橙黄底、白字；未选中时为橙黄边框、橙黄字、透明填充。
@@ -202,7 +218,7 @@ CAML
 - 最大内存保存到 `~/.caml/settings.properties`；启动时由后端加载，滑块停止变化
   约 300ms 后通过后端异步写入。
 - 导航切换会保留主页已填写的状态。
-- 界面控件来自 `CAMLUI`：`CamlButton`、`CamlComboBox`、`CamlMemorySlider`、
+- 界面控件来自 `CAMLUI`：`CamlButton`、`CamlComboBox`、`CamlMemorySlider`、`CamlRadioButton`、
   `CamlTextArea`、`CamlTextField`、`CamlTopBar`、`CamlTopNav`、`CamlTopNavItem`、
   `CamlPageHost`、`CamlSideNav` 和 `CamlSideNavItem`。
 - 主题入口：`CamlTheme.install(scene)` 和 `CamlTheme.applyTheme(scene, path)`。
@@ -294,18 +310,19 @@ PATH=/usr/lib/jvm/zulu-25/bin:$PATH \
 
 - 后端构建通过。
 - JavaFX 启动冒烟测试通过。
-- 71 个后端测试和 11 个前端测试全部通过（共 82 个）。
+- 86 个后端测试和 11 个前端测试全部通过（共 97 个）。
 - 集成测试覆盖：
   - 版本清单获取与缓存。
   - 版本 JSON 获取。
   - 客户端、library、asset index、asset object 下载。
   - SHA-1 校验和原子落盘。
+  - 下载并发上限和并发数设置持久化/边界校验。
   - 离线账号。
   - Java 检测和匹配。
   - LaunchPlan 创建和 Java 要求校验。
   - classpath 过滤、去重、native 排除和客户端 jar 顺序。
   - JVM/游戏参数、占位符、features 和旧版参数回退。
-  - natives 清理、解压和排除规则。
+  - natives 清理、解压、排除规则和 26.3 `natives/java` 子目录。
   - virtual assets 重建和 assets 目录替换。
   - 平台默认游戏目录：Linux 用户目录，Windows 启动器目录。
   - 默认主题首次复制、主题列表排序、主题选择持久化和路径穿越校验。
@@ -320,8 +337,11 @@ PATH=/usr/lib/jvm/zulu-25/bin:$PATH \
   - 启动失败分类和用户提示文本。
   - 本地 HTTP 安装假客户端并完成端到端启动。
   - 本地自定义版本 ID 复用和版本 JSON 保持。
+  - 远程原版安装使用自定义实例 ID。
   - 已安装版本/隔离版本目录探测。
-  - PCL/HMCL 版本隔离判定。
+  - PCL/HMCL 版本隔离自动判定、显式完全隔离/不隔离和设置持久化。
+  - 官方正式版过滤、发布时间排序和快照排除。
+  - 下载被截断后的重试。
 
 ## 7. 当前未实现
 
@@ -334,7 +354,7 @@ PATH=/usr/lib/jvm/zulu-25/bin:$PATH \
 - 微软账号登录。
 - token 刷新和安全存储。
 - Fabric、Quilt、Forge、NeoForge 等加载器。
-- 镜像源、并发下载、取消和内容寻址缓存。
+- 镜像源、下载取消和内容寻址缓存。
 - quick play 和服务器直连。
 - 整合包和模组管理。
 

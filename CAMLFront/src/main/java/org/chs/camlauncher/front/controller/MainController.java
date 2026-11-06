@@ -7,8 +7,10 @@ import org.chs.camlauncher.backend.api.BackendStatus;
 import org.chs.camlauncher.backend.api.CAMLBackend;
 import org.chs.camlauncher.backend.api.GameDirectoryInfo;
 import org.chs.camlauncher.backend.download.DownloadListener;
+import org.chs.camlauncher.backend.instance.VersionIsolationMode;
 import org.chs.camlauncher.backend.launch.LaunchOptions;
 import org.chs.camlauncher.backend.launch.ProcessListener;
+import org.chs.camlauncher.backend.metadata.VersionManifest;
 import org.chs.camlauncher.backend.system.SystemMemoryInfo;
 
 import java.io.IOException;
@@ -17,6 +19,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.RejectedExecutionException;
@@ -104,13 +107,18 @@ public final class MainController {
         return backend.status();
     }
 
+    public int downloadConcurrency() {
+        return backend.downloadConcurrency();
+    }
+
     /**
      * 在指定游戏目录启动游戏。
      *
      * <p>这里只负责组装参数和派发后台任务；真正的安装、登录、Java 选择和进程启动
      * 都由 {@code CAMLBackend#launchGame} 在后端完成。</p>
      */
-    public void startGame(String version, String username, int memoryMb, Path gameDirectory) {
+    public void startGame(String version, String username, int memoryMb, Path gameDirectory,
+                          boolean fullVersionIsolation) {
         Objects.requireNonNull(gameDirectory, "gameDirectory");
 
         // 仅设置最大内存，其余选项保持默认。
@@ -139,6 +147,9 @@ public final class MainController {
             try {
                 sendStatus("正在启动 " + version + "...");
                 backend.launchGame(version, gameDirectory, username, options,
+                        fullVersionIsolation
+                                ? VersionIsolationMode.FULL
+                                : VersionIsolationMode.NONE,
                         downloadListener, processListener);
                 sendStatus("启动指令已发送");
             } catch (Exception ex) {
@@ -182,6 +193,72 @@ public final class MainController {
                 });
     }
 
+    /**
+     * 异步获取官方版本清单中的正式版，结果和错误都回到 JavaFX 线程。
+     */
+    public void fetchReleaseVersions(Consumer<List<VersionManifest.Version>> onLoaded,
+                                     Consumer<String> onError) {
+        CompletableFuture
+                .supplyAsync(() -> {
+                    try {
+                        return backend.fetchVersionManifest();
+                    } catch (IOException | InterruptedException e) {
+                        if (e instanceof InterruptedException) {
+                            Thread.currentThread().interrupt();
+                        }
+                        throw new CompletionException(e);
+                    }
+                }, ioExecutor)
+                .thenAccept(manifest -> {
+                    List<VersionManifest.Version> releases = manifest.releasesNewestFirst();
+                    Platform.runLater(() -> onLoaded.accept(releases));
+                })
+                .exceptionally(ex -> {
+                    Throwable cause = ex.getCause() != null ? ex.getCause() : ex;
+                    String message = cause.getMessage() == null
+                            ? cause.getClass().getSimpleName()
+                            : cause.getMessage();
+                    LOGGER.warn("获取官方版本列表失败", cause);
+                    sendLog("[版本列表] 获取失败: " + message);
+                    Platform.runLater(() -> onError.accept(message));
+                    return null;
+                });
+    }
+
+    /** 异步下载官方原版实例；完成和失败回调都切回 JavaFX 线程。 */
+    public void downloadVersion(String versionId, String instanceId, Path gameDirectory,
+                                Runnable onSuccess, Consumer<String> onError) {
+        Objects.requireNonNull(gameDirectory, "gameDirectory");
+        CompletableFuture
+                .supplyAsync(() -> {
+                    try {
+                        return backend.installVersion(
+                                versionId, instanceId, gameDirectory, DownloadListener.NONE);
+                    } catch (IOException | InterruptedException e) {
+                        if (e instanceof InterruptedException) {
+                            Thread.currentThread().interrupt();
+                        }
+                        throw new CompletionException(e);
+                    }
+                }, ioExecutor)
+                .thenAccept(installed -> {
+                    LOGGER.info("官方原版实例安装完成: {} / {} -> {}",
+                            instanceId, versionId, installed.gameDirectory());
+                    sendLog("[下载] 已安装实例 " + instanceId + "（原版 " + versionId + "）");
+                    Platform.runLater(onSuccess);
+                })
+                .exceptionally(ex -> {
+                    Throwable cause = ex.getCause() != null ? ex.getCause() : ex;
+                    String message = cause.getMessage() == null
+                            ? cause.getClass().getSimpleName()
+                            : cause.getMessage();
+                    LOGGER.warn("下载官方原版实例失败: {} / {}", instanceId, versionId, cause);
+                    sendLog("[下载] 实例 " + instanceId + "（原版 " + versionId + "）失败: " + message);
+                    Platform.runLater(() -> onError.accept(message));
+                    return null;
+                });
+    }
+
     /** 关闭后台线程池，由应用退出流程调用。 */
     public void shutdown() {
         ioExecutor.shutdownNow();
@@ -211,6 +288,38 @@ public final class MainController {
                     backend.setGameDirectory(gameDirectory);
                 } catch (IOException | RuntimeException e) {
                     LOGGER.warn("保存游戏位置失败: {}", gameDirectory, e);
+                }
+            });
+        } catch (RejectedExecutionException ignored) {
+            // 应用正在退出，不再接受新的持久化任务。
+        }
+    }
+
+    /** 异步保存版本隔离选择，避免在 JavaFX Application Thread 上写文件。 */
+    public void saveVersionIsolationAsync(boolean fullVersionIsolation) {
+        try {
+            ioExecutor.execute(() -> {
+                try {
+                    backend.setVersionIsolationMode(fullVersionIsolation
+                            ? VersionIsolationMode.FULL
+                            : VersionIsolationMode.NONE);
+                } catch (IOException | RuntimeException e) {
+                    LOGGER.warn("保存版本隔离设置失败: {}", fullVersionIsolation, e);
+                }
+            });
+        } catch (RejectedExecutionException ignored) {
+            // 应用正在退出，不再接受新的持久化任务。
+        }
+    }
+
+    /** 异步保存下载并发数，并立即更新后端下载器。 */
+    public void saveDownloadConcurrencyAsync(int downloadConcurrency) {
+        try {
+            ioExecutor.execute(() -> {
+                try {
+                    backend.setDownloadConcurrency(downloadConcurrency);
+                } catch (IOException | RuntimeException e) {
+                    LOGGER.warn("保存下载并发数失败: {}", downloadConcurrency, e);
                 }
             });
         } catch (RejectedExecutionException ignored) {
@@ -266,7 +375,7 @@ public final class MainController {
         private int lastPercent = -1;
 
         @Override
-        public void onProgress(DownloadProgress progress) {
+        public synchronized void onProgress(DownloadProgress progress) {
             boolean finished = progress.total() > 0 && progress.downloaded() >= progress.total();
             boolean labelChanged = lastLabel == null || !lastLabel.equals(progress.label());
 

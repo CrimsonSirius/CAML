@@ -68,6 +68,9 @@ VersionInstaller.install(...)
 规则：
 
 - 本地已安装时不会重写版本 JSON，保持与外部启动器一致。
+
+下载原版时还支持单独实例名：官方版本 ID 用于查询清单和拉取版本 JSON，
+实例 ID 用于 `versions/<id>` 目录、客户端 jar 和当前实例显示。实例名默认官方版本号。
 - 合并 `inheritsFrom` 时按**文件夹名**查找父版本，兼容 JSON 内部 `id` 与文件夹名不一致的情况。
 - 解析完成后把 manifest 的 `id` 统一为文件夹名，保证 `versions/<id>/<id>.jar` 等路径一致。
 - 本地版本缺库、缺资源或缺客户端 jar 时仍会自动补齐。
@@ -283,7 +286,7 @@ assetIndexFile
 - 只支持原版安装；加载器安装尚未实现。
 - `inheritsFrom` 只读取本地父版本，不会自动安装父版本。
 - 只有官方下载源，镜像源接口尚未接入配置。
-- 下载是顺序执行，没有并发和取消。
+- 下载使用有界线程池并发执行，并发数可配置为 1–256；下载取消尚未实现。
 - 没有内容寻址缓存，只有目标文件存在且 SHA-1 匹配时跳过。
 
 ## 3. 启动链路
@@ -316,7 +319,7 @@ JavaRuntime       实际 Java 可执行文件、版本、架构、位数
 读取 InstalledVersion
 → 读取 AuthSession
 → 选择 JavaRuntime
-→ 通过 GameDataLayout 判断版本隔离
+→ 读取用户选择的版本隔离模式
 → 创建 LaunchPlan（已实现）
 → 构建 classpath（已实现）
 → 构建 JVM 参数（已实现）
@@ -344,8 +347,8 @@ JavaRuntime       实际 Java 可执行文件、版本、架构、位数
 | `assetsDirectory` | `Path` | assets 目录 |
 | `nativesDirectory` | `Path` | natives 解压目录 |
 
-`gameDirectory` 是实际传给 `--gameDir` 的目录：隔离版本为 `versions/<id>`，
-否则为 `.minecraft` 根目录。`assetsDirectory` 和 `libraries` 始终来自根目录。
+`gameDirectory` 是实际传给 `--gameDir` 的目录：完全版本隔离时为 `versions/<id>`，
+不隔离时为 `.minecraft` 根目录。`assetsDirectory` 和 `libraries` 始终来自根目录。
 构造时会校验所有字段非空。
 
 ### 3.5 LaunchOptions
@@ -382,8 +385,9 @@ LaunchPlanner.create(instance, auth, java, options)
 create(instance, auth, java, options, gameDataDirectory)
 ```
 
-用于显式指定游戏数据目录。`GameLaunchService` 会调用
-`GameDataLayout.resolve(...)`，自动选择 `.minecraft` 根目录或 `versions/<id>`。
+用于显式指定游戏数据目录。`GameLaunchService` 根据 `VersionIsolationMode` 调用
+`GameDataLayout.resolve(...)`：`FULL` 选择 `versions/<id>`，`NONE` 选择根目录，
+旧调用的 `AUTO` 才根据目录内容自动判断。
 
 当前 `LaunchPlan` 只负责组织启动所需数据，不负责：
 
@@ -466,6 +470,8 @@ List<String> gameArgs = backend.gameArgumentsBuilder().build(plan, classpath);
 `NativeExtractor.extract(plan)`：
 
 - 清理 `versions/<id>/natives`。
+- 若版本 JSON 指定 `-Djava.library.path=${natives_directory}/java`，解压到
+  `versions/<id>/natives/java`；26.3 的原生库必须位于该目录。
 - 按当前 OS 和位数选择 native jar。
 - 支持旧式 `natives` classifier 和新式 `natives-*` library。
 - 跳过目录、`META-INF/` 和 `extract.exclude`。
@@ -563,7 +569,7 @@ GameProcess process = backend.processLauncher().launch(plan, classpath, listener
 安装版本
 → 离线登录
 → 选择游戏 Java
-→ GameDataLayout.resolve 判断版本隔离
+→ GameDataLayout.resolve 应用版本隔离模式
 → 创建 LaunchPlan
 → 重建 virtual assets
 → 解压 natives
@@ -589,8 +595,14 @@ GameLaunch launch = backend.launchGame(
 
 ### 3.12 版本隔离
 
-PCL/HMCL 等启动器默认开启版本隔离，游戏数据位于 `versions/<id>` 内。
-CAML 通过 `GameDataLayout` 检测以下标记：
+界面默认选择“完全版本隔离”，并把 `VersionIsolationMode.FULL` 保存到
+`~/.caml/settings.properties` 的 `versionIsolation` 项。启动时：
+
+- `FULL`：`--gameDir` 始终指向 `versions/<id>`。
+- `NONE`：`--gameDir` 始终指向 `.minecraft` 根目录。
+
+切换模式只影响后续启动，不会自动搬迁已有存档。旧 API 的 `AUTO` 模式仍通过
+`GameDataLayout` 检测以下标记：
 
 ```text
 options.txt
@@ -604,19 +616,15 @@ usercache.json
 command_history.txt
 ```
 
-命中任意一项时：
-
-- `--gameDir` 指向 `versions/<id>`。
-- `libraries` 和 `assets` 仍来自 `.minecraft` 根目录。
-- 存档、设置、日志和模组路径与外部启动器保持一致。
-
-界面通过 `GameDirectoryInfo.isolatedVersions()` 获取隔离版本列表，
-并在当前实例信息下方显示“版本隔离：存档在 versions/<id>/saves”。
+命中任意一项时使用版本目录作为自动模式的结果。无论显式模式还是自动模式，
+`libraries` 和 `assets` 都来自 `.minecraft` 根目录。主页根据当前显式模式显示实际
+存档位置；`GameDirectoryInfo.isolatedVersions()` 仍保留给目录扫描和兼容用途。
 
 ## 4. 相关源码
 
 - `CAMLBackend/src/main/java/org/chs/camlauncher/backend/instance/VersionInstaller.java`
 - `CAMLBackend/src/main/java/org/chs/camlauncher/backend/instance/GameDataLayout.java`
+- `CAMLBackend/src/main/java/org/chs/camlauncher/backend/instance/VersionIsolationMode.java`
 - `CAMLBackend/src/main/java/org/chs/camlauncher/backend/api/GameDirectoryInfo.java`
 - `CAMLBackend/src/main/java/org/chs/camlauncher/backend/metadata/VersionManifestService.java`
 - `CAMLBackend/src/main/java/org/chs/camlauncher/backend/download/DownloadPlanner.java`
