@@ -20,7 +20,7 @@ import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.IntConsumer;
 
-/** 设置页：左侧子导航，右侧游戏/启动器设置内容。 */
+/** 设置页：左侧子导航，右侧游戏/下载/启动器设置内容。 */
 final class SettingsView extends VBox implements SidebarPage {
     private static final boolean REDUCE_MOTION = Boolean.getBoolean("caml.reduceMotion");
 
@@ -35,14 +35,18 @@ final class SettingsView extends VBox implements SidebarPage {
         GameSettingsView gameSettings = new GameSettingsView(
                 launchSettings, onMemoryChanged, onVersionIsolationChanged, systemMemory, controller);
         controller.setOnSystemMemoryUpdated(gameSettings::updateSystemMemory);
+        DownloadSettingsView downloadSettings = new DownloadSettingsView(
+                controller.downloadConcurrency(), controller::saveDownloadConcurrencyAsync);
         launcherSettings = new LauncherSettingsView();
 
         sideNav = new CamlSideNav();
         sideNav.getStyleClass().add("app-settings-sidebar");
         sideNav.setMaxHeight(Double.MAX_VALUE);
         CamlSideNavItem gameItem = new CamlSideNavItem("游戏设置");
+        CamlSideNavItem downloadItem = new CamlSideNavItem("下载设置");
         CamlSideNavItem launcherItem = new CamlSideNavItem("启动器设置");
         sideNav.addItem(gameItem);
+        sideNav.addItem(downloadItem);
         sideNav.addItem(launcherItem);
         sideNav.select(gameItem);
 
@@ -55,9 +59,18 @@ final class SettingsView extends VBox implements SidebarPage {
             double innerWidth = Math.max(0, newValue.doubleValue() - 80);
             gameSettings.setPrefWidth(innerWidth);
             gameSettings.setMaxWidth(innerWidth);
+            downloadSettings.setPrefWidth(innerWidth);
+            downloadSettings.setMaxWidth(innerWidth);
         });
-        sideNav.selectedItemProperty().addListener((observable, oldValue, selected) ->
-                showContent(selected == launcherItem ? launcherSettings : gameSettings));
+        sideNav.selectedItemProperty().addListener((observable, oldValue, selected) -> {
+            if (selected == launcherItem) {
+                showContent(launcherSettings);
+            } else if (selected == downloadItem) {
+                showContent(downloadSettings);
+            } else {
+                showContent(gameSettings);
+            }
+        });
 
         HBox body = new HBox(24, sideNav, contentHost);
         body.setAlignment(Pos.TOP_LEFT);

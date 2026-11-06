@@ -6,6 +6,9 @@ import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import org.chs.camlauncher.ui.control.CamlButton;
 
+import java.time.OffsetDateTime;
+import java.time.format.DateTimeParseException;
+
 /** 跨页面复用的轻量布局工具。 */
 final class ViewSupport {
     private ViewSupport() {
@@ -54,5 +57,16 @@ final class ViewSupport {
         button.setMinWidth(80);
         button.setOnAction(event -> onBack.run());
         return button;
+    }
+
+    static String releaseDate(String releaseTime) {
+        if (releaseTime == null || releaseTime.isBlank()) {
+            return "";
+        }
+        try {
+            return OffsetDateTime.parse(releaseTime).toLocalDate().toString();
+        } catch (DateTimeParseException ignored) {
+            return releaseTime.length() >= 10 ? releaseTime.substring(0, 10) : releaseTime;
+        }
     }
 }

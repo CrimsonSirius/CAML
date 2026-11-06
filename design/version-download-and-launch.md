@@ -68,6 +68,9 @@ VersionInstaller.install(...)
 规则：
 
 - 本地已安装时不会重写版本 JSON，保持与外部启动器一致。
+
+下载原版时还支持单独实例名：官方版本 ID 用于查询清单和拉取版本 JSON，
+实例 ID 用于 `versions/<id>` 目录、客户端 jar 和当前实例显示。实例名默认官方版本号。
 - 合并 `inheritsFrom` 时按**文件夹名**查找父版本，兼容 JSON 内部 `id` 与文件夹名不一致的情况。
 - 解析完成后把 manifest 的 `id` 统一为文件夹名，保证 `versions/<id>/<id>.jar` 等路径一致。
 - 本地版本缺库、缺资源或缺客户端 jar 时仍会自动补齐。
@@ -283,7 +286,7 @@ assetIndexFile
 - 只支持原版安装；加载器安装尚未实现。
 - `inheritsFrom` 只读取本地父版本，不会自动安装父版本。
 - 只有官方下载源，镜像源接口尚未接入配置。
-- 下载是顺序执行，没有并发和取消。
+- 下载使用有界线程池并发执行，并发数可配置为 1–256；下载取消尚未实现。
 - 没有内容寻址缓存，只有目标文件存在且 SHA-1 匹配时跳过。
 
 ## 3. 启动链路
@@ -467,6 +470,8 @@ List<String> gameArgs = backend.gameArgumentsBuilder().build(plan, classpath);
 `NativeExtractor.extract(plan)`：
 
 - 清理 `versions/<id>/natives`。
+- 若版本 JSON 指定 `-Djava.library.path=${natives_directory}/java`，解压到
+  `versions/<id>/natives/java`；26.3 的原生库必须位于该目录。
 - 按当前 OS 和位数选择 native jar。
 - 支持旧式 `natives` classifier 和新式 `natives-*` library。
 - 跳过目录、`META-INF/` 和 `extract.exclude`。

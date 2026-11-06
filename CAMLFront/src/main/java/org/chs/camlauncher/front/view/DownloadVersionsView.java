@@ -1,0 +1,89 @@
+package org.chs.camlauncher.front.view;
+
+import javafx.beans.binding.Bindings;
+import javafx.geometry.Insets;
+import javafx.geometry.Pos;
+import javafx.scene.control.ContentDisplay;
+import javafx.scene.control.Label;
+import javafx.scene.control.ScrollPane;
+import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.Priority;
+import javafx.scene.layout.VBox;
+import org.chs.camlauncher.backend.metadata.VersionManifest;
+import org.chs.camlauncher.front.controller.MainController;
+import org.chs.camlauncher.ui.control.CamlButton;
+
+import java.util.List;
+import java.util.function.Consumer;
+
+/** 下载页中的正式版列表。 */
+final class DownloadVersionsView extends VBox {
+    private final Label statusLabel = new Label("正在从官方源获取正式版列表...");
+    private final ScrollPane scroll = new ScrollPane();
+
+    DownloadVersionsView(MainController controller,
+                         Consumer<VersionManifest.Version> onVersionSelected) {
+        getStyleClass().add("app-download-content");
+        setPadding(new Insets(32, 40, 32, 40));
+        setSpacing(16);
+        setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
+
+        statusLabel.getStyleClass().addAll("caml-body-small", "field-hint");
+        statusLabel.setWrapText(true);
+
+        scroll.setFitToWidth(true);
+        scroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+        scroll.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
+        scroll.getStyleClass().add("app-instance-scroll");
+        VBox.setVgrow(scroll, Priority.ALWAYS);
+
+        getChildren().addAll(statusLabel, scroll);
+        controller.fetchReleaseVersions(
+                versions -> showVersions(versions, onVersionSelected),
+                this::showError
+        );
+    }
+
+    private void showVersions(List<VersionManifest.Version> versions,
+                              Consumer<VersionManifest.Version> onVersionSelected) {
+        if (versions.isEmpty()) {
+            statusLabel.setText("官方源没有返回可下载的正式版");
+            return;
+        }
+
+        VBox list = new VBox(8);
+        list.setPadding(new Insets(4, 0, 4, 0));
+        for (VersionManifest.Version version : versions) {
+            String date = ViewSupport.releaseDate(version.releaseTime());
+            CamlButton item = CamlButton.outlined("");
+            item.getStyleClass().addAll("app-instance-item", "app-download-version-item");
+            item.setMaxWidth(Double.MAX_VALUE);
+
+            Label idLabel = new Label(version.id());
+            idLabel.getStyleClass().add("app-download-version-id");
+            Label dateLabel = new Label(date);
+            dateLabel.getStyleClass().add("app-download-version-date");
+            dateLabel.setMinWidth(96);
+            dateLabel.setAlignment(Pos.CENTER_RIGHT);
+
+            BorderPane row = new BorderPane();
+            row.setLeft(idLabel);
+            row.setRight(dateLabel);
+            row.prefWidthProperty().bind(Bindings.max(0, item.widthProperty().subtract(48)));
+            item.setGraphic(row);
+            item.setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
+            item.setAccessibleText(version.id() + (date.isBlank() ? "" : "，" + date));
+            item.setOnAction(event -> onVersionSelected.accept(version));
+            list.getChildren().add(item);
+        }
+        scroll.setContent(list);
+        statusLabel.setText("共 " + versions.size() + " 个正式版，按发布时间从新到旧排列");
+    }
+
+    private void showError(String message) {
+        statusLabel.setText("获取官方版本列表失败：" + message);
+        statusLabel.getStyleClass().remove("field-hint");
+        statusLabel.getStyleClass().add("field-hint-error");
+    }
+
+}

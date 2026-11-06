@@ -34,7 +34,7 @@ CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
 | `runtime` | Java 运行时检测、版本/架构/位数匹配 | 已有 |
 | `launch` | LaunchPlan、classpath、参数、进程启动 | 已有 |
 | `theme` | 主题目录、默认主题复制和当前主题配置 | 已有 |
-| `settings` | 启动器设置持久化（游戏位置、最大内存、版本隔离） | 已有 |
+| `settings` | 启动器设置持久化（游戏位置、最大内存、版本隔离、下载并发数） | 已有 |
 | `system` | 物理内存与可用内存读取 | 已有 |
 | `loader` | Fabric、Quilt、Forge、NeoForge 等加载器 | 未实现 |
 | `json` | 通用 JSON 文件读写 | 已有 |
@@ -58,12 +58,15 @@ CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
 - 生成 assets objects 下载计划。
 - 使用 SHA-1 校验。
 - 使用 `.part` 临时文件和原子移动。
-- 下载重试。
+- 下载使用 HTTP/1.1；失败重试并短暂退避，最终错误包含下载项和地址。
+- 使用有界线程池并发执行下载，并发数由设置决定（1–256，默认 8）。
 - 已有有效文件时跳过。
 
 ### 3.3 实例安装
 
 - 按版本 ID 安装原版。
+- 远程安装区分官方版本 ID 和实例 ID：官方 ID 用于拉取元数据，实例 ID 用作 `versions/<id>` 目录名和当前实例名。
+- 实例名默认官方版本号，拒绝空名、路径分隔符和 Windows 非法字符。
 - 本地已安装的版本（包括第三方启动器/整合包的自定义版本 ID）直接复用，不访问官方清单。
 - 复用本地版本时保持版本 JSON 不变，只补齐缺失文件。
 - 本地版本以 `versions/<id>` 文件夹名作为版本 ID；`inheritsFrom` 也按文件夹名查找父版本。
@@ -120,6 +123,7 @@ CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
 
 - 清理旧 natives 目录。
 - 解压当前系统的 native jar。
+- 根据版本 JSON 的 `-Djava.library.path=${natives_directory}/<子目录>` 决定实际解压目录。
 - 跳过 `META-INF/` 和 `extract.exclude` 指定内容。
 - 下载游戏 Log4j 配置文件。
 - 在 JVM 参数中注入 `-Dlog4j.configurationFile`。
@@ -151,13 +155,15 @@ CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
   “浏览游戏实例”打开二级列表，“管理实例”打开空管理页。
 - `GameLocationSettingsView` 负责游戏位置草稿、浏览、显式保存和目录校验。
 - `InstancePickerView` 扫描当前游戏位置并列出全部已安装实例。
-- `DownloadsView` 是空白下载页；`SettingsView` 负责设置页子导航。
-- `GameSettingsView` 负责叠层内存滑块，`LauncherSettingsView` 负责主题选择。
+- `DownloadsView` 负责下载页子导航；`DownloadVersionsView` 加载官方正式版列表，
+  `DownloadVersionSetupView` 负责实例命名、版本信息和加载器选择，底部按钮通过后端安装原版游戏。
+- `GameSettingsView` 负责叠层内存滑块，`DownloadSettingsView` 负责 1–256 下载并发滑块，
+  `LauncherSettingsView` 负责主题选择。
 - `SystemMemoryService` 在 Linux 读取 `/proc/meminfo` 的 `MemAvailable`，避免把
   `MemFree` 误当成任务管理器显示的可用内存。
 - `MainController` 每 500ms 在后台线程读取一次系统内存，并通过 `Platform.runLater`
   立即刷新设置页。
-- 游戏位置、版本隔离和最大内存保存在 `~/.caml/settings.properties`，启动时加载；游戏位置只有点击保存才写入，版本隔离选择立即写入。
+- 游戏位置、版本隔离、下载并发数和最大内存保存在 `~/.caml/settings.properties`，启动时加载；游戏位置只有点击保存才写入，版本隔离和下载并发数选择立即写入。
 - `LaunchSettings` 在主页和设置页之间共享游戏位置、版本隔离和最大内存值；`ViewSupport` 提供通用字段与侧边栏布局。
 - 当前实例通过共享 `LaunchSettings.selectedVersion` 管理；实例信息下方显示存档位置。
 - `MainController` 使用独立 I/O 线程执行目录探测和启动，不阻塞 JavaFX Application Thread。
@@ -169,8 +175,8 @@ CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
 - 启动设置是主区域，日志是支持面板；表单字段采用“标签在上、控件在下”的稳定结构。
 - 启动按钮固定在表单底部，字段过多时只滚动字段区域，主操作始终可见。
 - 顶栏只保留应用身份和“主页 / 下载 / 设置”主导航。
-- 主页承载启动设置和日志；下载页是空白页并带空白侧边栏，不显示页面标题或说明。
-- 设置页带“游戏设置 / 启动器设置”子侧边栏，不显示页面标题或说明。
+- 主页承载启动设置和日志；下载页带“添加游戏实例”胶囊、正式版列表和原版下载设置页。
+- 设置页带“游戏设置 / 下载设置 / 启动器设置”子侧边栏，不显示页面标题或说明。
 - 游戏设置使用内存滑块，线上方显示“游戏内存 / 可用内存 / 总内存”。
 - 启动器设置承载主题选择，切换后立即生效，不额外放保存按钮。
 - 侧边栏不使用灰色背景，只用右侧分隔线；设置项选中时为橙黄实心胶囊，未选中时为橙黄描边胶囊。

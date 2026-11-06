@@ -45,7 +45,7 @@ public final class MainView extends BorderPane {
                 controller
         );
         homeView = new HomeView(controller, launchSettings);
-        downloadsView = new DownloadsView();
+        downloadsView = new DownloadsView(controller, launchSettings);
         pageHost = new CamlPageHost(homeView);
 
         setTop(buildTopBar());
