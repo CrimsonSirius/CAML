@@ -7,6 +7,7 @@ import org.chs.camlauncher.backend.api.BackendStatus;
 import org.chs.camlauncher.backend.api.CAMLBackend;
 import org.chs.camlauncher.backend.api.GameDirectoryInfo;
 import org.chs.camlauncher.backend.download.DownloadListener;
+import org.chs.camlauncher.backend.instance.VersionIsolationMode;
 import org.chs.camlauncher.backend.launch.LaunchOptions;
 import org.chs.camlauncher.backend.launch.ProcessListener;
 import org.chs.camlauncher.backend.system.SystemMemoryInfo;
@@ -110,7 +111,8 @@ public final class MainController {
      * <p>这里只负责组装参数和派发后台任务；真正的安装、登录、Java 选择和进程启动
      * 都由 {@code CAMLBackend#launchGame} 在后端完成。</p>
      */
-    public void startGame(String version, String username, int memoryMb, Path gameDirectory) {
+    public void startGame(String version, String username, int memoryMb, Path gameDirectory,
+                          boolean fullVersionIsolation) {
         Objects.requireNonNull(gameDirectory, "gameDirectory");
 
         // 仅设置最大内存，其余选项保持默认。
@@ -139,6 +141,9 @@ public final class MainController {
             try {
                 sendStatus("正在启动 " + version + "...");
                 backend.launchGame(version, gameDirectory, username, options,
+                        fullVersionIsolation
+                                ? VersionIsolationMode.FULL
+                                : VersionIsolationMode.NONE,
                         downloadListener, processListener);
                 sendStatus("启动指令已发送");
             } catch (Exception ex) {
@@ -211,6 +216,23 @@ public final class MainController {
                     backend.setGameDirectory(gameDirectory);
                 } catch (IOException | RuntimeException e) {
                     LOGGER.warn("保存游戏位置失败: {}", gameDirectory, e);
+                }
+            });
+        } catch (RejectedExecutionException ignored) {
+            // 应用正在退出，不再接受新的持久化任务。
+        }
+    }
+
+    /** 异步保存版本隔离选择，避免在 JavaFX Application Thread 上写文件。 */
+    public void saveVersionIsolationAsync(boolean fullVersionIsolation) {
+        try {
+            ioExecutor.execute(() -> {
+                try {
+                    backend.setVersionIsolationMode(fullVersionIsolation
+                            ? VersionIsolationMode.FULL
+                            : VersionIsolationMode.NONE);
+                } catch (IOException | RuntimeException e) {
+                    LOGGER.warn("保存版本隔离设置失败: {}", fullVersionIsolation, e);
                 }
             });
         } catch (RejectedExecutionException ignored) {

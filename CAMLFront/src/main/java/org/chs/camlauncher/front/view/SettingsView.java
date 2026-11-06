@@ -30,9 +30,10 @@ final class SettingsView extends VBox implements SidebarPage {
     private FadeTransition contentTransition;
 
     SettingsView(LaunchSettings launchSettings, IntConsumer onMemoryChanged,
+                 Consumer<Boolean> onVersionIsolationChanged,
                  SystemMemoryInfo systemMemory, MainController controller) {
         GameSettingsView gameSettings = new GameSettingsView(
-                launchSettings, onMemoryChanged, systemMemory, controller);
+                launchSettings, onMemoryChanged, onVersionIsolationChanged, systemMemory, controller);
         controller.setOnSystemMemoryUpdated(gameSettings::updateSystemMemory);
         launcherSettings = new LauncherSettingsView();
 
@@ -50,6 +51,11 @@ final class SettingsView extends VBox implements SidebarPage {
         contentHost.setMaxHeight(Double.MAX_VALUE);
         contentHost.setPadding(new Insets(32, 40, 32, 40));
         HBox.setHgrow(contentHost, Priority.ALWAYS);
+        contentHost.widthProperty().addListener((observable, oldValue, newValue) -> {
+            double innerWidth = Math.max(0, newValue.doubleValue() - 80);
+            gameSettings.setPrefWidth(innerWidth);
+            gameSettings.setMaxWidth(innerWidth);
+        });
         sideNav.selectedItemProperty().addListener((observable, oldValue, selected) ->
                 showContent(selected == launcherItem ? launcherSettings : gameSettings));
 

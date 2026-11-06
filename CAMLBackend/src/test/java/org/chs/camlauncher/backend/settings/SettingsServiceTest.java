@@ -1,5 +1,6 @@
 package org.chs.camlauncher.backend.settings;
 
+import org.chs.camlauncher.backend.instance.VersionIsolationMode;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -59,5 +60,43 @@ class SettingsServiceTest {
         SettingsService service = new SettingsService(dataDirectory);
 
         assertTrue(service.gameDirectory().isEmpty());
+    }
+
+    @Test
+    void defaultsToFullVersionIsolation() throws Exception {
+        assertEquals(
+                VersionIsolationMode.FULL,
+                new SettingsService(dataDirectory).versionIsolationMode()
+        );
+    }
+
+    @Test
+    void persistsVersionIsolationAcrossInstances() throws Exception {
+        new SettingsService(dataDirectory).setVersionIsolationMode(VersionIsolationMode.NONE);
+
+        assertEquals(
+                VersionIsolationMode.NONE,
+                new SettingsService(dataDirectory).versionIsolationMode()
+        );
+    }
+
+    @Test
+    void invalidVersionIsolationFallsBackToFull() throws Exception {
+        Files.writeString(dataDirectory.resolve("settings.properties"), "versionIsolation=oops\n");
+
+        assertEquals(
+                VersionIsolationMode.FULL,
+                new SettingsService(dataDirectory).versionIsolationMode()
+        );
+    }
+
+    @Test
+    void rejectsAutomaticVersionIsolationPersistence() {
+        SettingsService service = new SettingsService(dataDirectory);
+
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> service.setVersionIsolationMode(VersionIsolationMode.AUTO)
+        );
     }
 }

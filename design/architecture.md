@@ -34,7 +34,7 @@ CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
 | `runtime` | Java 运行时检测、版本/架构/位数匹配 | 已有 |
 | `launch` | LaunchPlan、classpath、参数、进程启动 | 已有 |
 | `theme` | 主题目录、默认主题复制和当前主题配置 | 已有 |
-| `settings` | 启动器设置持久化（游戏位置、最大内存） | 已有 |
+| `settings` | 启动器设置持久化（游戏位置、最大内存、版本隔离） | 已有 |
 | `system` | 物理内存与可用内存读取 | 已有 |
 | `loader` | Fabric、Quilt、Forge、NeoForge 等加载器 | 未实现 |
 | `json` | 通用 JSON 文件读写 | 已有 |
@@ -93,10 +93,11 @@ CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
 - 合并 `InstalledVersion`、`AuthSession`、`JavaRuntime`、目录和 `LaunchOptions`。
 - 支持内存、分辨率、JVM 参数、游戏参数和环境变量。
 - 启动计划创建时校验 Java 是否满足版本要求。
-- **版本隔离**：`GameDataLayout` 检测 `versions/<id>` 内是否存在 `saves`、`options.txt`、
-  `logs`、`mods` 等游戏数据；若存在，则 `--gameDir` 指向该版本目录，
-  `libraries` 与 `assets` 仍来自 `.minecraft` 根目录。`LaunchPlanner` 提供显式
-  `gameDataDirectory` 的创建重载，`GameLaunchService` 负责调用 `GameDataLayout.resolve`。
+- **版本隔离**：界面持久化 `VersionIsolationMode.FULL` 或 `NONE`。`FULL` 始终把
+  `--gameDir` 指向 `versions/<id>`，`NONE` 始终指向 `.minecraft` 根目录；
+  `libraries` 与 `assets` 始终来自根目录。旧 API 仍可使用 `AUTO` 按
+  `saves`、`options.txt` 等标记自动检测。`GameLaunchService` 接收显式模式并调用
+  `GameDataLayout.resolve`。
 
 ### 3.7 classpath
 
@@ -156,8 +157,8 @@ CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
   `MemFree` 误当成任务管理器显示的可用内存。
 - `MainController` 每 500ms 在后台线程读取一次系统内存，并通过 `Platform.runLater`
   立即刷新设置页。
-- 游戏位置和最大内存保存在 `~/.caml/settings.properties`，启动时加载；游戏位置只有点击保存才写入。
-- `LaunchSettings` 在主页和设置页之间共享游戏位置和最大内存值；`ViewSupport` 提供通用字段与侧边栏布局。
+- 游戏位置、版本隔离和最大内存保存在 `~/.caml/settings.properties`，启动时加载；游戏位置只有点击保存才写入，版本隔离选择立即写入。
+- `LaunchSettings` 在主页和设置页之间共享游戏位置、版本隔离和最大内存值；`ViewSupport` 提供通用字段与侧边栏布局。
 - 当前实例通过共享 `LaunchSettings.selectedVersion` 管理；实例信息下方显示存档位置。
 - `MainController` 使用独立 I/O 线程执行目录探测和启动，不阻塞 JavaFX Application Thread。
 - 下载日志按文件切换和每 10% 进度节流，避免刷屏。

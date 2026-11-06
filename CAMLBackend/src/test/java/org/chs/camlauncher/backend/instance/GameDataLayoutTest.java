@@ -46,5 +46,27 @@ class GameDataLayoutTest {
         assertFalse(GameDataLayout.isIsolated(missing));
         assertEquals(gameDirectory, GameDataLayout.resolve(gameDirectory, missing));
     }
+
+    @Test
+    void fullModeAlwaysUsesVersionDirectory() {
+        Path versionDirectory = gameDirectory.resolve("versions").resolve("1.21.4");
+
+        assertEquals(
+                versionDirectory,
+                GameDataLayout.resolve(gameDirectory, versionDirectory, VersionIsolationMode.FULL)
+        );
+    }
+
+    @Test
+    void noneModeAlwaysUsesRootDirectory() throws Exception {
+        Path versionDirectory = gameDirectory.resolve("versions").resolve("1.21.4");
+        Files.createDirectories(versionDirectory.resolve("saves"));
+        Files.writeString(versionDirectory.resolve("options.txt"), "fov:0.0");
+
+        assertEquals(
+                gameDirectory,
+                GameDataLayout.resolve(gameDirectory, versionDirectory, VersionIsolationMode.NONE)
+        );
+    }
 }
 

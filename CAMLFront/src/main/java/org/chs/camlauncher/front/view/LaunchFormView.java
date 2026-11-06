@@ -5,7 +5,8 @@ import javafx.geometry.Pos;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.layout.BorderPane;
-import javafx.scene.layout.HBox;
+import javafx.scene.layout.ColumnConstraints;
+import javafx.scene.layout.GridPane;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import org.chs.camlauncher.backend.api.GameDirectoryInfo;
@@ -72,14 +73,6 @@ final class LaunchFormView extends BorderPane {
     }
 
     private void buildLayout(Runnable onChooseInstance, Runnable onManageInstances) {
-        Label heading = new Label("启动游戏");
-        heading.getStyleClass().add("caml-headline-small");
-
-        Label subheading = new Label("选择游戏实例与运行参数");
-        subheading.getStyleClass().addAll("caml-body-medium", "caml-on-surface-muted");
-
-        VBox header = new VBox(6, heading, subheading);
-
         VBox instanceInfo = new VBox(10, instanceLabel, gameLocationLabel, saveLocationLabel);
         instanceInfo.getStyleClass().add("app-instance-info-group");
         VBox fields = new VBox(16,
@@ -91,18 +84,26 @@ final class LaunchFormView extends BorderPane {
         CamlButton chooseInstanceButton = CamlButton.outlined("浏览游戏实例");
         chooseInstanceButton.setMinWidth(0);
         chooseInstanceButton.setMaxWidth(Double.MAX_VALUE);
-        HBox.setHgrow(chooseInstanceButton, Priority.ALWAYS);
         chooseInstanceButton.setOnAction(event -> onChooseInstance.run());
 
         CamlButton manageInstancesButton = CamlButton.outlined("管理实例");
         manageInstancesButton.setMinWidth(0);
         manageInstancesButton.setMaxWidth(Double.MAX_VALUE);
-        HBox.setHgrow(manageInstancesButton, Priority.ALWAYS);
         manageInstancesButton.setOnAction(event -> onManageInstances.run());
 
-        HBox instanceActions = new HBox(8, chooseInstanceButton, manageInstancesButton);
+        GridPane instanceActions = new GridPane();
+        instanceActions.setHgap(8);
         instanceActions.setAlignment(Pos.CENTER_LEFT);
         instanceActions.setMaxWidth(Double.MAX_VALUE);
+        ColumnConstraints leftColumn = new ColumnConstraints();
+        leftColumn.setPercentWidth(50);
+        ColumnConstraints rightColumn = new ColumnConstraints();
+        rightColumn.setPercentWidth(50);
+        instanceActions.getColumnConstraints().addAll(leftColumn, rightColumn);
+        instanceActions.add(chooseInstanceButton, 0, 0);
+        instanceActions.add(manageInstancesButton, 1, 0);
+        GridPane.setHgrow(chooseInstanceButton, Priority.ALWAYS);
+        GridPane.setHgrow(manageInstancesButton, Priority.ALWAYS);
 
         VBox actions = new VBox(12, instanceActions, statusLabel, launchBtn);
         actions.getStyleClass().add("app-actions");
@@ -113,10 +114,8 @@ final class LaunchFormView extends BorderPane {
         fieldScroll.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
         fieldScroll.getStyleClass().add("app-field-scroll");
 
-        setTop(header);
         setCenter(fieldScroll);
         setBottom(actions);
-        BorderPane.setMargin(header, new Insets(0, 0, 20, 0));
         BorderPane.setMargin(actions, new Insets(20, 0, 0, 0));
     }
 
@@ -132,6 +131,8 @@ final class LaunchFormView extends BorderPane {
         controller.setOnGameDirectoryInspected(this::applyGameDirectoryInfo);
 
         launchSettings.selectedVersionProperty().addListener((observable, oldValue, newValue) ->
+                updateInstanceInfo());
+        launchSettings.fullVersionIsolationProperty().addListener((observable, oldValue, newValue) ->
                 updateInstanceInfo());
 
         launchBtn.setOnAction(event -> launchGame());
@@ -176,7 +177,8 @@ final class LaunchFormView extends BorderPane {
         launchBtn.setText("启动中...");
         onLaunchStarted.run();
 
-        controller.startGame(version, username, launchSettings.maxMemoryMb(), gameDirectory);
+        controller.startGame(version, username, launchSettings.maxMemoryMb(), gameDirectory,
+                launchSettings.fullVersionIsolation());
     }
 
     private void applyGameDirectoryInfo(GameDirectoryInfo info) {
@@ -231,11 +233,11 @@ final class LaunchFormView extends BorderPane {
             return;
         }
 
-        boolean isolated = lastGameDirectoryInfo != null && lastGameDirectoryInfo.isIsolated(version);
+        boolean isolated = launchSettings.fullVersionIsolation();
         Path savePath = isolated
                 ? gameDirectory.resolve("versions").resolve(version).resolve("saves")
                 : gameDirectory.resolve("saves");
-        saveLocationLabel.setText("存档位置：" + savePath + (isolated ? "（版本隔离）" : ""));
+        saveLocationLabel.setText("存档位置：" + savePath + (isolated ? "（完全版本隔离）" : ""));
         styleDetail(saveLocationLabel, false);
     }
 

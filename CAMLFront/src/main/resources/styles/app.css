@@ -56,8 +56,40 @@
     -fx-font-weight: bold;
 }
 
+.app-settings-group .caml-body-medium {
+    -fx-font-size: 16px;
+}
+
+.app-settings-group .caml-body-small {
+    -fx-font-size: 16px;
+}
+
+.app-settings-group .caml-label-medium {
+    -fx-font-size: 16px;
+}
+
+.app-settings-group .caml-text-field {
+    -fx-font-size: 16px;
+}
+
+.app-settings-group .caml-radio-button {
+    -fx-font-size: 16px;
+}
+
+.app-settings-group .caml-button {
+    -fx-font-size: 15px;
+}
+
+.app-settings-group .app-memory-summary {
+    -fx-font-size: 17px;
+}
+
 .app-instance-picker {
     -fx-background-color: -caml-surface;
+}
+
+.app-instance-picker .caml-body-small {
+    -fx-font-size: 16px;
 }
 
 .app-pill-button {

@@ -15,7 +15,8 @@
 - “浏览游戏实例”和“管理实例”等宽，各占启动按钮宽度的一半左右。
 - 下载页：空白页 + 空白侧边栏，不显示标题或说明。
 - 设置页：左侧“游戏设置 / 启动器设置”侧边栏，右侧对应内容，不显示页面标题。
-- 游戏设置：两个圆角分组。“游戏位置”组包含路径输入、浏览和保存；“内存”组包含描述、内存摘要和叠层滑块。
+- 游戏设置：三个圆角分组。“游戏位置”组包含路径输入、浏览和保存；“版本隔离”组包含“完全版本隔离”和“不进行版本隔离”两个圆形单选项；“内存”组包含描述、内存摘要和叠层滑块。
+- 三个分组按内容区宽度拉齐；“已使用 / 游戏 / 可用 / 总内存”保持单行，灰色辅助文字统一放大。
 - 主页“浏览游戏实例”进入二级列表，列出当前游戏位置扫描出的全部实例；
   进入和返回都通过 `CamlPageHost` 播放与顶级页面一致的淡入/位移动画。
   实例条目使用淡灰底，悬停时变为淡黄色，保留橙黄描边；返回按钮使用同样的底色和悬停状态。
@@ -34,7 +35,8 @@
 - 启动按钮固定在表单底部；字段区域独立滚动，主操作始终可见。
 - 底栏显示后端状态和数据目录。
 - 视图拆分：`MainView` 是壳层；主页由 `HomeView`、`LaunchFormView` 和
-  `LogPaneView` 组成；设置页由 `SettingsView`、`GameSettingsView` 和
+  `LogPaneView` 组成；设置页由 `SettingsView`、`GameSettingsView`、
+  `GameLocationSettingsView`、`VersionIsolationSettingsView` 和
   `LauncherSettingsView` 组成；`LaunchSettings` 共享内存值。
 
 ## 3. 组件映射
@@ -44,6 +46,7 @@
 | 顶部主导航 | `CamlTopNav` + `CamlTopNavItem` |
 | 页面切换动画 | `CamlPageHost` |
 | 游戏位置 | `CamlTextField` + 浏览/保存 `CamlButton`（游戏设置组） |
+| 版本隔离 | `CamlRadioButton` + `ToggleGroup`（游戏设置组） |
 | 浏览游戏实例 | outlined `CamlButton` → `InstancePickerView` |
 | 管理实例 | outlined `CamlButton` → `ManageInstancesView` |
 | 当前实例信息 | 圆角 `VBox`，三行标签 |
@@ -80,6 +83,8 @@
   剩余未使用部分为半粗淡灰色。小球按下缩至 `0.84` 倍，整条滑块不绘制聚焦边框。
 - 系统内存每 500ms 重新读取一次，读取后立即刷新数值和灰色条，不等待页面重开。
 - 游戏位置输入是草稿；只有点击“保存”并通过目录校验后，才更新共享状态和后端配置。
+- 版本隔离选择立即写入共享状态和 `~/.caml/settings.properties`，下一次启动使用所选模式；
+  主页“存档位置”随选择立即切换。
 - 最大内存保存到 `~/.caml/settings.properties`，滑块停止变化约 300ms 后持久化。
 - 设置侧边栏：同一时间只保留一个选中项，游戏设置默认选中。
 - 设置子项选中：不透明橙黄胶囊，白色文字。

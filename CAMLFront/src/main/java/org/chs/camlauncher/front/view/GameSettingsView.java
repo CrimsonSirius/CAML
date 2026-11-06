@@ -10,11 +10,13 @@ import org.chs.camlauncher.front.controller.MainController;
 import org.chs.camlauncher.ui.control.CamlMemorySlider;
 
 import java.util.function.IntConsumer;
+import java.util.function.Consumer;
 
 /** 设置页中的“游戏设置”。 */
 final class GameSettingsView extends VBox {
     private final LaunchSettings launchSettings;
     private final MainController controller;
+    private final Consumer<Boolean> onVersionIsolationChanged;
     private final CamlMemorySlider memorySlider;
     private final Label memorySummary;
     private long totalMemoryMb;
@@ -23,9 +25,11 @@ final class GameSettingsView extends VBox {
     private final PauseTransition saveDebounce = new PauseTransition(Duration.millis(300));
 
     GameSettingsView(LaunchSettings launchSettings, IntConsumer onMemoryChanged,
+                     Consumer<Boolean> onVersionIsolationChanged,
                      SystemMemoryInfo systemMemory, MainController controller) {
         this.launchSettings = launchSettings;
         this.controller = controller;
+        this.onVersionIsolationChanged = onVersionIsolationChanged;
 
         totalMemoryMb = systemMemory.totalMb();
         availableMemoryMb = systemMemory.availableMb();
@@ -93,7 +97,11 @@ final class GameSettingsView extends VBox {
         setPrefWidth(560);
         setMaxWidth(560);
         getStyleClass().add("app-settings-content");
-        getChildren().addAll(new GameLocationSettingsView(launchSettings, controller), group);
+        getChildren().addAll(
+                new GameLocationSettingsView(launchSettings, controller),
+                new VersionIsolationSettingsView(launchSettings, onVersionIsolationChanged),
+                group
+        );
     }
 
     private void updateMemorySummary(int value) {

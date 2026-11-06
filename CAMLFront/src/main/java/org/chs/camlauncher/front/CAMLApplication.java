@@ -9,6 +9,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.chs.camlauncher.backend.api.CAMLBackend;
 import org.chs.camlauncher.backend.config.BackendConfig;
+import org.chs.camlauncher.backend.instance.VersionIsolationMode;
 import org.chs.camlauncher.backend.settings.SettingsService;
 import org.chs.camlauncher.backend.system.SystemMemoryInfo;
 import org.chs.camlauncher.backend.theme.ThemeInfo;
@@ -37,6 +38,8 @@ public final class CAMLApplication extends Application {
     private int savedMaxMemoryMb = SettingsService.DEFAULT_MAX_MEMORY_MB;
     private SystemMemoryInfo systemMemory;
     private Path gameDirectory;
+    private boolean fullVersionIsolation = SettingsService.DEFAULT_VERSION_ISOLATION
+            == VersionIsolationMode.FULL;
 
     @Override
     public void init() throws Exception {
@@ -66,6 +69,13 @@ public final class CAMLApplication extends Application {
             gameDirectory = config.gameDirectory();
             logger.warn("无法读取游戏位置设置，使用默认目录 {}", gameDirectory, e);
         }
+        try {
+            fullVersionIsolation = backend.versionIsolationMode() == VersionIsolationMode.FULL;
+        } catch (IOException e) {
+            fullVersionIsolation = SettingsService.DEFAULT_VERSION_ISOLATION
+                    == VersionIsolationMode.FULL;
+            logger.warn("无法读取版本隔离设置，使用默认值 {}", SettingsService.DEFAULT_VERSION_ISOLATION, e);
+        }
         systemMemory = backend.systemMemory();
 
         logger.info("CAML frontend initialized");
@@ -75,7 +85,8 @@ public final class CAMLApplication extends Application {
     public void start(Stage stage) {
         // 2. 组装 Controller 和 View
         controller = new MainController(backend);
-        MainView view = new MainView(controller, savedMaxMemoryMb, systemMemory, gameDirectory);
+        MainView view = new MainView(
+                controller, savedMaxMemoryMb, systemMemory, gameDirectory, fullVersionIsolation);
 
         // 3. 按主屏幕可用区域决定窗口尺寸：小屏不溢出，大屏不过小，默认居中
         Rectangle2D screen = Screen.getPrimary().getVisualBounds();

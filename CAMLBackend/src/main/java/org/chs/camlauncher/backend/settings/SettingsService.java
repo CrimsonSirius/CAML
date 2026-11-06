@@ -1,5 +1,7 @@
 package org.chs.camlauncher.backend.settings;
 
+import org.chs.camlauncher.backend.instance.VersionIsolationMode;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -10,13 +12,15 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Properties;
 
-/** 启动器设置持久化：游戏位置和最大内存。 */
+/** 启动器设置持久化：游戏位置、最大内存和版本隔离。 */
 public final class SettingsService {
     public static final int DEFAULT_MAX_MEMORY_MB = 4096;
     public static final int MIN_MAX_MEMORY_MB = 512;
+    public static final VersionIsolationMode DEFAULT_VERSION_ISOLATION = VersionIsolationMode.FULL;
 
     private static final String MAX_MEMORY_KEY = "maxMemoryMb";
     private static final String GAME_DIRECTORY_KEY = "gameDirectory";
+    private static final String VERSION_ISOLATION_KEY = "versionIsolation";
 
     private final Path settingsFile;
 
@@ -65,6 +69,28 @@ public final class SettingsService {
         Properties properties = load();
         properties.setProperty(GAME_DIRECTORY_KEY,
                 directory.toAbsolutePath().normalize().toString());
+        store(properties);
+    }
+
+    public VersionIsolationMode versionIsolationMode() throws IOException {
+        String raw = load().getProperty(VERSION_ISOLATION_KEY);
+        if (raw == null) {
+            return DEFAULT_VERSION_ISOLATION;
+        }
+        return switch (raw.trim().toLowerCase()) {
+            case "full" -> VersionIsolationMode.FULL;
+            case "none" -> VersionIsolationMode.NONE;
+            default -> DEFAULT_VERSION_ISOLATION;
+        };
+    }
+
+    public void setVersionIsolationMode(VersionIsolationMode mode) throws IOException {
+        Objects.requireNonNull(mode, "mode");
+        if (mode == VersionIsolationMode.AUTO) {
+            throw new IllegalArgumentException("界面设置不能持久化自动隔离模式");
+        }
+        Properties properties = load();
+        properties.setProperty(VERSION_ISOLATION_KEY, mode.name().toLowerCase());
         store(properties);
     }
 

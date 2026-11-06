@@ -5,6 +5,7 @@ import org.chs.camlauncher.backend.auth.OfflineAccount;
 import org.chs.camlauncher.backend.download.DownloadListener;
 import org.chs.camlauncher.backend.instance.GameDataLayout;
 import org.chs.camlauncher.backend.instance.InstalledVersion;
+import org.chs.camlauncher.backend.instance.VersionIsolationMode;
 import org.chs.camlauncher.backend.instance.VersionInstaller;
 import org.chs.camlauncher.backend.runtime.JavaLocator;
 import org.chs.camlauncher.backend.runtime.JavaRequirement;
@@ -68,6 +69,7 @@ public final class GameLaunchService {
                 defaultGameDirectory,
                 username,
                 options,
+                VersionIsolationMode.AUTO,
                 downloadListener,
                 processListener
         );
@@ -86,7 +88,31 @@ public final class GameLaunchService {
             DownloadListener downloadListener,
             ProcessListener processListener
     ) throws IOException, InterruptedException {
+        return launch(
+                versionId,
+                gameDirectory,
+                username,
+                options,
+                VersionIsolationMode.AUTO,
+                downloadListener,
+                processListener
+        );
+    }
+
+    /**
+     * 使用指定游戏目录和隔离策略启动游戏。
+     */
+    public GameLaunch launch(
+            String versionId,
+            Path gameDirectory,
+            String username,
+            LaunchOptions options,
+            VersionIsolationMode isolationMode,
+            DownloadListener downloadListener,
+            ProcessListener processListener
+    ) throws IOException, InterruptedException {
         Objects.requireNonNull(gameDirectory, "gameDirectory");
+        Objects.requireNonNull(isolationMode, "isolationMode");
         InstalledVersion installed = versionInstaller.install(
                 versionId,
                 gameDirectory,
@@ -109,8 +135,11 @@ public final class GameLaunchService {
                 auth,
                 java,
                 options,
-                // 支持 PCL/HMCL 等启动器的“版本隔离”：游戏数据可能在 versions/<id> 内。
-                GameDataLayout.resolve(installed.gameDirectory(), installed.versionDirectory())
+                GameDataLayout.resolve(
+                        installed.gameDirectory(),
+                        installed.versionDirectory(),
+                        isolationMode
+                )
         );
 
         plan = virtualAssetInstaller.prepare(plan);

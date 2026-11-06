@@ -20,7 +20,7 @@
 → classpath
 → JVM/游戏参数
 → natives/Log4j
-→ 版本隔离判定
+→ 读取版本隔离策略
 → 命令构建
 → 进程启动/日志
 ```
@@ -114,11 +114,12 @@ CAML
 - 合并 `InstalledVersion`、`AuthSession`、`JavaRuntime`、目录和 `LaunchOptions`。
 - 支持内存、分辨率、JVM 参数、游戏参数和环境变量。
 - 创建计划时校验 Java 是否满足版本要求。
-- **版本隔离**：`GameDataLayout` 检查 `versions/<id>` 下的 `saves`、`options.txt`、
-  `logs`、`mods`、`config`、`resourcepacks`、`shaderpacks`、`usercache.json`、
-  `command_history.txt`；命中任意一项时以该版本目录作为 `--gameDir`。
+- **版本隔离**：设置页把 `VersionIsolationMode.FULL` 或 `NONE` 持久化到
+  `~/.caml/settings.properties`。`FULL` 始终以 `versions/<id>` 作为 `--gameDir`，
+  `NONE` 始终以 `.minecraft` 根目录作为 `--gameDir`。旧 API 的 `AUTO` 模式仍检查
+  `saves`、`options.txt`、`logs`、`mods` 等标记。
 - `LaunchPlanner.create(..., gameDataDirectory)` 支持显式指定游戏数据目录，
-  `GameLaunchService` 负责解析隔离布局。
+  `GameLaunchService` 接收隔离模式并解析实际游戏数据目录。
 - `.minecraft/libraries` 与 `.minecraft/assets` 始终来自根目录。
 
 ### 3.8 classpath
@@ -154,7 +155,7 @@ CAML
 - 主页由 `HomeView` 组合 `LaunchFormView` 与 `LogPaneView`；设置页由
   `SettingsView` 组合 `GameSettingsView` 与 `LauncherSettingsView`；
   `DownloadsView` 负责空白下载页。
-- `LaunchSettings` 共享主页和设置页的游戏位置、最大内存值，`ViewSupport` 提供通用布局工具。
+- `LaunchSettings` 共享主页和设置页的游戏位置、版本隔离和最大内存值，`ViewSupport` 提供通用布局工具。
 - 游戏位置从主页移除；设置页新增“游戏位置”圆角分组，包含路径输入、浏览和保存。
 - 只有点击保存并校验目录存在后，才更新共享位置并写入 `~/.caml/settings.properties`。
 - 主页新增“浏览游戏实例”和“管理实例”按钮；前者打开 `InstancePickerView` 二级列表，
@@ -165,7 +166,7 @@ CAML
 - 主界面不再显示游戏实例下拉框或版本输入框；当前实例由二级列表选择并共享到启动流程。
 - 当前实例、游戏位置、存档位置以三行信息放入圆角分组，字号放大。
 - “浏览游戏实例”和“管理实例”等宽，并共同占满启动按钮上方一行。
-- 显示存档位置：隔离版本提示 `versions/<id>/saves`，否则提示 `.minecraft/saves`。
+- 显示存档位置：选择完全版本隔离时提示 `versions/<id>/saves`，否则提示 `.minecraft/saves`。
 - 离线用户名、启动按钮、状态提示和日志窗口；最大内存位于设置 → 游戏设置。
 - `MainController` 用独立 I/O 线程执行目录探测和启动，下载日志每 10% 节流。
 - 主工作区宽屏左右分栏，窄屏上下堆叠；断点为 900px。
@@ -188,6 +189,9 @@ CAML
 - 设置页侧边栏提供“游戏设置 / 启动器设置”。
 - 游戏设置使用圆角分组承载整个内存区域，左上角标题为“内存”；
   组内使用叠层滑块显示系统已使用、游戏分配和未使用内存。
+- 游戏位置、版本隔离和内存三个分组按设置内容区宽度拉齐，组内灰色辅助文字统一放大，
+  内存摘要保持单行显示。版本隔离组使用 `CamlRadioButton` 提供“完全版本隔离”和
+  “不进行版本隔离”两个单选项；选择立即同步到共享状态并异步持久化。
 - 启动器设置提供主题选择；主题切换立即生效。
 - 设置页不显示页面标题或说明，侧边栏从顶栏底部铺到页脚，只用右侧分隔线。
 - 设置子项选中时为不透明橙黄底、白字；未选中时为橙黄边框、橙黄字、透明填充。
@@ -202,7 +206,7 @@ CAML
 - 最大内存保存到 `~/.caml/settings.properties`；启动时由后端加载，滑块停止变化
   约 300ms 后通过后端异步写入。
 - 导航切换会保留主页已填写的状态。
-- 界面控件来自 `CAMLUI`：`CamlButton`、`CamlComboBox`、`CamlMemorySlider`、
+- 界面控件来自 `CAMLUI`：`CamlButton`、`CamlComboBox`、`CamlMemorySlider`、`CamlRadioButton`、
   `CamlTextArea`、`CamlTextField`、`CamlTopBar`、`CamlTopNav`、`CamlTopNavItem`、
   `CamlPageHost`、`CamlSideNav` 和 `CamlSideNavItem`。
 - 主题入口：`CamlTheme.install(scene)` 和 `CamlTheme.applyTheme(scene, path)`。
@@ -294,7 +298,7 @@ PATH=/usr/lib/jvm/zulu-25/bin:$PATH \
 
 - 后端构建通过。
 - JavaFX 启动冒烟测试通过。
-- 71 个后端测试和 11 个前端测试全部通过（共 82 个）。
+- 77 个后端测试和 11 个前端测试全部通过（共 88 个）。
 - 集成测试覆盖：
   - 版本清单获取与缓存。
   - 版本 JSON 获取。
@@ -321,7 +325,7 @@ PATH=/usr/lib/jvm/zulu-25/bin:$PATH \
   - 本地 HTTP 安装假客户端并完成端到端启动。
   - 本地自定义版本 ID 复用和版本 JSON 保持。
   - 已安装版本/隔离版本目录探测。
-  - PCL/HMCL 版本隔离判定。
+  - PCL/HMCL 版本隔离自动判定、显式完全隔离/不隔离和设置持久化。
 
 ## 7. 当前未实现
 

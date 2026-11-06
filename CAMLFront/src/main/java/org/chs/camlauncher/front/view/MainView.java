@@ -30,12 +30,20 @@ public final class MainView extends BorderPane {
     private final CamlPageHost pageHost;
 
     public MainView(MainController controller, int initialMaxMemoryMb,
-                    SystemMemoryInfo systemMemory, Path initialGameDirectory) {
+                    SystemMemoryInfo systemMemory, Path initialGameDirectory,
+                    boolean fullVersionIsolation) {
         this.controller = controller;
         getStyleClass().add("app-root");
 
-        LaunchSettings launchSettings = new LaunchSettings(initialMaxMemoryMb, initialGameDirectory);
-        settingsView = new SettingsView(launchSettings, controller::saveMaxMemoryMbAsync, systemMemory, controller);
+        LaunchSettings launchSettings = new LaunchSettings(
+                initialMaxMemoryMb, initialGameDirectory, fullVersionIsolation);
+        settingsView = new SettingsView(
+                launchSettings,
+                controller::saveMaxMemoryMbAsync,
+                controller::saveVersionIsolationAsync,
+                systemMemory,
+                controller
+        );
         homeView = new HomeView(controller, launchSettings);
         downloadsView = new DownloadsView();
         pageHost = new CamlPageHost(homeView);

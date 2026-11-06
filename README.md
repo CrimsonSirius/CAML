@@ -22,9 +22,9 @@ CAML 是一个基于 **Java 25 + JavaFX** 的 Minecraft 启动器，采用前后
 | 版本安装 | 本地已安装版本直接复用（支持第三方启动器/整合包的自定义版本 ID），缺失文件自动补齐；兼容 PCL/HMCL 版本隔离布局；基础文件完成后才写入版本 JSON |
 | 账号 | 离线登录，稳定离线 UUID，生成 `AuthSession` |
 | Java | 扫描 `java.home`、`JAVA_HOME`、`PATH` 及常见 JDK 目录；读取版本、供应商、架构、位数；按版本要求选择运行时；Windows 优先 `javaw.exe` |
-| 启动 | 不可变 `LaunchPlan`、classpath 构建、JVM/游戏参数与 `${...}` 占位符、natives 解压、Log4j 配置、旧版本 virtual assets 重建；版本隔离时 `--gameDir` 自动指向 `versions/<id>` |
+| 启动 | 不可变 `LaunchPlan`、classpath 构建、JVM/游戏参数与 `${...}` 占位符、natives 解压、Log4j 配置、旧版本 virtual assets 重建；根据设置选择，`--gameDir` 指向 `versions/<id>` 或 `.minecraft` 根目录 |
 | 进程 | `ProcessBuilder` 启动、工作目录与环境变量、stdout/stderr 转发、退出码回调、停止能力；命令行过长时自动回退 `@argfile` / manifest classpath jar；`LaunchException` 分类错误并提供中文提示 |
-| 界面 | CAML 组件库；外部 CSS 主题（`~/.caml/themes`）；顶部“主页 / 下载 / 设置”导航；窗口尺寸按主屏可用区域自适应并居中（小屏收缩、大屏限幅）；下载页空白侧边栏；设置页“游戏设置 / 启动器设置”侧边栏；“游戏位置”设置组（输入、浏览、显式保存）；主页“浏览游戏实例”二级列表和“管理实例”空页；叠层内存滑块（灰色=系统已使用+游戏分配，淡灰=未使用），每 0.5 秒刷新；游戏位置和内存设置持久化；宽屏左右分栏、窄屏上下堆叠 |
+| 界面 | CAML 组件库；外部 CSS 主题（`~/.caml/themes`）；顶部“主页 / 下载 / 设置”导航；窗口尺寸按主屏可用区域自适应并居中（小屏收缩、大屏限幅）；下载页空白侧边栏；设置页“游戏设置 / 启动器设置”侧边栏；“游戏位置”设置组（输入、浏览、显式保存）；“版本隔离”单选组；主页“浏览游戏实例”二级列表和“管理实例”空页；叠层内存滑块（灰色=系统已使用+游戏分配，淡灰=未使用），每 0.5 秒刷新；游戏位置、版本隔离和内存设置持久化；宽屏左右分栏、窄屏上下堆叠 |
 
 ### 尚未实现
 
@@ -77,6 +77,7 @@ CAML/
 │  │     ├─ SettingsView.java         设置页侧边栏
 │  │     ├─ GameSettingsView.java     游戏设置分组
 │  │     ├─ GameLocationSettingsView.java 游戏位置输入、浏览和保存
+│  │     ├─ VersionIsolationSettingsView.java 版本隔离单选组
 │  │     ├─ InstancePickerView.java   游戏实例二级列表
 │  │     ├─ ManageInstancesView.java  管理实例空二级页
 │  │     ├─ LauncherSettingsView.java 启动器设置与主题
@@ -218,11 +219,24 @@ CAMLBackend/src/main/resources/themes/default.css
 | 游戏数据（Windows） | 启动器所在目录下的 `.minecraft` |
 
 游戏目录在 **设置 → 游戏设置 → 游戏位置** 中修改；输入或浏览后必须点击保存才会生效。
+版本隔离在 **设置 → 游戏设置 → 版本隔离** 中选择，修改后立即生效并写入设置文件。
 主页的 **浏览游戏实例** 会扫描当前游戏位置并列出 `versions/<id>/<id>.json`。
 
 ### 版本隔离
 
-CAML 兼容 PCL/HMCL 等启动器的版本隔离布局。后端会检查 `versions/<id>` 中是否存在：
+设置页提供两个选项：
+
+- **完全版本隔离**：`--gameDir` 始终指向 `versions/<id>`，这是默认值。
+- **不进行版本隔离**：`--gameDir` 始终指向 `.minecraft` 根目录。
+
+选择会影响下一次启动。切换模式不会自动搬运已有存档；从“不进行版本隔离”切换到
+“完全版本隔离”后，旧存档仍留在 `.minecraft/saves`，新存档写入
+`versions/<id>/saves`。需要沿用旧存档时应手动复制。
+
+后端仍保留对 PCL/HMCL 隔离布局的自动检测重载，用于旧 API 和目录扫描；界面启动
+使用用户选择的显式模式，不再根据版本目录中是否已有 `saves` 来猜测。
+
+自动检测会检查 `versions/<id>` 中是否存在：
 
 ```text
 saves
@@ -236,12 +250,8 @@ usercache.json
 command_history.txt
 ```
 
-命中任意一项时：
-
-- `--gameDir` 指向 `versions/<id>`，以便读取原有存档和设置。
-- `libraries`、`assets` 仍然来自 `.minecraft` 根目录，不会重复下载。
-- 界面在当前实例信息下方显示“版本隔离：存档在 `versions/<id>/saves`”。
-- Windows 的 `APPDATA` 仍按 `.minecraft` 根目录计算，不会误指向版本目录。
+无论选择哪种模式，`libraries`、`assets` 都来自 `.minecraft` 根目录；Windows 的
+`APPDATA` 也始终按 `.minecraft` 根目录计算。主页会根据当前选择显示实际存档位置。
 
 ---
 

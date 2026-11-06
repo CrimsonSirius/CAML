@@ -12,6 +12,7 @@ import org.chs.camlauncher.backend.download.DownloadPlanner;
 import org.chs.camlauncher.backend.download.FileDownloader;
 import org.chs.camlauncher.backend.instance.GameDataLayout;
 import org.chs.camlauncher.backend.instance.InstalledVersion;
+import org.chs.camlauncher.backend.instance.VersionIsolationMode;
 import org.chs.camlauncher.backend.instance.VersionInstaller;
 import org.chs.camlauncher.backend.json.JsonService;
 import org.chs.camlauncher.backend.launch.LaunchOptions;
@@ -174,6 +175,14 @@ public final class CAMLBackend implements AutoCloseable {
         settingsService.setGameDirectory(directory);
     }
 
+    public VersionIsolationMode versionIsolationMode() throws IOException {
+        return settingsService.versionIsolationMode();
+    }
+
+    public void setVersionIsolationMode(VersionIsolationMode mode) throws IOException {
+        settingsService.setVersionIsolationMode(mode);
+    }
+
     public MetadataService metadata() {
         return metadata;
     }
@@ -326,6 +335,7 @@ public final class CAMLBackend implements AutoCloseable {
                 config.gameDirectory(),
                 username,
                 options,
+                VersionIsolationMode.AUTO,
                 downloadListener,
                 processListener
         );
@@ -345,11 +355,35 @@ public final class CAMLBackend implements AutoCloseable {
             DownloadListener downloadListener,
             ProcessListener processListener
     ) throws IOException, InterruptedException {
+        return launchGame(
+                versionId,
+                gameDirectory,
+                username,
+                options,
+                VersionIsolationMode.AUTO,
+                downloadListener,
+                processListener
+        );
+    }
+
+    /**
+     * 使用指定游戏目录和版本隔离策略启动游戏。
+     */
+    public GameLaunch launchGame(
+            String versionId,
+            Path gameDirectory,
+            String username,
+            LaunchOptions options,
+            VersionIsolationMode isolationMode,
+            DownloadListener downloadListener,
+            ProcessListener processListener
+    ) throws IOException, InterruptedException {
         return gameLaunchService.launch(
                 versionId,
                 gameDirectory,
                 username,
                 options,
+                isolationMode,
                 downloadListener,
                 processListener
         );
