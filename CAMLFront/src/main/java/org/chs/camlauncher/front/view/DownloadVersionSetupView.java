@@ -99,7 +99,7 @@ final class DownloadVersionSetupView extends VBox {
         fabricLoaderSelector.setConverter(new StringConverter<>() {
             @Override
             public String toString(FabricLoaderVersion loader) {
-                return loader == null ? "" : loader.version();
+                return loader == null ? null : loader.version();
             }
 
             @Override
@@ -127,7 +127,7 @@ final class DownloadVersionSetupView extends VBox {
         fabricApiSelector.setConverter(new StringConverter<>() {
             @Override
             public String toString(FabricApiVersion api) {
-                return api == null ? "" : api.versionNumber();
+                return api == null ? null : api.versionNumber();
             }
 
             @Override
@@ -144,7 +144,7 @@ final class DownloadVersionSetupView extends VBox {
         forgeSelector.setConverter(new StringConverter<>() {
             @Override
             public String toString(ForgeVersion forge) {
-                return forge == null ? "" : forge.version();
+                return forge == null ? null : forge.version();
             }
 
             @Override
@@ -157,9 +157,9 @@ final class DownloadVersionSetupView extends VBox {
                 return;
             }
             updatingLoaders = true;
-            fabricLoaderSelector.setValue(null);
-            fabricApiSelector.setValue(null);
-            neoForgeSelector.setValue(null);
+            clearSelection(fabricLoaderSelector, "请选择 Fabric 版本");
+            clearSelection(fabricApiSelector, "请先选择 Fabric 版本");
+            clearSelection(neoForgeSelector, "请选择 NeoForge 版本");
             updatingLoaders = false;
             updateFabricApiState();
             autoUpdateInstanceName(forge.versionId());
@@ -173,7 +173,7 @@ final class DownloadVersionSetupView extends VBox {
         neoForgeSelector.setConverter(new StringConverter<>() {
             @Override
             public String toString(NeoForgeVersion neoForge) {
-                return neoForge == null ? "" : neoForge.version();
+                return neoForge == null ? null : neoForge.version();
             }
 
             @Override
@@ -186,9 +186,9 @@ final class DownloadVersionSetupView extends VBox {
                 return;
             }
             updatingLoaders = true;
-            forgeSelector.setValue(null);
-            fabricLoaderSelector.setValue(null);
-            fabricApiSelector.setValue(null);
+            clearSelection(forgeSelector, "请选择 Forge 版本");
+            clearSelection(fabricLoaderSelector, "请选择 Fabric 版本");
+            clearSelection(fabricApiSelector, "请先选择 Fabric 版本");
             updatingLoaders = false;
             updateFabricApiState();
             autoUpdateInstanceName(neoForge.versionId());
@@ -205,16 +205,31 @@ final class DownloadVersionSetupView extends VBox {
     private void clearOtherLoaders(CamlComboBox<?> selected) {
         updatingLoaders = true;
         if (selected != forgeSelector) {
-            forgeSelector.setValue(null);
+            clearSelection(forgeSelector, "请选择 Forge 版本");
         }
         if (selected != neoForgeSelector) {
-            neoForgeSelector.setValue(null);
+            clearSelection(neoForgeSelector, "请选择 NeoForge 版本");
         }
         if (selected != fabricLoaderSelector) {
-            fabricLoaderSelector.setValue(null);
-            fabricApiSelector.setValue(null);
+            clearSelection(fabricLoaderSelector, "请选择 Fabric 版本");
+            clearSelection(fabricApiSelector, "请先选择 Fabric 版本");
         }
         updatingLoaders = false;
+    }
+
+    private static void clearSelection(CamlComboBox<?> selector, String prompt) {
+        selector.getSelectionModel().clearSelection();
+        selector.setValue(null);
+
+        String targetPrompt = prompt;
+        String currentPrompt = selector.getPromptText();
+        if (selector.getItems().isEmpty() && currentPrompt != null && !currentPrompt.isBlank()) {
+            targetPrompt = currentPrompt;
+        }
+        // JavaFX 在 promptText 未变化时不会刷新按钮单元格；先清空再设置可强制恢复占位文字。
+        selector.setPromptText(null);
+        selector.setPromptText(targetPrompt);
+        selector.refreshDisplay();
     }
 
     private static <T> T findByLabel(List<T> items, String value,
@@ -271,7 +286,9 @@ final class DownloadVersionSetupView extends VBox {
                 && forgeSelector.getValue() == null
                 && neoForgeSelector.getValue() == null;
         if (!hasFabric) {
-            fabricApiSelector.setValue(null);
+            clearSelection(fabricApiSelector, "请先选择 Fabric 版本");
+        } else if (fabricApiSelector.getValue() == null && !fabricApiSelector.getItems().isEmpty()) {
+            fabricApiSelector.setPromptText("请选择 Fabric API 版本");
         }
         fabricApiSelector.setDisable(
                 downloading || !hasFabric || fabricApiSelector.getItems().isEmpty());
