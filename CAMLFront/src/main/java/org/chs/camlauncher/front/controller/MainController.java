@@ -10,6 +10,8 @@ import org.chs.camlauncher.backend.download.DownloadListener;
 import org.chs.camlauncher.backend.instance.VersionIsolationMode;
 import org.chs.camlauncher.backend.loader.fabric.FabricApiVersion;
 import org.chs.camlauncher.backend.loader.fabric.FabricLoaderVersion;
+import org.chs.camlauncher.backend.loader.forge.ForgeVersion;
+import org.chs.camlauncher.backend.loader.neoforge.NeoForgeVersion;
 import org.chs.camlauncher.backend.launch.LaunchOptions;
 import org.chs.camlauncher.backend.launch.ProcessListener;
 import org.chs.camlauncher.backend.metadata.VersionManifest;
@@ -362,6 +364,105 @@ public final class MainController {
                     Platform.runLater(() -> onError.accept(message));
                     return null;
                 });
+    }
+
+    public void fetchForgeVersions(String gameVersion,
+                                   Consumer<List<ForgeVersion>> onLoaded,
+                                   Consumer<String> onError) {
+        fetchLoaderVersions("Forge", () -> backend.fetchForgeVersions(gameVersion), onLoaded, onError);
+    }
+
+    public void fetchNeoForgeVersions(String gameVersion,
+                                      Consumer<List<NeoForgeVersion>> onLoaded,
+                                      Consumer<String> onError) {
+        fetchLoaderVersions("NeoForge", () -> backend.fetchNeoForgeVersions(gameVersion), onLoaded, onError);
+    }
+
+    private <T> void fetchLoaderVersions(String name, LoaderSupplier<T> supplier,
+                                         Consumer<List<T>> onLoaded, Consumer<String> onError) {
+        CompletableFuture
+                .supplyAsync(() -> {
+                    try {
+                        return supplier.get();
+                    } catch (IOException | InterruptedException e) {
+                        if (e instanceof InterruptedException) {
+                            Thread.currentThread().interrupt();
+                        }
+                        throw new CompletionException(e);
+                    }
+                }, ioExecutor)
+                .thenAccept(versions -> Platform.runLater(() -> onLoaded.accept(versions)))
+                .exceptionally(ex -> {
+                    Throwable cause = ex.getCause() != null ? ex.getCause() : ex;
+                    String message = messageOf(cause);
+                    LOGGER.warn("获取 {} 版本失败", name, cause);
+                    Platform.runLater(() -> onError.accept(message));
+                    return null;
+                });
+    }
+
+    public void downloadForgeVersion(String gameVersion, String instanceId, ForgeVersion version,
+                                     Path gameDirectory, Runnable onSuccess,
+                                     Consumer<String> onError) {
+        downloadExternalLoaderVersion("Forge", gameVersion, instanceId, gameDirectory,
+                () -> backend.installForgeVersion(gameVersion, instanceId, version, gameDirectory,
+                        DownloadListener.NONE),
+                onSuccess, onError);
+    }
+
+    public void downloadNeoForgeVersion(String gameVersion, String instanceId, NeoForgeVersion version,
+                                        Path gameDirectory, Runnable onSuccess,
+                                        Consumer<String> onError) {
+        downloadExternalLoaderVersion("NeoForge", gameVersion, instanceId, gameDirectory,
+                () -> backend.installNeoForgeVersion(gameVersion, instanceId, version, gameDirectory,
+                        DownloadListener.NONE),
+                onSuccess, onError);
+    }
+
+    private void downloadExternalLoaderVersion(
+            String loaderName,
+            String gameVersion,
+            String instanceId,
+            Path gameDirectory,
+            LoaderInstallSupplier supplier,
+            Runnable onSuccess,
+            Consumer<String> onError
+    ) {
+        Objects.requireNonNull(gameDirectory, "gameDirectory");
+        CompletableFuture
+                .supplyAsync(() -> {
+                    try {
+                        return supplier.install();
+                    } catch (IOException | InterruptedException e) {
+                        if (e instanceof InterruptedException) {
+                            Thread.currentThread().interrupt();
+                        }
+                        throw new CompletionException(e);
+                    }
+                }, ioExecutor)
+                .thenAccept(installed -> {
+                    LOGGER.info("{} 实例安装完成: {} -> {}", loaderName, instanceId, gameVersion);
+                    sendLog("[下载] 已安装 " + loaderName + " 实例 " + instanceId);
+                    Platform.runLater(onSuccess);
+                })
+                .exceptionally(ex -> {
+                    Throwable cause = ex.getCause() != null ? ex.getCause() : ex;
+                    String message = messageOf(cause);
+                    LOGGER.warn("{} 实例安装失败: {}", loaderName, instanceId, cause);
+                    sendLog("[下载] " + loaderName + " 实例 " + instanceId + " 安装失败: " + message);
+                    Platform.runLater(() -> onError.accept(message));
+                    return null;
+                });
+    }
+
+    @FunctionalInterface
+    private interface LoaderSupplier<T> {
+        List<T> get() throws IOException, InterruptedException;
+    }
+
+    @FunctionalInterface
+    private interface LoaderInstallSupplier {
+        Object install() throws IOException, InterruptedException;
     }
 
     private static String messageOf(Throwable cause) {

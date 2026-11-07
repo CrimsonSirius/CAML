@@ -156,6 +156,14 @@ Fabric 安装流程：
 - profile 没有 `jar` 时复用父版本客户端 jar。
 - Fabric API 从 Modrinth `fabric-api` 项目获取，并写入实际游戏目录的 `mods`。
 
+Forge/NeoForge 安装流程：
+
+- 从 Forge/NeoForge Maven `maven-metadata.xml` 筛选当前 Minecraft 版本的 installer。
+- 先确保原版父版本存在，再创建 staging 目录并复制父版本 JSON 和客户端 jar。
+- 运行官方 installer 的 headless `--installClient <staging>`，由官方 processor 生成运行时库和版本文件。
+- 把 staging libraries 合并回共享 `libraries`，再按用户实例名移动版本目录。
+- 最后用 `VersionInstaller` 读取安装结果，解析 `inheritsFrom` 并校验启动所需文件。
+
 ### 2.6 生成基础下载计划
 
 `DownloadPlanner.plan(resolved, gameDirectory)` 生成基础文件计划，包含：
@@ -292,7 +300,7 @@ assetIndexFile
 
 ### 2.13 当前下载限制
 
-- 支持原版和 Fabric Loader/Fabric API 安装；Quilt、Forge、NeoForge 尚未实现。
+- 支持原版、Fabric Loader/Fabric API、Forge 和 NeoForge 安装；Quilt 尚未实现。
 - `inheritsFrom` 只读取本地父版本，不会自动安装父版本。
 - 只有官方下载源，镜像源接口尚未接入配置。
 - 下载使用有界线程池并发执行，并发数可配置为 1–256；下载取消尚未实现。

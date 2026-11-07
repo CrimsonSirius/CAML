@@ -20,6 +20,11 @@ import org.chs.camlauncher.backend.loader.fabric.FabricApiVersion;
 import org.chs.camlauncher.backend.loader.fabric.FabricInstaller;
 import org.chs.camlauncher.backend.loader.fabric.FabricLoaderVersion;
 import org.chs.camlauncher.backend.loader.fabric.FabricService;
+import org.chs.camlauncher.backend.loader.ExternalLoaderInstaller;
+import org.chs.camlauncher.backend.loader.forge.ForgeService;
+import org.chs.camlauncher.backend.loader.forge.ForgeVersion;
+import org.chs.camlauncher.backend.loader.neoforge.NeoForgeService;
+import org.chs.camlauncher.backend.loader.neoforge.NeoForgeVersion;
 import org.chs.camlauncher.backend.launch.LaunchOptions;
 import org.chs.camlauncher.backend.launch.LaunchPlan;
 import org.chs.camlauncher.backend.launch.LaunchPlanner;
@@ -68,6 +73,9 @@ public final class CAMLBackend implements AutoCloseable {
     private final VersionInstaller versionInstaller;
     private final FabricService fabricService;
     private final FabricInstaller fabricInstaller;
+    private final ForgeService forgeService;
+    private final NeoForgeService neoForgeService;
+    private final ExternalLoaderInstaller externalLoaderInstaller;
     private final LaunchPlanner launchPlanner;
     private final ClasspathBuilder classpathBuilder;
     private final JvmArgumentsBuilder jvmArgumentsBuilder;
@@ -104,6 +112,16 @@ public final class CAMLBackend implements AutoCloseable {
                 versionInstaller,
                 fabricService,
                 fileDownloader,
+                VersionManifestService.DEFAULT_MANIFEST_URI,
+                config.dataDirectory().resolve("cache").resolve("version_manifest_v2.json")
+        );
+        this.forgeService = new ForgeService();
+        this.neoForgeService = new NeoForgeService();
+        this.externalLoaderInstaller = new ExternalLoaderInstaller(
+                versionInstaller,
+                javaLocator,
+                fileDownloader,
+                metadata,
                 VersionManifestService.DEFAULT_MANIFEST_URI,
                 config.dataDirectory().resolve("cache").resolve("version_manifest_v2.json")
         );
@@ -321,6 +339,52 @@ public final class CAMLBackend implements AutoCloseable {
                 apiVersion,
                 gameDirectory,
                 fullVersionIsolation,
+                listener
+        );
+    }
+
+    public List<ForgeVersion> fetchForgeVersions(String gameVersion)
+            throws IOException, InterruptedException {
+        return forgeService.fetchVersions(gameVersion);
+    }
+
+    public List<NeoForgeVersion> fetchNeoForgeVersions(String gameVersion)
+            throws IOException, InterruptedException {
+        return neoForgeService.fetchVersions(gameVersion);
+    }
+
+    public InstalledVersion installForgeVersion(
+            String gameVersion,
+            String instanceId,
+            ForgeVersion version,
+            Path gameDirectory,
+            DownloadListener listener
+    ) throws IOException, InterruptedException {
+        Objects.requireNonNull(version, "version");
+        return externalLoaderInstaller.install(
+                "Forge",
+                gameVersion,
+                instanceId,
+                version.installerUri(),
+                gameDirectory,
+                listener
+        );
+    }
+
+    public InstalledVersion installNeoForgeVersion(
+            String gameVersion,
+            String instanceId,
+            NeoForgeVersion version,
+            Path gameDirectory,
+            DownloadListener listener
+    ) throws IOException, InterruptedException {
+        Objects.requireNonNull(version, "version");
+        return externalLoaderInstaller.install(
+                "NeoForge",
+                gameVersion,
+                instanceId,
+                version.installerUri(),
+                gameDirectory,
                 listener
         );
     }
