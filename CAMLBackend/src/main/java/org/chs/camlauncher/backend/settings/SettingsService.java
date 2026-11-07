@@ -26,6 +26,7 @@ public final class SettingsService {
     private static final String GAME_DIRECTORY_KEY = "gameDirectory";
     private static final String VERSION_ISOLATION_KEY = "versionIsolation";
     private static final String DOWNLOAD_CONCURRENCY_KEY = "downloadConcurrency";
+    private static final String LAST_LAUNCHED_INSTANCE_KEY = "lastInstanceId";
 
     private final Path settingsFile;
 
@@ -122,6 +123,24 @@ public final class SettingsService {
         }
         Properties properties = load();
         properties.setProperty(DOWNLOAD_CONCURRENCY_KEY, Integer.toString(value));
+        store(properties);
+    }
+
+    public Optional<String> lastLaunchedInstanceId() throws IOException {
+        String raw = load().getProperty(LAST_LAUNCHED_INSTANCE_KEY);
+        if (raw == null || raw.isBlank()) {
+            return Optional.empty();
+        }
+        return Optional.of(raw.trim());
+    }
+
+    public void setLastLaunchedInstanceId(String instanceId) throws IOException {
+        String value = Objects.requireNonNull(instanceId, "instanceId").trim();
+        if (value.isEmpty()) {
+            throw new IllegalArgumentException("最后启动的实例不能为空");
+        }
+        Properties properties = load();
+        properties.setProperty(LAST_LAUNCHED_INSTANCE_KEY, value);
         store(properties);
     }
 

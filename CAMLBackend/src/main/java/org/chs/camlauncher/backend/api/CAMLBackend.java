@@ -202,6 +202,14 @@ public final class CAMLBackend implements AutoCloseable {
         versionInstaller.setDownloadConcurrency(value);
     }
 
+    public Optional<String> lastLaunchedInstanceId() throws IOException {
+        return settingsService.lastLaunchedInstanceId();
+    }
+
+    public void setLastLaunchedInstanceId(String instanceId) throws IOException {
+        settingsService.setLastLaunchedInstanceId(instanceId);
+    }
+
     public MetadataService metadata() {
         return metadata;
     }

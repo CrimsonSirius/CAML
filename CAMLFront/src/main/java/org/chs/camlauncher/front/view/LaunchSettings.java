@@ -12,15 +12,19 @@ import java.nio.file.Path;
 /** 主页和设置页共享的启动参数。 */
 final class LaunchSettings {
     private final ObjectProperty<Path> gameDirectory = new SimpleObjectProperty<>(this, "gameDirectory");
-    private final StringProperty selectedVersion = new SimpleStringProperty(this, "selectedVersion", "1.21.4");
+    private final StringProperty selectedVersion = new SimpleStringProperty(this, "selectedVersion");
     private final BooleanProperty fullVersionIsolation =
             new SimpleBooleanProperty(this, "fullVersionIsolation");
     private int maxMemoryMb;
 
-    LaunchSettings(int maxMemoryMb, Path gameDirectory, boolean fullVersionIsolation) {
+    LaunchSettings(int maxMemoryMb, Path gameDirectory, boolean fullVersionIsolation,
+                   String selectedVersion) {
         this.maxMemoryMb = maxMemoryMb;
         this.gameDirectory.set(gameDirectory);
         this.fullVersionIsolation.set(fullVersionIsolation);
+        this.selectedVersion.set(selectedVersion == null || selectedVersion.isBlank()
+                ? "1.21.4"
+                : selectedVersion);
     }
 
     int maxMemoryMb() {

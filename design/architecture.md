@@ -163,9 +163,9 @@ CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
   `MemFree` 误当成任务管理器显示的可用内存。
 - `MainController` 每 500ms 在后台线程读取一次系统内存，并通过 `Platform.runLater`
   立即刷新设置页。
-- 游戏位置、版本隔离、下载并发数和最大内存保存在 `~/.caml/settings.properties`，启动时加载；游戏位置只有点击保存才写入，版本隔离和下载并发数选择立即写入。
+- 游戏位置、版本隔离、下载并发数、最大内存和最后启动实例保存在 `~/.caml/settings.properties`，启动时加载；游戏位置只有点击保存才写入，版本隔离和下载并发数选择立即写入，最后启动实例在启动成功后写入。
 - `LaunchSettings` 在主页和设置页之间共享游戏位置、版本隔离和最大内存值；`ViewSupport` 提供通用字段与侧边栏布局。
-- 当前实例通过共享 `LaunchSettings.selectedVersion` 管理；实例信息下方显示存档位置。
+- 当前实例通过共享 `LaunchSettings.selectedVersion` 管理；启动器初始化时恢复 `lastInstanceId`，实例信息下方显示存档位置。
 - `MainController` 使用独立 I/O 线程执行目录探测和启动，不阻塞 JavaFX Application Thread。
 - 下载日志按文件切换和每 10% 进度节流，避免刷屏。
 - 主工作区使用 `SplitPane`：宽度 `< 900` 时上下堆叠，`>= 900` 时左右分栏。

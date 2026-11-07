@@ -151,6 +151,7 @@ public final class MainController {
                                 ? VersionIsolationMode.FULL
                                 : VersionIsolationMode.NONE,
                         downloadListener, processListener);
+                saveLastLaunchedInstance(version);
                 sendStatus("启动指令已发送");
             } catch (Exception ex) {
                 sendLog("[FATAL] " + ex.getMessage());
@@ -160,6 +161,14 @@ public final class MainController {
         }, "caml-launch-worker");
         worker.setDaemon(true);
         worker.start();
+    }
+
+    private void saveLastLaunchedInstance(String version) {
+        try {
+            backend.setLastLaunchedInstanceId(version);
+        } catch (IOException | RuntimeException e) {
+            LOGGER.warn("保存最后启动实例失败: {}", version, e);
+        }
     }
 
     /**
