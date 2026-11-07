@@ -90,13 +90,15 @@ public final class LibraryArtifact {
         return library.checksums().stream()
                 .filter(checksum -> checksum != null && !checksum.isBlank())
                 .findFirst()
-                .orElse(null);
+                .orElseGet(() -> library.sha1() == null || library.sha1().isBlank()
+                        ? null
+                        : library.sha1());
     }
 
     public static Long size(Library library) {
         return library.downloads() != null && library.downloads().artifact() != null
                 ? library.downloads().artifact().size()
-                : null;
+                : library.size();
     }
 
     private static String stripExtension(String value) {

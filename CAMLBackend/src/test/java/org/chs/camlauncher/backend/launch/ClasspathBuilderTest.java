@@ -41,6 +41,8 @@ class ClasspathBuilderTest {
                 List.of(),
                 List.of(),
                 null,
+                null,
+                null,
                 null
         );
         Library nativeOnly = library(
@@ -133,6 +135,8 @@ class ClasspathBuilderTest {
                 List.of(),
                 List.of("jline-sha1"),
                 true,
+                null,
+                null,
                 null
         );
         Library serverOnly = new Library(
@@ -144,7 +148,9 @@ class ClasspathBuilderTest {
                 List.of(),
                 List.of(),
                 true,
-                false
+                false,
+                null,
+                null
         );
 
         VersionInfo manifest = new VersionInfo(
@@ -212,6 +218,8 @@ class ClasspathBuilderTest {
                 null,
                 rules,
                 List.of(),
+                null,
+                null,
                 null,
                 null
         );

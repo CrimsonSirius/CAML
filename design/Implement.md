@@ -25,7 +25,7 @@
 → 进程启动/日志
 ```
 
-尚未完成：微软登录、加载器、启动错误对话框、停止按钮、崩溃分析、启动器可见性策略和真实客户端验证。
+尚未完成：微软登录、Quilt/Forge/NeoForge、启动错误对话框、停止按钮、崩溃分析、启动器可见性策略和真实客户端验证。
 
 ## 2. 项目结构
 
@@ -98,6 +98,7 @@ CAML
 - 支持加载器 manifest 的 `jar` 字段；客户端 jar 与 classpath 使用该字段指定的版本。
 - 子版本 libraries 排在父版本之前，classpath 去重时子版本优先。
 - `clientreq=false` 的库在客户端下载和 classpath 中跳过。
+- Fabric 安装：确保原版父版本、写入 Fabric profile、可选下载 Fabric API 到实际 `mods` 目录。
 - 支持本地已安装父版本。
 - 下载完成后才写入版本 JSON；复用本地版本时保持原文件不变。
 - 补齐本地版本缺失的库、资源和客户端 jar。
@@ -202,9 +203,9 @@ CAML
 - 下载页侧边栏提供“添加游戏实例”胶囊；`DownloadVersionsView` 通过后端异步获取官方
   版本清单，只保留 `type=release`，按 `releaseTime` 从新到旧排列。
 - 点击正式版后进入 `DownloadVersionSetupView`，页面由版本信息、Forge、Fabric、
-  NeoForge 四条组成；顶部实例名输入框默认官方版本号。加载器下拉框当前没有选项，也不参与安装。取消位于左上角，
-  底部“下载实例”通过后端 `VersionInstaller` 安装当前选中的原版游戏，并使用设置中的
-  游戏位置；完成后把实例名设为当前实例。
+  Fabric API、NeoForge 五条组成；顶部实例名输入框默认官方版本号。Fabric Loader
+  从 Fabric Meta 获取，Fabric API 从 Modrinth 获取；选择 Fabric 后自动改用 Fabric
+  实例默认名。取消位于左上角，底部“下载实例”安装原版或 Fabric 游戏。
 - 设置页侧边栏提供“游戏设置 / 下载设置 / 启动器设置”。
 - 下载设置使用“设定下载并发数”圆角组和 1–256 整数滑块，文字大小与游戏设置一致。
 - 游戏设置使用圆角分组承载整个内存区域，左上角标题为“内存”；
@@ -318,7 +319,7 @@ PATH=/usr/lib/jvm/zulu-25/bin:$PATH \
 
 - 后端构建通过。
 - JavaFX 启动冒烟测试通过。
-- 93 个后端测试和 11 个前端测试全部通过（共 104 个）。
+- 96 个后端测试和 11 个前端测试全部通过（共 107 个）。
 - 集成测试覆盖：
   - 版本清单获取与缓存。
   - 版本 JSON 获取。
@@ -332,6 +333,7 @@ PATH=/usr/lib/jvm/zulu-25/bin:$PATH \
   - `inheritsFrom` 的 `jar` 字段、子库优先顺序和旧版 `auth_session`。
   - 旧式 Forge library 的 Maven 路径、URL/checksum 和 `clientreq` 过滤。
   - classpath 的坐标去重和旧式 library 路径。
+  - Fabric Meta/Modrinth 响应解析、Fabric profile 安装和 Fabric API 落盘。
   - JVM/游戏参数、占位符、features 和旧版参数回退。
   - natives 清理、解压、排除规则和 26.3 `natives/java` 子目录。
   - virtual assets 重建和 assets 目录替换。
@@ -365,7 +367,7 @@ PATH=/usr/lib/jvm/zulu-25/bin:$PATH \
 - 启动脚本导出。
 - 微软账号登录。
 - token 刷新和安全存储。
-- Fabric、Quilt、Forge、NeoForge 等加载器。
+- Quilt、Forge、NeoForge 等加载器。
 - 镜像源、下载取消和内容寻址缓存。
 - quick play 和服务器直连。
 - 整合包和模组管理。

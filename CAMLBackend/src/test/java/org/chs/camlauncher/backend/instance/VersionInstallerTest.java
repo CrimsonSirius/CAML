@@ -205,6 +205,43 @@ class VersionInstallerTest {
         );
     }
 
+    @Test
+    void localLoaderProfileWithoutJarUsesParentClientJarPath() throws Exception {
+        Path parentDirectory = gameDirectory.resolve("versions/1.20.1");
+        Files.createDirectories(parentDirectory);
+        Files.writeString(parentDirectory.resolve("1.20.1.json"), """
+                {
+                  "id": "1.20.1",
+                  "mainClass": "parent.Main"
+                }
+                """);
+        Files.write(parentDirectory.resolve("1.20.1.jar"), new byte[]{1});
+
+        Path loaderDirectory = gameDirectory.resolve("versions/fabric-instance");
+        Files.createDirectories(loaderDirectory);
+        Files.writeString(loaderDirectory.resolve("fabric-instance.json"), """
+                {
+                  "id": "fabric-loader-test-1.20.1",
+                  "inheritsFrom": "1.20.1",
+                  "mainClass": "net.fabricmc.loader.impl.launch.knot.KnotClient"
+                }
+                """);
+
+        InstalledVersion installed = new VersionInstaller().install(
+                "fabric-instance",
+                gameDirectory,
+                URI.create("https://example.invalid/version_manifest_v2.json"),
+                gameDirectory.resolve("cache/version_manifest_v2.json"),
+                DownloadListener.NONE
+        );
+
+        assertEquals("1.20.1", installed.manifest().clientJarId());
+        assertEquals(
+                gameDirectory.resolve("versions/1.20.1/1.20.1.jar").toAbsolutePath().normalize(),
+                installed.clientJar().toAbsolutePath().normalize()
+        );
+    }
+
     private static void respond(HttpExchange exchange, byte[] content) throws IOException {
         exchange.sendResponseHeaders(200, content.length);
         try (OutputStream output = exchange.getResponseBody()) {

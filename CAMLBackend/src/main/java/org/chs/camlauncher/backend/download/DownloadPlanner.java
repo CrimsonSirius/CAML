@@ -44,8 +44,11 @@ public final class DownloadPlanner {
     }
 
     public DownloadPlan plan(VersionInfo version, Path gameDirectory) {
+        return plan(version, gameDirectory, version.clientJarId());
+    }
+
+    public DownloadPlan plan(VersionInfo version, Path gameDirectory, String clientJarId) {
         Map<Path, DownloadItem> items = new LinkedHashMap<>();
-        String clientJarId = version.clientJarId();
         Path clientJarDirectory = gameDirectory.resolve("versions").resolve(clientJarId);
 
         DownloadInfo client = version.downloads().get("client");

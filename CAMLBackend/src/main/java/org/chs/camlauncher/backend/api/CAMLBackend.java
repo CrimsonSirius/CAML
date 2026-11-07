@@ -16,6 +16,10 @@ import org.chs.camlauncher.backend.instance.InstalledVersion;
 import org.chs.camlauncher.backend.instance.VersionIsolationMode;
 import org.chs.camlauncher.backend.instance.VersionInstaller;
 import org.chs.camlauncher.backend.json.JsonService;
+import org.chs.camlauncher.backend.loader.fabric.FabricApiVersion;
+import org.chs.camlauncher.backend.loader.fabric.FabricInstaller;
+import org.chs.camlauncher.backend.loader.fabric.FabricLoaderVersion;
+import org.chs.camlauncher.backend.loader.fabric.FabricService;
 import org.chs.camlauncher.backend.launch.LaunchOptions;
 import org.chs.camlauncher.backend.launch.LaunchPlan;
 import org.chs.camlauncher.backend.launch.LaunchPlanner;
@@ -62,6 +66,8 @@ public final class CAMLBackend implements AutoCloseable {
     private final AssetDownloadPlanner assetDownloadPlanner;
     private final FileDownloader fileDownloader;
     private final VersionInstaller versionInstaller;
+    private final FabricService fabricService;
+    private final FabricInstaller fabricInstaller;
     private final LaunchPlanner launchPlanner;
     private final ClasspathBuilder classpathBuilder;
     private final JvmArgumentsBuilder jvmArgumentsBuilder;
@@ -92,6 +98,14 @@ public final class CAMLBackend implements AutoCloseable {
                 downloadPlanner,
                 assetDownloadPlanner,
                 fileDownloader
+        );
+        this.fabricService = new FabricService();
+        this.fabricInstaller = new FabricInstaller(
+                versionInstaller,
+                fabricService,
+                fileDownloader,
+                VersionManifestService.DEFAULT_MANIFEST_URI,
+                config.dataDirectory().resolve("cache").resolve("version_manifest_v2.json")
         );
         this.launchPlanner = new LaunchPlanner();
         this.classpathBuilder = new ClasspathBuilder();
@@ -277,6 +291,36 @@ public final class CAMLBackend implements AutoCloseable {
                 gameDirectory,
                 VersionManifestService.DEFAULT_MANIFEST_URI,
                 config.dataDirectory().resolve("cache").resolve("version_manifest_v2.json"),
+                listener
+        );
+    }
+
+    public List<FabricLoaderVersion> fetchFabricLoaderVersions(String gameVersion)
+            throws IOException, InterruptedException {
+        return fabricService.fetchLoaderVersions(gameVersion);
+    }
+
+    public List<FabricApiVersion> fetchFabricApiVersions(String gameVersion)
+            throws IOException, InterruptedException {
+        return fabricService.fetchApiVersions(gameVersion);
+    }
+
+    public InstalledVersion installFabricVersion(
+            String gameVersion,
+            String instanceId,
+            String loaderVersion,
+            FabricApiVersion apiVersion,
+            Path gameDirectory,
+            boolean fullVersionIsolation,
+            DownloadListener listener
+    ) throws IOException, InterruptedException {
+        return fabricInstaller.install(
+                gameVersion,
+                instanceId,
+                loaderVersion,
+                apiVersion,
+                gameDirectory,
+                fullVersionIsolation,
                 listener
         );
     }

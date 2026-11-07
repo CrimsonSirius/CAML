@@ -62,6 +62,8 @@ class NativeExtractorTest {
                 List.of(),
                 List.of(),
                 null,
+                null,
+                null,
                 null
         );
         Library legacyNative = new Library(
@@ -73,6 +75,8 @@ class NativeExtractorTest {
                 List.of(),
                 List.of("legacy-sha1"),
                 true,
+                null,
+                null,
                 null
         );
         VersionInfo manifest = new VersionInfo(

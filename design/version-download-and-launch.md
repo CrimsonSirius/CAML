@@ -147,7 +147,14 @@ versions/<parentId>/<parentId>.json
 - `downloads` 和 `logging` 合并。
 - 清除 `inheritsFrom`，得到可下载的解析后 manifest。
 
-当前没有实现从远程自动安装加载器版本，所以加载器版本的 `inheritsFrom` 依赖本地已经存在的父版本。
+加载器版本的 `inheritsFrom` 依赖本地已经存在的父版本。Fabric 安装会先确保原版父版本存在。
+
+Fabric 安装流程：
+
+- 从 `https://meta.fabricmc.net/v2/versions/loader/<game>` 获取 Loader 版本。
+- 获取 `<game>/<loader>/profile/json`，写入 `versions/<instance>/<instance>.json`。
+- profile 没有 `jar` 时复用父版本客户端 jar。
+- Fabric API 从 Modrinth `fabric-api` 项目获取，并写入实际游戏目录的 `mods`。
 
 ### 2.6 生成基础下载计划
 
@@ -285,7 +292,7 @@ assetIndexFile
 
 ### 2.13 当前下载限制
 
-- 只支持原版安装；加载器安装尚未实现。
+- 支持原版和 Fabric Loader/Fabric API 安装；Quilt、Forge、NeoForge 尚未实现。
 - `inheritsFrom` 只读取本地父版本，不会自动安装父版本。
 - 只有官方下载源，镜像源接口尚未接入配置。
 - 下载使用有界线程池并发执行，并发数可配置为 1–256；下载取消尚未实现。

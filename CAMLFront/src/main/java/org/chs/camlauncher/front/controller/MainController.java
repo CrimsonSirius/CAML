@@ -8,6 +8,8 @@ import org.chs.camlauncher.backend.api.CAMLBackend;
 import org.chs.camlauncher.backend.api.GameDirectoryInfo;
 import org.chs.camlauncher.backend.download.DownloadListener;
 import org.chs.camlauncher.backend.instance.VersionIsolationMode;
+import org.chs.camlauncher.backend.loader.fabric.FabricApiVersion;
+import org.chs.camlauncher.backend.loader.fabric.FabricLoaderVersion;
 import org.chs.camlauncher.backend.launch.LaunchOptions;
 import org.chs.camlauncher.backend.launch.ProcessListener;
 import org.chs.camlauncher.backend.metadata.VersionManifest;
@@ -266,6 +268,104 @@ public final class MainController {
                     Platform.runLater(() -> onError.accept(message));
                     return null;
                 });
+    }
+
+    public void fetchFabricLoaderVersions(String gameVersion,
+                                          Consumer<List<FabricLoaderVersion>> onLoaded,
+                                          Consumer<String> onError) {
+        CompletableFuture
+                .supplyAsync(() -> {
+                    try {
+                        return backend.fetchFabricLoaderVersions(gameVersion);
+                    } catch (IOException | InterruptedException e) {
+                        if (e instanceof InterruptedException) {
+                            Thread.currentThread().interrupt();
+                        }
+                        throw new CompletionException(e);
+                    }
+                }, ioExecutor)
+                .thenAccept(versions -> Platform.runLater(() -> onLoaded.accept(versions)))
+                .exceptionally(ex -> {
+                    Throwable cause = ex.getCause() != null ? ex.getCause() : ex;
+                    String message = messageOf(cause);
+                    LOGGER.warn("获取 Fabric Loader 版本失败: {}", gameVersion, cause);
+                    Platform.runLater(() -> onError.accept(message));
+                    return null;
+                });
+    }
+
+    public void fetchFabricApiVersions(String gameVersion,
+                                       Consumer<List<FabricApiVersion>> onLoaded,
+                                       Consumer<String> onError) {
+        CompletableFuture
+                .supplyAsync(() -> {
+                    try {
+                        return backend.fetchFabricApiVersions(gameVersion);
+                    } catch (IOException | InterruptedException e) {
+                        if (e instanceof InterruptedException) {
+                            Thread.currentThread().interrupt();
+                        }
+                        throw new CompletionException(e);
+                    }
+                }, ioExecutor)
+                .thenAccept(versions -> Platform.runLater(() -> onLoaded.accept(versions)))
+                .exceptionally(ex -> {
+                    Throwable cause = ex.getCause() != null ? ex.getCause() : ex;
+                    String message = messageOf(cause);
+                    LOGGER.warn("获取 Fabric API 版本失败: {}", gameVersion, cause);
+                    Platform.runLater(() -> onError.accept(message));
+                    return null;
+                });
+    }
+
+    public void downloadFabricVersion(
+            String gameVersion,
+            String instanceId,
+            String loaderVersion,
+            FabricApiVersion apiVersion,
+            Path gameDirectory,
+            boolean fullVersionIsolation,
+            Runnable onSuccess,
+            Consumer<String> onError
+    ) {
+        Objects.requireNonNull(gameDirectory, "gameDirectory");
+        CompletableFuture
+                .supplyAsync(() -> {
+                    try {
+                        return backend.installFabricVersion(
+                                gameVersion,
+                                instanceId,
+                                loaderVersion,
+                                apiVersion,
+                                gameDirectory,
+                                fullVersionIsolation,
+                                DownloadListener.NONE
+                        );
+                    } catch (IOException | InterruptedException e) {
+                        if (e instanceof InterruptedException) {
+                            Thread.currentThread().interrupt();
+                        }
+                        throw new CompletionException(e);
+                    }
+                }, ioExecutor)
+                .thenAccept(installed -> {
+                    LOGGER.info("Fabric 实例安装完成: {} / {} -> {}",
+                            instanceId, loaderVersion, installed.gameDirectory());
+                    sendLog("[下载] 已安装 Fabric 实例 " + instanceId + "（Loader " + loaderVersion + "）");
+                    Platform.runLater(onSuccess);
+                })
+                .exceptionally(ex -> {
+                    Throwable cause = ex.getCause() != null ? ex.getCause() : ex;
+                    String message = messageOf(cause);
+                    LOGGER.warn("Fabric 实例安装失败: {} / {}", instanceId, loaderVersion, cause);
+                    sendLog("[下载] Fabric 实例 " + instanceId + " 安装失败: " + message);
+                    Platform.runLater(() -> onError.accept(message));
+                    return null;
+                });
+    }
+
+    private static String messageOf(Throwable cause) {
+        return cause.getMessage() == null ? cause.getClass().getSimpleName() : cause.getMessage();
     }
 
     /** 关闭后台线程池，由应用退出流程调用。 */

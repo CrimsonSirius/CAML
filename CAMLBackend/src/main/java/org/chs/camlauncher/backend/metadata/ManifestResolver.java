@@ -48,7 +48,11 @@ public final class ManifestResolver {
                 child.time() != null ? child.time() : parent.time(),
                 child.releaseTime() != null ? child.releaseTime() : parent.releaseTime(),
                 child.complianceLevel() != null ? child.complianceLevel() : parent.complianceLevel(),
-                child.jar() != null && !child.jar().isBlank() ? child.jar() : parent.jar()
+                child.jar() != null && !child.jar().isBlank()
+                        ? child.jar()
+                        : parent.jar() != null && !parent.jar().isBlank()
+                                ? parent.jar()
+                                : parent.id()
         );
     }
 

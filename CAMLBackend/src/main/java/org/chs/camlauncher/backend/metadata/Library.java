@@ -14,7 +14,9 @@ public record Library(
         @SerializedName("rules") List<Rule> rules,
         @SerializedName("checksums") List<String> checksums,
         @SerializedName("serverreq") Boolean serverReq,
-        @SerializedName("clientreq") Boolean clientReq
+        @SerializedName("clientreq") Boolean clientReq,
+        @SerializedName("sha1") String sha1,
+        @SerializedName("size") Long size
 ) {
     public Library {
         natives = natives == null ? Map.of() : Map.copyOf(natives);
