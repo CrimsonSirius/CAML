@@ -563,7 +563,9 @@ java 可执行文件
 `GameProcess`：
 
 - 独立线程读取 stdout 和 stderr。
-- 通过 `ProcessListener` 转发日志。
+- Minecraft 官方控制台 XML 事件由 `MinecraftLogFormatter` 转换为
+  `[HH:mm:ss] [线程/级别]: 消息`，堆栈保持多行。
+- 通过 `ProcessListener` 转发格式化后的日志。
 - 进程退出后回调退出码。
 - 支持 `waitFor`、`exitValue` 和 `stop`。
 
