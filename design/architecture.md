@@ -49,6 +49,7 @@ CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
 - 解析 libraries、asset index、downloads、javaVersion 和 logging。
 - 处理 OS、架构、版本正则和 features 规则。
 - 合并 `inheritsFrom` 父版本。
+- 子版本标量字段覆盖父版本；libraries 子版本优先；支持 `jar` 字段。
 - 拉取远程版本清单和单版本 JSON。
 - 版本清单缓存和网络失败回退。
 
@@ -70,7 +71,7 @@ CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
 - 本地已安装的版本（包括第三方启动器/整合包的自定义版本 ID）直接复用，不访问官方清单。
 - 复用本地版本时保持版本 JSON 不变，只补齐缺失文件。
 - 本地版本以 `versions/<id>` 文件夹名作为版本 ID；`inheritsFrom` 也按文件夹名查找父版本。
-- 安装完成后把 manifest 的 `id` 统一为文件夹名，保证客户端 jar 路径一致。
+- 安装完成后把 manifest 的 `id` 统一为文件夹名；客户端 jar 按 `jar` 字段回退到实例 ID。
 - 基础文件下载完成后才写入版本 JSON。
 - 返回 `InstalledVersion`，包含后续启动需要的路径。
 - `CAMLBackend.inspectGameDirectory` 扫描 `versions/<id>/<id>.json`，返回已安装版本和隔离版本列表。
@@ -107,7 +108,7 @@ CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
 - 按规则筛选 libraries。
 - 排除 native-only library。
 - 按目标路径去重并保持顺序。
-- 客户端 jar 追加在最后。
+- 子版本库排在父版本库前，客户端 jar 按 `jar` 字段追加在最后。
 - 使用平台路径分隔符拼接。
 
 ### 3.8 启动参数

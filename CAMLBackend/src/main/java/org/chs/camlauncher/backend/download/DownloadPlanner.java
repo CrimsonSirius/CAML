@@ -44,11 +44,13 @@ public final class DownloadPlanner {
 
     public DownloadPlan plan(VersionInfo version, Path gameDirectory) {
         Map<Path, DownloadItem> items = new LinkedHashMap<>();
-        Path versionDirectory = gameDirectory.resolve("versions").resolve(version.id());
+        String clientJarId = version.clientJarId();
+        Path clientJarDirectory = gameDirectory.resolve("versions").resolve(clientJarId);
 
         DownloadInfo client = version.downloads().get("client");
         if (client != null) {
-            add(items, "client " + version.id(), client, versionDirectory.resolve(version.id() + ".jar"));
+            add(items, "client " + clientJarId, client,
+                    clientJarDirectory.resolve(clientJarId + ".jar"));
         }
 
         for (Library library : version.libraries()) {

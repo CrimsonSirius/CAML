@@ -57,7 +57,7 @@ class NativeExtractorTest {
         VersionInfo manifest = new VersionInfo(
                 "1.20.1", "release", null, "net.minecraft.client.main.Main", "5", null, null, null,
                 null, new JavaVersion("java-runtime-gamma", 17), List.of(library), null,
-                null, null, null, null
+                null, null, null, null, null
         );
         InstalledVersion instance = new InstalledVersion(
                 "1.20.1",
@@ -106,7 +106,7 @@ class NativeExtractorTest {
                         List.of(new StringArgument("-Djava.library.path=${natives_directory}/java"))
                 ),
                 null, new JavaVersion("java-runtime-gamma", 25), List.of(), null,
-                null, null, null, null
+                null, null, null, null, null
         );
         Path nativesDirectory = gameDirectory.resolve("versions/26.3/natives");
 

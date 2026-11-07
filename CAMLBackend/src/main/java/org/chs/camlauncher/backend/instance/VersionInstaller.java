@@ -137,7 +137,11 @@ public final class VersionInstaller {
 
         Path versionDirectory = gameDirectory.resolve("versions").resolve(versionId);
         Path versionFile = versionDirectory.resolve(versionId + ".json");
-        Path clientJar = versionDirectory.resolve(versionId + ".jar");
+        String clientJarId = resolved.clientJarId();
+        Path clientJar = gameDirectory
+                .resolve("versions")
+                .resolve(clientJarId)
+                .resolve(clientJarId + ".jar");
         Path librariesDirectory = gameDirectory.resolve("libraries");
         Path assetsDirectory = gameDirectory.resolve("assets");
 

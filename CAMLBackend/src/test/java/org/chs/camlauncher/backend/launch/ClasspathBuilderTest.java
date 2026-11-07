@@ -61,7 +61,7 @@ class ClasspathBuilderTest {
                 "1.20.1", "release", null, "net.minecraft.client.main.Main", "5", null, null, null,
                 null, new JavaVersion("java-runtime-gamma", 17),
                 List.of(base, nativeMain, base, nativeOnly, disallowed), null,
-                null, null, null, null
+                null, null, null, null, null
         );
 
         InstalledVersion instance = new InstalledVersion(

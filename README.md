@@ -16,7 +16,7 @@ CAML 是一个基于 **Java 25 + JavaFX** 的 Minecraft 启动器，采用前后
 
 | 模块 | 能力 |
 |---|---|
-| 元数据 | 解析 `version_manifest_v2.json`、单版本 JSON、字符串/带规则参数、libraries、asset index、downloads、javaVersion、logging；处理 OS / 架构 / 版本正则 / features 规则；合并 `inheritsFrom` 父版本 |
+| 元数据 | 解析 `version_manifest_v2.json`、单版本 JSON、字符串/带规则参数、libraries、asset index、downloads、javaVersion、logging、`jar`；处理 OS / 架构 / 版本正则 / features 规则；合并 `inheritsFrom` 父版本，子库优先 |
 | 远程元数据 | 拉取官方版本清单与单版本 JSON，本地缓存，网络失败时回退缓存 |
 | 下载 | 客户端 jar、libraries、natives、asset index、assets objects 下载计划；SHA-1 校验；`.part` 临时文件 + 原子移动；失败重试；并发下载数可设 1–256；已有有效文件跳过 |
 | 版本安装 | 本地已安装版本直接复用（支持第三方启动器/整合包的自定义版本 ID），下载时可用自定义实例名；官方版本 ID 负责元数据，实例 ID 作为 `versions/<id>` 目录名；缺失文件自动补齐；兼容 PCL/HMCL 版本隔离布局；基础文件完成后才写入版本 JSON |

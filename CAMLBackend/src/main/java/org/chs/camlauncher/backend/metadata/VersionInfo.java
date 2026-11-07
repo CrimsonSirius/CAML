@@ -22,7 +22,8 @@ public record VersionInfo(
         @SerializedName("minimumLauncherVersion") Integer minimumLauncherVersion,
         @SerializedName("time") String time,
         @SerializedName("releaseTime") String releaseTime,
-        @SerializedName("complianceLevel") Integer complianceLevel
+        @SerializedName("complianceLevel") Integer complianceLevel,
+        @SerializedName("jar") String jar
 ) {
     public VersionInfo {
         Objects.requireNonNull(id, "id");
@@ -63,7 +64,13 @@ public record VersionInfo(
                 minimumLauncherVersion,
                 time,
                 releaseTime,
-                complianceLevel
+                complianceLevel,
+                jar
         );
+    }
+
+    /** @return 客户端 jar 对应的版本 ID；未指定 {@code jar} 时使用当前实例 ID */
+    public String clientJarId() {
+        return jar == null || jar.isBlank() ? id : jar;
     }
 }

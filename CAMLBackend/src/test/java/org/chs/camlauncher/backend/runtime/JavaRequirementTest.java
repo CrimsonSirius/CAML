@@ -16,7 +16,7 @@ class JavaRequirementTest {
         VersionInfo version = new VersionInfo(
                 "1.20.1", "release", null, "main", "5", null, null, null,
                 null, new JavaVersion("java-runtime-gamma", 17), List.of(), null,
-                null, null, null, null
+                null, null, null, null, null
         );
 
         JavaRequirement requirement = JavaRequirement.from(version);

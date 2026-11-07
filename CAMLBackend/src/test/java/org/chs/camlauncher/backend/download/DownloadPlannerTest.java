@@ -101,4 +101,35 @@ class DownloadPlannerTest {
                 item.destination().endsWith(Path.of("assets", "log_configs", "client-1.12.xml"))));
         assertEquals(5, plan.missing().size());
     }
+
+    @Test
+    void downloadsClientJarToInheritedJarId() throws Exception {
+        VersionInfo version = new MetadataService().parseVersionInfo("""
+                {
+                  "id": "forge-instance",
+                  "jar": "1.20.1",
+                  "downloads": {
+                    "client": {
+                      "sha1": "client-sha1",
+                      "size": 10,
+                      "url": "https://example.com/client.jar"
+                    }
+                  }
+                }
+                """);
+
+        DownloadPlan plan = new DownloadPlanner(
+                List.of(OfficialDownloadSource.INSTANCE),
+                new RuleEvaluator("linux", "x86_64", "6.0", Map.of()),
+                "linux",
+                64
+        ).plan(version, gameDirectory);
+
+        assertEquals(1, plan.items().size());
+        assertEquals(
+                gameDirectory.resolve("versions/1.20.1/1.20.1.jar").toAbsolutePath().normalize(),
+                plan.items().getFirst().destination()
+        );
+        assertEquals("1.20.1", version.clientJarId());
+    }
 }

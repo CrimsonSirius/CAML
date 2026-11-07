@@ -88,7 +88,7 @@ class LaunchPlannerTest {
         return new VersionInfo(
                 "1.20.1", "release", null, "net.minecraft.client.main.Main", "5", null, null, null,
                 null, new JavaVersion("java-runtime-gamma", majorVersion), List.of(), null,
-                null, null, null, null
+                null, null, null, null, null
         );
     }
 }

@@ -94,6 +94,8 @@ CAML
 - **本地优先**：`versions/<id>/<id>.json` 已存在时直接复用本地版本，不访问官方清单。
 - 版本 ID 即 `versions/` 下的文件夹名，支持第三方启动器/整合包的自定义名称（如 `1.21.4-DeepSeek`）。
 - 解析后把 manifest 的 `id` 统一为文件夹名，`inheritsFrom` 按文件夹名查找父版本。
+- 支持加载器 manifest 的 `jar` 字段；客户端 jar 与 classpath 使用该字段指定的版本。
+- 子版本 libraries 排在父版本之前，classpath 去重时子版本优先。
 - 支持本地已安装父版本。
 - 下载完成后才写入版本 JSON；复用本地版本时保持原文件不变。
 - 补齐本地版本缺失的库、资源和客户端 jar。
@@ -126,6 +128,7 @@ CAML
 - `LaunchPlanner.create(..., gameDataDirectory)` 支持显式指定游戏数据目录，
   `GameLaunchService` 接收隔离模式并解析实际游戏数据目录。
 - `.minecraft/libraries` 与 `.minecraft/assets` 始终来自根目录。
+- 旧版 `minecraftArguments` 支持 `${auth_session}`。
 
 ### 3.8 classpath
 
@@ -312,7 +315,7 @@ PATH=/usr/lib/jvm/zulu-25/bin:$PATH \
 
 - 后端构建通过。
 - JavaFX 启动冒烟测试通过。
-- 89 个后端测试和 11 个前端测试全部通过（共 100 个）。
+- 91 个后端测试和 11 个前端测试全部通过（共 102 个）。
 - 集成测试覆盖：
   - 版本清单获取与缓存。
   - 版本 JSON 获取。
@@ -323,6 +326,7 @@ PATH=/usr/lib/jvm/zulu-25/bin:$PATH \
   - Java 检测和匹配。
   - LaunchPlan 创建和 Java 要求校验。
   - classpath 过滤、去重、native 排除和客户端 jar 顺序。
+  - `inheritsFrom` 的 `jar` 字段、子库优先顺序和旧版 `auth_session`。
   - JVM/游戏参数、占位符、features 和旧版参数回退。
   - natives 清理、解压、排除规则和 26.3 `natives/java` 子目录。
   - virtual assets 重建和 assets 目录替换。

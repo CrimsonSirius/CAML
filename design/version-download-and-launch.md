@@ -141,9 +141,9 @@ versions/<parentId>/<parentId>.json
 
 合并由 `ManifestResolver` 负责：
 
-- 父版本在前，子版本覆盖标量字段。
+- 标量字段由子版本覆盖父版本；`jar` 未指定时继承父版本。
 - `arguments.game` 和 `arguments.jvm` 合并。
-- `libraries` 合并。
+- `libraries` 合并为“子版本库在前、父版本库在后”，classpath 按路径去重时子库优先。
 - `downloads` 和 `logging` 合并。
 - 清除 `inheritsFrom`，得到可下载的解析后 manifest。
 
@@ -419,6 +419,7 @@ classpath 由 `ClasspathBuilder` 单独生成。Java 检测和匹配细节见 [r
 - 有 native classifier 的普通库仍保留主 artifact。
 - 同一个目标路径只加入一次。
 - 客户端 jar 固定放在最后。
+- 客户端 jar 路径来自 manifest 的 `jar` 字段，未指定时回退到实例 ID。
 - `join(List<Path>)` 使用 `File.pathSeparator` 拼接。
 
 对外入口：
@@ -451,10 +452,10 @@ String joined = backend.classpathBuilder().join(classpath);
 
 `PlaceholderResolver` 和 `LaunchPlaceholders` 负责：
 
-- 玩家名、UUID、accessToken。
+- 玩家名、UUID、accessToken、旧版 `auth_session`。
 - 版本名、版本类型、游戏目录。
 - assets 目录、asset index、natives 目录。
-- classpath、libraries 目录。
+- classpath、libraries 目录、`jar` 指定的客户端 jar。
 - 启动器名称和版本。
 - 分辨率。
 

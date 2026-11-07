@@ -48,7 +48,7 @@ class VirtualAssetInstallerTest {
         VersionInfo manifest = new VersionInfo(
                 "1.6.4", "release", null, "net.minecraft.client.main.Main", "legacy", assetIndex,
                 null, null, null, new JavaVersion("jre-legacy", 8), List.of(), null,
-                null, null, null, null
+                null, null, null, null, null
         );
         InstalledVersion instance = new InstalledVersion(
                 "1.6.4", manifest, gameDirectory,
