@@ -25,6 +25,9 @@ import org.chs.camlauncher.backend.loader.forge.ForgeService;
 import org.chs.camlauncher.backend.loader.forge.ForgeVersion;
 import org.chs.camlauncher.backend.loader.neoforge.NeoForgeService;
 import org.chs.camlauncher.backend.loader.neoforge.NeoForgeVersion;
+import org.chs.camlauncher.backend.loader.optifine.OptiFineInstaller;
+import org.chs.camlauncher.backend.loader.optifine.OptiFineService;
+import org.chs.camlauncher.backend.loader.optifine.OptiFineVersion;
 import org.chs.camlauncher.backend.launch.GameLaunch;
 import org.chs.camlauncher.backend.launch.GameLaunchService;
 import org.chs.camlauncher.backend.launch.LaunchOptions;
@@ -75,6 +78,8 @@ public final class CAMLBackend implements AutoCloseable {
     private final FabricInstaller fabricInstaller;
     private final ForgeService forgeService;
     private final NeoForgeService neoForgeService;
+    private final OptiFineService optiFineService;
+    private final OptiFineInstaller optiFineInstaller;
     private final ExternalLoaderInstaller externalLoaderInstaller;
     private final LaunchPlanner launchPlanner;
     private final ClasspathBuilder classpathBuilder;
@@ -117,11 +122,20 @@ public final class CAMLBackend implements AutoCloseable {
         );
         this.forgeService = new ForgeService();
         this.neoForgeService = new NeoForgeService();
+        this.optiFineService = new OptiFineService();
         this.externalLoaderInstaller = new ExternalLoaderInstaller(
                 versionInstaller,
                 javaLocator,
                 fileDownloader,
                 metadata,
+                VersionManifestService.DEFAULT_MANIFEST_URI,
+                config.dataDirectory().resolve("cache").resolve("version_manifest_v2.json")
+        );
+        this.optiFineInstaller = new OptiFineInstaller(
+                versionInstaller,
+                externalLoaderInstaller,
+                javaLocator,
+                fileDownloader,
                 VersionManifestService.DEFAULT_MANIFEST_URI,
                 config.dataDirectory().resolve("cache").resolve("version_manifest_v2.json")
         );
@@ -384,6 +398,34 @@ public final class CAMLBackend implements AutoCloseable {
                 gameVersion,
                 instanceId,
                 version.installerUri(),
+                gameDirectory,
+                listener
+        );
+    }
+
+    public List<OptiFineVersion> fetchOptiFineVersions(String gameVersion)
+            throws IOException, InterruptedException {
+        return optiFineService.fetchVersions(gameVersion);
+    }
+
+    /**
+     * 安装 Forge + OptiFine。OptiFine 只允许与 Forge 组合。
+     */
+    public InstalledVersion installForgeOptiFineVersion(
+            String gameVersion,
+            String instanceId,
+            ForgeVersion forgeVersion,
+            OptiFineVersion optiFineVersion,
+            Path gameDirectory,
+            DownloadListener listener
+    ) throws IOException, InterruptedException {
+        Objects.requireNonNull(forgeVersion, "forgeVersion");
+        Objects.requireNonNull(optiFineVersion, "optiFineVersion");
+        return optiFineInstaller.install(
+                gameVersion,
+                instanceId,
+                forgeVersion,
+                optiFineVersion,
                 gameDirectory,
                 listener
         );

@@ -8,6 +8,7 @@ import org.chs.camlauncher.backend.loader.fabric.FabricApiVersion;
 import org.chs.camlauncher.backend.loader.fabric.FabricLoaderVersion;
 import org.chs.camlauncher.backend.loader.forge.ForgeVersion;
 import org.chs.camlauncher.backend.loader.neoforge.NeoForgeVersion;
+import org.chs.camlauncher.backend.loader.optifine.OptiFineVersion;
 import org.chs.camlauncher.backend.metadata.model.VersionManifest;
 
 import java.io.IOException;
@@ -147,6 +148,13 @@ public final class DownloadsController {
                 () -> context.backend().fetchNeoForgeVersions(gameVersion), onLoaded, onError);
     }
 
+    public void fetchOptiFineVersions(String gameVersion,
+                                      Consumer<List<OptiFineVersion>> onLoaded,
+                                      Consumer<String> onError) {
+        fetchLoaderVersions("OptiFine",
+                () -> context.backend().fetchOptiFineVersions(gameVersion), onLoaded, onError);
+    }
+
     private <T> void fetchLoaderVersions(String name, LoaderSupplier<T> supplier,
                                          Consumer<List<T>> onLoaded, Consumer<String> onError) {
         context.supplyAsync(supplier::get)
@@ -174,6 +182,22 @@ public final class DownloadsController {
                                         Consumer<String> onError) {
         downloadExternalLoaderVersion("NeoForge", gameVersion, instanceId, gameDirectory,
                 () -> context.backend().installNeoForgeVersion(gameVersion, instanceId, version,
+                        gameDirectory, DownloadListener.NONE),
+                onSuccess, onError);
+    }
+
+    public void downloadForgeOptiFineVersion(
+            String gameVersion,
+            String instanceId,
+            ForgeVersion forgeVersion,
+            OptiFineVersion optiFineVersion,
+            Path gameDirectory,
+            Runnable onSuccess,
+            Consumer<String> onError
+    ) {
+        downloadExternalLoaderVersion("Forge + OptiFine", gameVersion, instanceId, gameDirectory,
+                () -> context.backend().installForgeOptiFineVersion(
+                        gameVersion, instanceId, forgeVersion, optiFineVersion,
                         gameDirectory, DownloadListener.NONE),
                 onSuccess, onError);
     }

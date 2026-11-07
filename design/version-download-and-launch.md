@@ -164,6 +164,15 @@ Forge/NeoForge 安装流程：
 - 把 staging libraries 合并回共享 `libraries`，再按用户实例名移动版本目录。
 - 最后用 `VersionInstaller` 读取安装结果，解析 `inheritsFrom` 并校验启动所需文件。
 
+OptiFine 安装流程（仅 Forge）：
+
+- 从 BMCLAPI `https://bmclapi2.bangbang93.com/optifine/<gameVersion>` 获取 OptiFine 版本。
+- 先安装 Forge 实例，再把原版版本 JSON 和客户端 jar 放入 staging。
+- 通过独立 Java 进程调用 OptiFine 官方 installer 的 `optifine.Installer.doInstall(staging)`。
+- 合并生成的 OptiFine 库；传统 LaunchWrapper Forge 追加
+  `--tweakClass optifine.OptiFineForgeTweaker`，现代 Forge 保留 Forge 主类并加入 OptiFine 库。
+- 删除 OptiFine 库中的 `META-INF/mods.toml`，避免 Forge 将其当作普通 mod 加载。
+
 ### 2.6 生成基础下载计划
 
 `DownloadPlanner.plan(resolved, gameDirectory)` 生成基础文件计划，包含：
@@ -300,7 +309,7 @@ assetIndexFile
 
 ### 2.13 当前下载限制
 
-- 支持原版、Fabric Loader/Fabric API、Forge 和 NeoForge 安装；Quilt 尚未实现。
+- 支持原版、Fabric Loader/Fabric API、Forge、NeoForge 和 OptiFine（仅 Forge）安装；Quilt 尚未实现。
 - `inheritsFrom` 只读取本地父版本，不会自动安装父版本。
 - 只有官方下载源，镜像源接口尚未接入配置。
 - 下载使用有界线程池并发执行，并发数可配置为 1–256；下载取消尚未实现。
@@ -710,6 +719,8 @@ launch/
 - `CAMLBackend/src/main/java/org/chs/camlauncher/backend/download/plan/DownloadPlanner.java`
 - `CAMLBackend/src/main/java/org/chs/camlauncher/backend/download/plan/AssetDownloadPlanner.java`
 - `CAMLBackend/src/main/java/org/chs/camlauncher/backend/download/FileDownloader.java`
+- `CAMLBackend/src/main/java/org/chs/camlauncher/backend/loader/optifine/OptiFineService.java`
+- `CAMLBackend/src/main/java/org/chs/camlauncher/backend/loader/optifine/OptiFineInstaller.java`
 - `CAMLBackend/src/main/java/org/chs/camlauncher/backend/launch/classpath/ClasspathBuilder.java`
 - `CAMLBackend/src/main/java/org/chs/camlauncher/backend/launch/command/PlaceholderResolver.java`
 - `CAMLBackend/src/main/java/org/chs/camlauncher/backend/launch/command/LaunchPlaceholders.java`

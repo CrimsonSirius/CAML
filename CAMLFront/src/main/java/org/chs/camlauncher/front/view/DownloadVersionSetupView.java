@@ -13,6 +13,7 @@ import org.chs.camlauncher.backend.loader.fabric.FabricApiVersion;
 import org.chs.camlauncher.backend.loader.fabric.FabricLoaderVersion;
 import org.chs.camlauncher.backend.loader.forge.ForgeVersion;
 import org.chs.camlauncher.backend.loader.neoforge.NeoForgeVersion;
+import org.chs.camlauncher.backend.loader.optifine.OptiFineVersion;
 import org.chs.camlauncher.backend.metadata.model.VersionManifest;
 import org.chs.camlauncher.front.controller.DownloadsController;
 import org.chs.camlauncher.ui.control.CamlButton;
@@ -29,6 +30,7 @@ final class DownloadVersionSetupView extends VBox {
     private final CamlComboBox<FabricLoaderVersion> fabricLoaderSelector = new CamlComboBox<>();
     private final CamlComboBox<FabricApiVersion> fabricApiSelector = new CamlComboBox<>();
     private final CamlComboBox<ForgeVersion> forgeSelector = new CamlComboBox<>();
+    private final CamlComboBox<OptiFineVersion> optiFineSelector = new CamlComboBox<>();
     private final CamlComboBox<NeoForgeVersion> neoForgeSelector = new CamlComboBox<>();
     private final String gameVersion;
     private boolean downloading;
@@ -66,6 +68,7 @@ final class DownloadVersionSetupView extends VBox {
         VBox options = new VBox(12,
                 optionBar("版本信息", valueLabel(versionInfo)),
                 optionBar("选择 Forge 版本", forgeSelector),
+                optionBar("选择 OptiFine 版本", optiFineSelector),
                 optionBar("选择 Fabric 版本", fabricLoaderSelector),
                 optionBar("选择 Fabric API 版本", fabricApiSelector),
                 optionBar("选择 NeoForge 版本", neoForgeSelector)
@@ -89,6 +92,7 @@ final class DownloadVersionSetupView extends VBox {
     private void configureSelectors(VersionManifest.Version version) {
         configureFabricSelectors();
         configureForgeSelector(version);
+        configureOptiFineSelector();
         configureNeoForgeSelector(version);
     }
 
@@ -162,7 +166,37 @@ final class DownloadVersionSetupView extends VBox {
             clearSelection(neoForgeSelector, "请选择 NeoForge 版本");
             updatingLoaders = false;
             updateFabricApiState();
+            updateOptiFineState();
             autoUpdateInstanceName(forge.versionId());
+        });
+    }
+
+    private void configureOptiFineSelector() {
+        optiFineSelector.setPrefWidth(280);
+        optiFineSelector.setMaxWidth(280);
+        optiFineSelector.setPromptText("请先选择 Forge 版本");
+        optiFineSelector.setDisable(true);
+        optiFineSelector.setConverter(new StringConverter<>() {
+            @Override
+            public String toString(OptiFineVersion optiFine) {
+                return optiFine == null ? null : optiFine.version();
+            }
+
+            @Override
+            public OptiFineVersion fromString(String value) {
+                return findByLabel(optiFineSelector.getItems(), value, OptiFineVersion::version);
+            }
+        });
+        optiFineSelector.valueProperty().addListener((observable, oldValue, optiFine) -> {
+            if (updatingLoaders || optiFine == null) {
+                return;
+            }
+            ForgeVersion forge = forgeSelector.getValue();
+            if (forge == null) {
+                clearSelection(optiFineSelector, "请先选择 Forge 版本");
+                return;
+            }
+            autoUpdateInstanceName(forge.versionId() + "-optifine-" + optiFine.version());
         });
     }
 
@@ -189,8 +223,10 @@ final class DownloadVersionSetupView extends VBox {
             clearSelection(forgeSelector, "请选择 Forge 版本");
             clearSelection(fabricLoaderSelector, "请选择 Fabric 版本");
             clearSelection(fabricApiSelector, "请先选择 Fabric 版本");
+            clearSelection(optiFineSelector, "请先选择 Forge 版本");
             updatingLoaders = false;
             updateFabricApiState();
+            updateOptiFineState();
             autoUpdateInstanceName(neoForge.versionId());
         });
     }
@@ -214,7 +250,11 @@ final class DownloadVersionSetupView extends VBox {
             clearSelection(fabricLoaderSelector, "请选择 Fabric 版本");
             clearSelection(fabricApiSelector, "请先选择 Fabric 版本");
         }
+        if (selected != forgeSelector) {
+            clearSelection(optiFineSelector, "请先选择 Forge 版本");
+        }
         updatingLoaders = false;
+        updateOptiFineState();
     }
 
     private static void clearSelection(CamlComboBox<?> selector, String prompt) {
@@ -249,6 +289,11 @@ final class DownloadVersionSetupView extends VBox {
                 message -> forgeSelector.setPromptText("获取 Forge 版本失败"));
         controller.fetchNeoForgeVersions(gameVersion, this::showNeoForgeVersions,
                 message -> neoForgeSelector.setPromptText("获取 NeoForge 版本失败"));
+        controller.fetchOptiFineVersions(gameVersion, this::showOptiFineVersions,
+                message -> {
+                    optiFineSelector.setPromptText("获取 OptiFine 版本失败");
+                    optiFineSelector.setDisable(true);
+                });
     }
 
     private void showFabricLoaders(List<FabricLoaderVersion> loaders) {
@@ -281,6 +326,30 @@ final class DownloadVersionSetupView extends VBox {
                 : "请选择 NeoForge 版本");
     }
 
+    private void showOptiFineVersions(List<OptiFineVersion> versions) {
+        optiFineSelector.getItems().setAll(versions);
+        optiFineSelector.setPromptText(versions.isEmpty()
+                ? "没有可用的 OptiFine 版本"
+                : "请先选择 Forge 版本");
+        updateOptiFineState();
+    }
+
+    private void updateOptiFineState() {
+        boolean hasForge = forgeSelector.getValue() != null
+                && fabricLoaderSelector.getValue() == null
+                && neoForgeSelector.getValue() == null;
+        if (!hasForge) {
+            clearSelection(optiFineSelector, "请先选择 Forge 版本");
+            optiFineSelector.setDisable(true);
+            return;
+        }
+
+        optiFineSelector.setDisable(downloading || optiFineSelector.getItems().isEmpty());
+        if (!optiFineSelector.getItems().isEmpty() && optiFineSelector.getValue() == null) {
+            optiFineSelector.setPromptText("请选择 OptiFine 版本");
+        }
+    }
+
     private void updateFabricApiState() {
         boolean hasFabric = fabricLoaderSelector.getValue() != null
                 && forgeSelector.getValue() == null
@@ -311,7 +380,12 @@ final class DownloadVersionSetupView extends VBox {
         ForgeVersion forge = forgeSelector.getValue();
         FabricLoaderVersion fabricLoader = fabricLoaderSelector.getValue();
         FabricApiVersion fabricApi = fabricLoader == null ? null : fabricApiSelector.getValue();
+        OptiFineVersion optiFine = optiFineSelector.getValue();
         NeoForgeVersion neoForge = neoForgeSelector.getValue();
+        if (optiFine != null && forge == null) {
+            showStatus("OptiFine 只能与 Forge 一起安装。", true);
+            return;
+        }
         boolean loaderSelected = forge != null || fabricLoader != null || neoForge != null;
         if (loaderSelected && instanceId.equals(version.id())) {
             showStatus("安装加载器时实例名不能与游戏版本号相同。", true);
@@ -324,16 +398,28 @@ final class DownloadVersionSetupView extends VBox {
         forgeSelector.setDisable(true);
         fabricLoaderSelector.setDisable(true);
         fabricApiSelector.setDisable(true);
+        optiFineSelector.setDisable(true);
         neoForgeSelector.setDisable(true);
         download.setDisable(true);
         download.setText("正在下载...");
 
         if (forge != null) {
-            showStatus("正在安装 Forge " + forge.version() + "，实例名：" + instanceId, false);
-            controller.downloadForgeVersion(version.id(), instanceId, forge, gameDirectory,
-                    () -> completeDownload(launchSettings, instanceId, gameDirectory, cancel, download,
-                            "下载完成：实例 " + instanceId + " 已安装 Forge " + forge.version()),
-                    message -> failDownload(message, cancel, download));
+            if (optiFine != null) {
+                showStatus("正在安装 Forge " + forge.version() + " + OptiFine "
+                        + optiFine.version() + "，实例名：" + instanceId, false);
+                controller.downloadForgeOptiFineVersion(version.id(), instanceId, forge, optiFine,
+                        gameDirectory,
+                        () -> completeDownload(launchSettings, instanceId, gameDirectory, cancel, download,
+                                "下载完成：实例 " + instanceId + " 已安装 Forge " + forge.version()
+                                        + " + OptiFine " + optiFine.version()),
+                        message -> failDownload(message, cancel, download));
+            } else {
+                showStatus("正在安装 Forge " + forge.version() + "，实例名：" + instanceId, false);
+                controller.downloadForgeVersion(version.id(), instanceId, forge, gameDirectory,
+                        () -> completeDownload(launchSettings, instanceId, gameDirectory, cancel, download,
+                                "下载完成：实例 " + instanceId + " 已安装 Forge " + forge.version()),
+                        message -> failDownload(message, cancel, download));
+            }
         } else if (fabricLoader != null) {
             String apiText = fabricApi == null ? "" : "，Fabric API：" + fabricApi.versionNumber();
             showStatus("正在安装 Fabric Loader " + fabricLoader.version()
@@ -385,6 +471,7 @@ final class DownloadVersionSetupView extends VBox {
         forgeSelector.setDisable(false);
         fabricLoaderSelector.setDisable(false);
         neoForgeSelector.setDisable(false);
+        updateOptiFineState();
         updateFabricApiState();
         showStatus("下载失败：" + message, true);
     }

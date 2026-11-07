@@ -36,7 +36,7 @@ CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
 | `theme` | 主题目录、默认主题复制和当前主题配置 | 已有 |
 | `settings` | 启动器设置持久化（游戏位置、最大内存、版本隔离、下载并发数） | 已有 |
 | `system` | 物理内存与可用内存读取 | 已有 |
-| `loader` | Fabric Loader/Fabric API、Forge、NeoForge 安装；Quilt 待实现 | 已有 |
+| `loader` | Fabric Loader/Fabric API、Forge、NeoForge、OptiFine（仅 Forge）安装；Quilt 待实现 | 已有 |
 | `json` | 通用 JSON 文件读写 | 已有 |
 
 ## 3. 当前已实现能力
@@ -77,6 +77,9 @@ CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
 - 返回 `InstalledVersion`，包含后续启动需要的路径。
 - Fabric 安装先确保原版父版本存在，再写入 Fabric Meta profile JSON，并把可选 Fabric API jar 放入实际游戏目录的 `mods`。
 - Forge/NeoForge 通过官方 installer 的 `--installClient` 在 staging 目录执行 processor，再合并 libraries 和版本目录。
+- OptiFine 从 BMCLAPI 获取版本和 installer；先安装 Forge，再调用 OptiFine 官方 installer 的
+  `doInstall` 生成补丁库，最后把 OptiFine 库和启动参数合并进 Forge 版本 JSON。
+- OptiFine 只允许与 Forge 组合；选择 Fabric/NeoForge 时 OptiFine 选项会被清空并禁用。
 - `CAMLBackend.inspectGameDirectory` 扫描 `versions/<id>/<id>.json`，返回已安装版本和隔离版本列表。
 
 ### 3.4 账号
@@ -164,7 +167,8 @@ CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
 - `GameLocationSettingsView` 负责游戏位置草稿、浏览、显式保存和目录校验。
 - `InstancePickerView` 扫描当前游戏位置并列出全部已安装实例。
 - `DownloadsView` 负责下载页子导航；`DownloadVersionsView` 加载官方正式版列表，
-  `DownloadVersionSetupView` 负责实例命名、版本信息、Fabric/Forge/NeoForge 选择，底部按钮通过后端安装原版或加载器游戏。
+  `DownloadVersionSetupView` 负责实例命名、版本信息、Forge/OptiFine/Fabric/NeoForge 选择；
+  OptiFine 只有在选择 Forge 后才可用，底部按钮通过后端安装原版或加载器游戏。
 - `GameSettingsView` 负责叠层内存滑块，`DownloadSettingsView` 负责 1–256 下载并发滑块，
   `LauncherSettingsView` 负责主题选择。
 - `SystemMemoryService` 在 Linux 读取 `/proc/meminfo` 的 `MemAvailable`，避免把

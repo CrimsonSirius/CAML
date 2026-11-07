@@ -16,10 +16,11 @@
 - 下载页：左侧“添加游戏实例”胶囊。“添加游戏实例”内容页从官方清单读取正式版，
   排除快照和非正式版本，按发布时间从新到旧列出；版本号左对齐，最后更新时间右对齐。
   点击版本进入下载设置页，顶部是取消、实例名字标签和输入框，输入框默认官方版本号。
-  页面主体由五条组成：版本信息、选择 Forge 版本、选择 Fabric 版本、选择 Fabric API 版本、
-  选择 NeoForge 版本；取消位于左上角，底部整宽“下载实例”按钮安装原版或所选加载器。
+  页面主体由六条组成：版本信息、选择 Forge 版本、选择 OptiFine 版本、选择 Fabric 版本、
+  选择 Fabric API 版本、选择 NeoForge 版本；取消位于左上角，底部整宽“下载实例”按钮安装原版或所选加载器。
   Fabric Loader 从 Fabric Meta 获取，Fabric API 从 Modrinth 获取；Forge/NeoForge 从各自 Maven 获取。
-  Forge、Fabric、NeoForge 互斥，未选择加载器时安装原版。
+  Forge、Fabric、NeoForge 互斥；OptiFine 只与 Forge 兼容，选择 Fabric 或 NeoForge 时会清空并禁用 OptiFine。
+  未选择加载器时安装原版。
 - 设置页：左侧“游戏设置 / 下载设置 / 启动器设置”侧边栏，右侧对应内容，不显示页面标题。
 - 游戏设置：三个圆角分组。“游戏位置”组包含路径输入、浏览和保存；“版本隔离”组包含“完全版本隔离”和“不进行版本隔离”两个圆形单选项；“内存”组包含描述、内存摘要和叠层滑块。
 - 三个分组按内容区宽度拉齐；“已使用 / 游戏 / 可用 / 总内存”保持单行，灰色辅助文字统一放大。
@@ -60,7 +61,7 @@
 | 版本隔离 | `CamlRadioButton` + `ToggleGroup`（游戏设置组） |
 | 下载并发数 | `CamlSlider`（下载设置组，1–256） |
 | 下载版本列表 | `CamlButton` 列表 + `CamlPageHost` 内部切页 |
-| 下载设置页 | 五个圆角信息条 + Forge/Fabric/Fabric API/NeoForge `CamlComboBox` + 整宽 `CamlButton` |
+| 下载设置页 | 六个圆角信息条 + Forge/OptiFine/Fabric/Fabric API/NeoForge `CamlComboBox` + 整宽 `CamlButton` |
 | 浏览游戏实例 | outlined `CamlButton` → `InstancePickerView` |
 | 管理实例 | outlined `CamlButton` → `ManageInstancesView` |
 | 当前实例信息 | 圆角 `VBox`，三行标签 |

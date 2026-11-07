@@ -100,6 +100,8 @@ CAML
 - `clientreq=false` 的库在客户端下载和 classpath 中跳过。
 - Fabric 安装：确保原版父版本、写入 Fabric profile、可选下载 Fabric API 到实际 `mods` 目录。
 - Forge/NeoForge 安装：调用官方 installer 的 headless `--installClient`，在 staging 中完成 processor，再合并库并重命名实例目录。
+- OptiFine 安装：BMCLAPI 获取版本和 installer，先安装 Forge，再调用官方
+  `optifine.Installer.doInstall`，合并 OptiFine 库和 Forge 启动参数；仅允许与 Forge 组合。
 - 支持本地已安装父版本。
 - 下载完成后才写入版本 JSON；复用本地版本时保持原文件不变。
 - 补齐本地版本缺失的库、资源和客户端 jar。
@@ -207,8 +209,9 @@ CAML
 - 顶栏主导航提供“主页 / 下载 / 设置”，主页为当前启动界面。
 - 下载页侧边栏提供“添加游戏实例”胶囊；`DownloadVersionsView` 通过后端异步获取官方
   版本清单，只保留 `type=release`，按 `releaseTime` 从新到旧排列。
-- 点击正式版后进入 `DownloadVersionSetupView`，页面由版本信息、Forge、Fabric、
-  Fabric API、NeoForge 五条组成；顶部实例名输入框默认官方版本号。Fabric Loader
+- 点击正式版后进入 `DownloadVersionSetupView`，页面由版本信息、Forge、OptiFine、Fabric、
+  Fabric API、NeoForge 六条组成；顶部实例名输入框默认官方版本号。OptiFine
+  只有选择 Forge 后才可用，选择 Fabric/NeoForge 会清空并禁用。Fabric Loader
   从 Fabric Meta 获取，Fabric API 从 Modrinth 获取，Forge/NeoForge 从各自 Maven
   获取；三种加载器互斥，选择后自动更新实例默认名。底部“下载实例”安装原版或所选加载器。
 - 设置页侧边栏提供“游戏设置 / 下载设置 / 启动器设置”。
@@ -327,7 +330,7 @@ PATH=/usr/lib/jvm/zulu-25/bin:$PATH \
 
 - 后端构建通过。
 - JavaFX 启动冒烟测试通过。
-- 108 个后端测试和 11 个前端测试全部通过（共 119 个）。
+- 111 个后端测试和 11 个前端测试全部通过（共 122 个）。
 - 集成测试覆盖：
   - 版本清单获取与缓存。
   - 版本 JSON 获取。
@@ -367,6 +370,7 @@ PATH=/usr/lib/jvm/zulu-25/bin:$PATH \
   - 下载被截断后的重试。
   - Minecraft Log4j XML 事件转换为原版日志风格。
   - NeoForge 26.2 + Vulkan 的 `earlyWindowControl` 兼容修复。
+  - OptiFine BMCLAPI 版本解析、installer URL 和 Forge 清单合并。
 
 ## 7. 当前未实现
 
