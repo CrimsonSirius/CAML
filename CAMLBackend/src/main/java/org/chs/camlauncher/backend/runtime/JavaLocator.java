@@ -1,6 +1,6 @@
 package org.chs.camlauncher.backend.runtime;
 
-import org.chs.camlauncher.backend.metadata.RuleEvaluator;
+import org.chs.camlauncher.backend.metadata.rule.RuleEvaluator;
 
 import java.io.File;
 import java.io.IOException;

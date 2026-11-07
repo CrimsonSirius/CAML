@@ -1,7 +1,7 @@
 package org.chs.camlauncher.backend.runtime;
 
-import org.chs.camlauncher.backend.metadata.RuleEvaluator;
-import org.chs.camlauncher.backend.metadata.VersionInfo;
+import org.chs.camlauncher.backend.metadata.rule.RuleEvaluator;
+import org.chs.camlauncher.backend.metadata.model.VersionInfo;
 
 import java.util.Objects;
 

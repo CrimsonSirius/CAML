@@ -1,5 +1,11 @@
 package org.chs.camlauncher.backend.metadata;
 
+import org.chs.camlauncher.backend.metadata.model.AssetIndexFile;
+import org.chs.camlauncher.backend.metadata.model.RuledArgument;
+import org.chs.camlauncher.backend.metadata.model.StringArgument;
+import org.chs.camlauncher.backend.metadata.model.VersionInfo;
+import org.chs.camlauncher.backend.metadata.model.VersionManifest;
+import org.chs.camlauncher.backend.metadata.rule.RuleEvaluator;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;

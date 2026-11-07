@@ -6,7 +6,10 @@ import javafx.scene.layout.BorderPane;
 import org.chs.camlauncher.backend.api.BackendStatus;
 import org.chs.camlauncher.backend.theme.ThemeInfo;
 import org.chs.camlauncher.backend.system.SystemMemoryInfo;
+import org.chs.camlauncher.front.controller.DownloadsController;
+import org.chs.camlauncher.front.controller.HomeController;
 import org.chs.camlauncher.front.controller.MainController;
+import org.chs.camlauncher.front.controller.SettingsController;
 import org.chs.camlauncher.ui.control.CamlPageHost;
 import org.chs.camlauncher.ui.control.CamlTopBar;
 import org.chs.camlauncher.ui.control.CamlTopNav;
@@ -41,15 +44,19 @@ public final class MainView extends BorderPane {
                 fullVersionIsolation,
                 initialSelectedInstance
         );
+        HomeController homeController = controller.homeController();
+        DownloadsController downloadsController = controller.downloadsController();
+        SettingsController settingsController = controller.settingsController();
+
         settingsView = new SettingsView(
                 launchSettings,
-                controller::saveMaxMemoryMbAsync,
-                controller::saveVersionIsolationAsync,
+                settingsController::saveMaxMemoryMbAsync,
+                settingsController::saveVersionIsolationAsync,
                 systemMemory,
-                controller
+                settingsController
         );
-        homeView = new HomeView(controller, launchSettings);
-        downloadsView = new DownloadsView(controller, launchSettings);
+        homeView = new HomeView(homeController, launchSettings);
+        downloadsView = new DownloadsView(downloadsController, launchSettings);
         pageHost = new CamlPageHost(homeView);
 
         setTop(buildTopBar());

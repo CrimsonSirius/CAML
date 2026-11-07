@@ -10,7 +10,7 @@ import javafx.scene.layout.GridPane;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import org.chs.camlauncher.backend.api.GameDirectoryInfo;
-import org.chs.camlauncher.front.controller.MainController;
+import org.chs.camlauncher.front.controller.HomeController;
 import org.chs.camlauncher.ui.control.CamlButton;
 import org.chs.camlauncher.ui.control.CamlTextField;
 
@@ -19,7 +19,7 @@ import java.util.Objects;
 
 /** 主页左侧的启动表单与启动交互。 */
 final class LaunchFormView extends BorderPane {
-    private final MainController controller;
+    private final HomeController controller;
     private final LaunchSettings launchSettings;
     private final Runnable onLaunchStarted;
 
@@ -32,7 +32,7 @@ final class LaunchFormView extends BorderPane {
 
     private GameDirectoryInfo lastGameDirectoryInfo;
 
-    LaunchFormView(MainController controller, LaunchSettings launchSettings,
+    LaunchFormView(HomeController controller, LaunchSettings launchSettings,
                    Runnable onLaunchStarted, Runnable onChooseInstance, Runnable onManageInstances) {
         this.controller = Objects.requireNonNull(controller, "controller");
         this.launchSettings = Objects.requireNonNull(launchSettings, "launchSettings");

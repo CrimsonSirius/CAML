@@ -180,11 +180,14 @@ CAML
 - 主界面不再显示游戏实例下拉框或版本输入框；当前实例由二级列表选择并共享到启动流程。
 - 启动成功后把实例 ID 写入 `~/.caml/settings.properties`；下次启动初始化 `LaunchSettings`
   时恢复该实例，实例不存在时回退到目录扫描结果。
+- 控制器按页面拆分：`MainController` 组合 `HomeController`、`DownloadsController` 和
+  `SettingsController`；`ControllerContext` 共享后端、I/O 线程和日志回调。
 - 当前实例、游戏位置、存档位置以三行信息放入圆角分组，字号放大。
 - “浏览游戏实例”和“管理实例”等宽，并共同占满启动按钮上方一行。
 - 显示存档位置：选择完全版本隔离时提示 `versions/<id>/saves`，否则提示 `.minecraft/saves`。
 - 离线用户名、启动按钮、状态提示和日志窗口；最大内存位于设置 → 游戏设置。
-- `MainController` 用独立 I/O 线程执行目录探测和启动，下载日志每 10% 节流。
+- `ControllerContext` 用独立 I/O 线程执行目录探测；`HomeController` 负责启动派发，
+  `DownloadsController` 负责下载，下载日志每 10% 节流。
 - 主工作区宽屏左右分栏，窄屏上下堆叠；断点为 900px。
 - 断点规则集中在纯计算的 `WorkspaceLayout`：跨过断点时切换 `SplitPane` 方向、放宽最小高度
   （表单 320→240、日志面板 220→140、日志文本区 200→120，首选高度 460→260）并重置分隔条
@@ -223,7 +226,7 @@ CAML
 - 灰色条使用完整系统已使用内存 `T - A` 再加当前游戏分配 `G`，不把灰色段改成 `T - A - G`。
 - `SystemMemoryService` 在 Linux 读取 `/proc/meminfo` 的 `MemAvailable`，而不是
   `MemFree`；Windows/其他平台回退到 JDK OperatingSystemMXBean。
-- `MainController` 每 500ms 后台读取内存，读取完成后立即在 JavaFX 线程刷新
+- `SettingsController` 每 500ms 后台读取内存，读取完成后立即在 JavaFX 线程刷新
   可用/已使用数值和灰色叠层宽度。
 - 最大内存保存到 `~/.caml/settings.properties`；启动时由后端加载，滑块停止变化
   约 300ms 后通过后端异步写入。
@@ -266,6 +269,7 @@ CAML
 - 启动失败分类：命令行过长、权限不足、找不到 Java、其他进程错误。
 - 提供中文 `userMessage()`。
 - `GameLaunchService` 串联安装、离线登录、Java、LaunchPlan、classpath、natives 和进程启动。
+- NeoForge 26.2 选择 Vulkan 时自动关闭 `earlyWindowControl`，避免 GLFW 65540。
 - 版本隔离时工作目录为 `versions/<id>`，但 Windows `APPDATA` 仍按 `.minecraft` 根目录计算。
 
 ## 4. 对外 API

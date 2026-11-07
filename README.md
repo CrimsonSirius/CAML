@@ -46,13 +46,12 @@ CAML/
 │  ├─ src/main/java/org/chs/camlauncher/backend/
 │  │  ├─ api/         后端 facade 与状态 DTO
 │  │  ├─ config/      配置与目录约定
-│  │  ├─ metadata/    版本清单、版本 JSON、规则、继承合并
+│  │  ├─ metadata/    版本清单和 JSON；model/rule/parse/resolve 子包
 │  │  ├─ instance/    实例模型、版本安装与版本隔离判定
-│  │  ├─ download/    下载源、下载计划、SHA-1、原子落盘
-│  │  │                并发执行器与并发数约束
+│  │  ├─ download/    下载入口；model/plan/source/io/hash 子包
 │  │  ├─ auth/        账号与离线登录
 │  │  ├─ runtime/     Java 运行时检测与匹配
-│  │  ├─ launch/      LaunchPlan、classpath、参数、进程启动
+│  │  ├─ launch/      启动编排；command/classpath/prepare/process/patch 子包
 │  │  ├─ loader/      Fabric/Forge/NeoForge 安装编排
 │  │  ├─ theme/       主题目录、默认主题复制和当前主题配置
 │  │  ├─ settings/    启动器设置持久化
@@ -69,7 +68,12 @@ CAML/
 │  ├─ src/main/java/org/chs/camlauncher/front/
 │  │  ├─ CAMLApplication.java         应用入口
 │  │  ├─ WindowSizePlanner.java       窗口尺寸与居中计算
-│  │  ├─ controller/                  MainController
+│  │  ├─ controller/
+│  │  │  ├─ MainController.java       页面控制器组合入口
+│  │  │  ├─ HomeController.java       启动、日志回调和实例扫描
+│  │  │  ├─ DownloadsController.java  版本列表和实例安装
+│  │  │  ├─ SettingsController.java   设置持久化和内存监视
+│  │  │  └─ ControllerContext.java    后端访问、I/O 线程和 UI 回调
 │  │  └─ view/
 │  │     ├─ MainView.java             应用壳层、顶部导航和页面宿主
 │  │     ├─ HomeView.java             主页分栏与自适应
@@ -104,6 +108,7 @@ CAML/
 - `CAMLUI` 不内置任何固定配色；所有颜色令牌来自外部主题文件。
 - `CAMLFront` 只通过 CAMLUI 组件搭建界面，不直接读写文件、不直接发 HTTP、不直接启动进程。
 - `MainView` 只负责壳层和页面切换；各页面、表单、日志和设置内容独立成类。
+- `MainController` 只组合 `HomeController`、`DownloadsController` 和 `SettingsController`，具体交互按页面拆分。
 - 前后端通过 facade、DTO、事件和 `CompletableFuture` 交互。
 - 网络、磁盘、进程和认证操作不得在 JavaFX Application Thread 执行。
 

@@ -1,9 +1,9 @@
 package org.chs.camlauncher.backend.loader;
 
 import com.sun.net.httpserver.HttpServer;
-import org.chs.camlauncher.backend.download.AssetDownloadPlanner;
+import org.chs.camlauncher.backend.download.plan.AssetDownloadPlanner;
 import org.chs.camlauncher.backend.download.DownloadListener;
-import org.chs.camlauncher.backend.download.DownloadPlanner;
+import org.chs.camlauncher.backend.download.plan.DownloadPlanner;
 import org.chs.camlauncher.backend.download.FileDownloader;
 import org.chs.camlauncher.backend.instance.InstalledVersion;
 import org.chs.camlauncher.backend.instance.VersionInstaller;

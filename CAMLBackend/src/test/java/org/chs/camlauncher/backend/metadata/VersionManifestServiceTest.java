@@ -1,6 +1,8 @@
 package org.chs.camlauncher.backend.metadata;
 
 import com.sun.net.httpserver.HttpServer;
+import org.chs.camlauncher.backend.metadata.model.VersionInfo;
+import org.chs.camlauncher.backend.metadata.model.VersionManifest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 

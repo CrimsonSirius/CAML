@@ -1,6 +1,6 @@
 package org.chs.camlauncher.backend.instance;
 
-import org.chs.camlauncher.backend.metadata.VersionInfo;
+import org.chs.camlauncher.backend.metadata.model.VersionInfo;
 
 import java.nio.file.Path;
 

@@ -4,21 +4,21 @@ import javafx.event.ActionEvent;
 import javafx.scene.Node;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
-import org.chs.camlauncher.backend.metadata.VersionManifest;
-import org.chs.camlauncher.front.controller.MainController;
+import org.chs.camlauncher.backend.metadata.model.VersionManifest;
+import org.chs.camlauncher.front.controller.DownloadsController;
 import org.chs.camlauncher.ui.control.CamlPageHost;
 import org.chs.camlauncher.ui.control.CamlSideNav;
 import org.chs.camlauncher.ui.control.CamlSideNavItem;
 
 /** 下载页：左侧“添加游戏实例”导航和右侧版本列表/下载设置页。 */
 final class DownloadsView extends HBox implements SidebarPage {
-    private final MainController controller;
+    private final DownloadsController controller;
     private final LaunchSettings launchSettings;
     private final CamlSideNav sidebar;
     private final CamlPageHost contentHost;
     private final DownloadVersionsView versionsView;
 
-    DownloadsView(MainController controller, LaunchSettings launchSettings) {
+    DownloadsView(DownloadsController controller, LaunchSettings launchSettings) {
         this.controller = controller;
         this.launchSettings = launchSettings;
         sidebar = new CamlSideNav();

@@ -6,7 +6,7 @@ import javafx.scene.control.Label;
 import javafx.scene.layout.VBox;
 import javafx.util.Duration;
 import org.chs.camlauncher.backend.system.SystemMemoryInfo;
-import org.chs.camlauncher.front.controller.MainController;
+import org.chs.camlauncher.front.controller.SettingsController;
 import org.chs.camlauncher.ui.control.CamlMemorySlider;
 
 import java.util.function.IntConsumer;
@@ -15,7 +15,7 @@ import java.util.function.Consumer;
 /** 设置页中的“游戏设置”。 */
 final class GameSettingsView extends VBox {
     private final LaunchSettings launchSettings;
-    private final MainController controller;
+    private final SettingsController controller;
     private final Consumer<Boolean> onVersionIsolationChanged;
     private final CamlMemorySlider memorySlider;
     private final Label memorySummary;
@@ -26,7 +26,7 @@ final class GameSettingsView extends VBox {
 
     GameSettingsView(LaunchSettings launchSettings, IntConsumer onMemoryChanged,
                      Consumer<Boolean> onVersionIsolationChanged,
-                     SystemMemoryInfo systemMemory, MainController controller) {
+                     SystemMemoryInfo systemMemory, SettingsController controller) {
         this.launchSettings = launchSettings;
         this.controller = controller;
         this.onVersionIsolationChanged = onVersionIsolationChanged;

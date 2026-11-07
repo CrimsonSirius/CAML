@@ -1,7 +1,7 @@
 package org.chs.camlauncher.backend.runtime;
 
-import org.chs.camlauncher.backend.metadata.JavaVersion;
-import org.chs.camlauncher.backend.metadata.VersionInfo;
+import org.chs.camlauncher.backend.metadata.model.JavaVersion;
+import org.chs.camlauncher.backend.metadata.model.VersionInfo;
 import org.junit.jupiter.api.Test;
 
 import java.nio.file.Path;

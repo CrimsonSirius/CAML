@@ -2,7 +2,7 @@ package org.chs.camlauncher.backend.loader;
 
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
-import org.chs.camlauncher.backend.download.DownloadItem;
+import org.chs.camlauncher.backend.download.model.DownloadItem;
 import org.chs.camlauncher.backend.download.DownloadListener;
 import org.chs.camlauncher.backend.download.FileDownloader;
 import org.chs.camlauncher.backend.instance.InstalledVersion;

@@ -1,8 +1,8 @@
 package org.chs.camlauncher.backend.instance;
 
-import org.chs.camlauncher.backend.download.AssetDownloadPlanner;
+import org.chs.camlauncher.backend.download.plan.AssetDownloadPlanner;
 import org.chs.camlauncher.backend.download.DownloadListener;
-import org.chs.camlauncher.backend.download.DownloadPlanner;
+import org.chs.camlauncher.backend.download.plan.DownloadPlanner;
 import org.chs.camlauncher.backend.download.FileDownloader;
 import org.chs.camlauncher.backend.metadata.MetadataService;
 import org.chs.camlauncher.backend.metadata.VersionManifestService;

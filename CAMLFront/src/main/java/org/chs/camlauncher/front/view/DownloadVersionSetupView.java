@@ -13,8 +13,8 @@ import org.chs.camlauncher.backend.loader.fabric.FabricApiVersion;
 import org.chs.camlauncher.backend.loader.fabric.FabricLoaderVersion;
 import org.chs.camlauncher.backend.loader.forge.ForgeVersion;
 import org.chs.camlauncher.backend.loader.neoforge.NeoForgeVersion;
-import org.chs.camlauncher.backend.metadata.VersionManifest;
-import org.chs.camlauncher.front.controller.MainController;
+import org.chs.camlauncher.backend.metadata.model.VersionManifest;
+import org.chs.camlauncher.front.controller.DownloadsController;
 import org.chs.camlauncher.ui.control.CamlButton;
 import org.chs.camlauncher.ui.control.CamlComboBox;
 import org.chs.camlauncher.ui.control.CamlTextField;
@@ -35,7 +35,7 @@ final class DownloadVersionSetupView extends VBox {
     private boolean updatingLoaders;
     private String lastAutoName;
 
-    DownloadVersionSetupView(VersionManifest.Version version, MainController controller,
+    DownloadVersionSetupView(VersionManifest.Version version, DownloadsController controller,
                              LaunchSettings launchSettings, Runnable onCancel) {
         getStyleClass().add("app-download-setup-page");
         setPadding(new Insets(32, 40, 32, 40));
@@ -225,7 +225,7 @@ final class DownloadVersionSetupView extends VBox {
                 .orElse(null);
     }
 
-    private void loadLoaderVersions(String gameVersion, MainController controller) {
+    private void loadLoaderVersions(String gameVersion, DownloadsController controller) {
         controller.fetchFabricLoaderVersions(gameVersion, this::showFabricLoaders,
                 message -> fabricLoaderSelector.setPromptText("获取 Fabric 版本失败"));
         controller.fetchFabricApiVersions(gameVersion, this::showFabricApiVersions,
@@ -277,7 +277,7 @@ final class DownloadVersionSetupView extends VBox {
                 downloading || !hasFabric || fabricApiSelector.getItems().isEmpty());
     }
 
-    private void startDownload(VersionManifest.Version version, MainController controller,
+    private void startDownload(VersionManifest.Version version, DownloadsController controller,
                                LaunchSettings launchSettings, CamlButton cancel,
                                CamlButton download) {
         Path gameDirectory = launchSettings.gameDirectory();

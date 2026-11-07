@@ -1,18 +1,18 @@
 package org.chs.camlauncher.backend.instance;
 
-import org.chs.camlauncher.backend.download.AssetDownloadPlanner;
+import org.chs.camlauncher.backend.download.plan.AssetDownloadPlanner;
 import org.chs.camlauncher.backend.download.DownloadConcurrency;
-import org.chs.camlauncher.backend.download.DownloadExecutor;
-import org.chs.camlauncher.backend.download.DownloadItem;
+import org.chs.camlauncher.backend.download.io.DownloadExecutor;
+import org.chs.camlauncher.backend.download.model.DownloadItem;
 import org.chs.camlauncher.backend.download.DownloadListener;
-import org.chs.camlauncher.backend.download.DownloadPlan;
-import org.chs.camlauncher.backend.download.DownloadPlanner;
+import org.chs.camlauncher.backend.download.model.DownloadPlan;
+import org.chs.camlauncher.backend.download.plan.DownloadPlanner;
 import org.chs.camlauncher.backend.download.FileDownloader;
-import org.chs.camlauncher.backend.metadata.AssetIndexFile;
-import org.chs.camlauncher.backend.metadata.ManifestResolver;
+import org.chs.camlauncher.backend.metadata.model.AssetIndexFile;
+import org.chs.camlauncher.backend.metadata.resolve.ManifestResolver;
 import org.chs.camlauncher.backend.metadata.MetadataService;
-import org.chs.camlauncher.backend.metadata.VersionInfo;
-import org.chs.camlauncher.backend.metadata.VersionManifest;
+import org.chs.camlauncher.backend.metadata.model.VersionInfo;
+import org.chs.camlauncher.backend.metadata.model.VersionManifest;
 import org.chs.camlauncher.backend.metadata.VersionManifestService;
 
 import java.io.IOException;
