@@ -11,11 +11,19 @@ public record Library(
         @SerializedName("downloads") Downloads downloads,
         @SerializedName("natives") Map<String, String> natives,
         @SerializedName("extract") Extract extract,
-        @SerializedName("rules") List<Rule> rules
+        @SerializedName("rules") List<Rule> rules,
+        @SerializedName("checksums") List<String> checksums,
+        @SerializedName("serverreq") Boolean serverReq,
+        @SerializedName("clientreq") Boolean clientReq
 ) {
     public Library {
         natives = natives == null ? Map.of() : Map.copyOf(natives);
         rules = rules == null ? List.of() : List.copyOf(rules);
+        checksums = checksums == null ? List.of() : List.copyOf(checksums);
+    }
+
+    public boolean isClientRequired() {
+        return clientReq == null || clientReq;
     }
 
     public record Downloads(

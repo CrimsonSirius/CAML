@@ -56,6 +56,7 @@ CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
 ### 3.2 下载
 
 - 生成客户端 jar、libraries、natives、asset index 下载计划。
+- 旧式 Forge library 根据 `name/url/checksums/clientreq` 推导 Maven 下载。
 - 生成 assets objects 下载计划。
 - 使用 SHA-1 校验。
 - 使用 `.part` 临时文件和原子移动。
@@ -107,7 +108,8 @@ CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
 
 - 按规则筛选 libraries。
 - 排除 native-only library。
-- 按目标路径去重并保持顺序。
+- 跳过 `clientreq=false`。
+- 按 `group:artifact:classifier` 与目标路径去重，子版本优先。
 - 子版本库排在父版本库前，客户端 jar 按 `jar` 字段追加在最后。
 - 使用平台路径分隔符拼接。
 

@@ -155,12 +155,14 @@ versions/<parentId>/<parentId>.json
 
 - 客户端 jar：`versions/<id>/<id>.jar`。
 - libraries：`libraries/<Maven 路径>`。
+- 旧式 Forge library 没有 `downloads` 时，从 `name` 推导 Maven 路径，从 `url` 补下载地址，并使用 `checksums` 第一个 SHA-1。
 - 当前系统的 native classifier。
 - asset index：`assets/indexes/<assetIndexId>.json`。
 
 规则处理：
 
 - 使用 `RuleEvaluator` 过滤 library 的 `rules`。
+- `clientreq=false` 的 library 在客户端下载和 classpath 中跳过。
 - 最后一个匹配规则的 action 生效。
 - native classifier 中的 `${arch}` 替换为当前位数。
 - 相同目标路径会去重。
@@ -406,7 +408,7 @@ classpath 由 `ClasspathBuilder` 单独生成。Java 检测和匹配细节见 [r
 遍历 resolved manifest 的 libraries
 → 按 RuleEvaluator 过滤 rules
 → 排除 native-only library
-→ 读取 downloads.artifact
+→ 读取 downloads.artifact，缺失时从 name 推导 Maven 路径
 → 解析 libraries/<path> 路径
 → 去重并保持顺序
 → 最后追加客户端 jar
@@ -414,10 +416,11 @@ classpath 由 `ClasspathBuilder` 单独生成。Java 检测和匹配细节见 [r
 
 规则：
 
-- `downloads.artifact` 存在时才加入 classpath。
+- 新式 library 使用 `downloads.artifact.path`；旧式 Forge library 从 `name` 推导 Maven 路径。
+- `clientreq=false` 的库不加入 classpath。
 - classifier 为 `natives-*` 的 native-only 库不加入 classpath。
 - 有 native classifier 的普通库仍保留主 artifact。
-- 同一个目标路径只加入一次。
+- 先按 `group:artifact:classifier` 去重，保留先出现的子版本库；再按目标路径去重。
 - 客户端 jar 固定放在最后。
 - 客户端 jar 路径来自 manifest 的 `jar` 字段，未指定时回退到实例 ID。
 - `join(List<Path>)` 使用 `File.pathSeparator` 拼接。

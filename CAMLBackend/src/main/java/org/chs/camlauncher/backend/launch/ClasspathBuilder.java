@@ -1,14 +1,13 @@
 package org.chs.camlauncher.backend.launch;
 
-import org.chs.camlauncher.backend.metadata.DownloadInfo;
 import org.chs.camlauncher.backend.metadata.Library;
+import org.chs.camlauncher.backend.metadata.LibraryArtifact;
 import org.chs.camlauncher.backend.metadata.RuleEvaluator;
 
 import java.io.File;
 import java.nio.file.Path;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Locale;
 import java.util.Objects;
 import java.util.Set;
 
@@ -28,19 +27,26 @@ public final class ClasspathBuilder {
 
         Path librariesDirectory = plan.instance().librariesDirectory();
         Set<Path> classpath = new LinkedHashSet<>();
+        Set<String> coordinates = new LinkedHashSet<>();
+        Set<Path> paths = new LinkedHashSet<>();
 
         for (Library library : plan.manifest().libraries()) {
-            if (!ruleEvaluator.isAllowed(library.rules()) || isNativeOnly(library)) {
+            if (!ruleEvaluator.isAllowed(library.rules())
+                    || !library.isClientRequired()
+                    || isNativeOnly(library)) {
                 continue;
             }
 
-            Library.Downloads downloads = library.downloads();
-            if (downloads == null || downloads.artifact() == null) {
+            if (!coordinates.add(LibraryArtifact.coordinateKey(library.name()))) {
                 continue;
             }
 
-            Path artifact = artifactPath(librariesDirectory, library, downloads.artifact());
-            if (artifact != null) {
+            String relativePath = LibraryArtifact.relativePath(library);
+            if (relativePath == null || relativePath.isBlank()) {
+                continue;
+            }
+            Path artifact = librariesDirectory.resolve(relativePath).toAbsolutePath().normalize();
+            if (paths.add(artifact)) {
                 classpath.add(artifact);
             }
         }
@@ -55,49 +61,12 @@ public final class ClasspathBuilder {
                 .collect(java.util.stream.Collectors.joining(File.pathSeparator));
     }
 
-    private static Path artifactPath(Path librariesDirectory, Library library, DownloadInfo artifact) {
-        String relativePath = artifact.path();
-        if (relativePath == null || relativePath.isBlank()) {
-            relativePath = mavenPath(library.name());
-        }
-        if (relativePath == null || relativePath.isBlank()) {
-            return null;
-        }
-        return librariesDirectory.resolve(relativePath).toAbsolutePath().normalize();
-    }
-
     private static boolean isNativeOnly(Library library) {
         String[] parts = library.name().split(":");
         if (parts.length < 4) {
             return false;
         }
-        String classifier = parts[3].toLowerCase(Locale.ROOT);
+        String classifier = parts[3].toLowerCase(java.util.Locale.ROOT);
         return classifier.startsWith("natives-") || classifier.contains("-natives-");
-    }
-
-    private static String mavenPath(String name) {
-        String[] parts = name.split(":");
-        if (parts.length < 3) {
-            return null;
-        }
-
-        String group = parts[0].replace('.', '/');
-        String artifact = parts[1];
-        String version = parts[2];
-        String classifier = parts.length >= 4 ? parts[3] : null;
-        String extension = "jar";
-
-        int extensionIndex = version.indexOf('@');
-        if (extensionIndex >= 0) {
-            extension = version.substring(extensionIndex + 1);
-            version = version.substring(0, extensionIndex);
-        }
-
-        String fileName = artifact + "-" + version;
-        if (classifier != null) {
-            fileName += "-" + classifier;
-        }
-        fileName += "." + extension;
-        return group + "/" + artifact + "/" + version + "/" + fileName;
     }
 }

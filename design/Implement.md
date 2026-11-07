@@ -76,6 +76,7 @@ CAML
 ### 3.3 下载
 
 - 生成客户端 jar、libraries、natives、asset index 下载计划。
+- 旧式 Forge library（`name/url/checksums/clientreq`，无 `downloads`）按 Maven 路径推导下载。
 - 生成 assets objects 下载计划。
 - SHA-1 校验。
 - `.part` 临时文件。
@@ -96,6 +97,7 @@ CAML
 - 解析后把 manifest 的 `id` 统一为文件夹名，`inheritsFrom` 按文件夹名查找父版本。
 - 支持加载器 manifest 的 `jar` 字段；客户端 jar 与 classpath 使用该字段指定的版本。
 - 子版本 libraries 排在父版本之前，classpath 去重时子版本优先。
+- `clientreq=false` 的库在客户端下载和 classpath 中跳过。
 - 支持本地已安装父版本。
 - 下载完成后才写入版本 JSON；复用本地版本时保持原文件不变。
 - 补齐本地版本缺失的库、资源和客户端 jar。
@@ -134,7 +136,8 @@ CAML
 
 - 按规则筛选 libraries。
 - 排除 native-only library。
-- 去重并保持顺序。
+- 跳过 `clientreq=false`。
+- 先按 `group:artifact:classifier` 去重，子版本在前；再按目标路径去重。
 - 客户端 jar 最后追加。
 - 使用平台路径分隔符拼接。
 
@@ -315,7 +318,7 @@ PATH=/usr/lib/jvm/zulu-25/bin:$PATH \
 
 - 后端构建通过。
 - JavaFX 启动冒烟测试通过。
-- 91 个后端测试和 11 个前端测试全部通过（共 102 个）。
+- 93 个后端测试和 11 个前端测试全部通过（共 104 个）。
 - 集成测试覆盖：
   - 版本清单获取与缓存。
   - 版本 JSON 获取。
@@ -327,6 +330,8 @@ PATH=/usr/lib/jvm/zulu-25/bin:$PATH \
   - LaunchPlan 创建和 Java 要求校验。
   - classpath 过滤、去重、native 排除和客户端 jar 顺序。
   - `inheritsFrom` 的 `jar` 字段、子库优先顺序和旧版 `auth_session`。
+  - 旧式 Forge library 的 Maven 路径、URL/checksum 和 `clientreq` 过滤。
+  - classpath 的坐标去重和旧式 library 路径。
   - JVM/游戏参数、占位符、features 和旧版参数回退。
   - natives 清理、解压、排除规则和 26.3 `natives/java` 子目录。
   - virtual assets 重建和 assets 目录替换。

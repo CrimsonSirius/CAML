@@ -3,6 +3,7 @@ package org.chs.camlauncher.backend.launch;
 import org.chs.camlauncher.backend.metadata.DownloadInfo;
 import org.chs.camlauncher.backend.metadata.Argument;
 import org.chs.camlauncher.backend.metadata.Library;
+import org.chs.camlauncher.backend.metadata.LibraryArtifact;
 import org.chs.camlauncher.backend.metadata.RuleEvaluator;
 import org.chs.camlauncher.backend.metadata.VersionInfo;
 import org.chs.camlauncher.backend.runtime.JavaRuntimeParser;
@@ -105,9 +106,22 @@ public final class NativeExtractor {
     }
 
     private List<NativeJar> nativeJars(Path librariesDirectory, Library library) {
+        if (!library.isClientRequired()) {
+            return List.of();
+        }
         Library.Downloads downloads = library.downloads();
         if (downloads == null) {
-            return List.of();
+            if (!isNativeOnly(library)) {
+                return List.of();
+            }
+            String path = LibraryArtifact.relativePath(library);
+            if (path == null || path.isBlank()) {
+                return List.of();
+            }
+            return List.of(new NativeJar(
+                    librariesDirectory.resolve(path).toAbsolutePath().normalize(),
+                    library.extract()
+            ));
         }
 
         List<NativeJar> result = new ArrayList<>(1);
