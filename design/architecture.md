@@ -1,6 +1,6 @@
 # CAML 总体架构
 
-更新日期：2026-11-05
+更新日期：2026-11-07
 
 ## 1. 架构目标
 
@@ -29,7 +29,7 @@ CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
 | `config` | 配置、目录约定和路径初始化 | 已有 |
 | `metadata` | 版本清单和 JSON；子包 `model`、`rule`、`parse`、`resolve` | 已有 |
 | `instance` | 实例模型、本地版本复用、版本安装和隔离判定 | 已有 |
-| `download` | 下载入口；子包 `model`、`plan`、`source`、`io`、`hash` | 已有基础能力 |
+| `download` | 下载入口；子包 `model`、`plan`、`source`、`io`、`hash` | 已有 |
 | `auth` | 账号、AuthSession、离线登录 | 已有离线能力 |
 | `runtime` | Java 运行时检测、版本/架构/位数匹配 | 已有 |
 | `launch` | 启动编排；子包 `command`、`classpath`、`prepare`、`process`、`patch` | 已有 |
@@ -141,7 +141,8 @@ CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
 - 设置工作目录和环境变量。
 - 仅在 Windows 设置 `APPDATA`。
 - 使用 `ProcessBuilder` 启动。
-- 后台线程转发 stdout/stderr。
+- 后台线程读取 stdout/stderr；Minecraft Log4j `LegacyXMLLayout` 事件转换为
+  `[HH:mm:ss] [线程/级别]: 消息` 后再转发到界面。
 - 提供退出码回调和停止能力。
 - 命令行过长时，Java 9+ 自动使用 `@argfile`。
 - Java 8 或 argfile 失败时使用 manifest classpath jar。
@@ -203,7 +204,7 @@ CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
 - 默认主题使用白底、灰色表面、黄色强调色和深色文字。
 - 组件 API 包括 `CamlButton`、`CamlCard`、`CamlTextField`、`CamlTextArea`、
   `CamlComboBox`、`CamlSpinner`、`CamlSwitch`、`CamlCheckBox`、`CamlSlider`、
-  `CamlMemorySlider`、`CamlProgressBar`、`CamlSideNav`、`CamlSideNavItem`、`CamlTopNav`、
+  `CamlMemorySlider`、`CamlRadioButton`、`CamlProgressBar`、`CamlSideNav`、`CamlSideNavItem`、`CamlTopNav`、
   `CamlTopNavItem`、`CamlPageHost` 和 `CamlTopBar`。
 - `CAMLFront` 依赖 `CAMLUI`，不再把控件外观写死在业务界面里。
 
@@ -218,7 +219,7 @@ CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
 - 微软账号登录。
 - token 刷新和安全存储。
 - Quilt 加载器安装。
-- 镜像源、并发下载、取消和内容寻址缓存。
+- 镜像源、下载取消和内容寻址缓存。
 - 整合包和模组管理。
 
 ## 5. 数据与安全原则
@@ -269,6 +270,7 @@ info.isolatedVersions();
 ## 7. 相关文档
 
 - 版本下载和启动链路详见 [version-download-and-launch.md](version-download-and-launch.md)。
+- 界面布局、组件映射和动效详见 [ui.md](ui.md)。
 - runtime 包详见 [runtime.md](runtime.md)。
 - 当前实现情况详见 [Implement.md](Implement.md)。
 - 开发任务和阶段计划由本地 `TODO.md` 维护。

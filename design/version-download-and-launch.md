@@ -1,6 +1,6 @@
 # CAML 版本下载与启动链路
 
-更新日期：2026-11-05
+更新日期：2026-11-07
 
 ## 1. 文档范围
 
@@ -352,7 +352,7 @@ JavaRuntime       实际 Java 可执行文件、版本、架构、位数
 
 这些类型已经存在，并由 `LaunchPlanner` 组合成不可变的 `LaunchPlan`。
 
-### 3.3 计划中的启动流程
+### 3.3 当前启动流程
 
 ```text
 读取 InstalledVersion
@@ -721,6 +721,7 @@ launch/
 - `CAMLBackend/src/main/java/org/chs/camlauncher/backend/launch/command/LaunchCommandBuilder.java`
 - `CAMLBackend/src/main/java/org/chs/camlauncher/backend/launch/process/ProcessLauncher.java`
 - `CAMLBackend/src/main/java/org/chs/camlauncher/backend/launch/process/GameProcess.java`
+- `CAMLBackend/src/main/java/org/chs/camlauncher/backend/launch/process/MinecraftLogFormatter.java`
 - `CAMLBackend/src/main/java/org/chs/camlauncher/backend/launch/process/ProcessListener.java`
 - `CAMLBackend/src/main/java/org/chs/camlauncher/backend/launch/process/ArgumentFile.java`
 - `CAMLBackend/src/main/java/org/chs/camlauncher/backend/launch/process/ClasspathManifest.java`

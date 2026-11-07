@@ -1,6 +1,6 @@
 # CAML 界面设计
 
-更新日期：2026-11-05
+更新日期：2026-11-07
 
 ## 1. 设计意图
 
@@ -41,10 +41,14 @@
 - 表单使用“标签在上、控件在下”的纵向结构，避免窄窗口下标签被挤压。
 - 启动按钮固定在表单底部；字段区域独立滚动，主操作始终可见。
 - 底栏显示后端状态和数据目录。
-- 视图拆分：`MainView` 是壳层；主页由 `HomeView`、`LaunchFormView` 和
-  `LogPaneView` 组成；设置页由 `SettingsView`、`GameSettingsView`、
-  `GameLocationSettingsView`、`VersionIsolationSettingsView` 和
-  `LauncherSettingsView` 组成；`LaunchSettings` 共享内存值。
+- 视图拆分：`MainView` 是壳层；主页由 `HomeView`、`LaunchFormView`、
+  `LogPaneView`、`InstancePickerView` 和 `ManageInstancesView` 组成；下载页由
+  `DownloadsView`、`DownloadVersionsView` 和 `DownloadVersionSetupView` 组成；设置页由
+  `SettingsView`、`GameSettingsView`、`GameLocationSettingsView`、
+  `VersionIsolationSettingsView`、`DownloadSettingsView` 和 `LauncherSettingsView` 组成；
+  `LaunchSettings` 共享内存值。
+- 控制器按页面拆分：`MainController` 组合 `HomeController`、`DownloadsController`
+  和 `SettingsController`，`ControllerContext` 提供共享 I/O 和日志回调。
 
 ## 3. 组件映射
 
@@ -56,11 +60,11 @@
 | 版本隔离 | `CamlRadioButton` + `ToggleGroup`（游戏设置组） |
 | 下载并发数 | `CamlSlider`（下载设置组，1–256） |
 | 下载版本列表 | `CamlButton` 列表 + `CamlPageHost` 内部切页 |
-| 下载设置页 | 五个圆角信息条 + Fabric/Fabric API `CamlComboBox` + 整宽 `CamlButton` |
+| 下载设置页 | 五个圆角信息条 + Forge/Fabric/Fabric API/NeoForge `CamlComboBox` + 整宽 `CamlButton` |
 | 浏览游戏实例 | outlined `CamlButton` → `InstancePickerView` |
 | 管理实例 | outlined `CamlButton` → `ManageInstancesView` |
 | 当前实例信息 | 圆角 `VBox`，三行标签 |
-| 游戏版本 | 可编辑 `CamlComboBox` |
+| 游戏实例 | outlined `CamlButton` → `InstancePickerView` |
 | 离线用户名 | `CamlTextField` |
 | 最大内存 | `CamlMemorySlider`（游戏设置） |
 | 启动游戏 | filled `CamlButton` |
@@ -83,9 +87,10 @@
 
 ## 5. 状态与反馈
 
-- 默认：显示“准备就绪”。
+- 默认：不显示状态文字；启动中、成功或失败时才显示状态标签。
 - 启动中：按钮变为“启动中...”并禁用。
 - 失败：状态文字切换为错误文案和错误色，日志保留诊断信息。
+- 游戏日志会过滤 Log4j XML，显示为 `[HH:mm:ss] [线程/级别]: 消息`，堆栈保留后续行。
 - 主题切换：立即应用，选择写入 `~/.caml/theme.txt`。
 - 主导航：同一时间只保留一个选中项，主页状态在切换页面时保留。
 - 内存滑块：同一条轨道上下叠层。底层灰色条宽度为 `系统已使用 + 游戏分配`，
@@ -95,6 +100,8 @@
 - 游戏位置输入是草稿；只有点击“保存”并通过目录校验后，才更新共享状态和后端配置。
 - 版本隔离选择立即写入共享状态和 `~/.caml/settings.properties`，下一次启动使用所选模式；
   主页“存档位置”随选择立即切换。
+- 加载器下拉框切换时，被清空的 Forge/Fabric/NeoForge 选项会恢复
+  `请选择 ... 版本` 提示文字，不会留下空白选项框。
 - 启动成功后把实例 ID 写入 `~/.caml/settings.properties` 的 `lastInstanceId`；
   下次启动优先恢复该实例，实例不存在时才回退到目录扫描结果。
 - 最大内存保存到 `~/.caml/settings.properties`，滑块停止变化约 300ms 后持久化。

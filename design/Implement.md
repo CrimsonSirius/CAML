@@ -1,6 +1,6 @@
 # CAML 当前实现情况
 
-更新日期：2026-11-05
+更新日期：2026-11-07
 
 ## 1. 总体状态
 
@@ -168,7 +168,8 @@ CAML
 - `MainView` 只负责应用壳层、导航和页面宿主；页面与表单拆分为独立视图类。
 - 主页由 `HomeView` 组合 `LaunchFormView` 与 `LogPaneView`；设置页由
   `SettingsView` 组合 `GameSettingsView` 与 `LauncherSettingsView`；
-  `DownloadsView` 负责下载页侧边栏和内部页面。
+  `DownloadsView` 负责下载页侧边栏和内部页面，`DownloadVersionsView` 负责正式版列表，
+  `DownloadVersionSetupView` 负责实例命名和加载器选择。
 - `LaunchSettings` 共享主页和设置页的游戏位置、版本隔离和最大内存值，`ViewSupport` 提供通用布局工具。
 - 游戏位置从主页移除；设置页新增“游戏位置”圆角分组，包含路径输入、浏览和保存。
 - 只有点击保存并校验目录存在后，才更新共享位置并写入 `~/.caml/settings.properties`。
@@ -262,7 +263,7 @@ CAML
 - 合并环境变量。
 - Windows 条件设置 `APPDATA`。
 - 启动 `ProcessBuilder`。
-- 转发 stdout/stderr。
+- 读取 stdout/stderr，经 `MinecraftLogFormatter` 将 Log4j XML 转为原版日志风格后再转发。
 - 回调退出码。
 - 支持等待和停止进程。
 - Java 9+ 命令行过长时自动使用 `@argfile`。
@@ -326,7 +327,7 @@ PATH=/usr/lib/jvm/zulu-25/bin:$PATH \
 
 - 后端构建通过。
 - JavaFX 启动冒烟测试通过。
-- 99 个后端测试和 11 个前端测试全部通过（共 110 个）。
+- 108 个后端测试和 11 个前端测试全部通过（共 119 个）。
 - 集成测试覆盖：
   - 版本清单获取与缓存。
   - 版本 JSON 获取。
@@ -364,6 +365,8 @@ PATH=/usr/lib/jvm/zulu-25/bin:$PATH \
   - PCL/HMCL 版本隔离自动判定、显式完全隔离/不隔离和设置持久化。
   - 官方正式版过滤、发布时间排序和快照排除。
   - 下载被截断后的重试。
+  - Minecraft Log4j XML 事件转换为原版日志风格。
+  - NeoForge 26.2 + Vulkan 的 `earlyWindowControl` 兼容修复。
 
 ## 7. 当前未实现
 
@@ -383,5 +386,6 @@ PATH=/usr/lib/jvm/zulu-25/bin:$PATH \
 ## 8. 相关文档
 
 - [总体架构](architecture.md)
+- [界面设计](ui.md)
 - [版本下载与启动链路](version-download-and-launch.md)
 - [runtime 包](runtime.md)
