@@ -99,13 +99,17 @@ class LaunchArgumentsBuilderTest {
 
     @Test
     void fallsBackToLegacyMinecraftArguments() {
-        VersionInfo manifest = manifest(null, "--username ${auth_player_name} --gameDir ${game_directory}");
+        VersionInfo manifest = manifest(
+                null,
+                "--username ${auth_player_name} --session ${auth_session} --gameDir ${game_directory}"
+        );
         LaunchPlan plan = plan(manifest, LaunchOptions.defaults());
 
         List<String> result = new GameArgumentsBuilder().build(plan, List.of());
 
         assertTrue(result.contains("--username"));
         assertTrue(result.contains("Steve"));
+        assertEquals("token", result.get(result.indexOf("--session") + 1));
         assertTrue(result.contains("--gameDir"));
         assertTrue(result.contains(gameDirectory.toString()));
     }
@@ -121,7 +125,7 @@ class LaunchArgumentsBuilderTest {
                 "1.20.1", "release", null, "net.minecraft.client.main.Main", "5", null,
                 null, new Arguments(List.of(), List.of()), null,
                 new JavaVersion("java-runtime-gamma", 17), List.of(), Map.of("client", logging),
-                null, null, null, null
+                null, null, null, null, null
         );
         LaunchPlan plan = plan(manifest, LaunchOptions.defaults());
 
@@ -166,7 +170,7 @@ class LaunchArgumentsBuilderTest {
                 "1.20.1", "release", null, "net.minecraft.client.main.Main", "5", null,
                 minecraftArguments, arguments, null,
                 new JavaVersion("java-runtime-gamma", 17), List.of(), null,
-                null, null, null, null
+                null, null, null, null, null
         );
     }
 }

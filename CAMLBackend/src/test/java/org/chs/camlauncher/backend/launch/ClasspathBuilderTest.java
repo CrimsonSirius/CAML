@@ -38,7 +38,12 @@ class ClasspathBuilderTest {
                 ),
                 Map.of("linux", "natives-linux"),
                 null,
-                List.of()
+                List.of(),
+                List.of(),
+                null,
+                null,
+                null,
+                null
         );
         Library nativeOnly = library(
                 "org.example:native:1.0:natives-linux",
@@ -61,7 +66,7 @@ class ClasspathBuilderTest {
                 "1.20.1", "release", null, "net.minecraft.client.main.Main", "5", null, null, null,
                 null, new JavaVersion("java-runtime-gamma", 17),
                 List.of(base, nativeMain, base, nativeOnly, disallowed), null,
-                null, null, null, null
+                null, null, null, null, null
         );
 
         InstalledVersion instance = new InstalledVersion(
@@ -107,6 +112,95 @@ class ClasspathBuilderTest {
         assertTrue(builder.join(classpath).contains("base-1.0.jar"));
     }
 
+    @Test
+    void childCoordinateWinsAndLegacyLibraryIsIncluded() {
+        Library child = library(
+                "org.example:shared:2.0",
+                "org/example/shared/2.0/shared-2.0.jar",
+                List.of(),
+                Map.of()
+        );
+        Library parent = library(
+                "org.example:shared:1.0",
+                "org/example/shared/1.0/shared-1.0.jar",
+                List.of(),
+                Map.of()
+        );
+        Library legacy = new Library(
+                "jline:jline:2.13",
+                "https://maven.example/repo/",
+                null,
+                Map.of(),
+                null,
+                List.of(),
+                List.of("jline-sha1"),
+                true,
+                null,
+                null,
+                null
+        );
+        Library serverOnly = new Library(
+                "server.only:library:1.0",
+                "https://maven.example/repo/",
+                null,
+                Map.of(),
+                null,
+                List.of(),
+                List.of(),
+                true,
+                false,
+                null,
+                null
+        );
+
+        VersionInfo manifest = new VersionInfo(
+                "forge-instance", "release", null, "loader.Main", null, null, null, null,
+                null, null, List.of(child, parent, legacy, serverOnly), null,
+                null, null, null, null, "1.20.1"
+        );
+        InstalledVersion instance = new InstalledVersion(
+                "forge-instance",
+                manifest,
+                gameDirectory,
+                gameDirectory.resolve("versions/forge-instance"),
+                gameDirectory.resolve("versions/forge-instance/forge-instance.json"),
+                gameDirectory.resolve("versions/1.20.1/1.20.1.jar"),
+                gameDirectory.resolve("libraries"),
+                gameDirectory.resolve("assets"),
+                null
+        );
+        LaunchPlan plan = new LaunchPlan(
+                instance,
+                manifest,
+                new AuthSession("Steve", UUID.randomUUID(), "token", "legacy", "{}"),
+                new JavaRuntime(Path.of("/tmp/java"), "21.0", 21, "test", "x86_64", 64, true),
+                LaunchOptions.defaults(),
+                gameDirectory,
+                gameDirectory.resolve("assets"),
+                gameDirectory.resolve("versions/forge-instance/natives")
+        );
+
+        List<Path> classpath = new ClasspathBuilder(
+                new RuleEvaluator("linux", "x86_64", "6.0", Map.of())
+        ).build(plan);
+
+        assertEquals(3, classpath.size());
+        assertEquals(
+                gameDirectory.resolve("libraries/org/example/shared/2.0/shared-2.0.jar")
+                        .toAbsolutePath().normalize(),
+                classpath.get(0)
+        );
+        assertEquals(
+                gameDirectory.resolve("libraries/jline/jline/2.13/jline-2.13.jar")
+                        .toAbsolutePath().normalize(),
+                classpath.get(1)
+        );
+        assertEquals(
+                gameDirectory.resolve("versions/1.20.1/1.20.1.jar").toAbsolutePath().normalize(),
+                classpath.get(2)
+        );
+    }
+
     private static Library library(
             String name,
             String path,
@@ -122,7 +216,12 @@ class ClasspathBuilderTest {
                 ),
                 natives,
                 null,
-                rules
+                rules,
+                List.of(),
+                null,
+                null,
+                null,
+                null
         );
     }
 }

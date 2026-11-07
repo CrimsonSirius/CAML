@@ -42,12 +42,17 @@ public final class ManifestResolver {
                 Arguments.merge(parent.arguments(), child.arguments()),
                 mergeMaps(parent.downloads(), child.downloads()),
                 child.javaVersion() != null ? child.javaVersion() : parent.javaVersion(),
-                concat(parent.libraries(), child.libraries()),
+                concat(child.libraries(), parent.libraries()),
                 mergeMaps(parent.logging(), child.logging()),
                 child.minimumLauncherVersion() != null ? child.minimumLauncherVersion() : parent.minimumLauncherVersion(),
                 child.time() != null ? child.time() : parent.time(),
                 child.releaseTime() != null ? child.releaseTime() : parent.releaseTime(),
-                child.complianceLevel() != null ? child.complianceLevel() : parent.complianceLevel()
+                child.complianceLevel() != null ? child.complianceLevel() : parent.complianceLevel(),
+                child.jar() != null && !child.jar().isBlank()
+                        ? child.jar()
+                        : parent.jar() != null && !parent.jar().isBlank()
+                                ? parent.jar()
+                                : parent.id()
         );
     }
 

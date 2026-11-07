@@ -3,6 +3,7 @@ package org.chs.camlauncher.backend.download;
 import org.chs.camlauncher.backend.metadata.AssetIndex;
 import org.chs.camlauncher.backend.metadata.DownloadInfo;
 import org.chs.camlauncher.backend.metadata.Library;
+import org.chs.camlauncher.backend.metadata.LibraryArtifact;
 import org.chs.camlauncher.backend.metadata.LoggingInfo;
 import org.chs.camlauncher.backend.metadata.RuleEvaluator;
 import org.chs.camlauncher.backend.metadata.VersionInfo;
@@ -43,21 +44,27 @@ public final class DownloadPlanner {
     }
 
     public DownloadPlan plan(VersionInfo version, Path gameDirectory) {
+        return plan(version, gameDirectory, version.clientJarId());
+    }
+
+    public DownloadPlan plan(VersionInfo version, Path gameDirectory, String clientJarId) {
         Map<Path, DownloadItem> items = new LinkedHashMap<>();
-        Path versionDirectory = gameDirectory.resolve("versions").resolve(version.id());
+        Path clientJarDirectory = gameDirectory.resolve("versions").resolve(clientJarId);
 
         DownloadInfo client = version.downloads().get("client");
         if (client != null) {
-            add(items, "client " + version.id(), client, versionDirectory.resolve(version.id() + ".jar"));
+            add(items, "client " + clientJarId, client,
+                    clientJarDirectory.resolve(clientJarId + ".jar"));
         }
 
         for (Library library : version.libraries()) {
-            if (!ruleEvaluator.isAllowed(library.rules())) {
+            if (!ruleEvaluator.isAllowed(library.rules()) || !library.isClientRequired()) {
                 continue;
             }
 
             Library.Downloads downloads = library.downloads();
             if (downloads == null) {
+                addLegacyLibrary(items, gameDirectory, library);
                 continue;
             }
 
@@ -98,6 +105,20 @@ public final class DownloadPlanner {
         }
 
         return new DownloadPlan(items.values().stream().toList());
+    }
+
+    private void addLegacyLibrary(Map<Path, DownloadItem> items, Path gameDirectory, Library library) {
+        String path = LibraryArtifact.relativePath(library);
+        String url = LibraryArtifact.downloadUrl(library);
+        if (path == null || url == null) {
+            return;
+        }
+        add(items, library.name(), new DownloadInfo(
+                path,
+                LibraryArtifact.sha1(library),
+                LibraryArtifact.size(library),
+                url
+        ), gameDirectory.resolve("libraries").resolve(path));
     }
 
     private void add(Map<Path, DownloadItem> items, String label, DownloadInfo info, Path destination) {

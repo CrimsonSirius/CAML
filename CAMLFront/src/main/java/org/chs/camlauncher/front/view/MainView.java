@@ -31,12 +31,16 @@ public final class MainView extends BorderPane {
 
     public MainView(MainController controller, int initialMaxMemoryMb,
                     SystemMemoryInfo systemMemory, Path initialGameDirectory,
-                    boolean fullVersionIsolation) {
+                    boolean fullVersionIsolation, String initialSelectedInstance) {
         this.controller = controller;
         getStyleClass().add("app-root");
 
         LaunchSettings launchSettings = new LaunchSettings(
-                initialMaxMemoryMb, initialGameDirectory, fullVersionIsolation);
+                initialMaxMemoryMb,
+                initialGameDirectory,
+                fullVersionIsolation,
+                initialSelectedInstance
+        );
         settingsView = new SettingsView(
                 launchSettings,
                 controller::saveMaxMemoryMbAsync,

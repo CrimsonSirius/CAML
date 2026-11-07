@@ -138,4 +138,29 @@ class SettingsServiceTest {
                 () -> service.setDownloadConcurrency(SettingsService.MAX_DOWNLOAD_CONCURRENCY + 1)
         );
     }
+
+    @Test
+    void missingLastLaunchedInstanceReturnsEmpty() throws Exception {
+        assertTrue(new SettingsService(dataDirectory).lastLaunchedInstanceId().isEmpty());
+    }
+
+    @Test
+    void persistsLastLaunchedInstanceAcrossInstances() throws Exception {
+        new SettingsService(dataDirectory).setLastLaunchedInstanceId("我的 1.21.4");
+
+        assertEquals(
+                "我的 1.21.4",
+                new SettingsService(dataDirectory).lastLaunchedInstanceId().orElseThrow()
+        );
+    }
+
+    @Test
+    void rejectsBlankLastLaunchedInstance() {
+        SettingsService service = new SettingsService(dataDirectory);
+
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> service.setLastLaunchedInstanceId("  ")
+        );
+    }
 }

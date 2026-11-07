@@ -8,6 +8,9 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
+import javafx.util.StringConverter;
+import org.chs.camlauncher.backend.loader.fabric.FabricApiVersion;
+import org.chs.camlauncher.backend.loader.fabric.FabricLoaderVersion;
 import org.chs.camlauncher.backend.metadata.VersionManifest;
 import org.chs.camlauncher.front.controller.MainController;
 import org.chs.camlauncher.ui.control.CamlButton;
@@ -15,11 +18,15 @@ import org.chs.camlauncher.ui.control.CamlComboBox;
 import org.chs.camlauncher.ui.control.CamlTextField;
 
 import java.nio.file.Path;
+import java.util.List;
 
-/** 选择版本后的下载设置页：版本信息、加载器选择条和原版下载按钮。 */
+/** 选择版本后的下载设置页：实例名、版本信息和加载器选择。 */
 final class DownloadVersionSetupView extends VBox {
-    private final Label statusLabel = new Label("当前仅下载原版游戏，加载器选择暂不生效。");
+    private final Label statusLabel = new Label("未选择 Fabric 版本时下载原版游戏。");
     private final CamlTextField instanceNameField;
+    private final CamlComboBox<FabricLoaderVersion> fabricLoaderSelector = new CamlComboBox<>();
+    private final CamlComboBox<FabricApiVersion> fabricApiSelector = new CamlComboBox<>();
+    private boolean downloading;
 
     DownloadVersionSetupView(VersionManifest.Version version, MainController controller,
                              LaunchSettings launchSettings, Runnable onCancel) {
@@ -40,6 +47,9 @@ final class DownloadVersionSetupView extends VBox {
         HBox nameRow = new HBox(12, cancel, nameLabel, instanceNameField);
         nameRow.setAlignment(Pos.CENTER_LEFT);
 
+        configureFabricSelectors(version);
+        loadFabricVersions(version.id(), controller);
+
         String date = ViewSupport.releaseDate(version.releaseTime());
         String versionInfo = "Minecraft " + version.id() + " · 正式版"
                 + (date.isBlank() ? "" : " · " + date);
@@ -47,7 +57,8 @@ final class DownloadVersionSetupView extends VBox {
         VBox options = new VBox(12,
                 optionBar("版本信息", valueLabel(versionInfo)),
                 optionBar("选择 Forge 版本", loaderSelector("请选择 Forge 版本")),
-                optionBar("选择 Fabric 版本", loaderSelector("请选择 Fabric 版本")),
+                optionBar("选择 Fabric 版本", fabricLoaderSelector),
+                optionBar("选择 Fabric API 版本", fabricApiSelector),
                 optionBar("选择 NeoForge 版本", loaderSelector("请选择 NeoForge 版本"))
         );
 
@@ -66,6 +77,86 @@ final class DownloadVersionSetupView extends VBox {
         getChildren().addAll(nameRow, options, spacer, statusLabel, download);
     }
 
+    private void configureFabricSelectors(VersionManifest.Version version) {
+        fabricLoaderSelector.setPrefWidth(280);
+        fabricLoaderSelector.setMaxWidth(280);
+        fabricLoaderSelector.setPromptText("正在获取 Fabric 版本...");
+        fabricLoaderSelector.setConverter(new StringConverter<>() {
+            @Override
+            public String toString(FabricLoaderVersion loader) {
+                return loader == null ? "" : loader.version();
+            }
+
+            @Override
+            public FabricLoaderVersion fromString(String value) {
+                return fabricLoaderSelector.getItems().stream()
+                        .filter(loader -> loader.version().equals(value))
+                        .findFirst()
+                        .orElse(null);
+            }
+        });
+        fabricLoaderSelector.valueProperty().addListener((observable, oldValue, loader) -> {
+            String currentName = instanceNameField.getText().trim();
+            if (loader != null
+                    && (currentName.equals(version.id())
+                    || (currentName.startsWith("fabric-loader-")
+                    && currentName.endsWith("-" + version.id())))) {
+                instanceNameField.setText("fabric-loader-" + loader.version() + "-" + version.id());
+            }
+            updateFabricApiState();
+        });
+
+        fabricApiSelector.setPrefWidth(280);
+        fabricApiSelector.setMaxWidth(280);
+        fabricApiSelector.setPromptText("请先选择 Fabric 版本");
+        fabricApiSelector.setDisable(true);
+        fabricApiSelector.setConverter(new StringConverter<>() {
+            @Override
+            public String toString(FabricApiVersion api) {
+                return api == null ? "" : api.versionNumber();
+            }
+
+            @Override
+            public FabricApiVersion fromString(String value) {
+                return fabricApiSelector.getItems().stream()
+                        .filter(api -> api.versionNumber().equals(value))
+                        .findFirst()
+                        .orElse(null);
+            }
+        });
+    }
+
+    private void loadFabricVersions(String gameVersion, MainController controller) {
+        controller.fetchFabricLoaderVersions(gameVersion, this::showFabricLoaders,
+                message -> fabricLoaderSelector.setPromptText("获取 Fabric 版本失败"));
+        controller.fetchFabricApiVersions(gameVersion, this::showFabricApiVersions,
+                message -> fabricApiSelector.setPromptText("获取 Fabric API 版本失败"));
+    }
+
+    private void showFabricLoaders(List<FabricLoaderVersion> loaders) {
+        fabricLoaderSelector.getItems().setAll(loaders);
+        fabricLoaderSelector.setPromptText(loaders.isEmpty()
+                ? "没有可用的 Fabric 版本"
+                : "请选择 Fabric 版本");
+    }
+
+    private void showFabricApiVersions(List<FabricApiVersion> versions) {
+        fabricApiSelector.getItems().setAll(versions);
+        fabricApiSelector.setPromptText(versions.isEmpty()
+                ? "没有可用的 Fabric API 版本"
+                : "请选择 Fabric API 版本");
+        updateFabricApiState();
+    }
+
+    private void updateFabricApiState() {
+        boolean hasLoader = fabricLoaderSelector.getValue() != null;
+        if (!hasLoader) {
+            fabricApiSelector.setValue(null);
+        }
+        fabricApiSelector.setDisable(
+                downloading || !hasLoader || fabricApiSelector.getItems().isEmpty());
+    }
+
     private void startDownload(VersionManifest.Version version, MainController controller,
                                LaunchSettings launchSettings, CamlButton cancel,
                                CamlButton download) {
@@ -80,25 +171,66 @@ final class DownloadVersionSetupView extends VBox {
             return;
         }
 
+        FabricLoaderVersion fabricLoader = fabricLoaderSelector.getValue();
+        FabricApiVersion fabricApi = fabricLoader == null ? null : fabricApiSelector.getValue();
+        if (fabricLoader != null && instanceId.equals(version.id())) {
+            showStatus("安装 Fabric 时实例名不能与游戏版本号相同。", true);
+            return;
+        }
+
         cancel.setDisable(true);
+        downloading = true;
         instanceNameField.setDisable(true);
+        fabricLoaderSelector.setDisable(true);
+        fabricApiSelector.setDisable(true);
         download.setDisable(true);
         download.setText("正在下载...");
-        showStatus("正在下载 Minecraft " + version.id() + "，实例名：" + instanceId, false);
 
-        controller.downloadVersion(version.id(), instanceId, gameDirectory, () -> {
-            launchSettings.setSelectedVersion(instanceId);
-            download.setText("下载完成");
-            cancel.setDisable(false);
-            showStatus("下载完成：实例 " + instanceId + "（Minecraft " + version.id()
-                    + "）已安装到 " + gameDirectory, false);
-        }, message -> {
-            download.setDisable(false);
-            download.setText("下载实例");
-            cancel.setDisable(false);
-            instanceNameField.setDisable(false);
-            showStatus("下载失败：" + message, true);
-        });
+        if (fabricLoader == null) {
+            showStatus("正在下载 Minecraft " + version.id() + "，实例名：" + instanceId, false);
+            controller.downloadVersion(version.id(), instanceId, gameDirectory,
+                    () -> completeDownload(launchSettings, instanceId, gameDirectory, cancel, download,
+                            "下载完成：实例 " + instanceId + "（Minecraft " + version.id() + "）已安装到 " + gameDirectory),
+                    message -> failDownload(message, cancel, download));
+            return;
+        }
+
+        String apiText = fabricApi == null ? "" : "，Fabric API：" + fabricApi.versionNumber();
+        showStatus("正在安装 Fabric Loader " + fabricLoader.version()
+                + apiText + "，实例名：" + instanceId, false);
+        controller.downloadFabricVersion(
+                version.id(),
+                instanceId,
+                fabricLoader.version(),
+                fabricApi,
+                gameDirectory,
+                launchSettings.fullVersionIsolation(),
+                () -> completeDownload(launchSettings, instanceId, gameDirectory, cancel, download,
+                        "下载完成：实例 " + instanceId + " 已安装 Fabric Loader "
+                                + fabricLoader.version() + apiText),
+                message -> failDownload(message, cancel, download)
+        );
+    }
+
+    private void completeDownload(LaunchSettings launchSettings, String instanceId,
+                                  Path gameDirectory, CamlButton cancel,
+                                  CamlButton download, String message) {
+        launchSettings.setSelectedVersion(instanceId);
+        downloading = false;
+        download.setText("下载完成");
+        cancel.setDisable(false);
+        showStatus(message + "（游戏位置：" + gameDirectory + "）", false);
+    }
+
+    private void failDownload(String message, CamlButton cancel, CamlButton download) {
+        download.setDisable(false);
+        downloading = false;
+        download.setText("下载实例");
+        cancel.setDisable(false);
+        instanceNameField.setDisable(false);
+        fabricLoaderSelector.setDisable(false);
+        updateFabricApiState();
+        showStatus("下载失败：" + message, true);
     }
 
     private void showStatus(String text, boolean error) {

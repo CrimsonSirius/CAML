@@ -122,6 +122,20 @@ public final class VersionInstaller {
     }
 
     /**
+     * 直接安装给定的版本 JSON，例如 Fabric Meta 返回的 loader profile。
+     */
+    public InstalledVersion installProfile(
+            String instanceId,
+            Path gameDirectory,
+            String versionJson,
+            DownloadListener listener
+    ) throws IOException, InterruptedException {
+        instanceId = validateInstanceId(instanceId);
+        Objects.requireNonNull(versionJson, "versionJson");
+        return complete(instanceId, gameDirectory, versionJson, listener, true);
+    }
+
+    /**
      * 统一的收尾流程：解析合并、生成下载计划、补齐文件并返回安装结果。
      *
      * @param writeVersionJson 只有远程安装才需要写入版本 JSON，本地版本保持原文件不变
@@ -133,15 +147,20 @@ public final class VersionInstaller {
             DownloadListener listener,
             boolean writeVersionJson
     ) throws IOException, InterruptedException {
-        VersionInfo resolved = resolve(metadata.parseVersionInfo(versionJson), gameDirectory, versionId);
+        VersionInfo parsed = metadata.parseVersionInfo(versionJson);
+        VersionInfo resolved = resolve(parsed, gameDirectory, versionId);
 
         Path versionDirectory = gameDirectory.resolve("versions").resolve(versionId);
         Path versionFile = versionDirectory.resolve(versionId + ".json");
-        Path clientJar = versionDirectory.resolve(versionId + ".jar");
+        String clientJarId = resolveClientJarId(parsed, resolved, versionDirectory, versionId);
+        Path clientJar = gameDirectory
+                .resolve("versions")
+                .resolve(clientJarId)
+                .resolve(clientJarId + ".jar");
         Path librariesDirectory = gameDirectory.resolve("libraries");
         Path assetsDirectory = gameDirectory.resolve("assets");
 
-        downloadPlan(downloadPlanner.plan(resolved, gameDirectory), listener);
+        downloadPlan(downloadPlanner.plan(resolved, gameDirectory, clientJarId), listener);
 
         Path assetIndexFile = null;
         if (resolved.assetIndex() != null) {
@@ -184,6 +203,22 @@ public final class VersionInstaller {
 
     public void setDownloadConcurrency(int downloadConcurrency) {
         this.downloadConcurrency = DownloadConcurrency.clamp(downloadConcurrency);
+    }
+
+    private static String resolveClientJarId(
+            VersionInfo parsed,
+            VersionInfo resolved,
+            Path versionDirectory,
+            String versionId
+    ) {
+        if (parsed.jar() != null && !parsed.jar().isBlank()) {
+            return parsed.jar();
+        }
+        Path ownJar = versionDirectory.resolve(versionId + ".jar");
+        if (Files.isRegularFile(ownJar)) {
+            return versionId;
+        }
+        return resolved.clientJarId();
     }
 
     private static String validateInstanceId(String instanceId) {

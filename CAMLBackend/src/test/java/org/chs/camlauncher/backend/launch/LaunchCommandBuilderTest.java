@@ -46,7 +46,7 @@ class LaunchCommandBuilderTest {
         VersionInfo manifest = new VersionInfo(
                 "1.20.1", "release", null, mainClass, "5", null, null, null,
                 null, new JavaVersion("java-runtime-gamma", 17), List.of(), null,
-                null, null, null, null
+                null, null, null, null, null
         );
         InstalledVersion instance = new InstalledVersion(
                 "1.20.1", manifest, gameDirectory,

@@ -10,6 +10,7 @@ import org.chs.camlauncher.backend.download.OfficialDownloadSource;
 import org.chs.camlauncher.backend.metadata.MetadataService;
 import org.chs.camlauncher.backend.metadata.RuleEvaluator;
 import org.chs.camlauncher.backend.metadata.VersionManifestService;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -164,6 +165,81 @@ class VersionInstallerTest {
         } finally {
             server.stop(0);
         }
+    }
+
+    @Test
+    void localLoaderVersionUsesJarFieldForClientJarPath() throws Exception {
+        Path parentDirectory = gameDirectory.resolve("versions/1.20.1");
+        Files.createDirectories(parentDirectory);
+        Files.writeString(parentDirectory.resolve("1.20.1.json"), """
+                {
+                  "id": "1.20.1",
+                  "mainClass": "parent.Main"
+                }
+                """);
+
+        Path loaderDirectory = gameDirectory.resolve("versions/forge-instance");
+        Files.createDirectories(loaderDirectory);
+        Files.writeString(loaderDirectory.resolve("forge-instance.json"), """
+                {
+                  "id": "forge-instance",
+                  "inheritsFrom": "1.20.1",
+                  "jar": "1.20.1",
+                  "mainClass": "loader.Main"
+                }
+                """);
+
+        InstalledVersion installed = new VersionInstaller().install(
+                "forge-instance",
+                gameDirectory,
+                URI.create("https://example.invalid/version_manifest_v2.json"),
+                gameDirectory.resolve("cache/version_manifest_v2.json"),
+                DownloadListener.NONE
+        );
+
+        assertEquals("forge-instance", installed.id());
+        assertEquals("1.20.1", installed.manifest().clientJarId());
+        assertEquals(
+                gameDirectory.resolve("versions/1.20.1/1.20.1.jar").toAbsolutePath().normalize(),
+                installed.clientJar().toAbsolutePath().normalize()
+        );
+    }
+
+    @Test
+    void localLoaderProfileWithoutJarUsesParentClientJarPath() throws Exception {
+        Path parentDirectory = gameDirectory.resolve("versions/1.20.1");
+        Files.createDirectories(parentDirectory);
+        Files.writeString(parentDirectory.resolve("1.20.1.json"), """
+                {
+                  "id": "1.20.1",
+                  "mainClass": "parent.Main"
+                }
+                """);
+        Files.write(parentDirectory.resolve("1.20.1.jar"), new byte[]{1});
+
+        Path loaderDirectory = gameDirectory.resolve("versions/fabric-instance");
+        Files.createDirectories(loaderDirectory);
+        Files.writeString(loaderDirectory.resolve("fabric-instance.json"), """
+                {
+                  "id": "fabric-loader-test-1.20.1",
+                  "inheritsFrom": "1.20.1",
+                  "mainClass": "net.fabricmc.loader.impl.launch.knot.KnotClient"
+                }
+                """);
+
+        InstalledVersion installed = new VersionInstaller().install(
+                "fabric-instance",
+                gameDirectory,
+                URI.create("https://example.invalid/version_manifest_v2.json"),
+                gameDirectory.resolve("cache/version_manifest_v2.json"),
+                DownloadListener.NONE
+        );
+
+        assertEquals("1.20.1", installed.manifest().clientJarId());
+        assertEquals(
+                gameDirectory.resolve("versions/1.20.1/1.20.1.jar").toAbsolutePath().normalize(),
+                installed.clientJar().toAbsolutePath().normalize()
+        );
     }
 
     private static void respond(HttpExchange exchange, byte[] content) throws IOException {

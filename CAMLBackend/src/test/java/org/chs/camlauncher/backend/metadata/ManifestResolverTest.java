@@ -52,6 +52,7 @@ class ManifestResolverTest {
                 {
                   "id": "1.20.1-loader",
                   "inheritsFrom": "1.20.1",
+                  "jar": "1.20.1",
                   "mainClass": "child.Main",
                   "arguments": {
                     "game": ["--loader-game"]
@@ -71,6 +72,10 @@ class ManifestResolverTest {
         assertEquals(17, resolved.javaVersion().majorVersion());
         assertEquals("client-sha1", resolved.downloads().get("client").sha1());
         assertEquals(2, resolved.libraries().size());
+        assertEquals("loader:library:2.0", resolved.libraries().get(0).name());
+        assertEquals("base:library:1.0", resolved.libraries().get(1).name());
+        assertEquals("1.20.1", resolved.jar());
+        assertEquals("1.20.1", resolved.clientJarId());
         assertEquals(2, resolved.arguments().game().size());
         assertEquals(1, resolved.arguments().jvm().size());
     }

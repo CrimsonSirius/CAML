@@ -41,6 +41,13 @@ class NativeExtractorTest {
             addEntry(zip, "excluded/file.txt", "excluded");
         }
 
+        Path legacyNativeJar = libraries.resolve(
+                "org/example/legacy-native/1.0/legacy-native-1.0-natives-linux.jar");
+        Files.createDirectories(legacyNativeJar.getParent());
+        try (ZipOutputStream zip = new ZipOutputStream(Files.newOutputStream(legacyNativeJar))) {
+            addEntry(zip, "liblegacy.so", "legacy");
+        }
+
         Library library = new Library(
                 "org.example:native:1.0",
                 null,
@@ -52,12 +59,30 @@ class NativeExtractorTest {
                 ),
                 Map.of("linux", "natives-linux"),
                 new Library.Extract(List.of("excluded/")),
-                List.of()
+                List.of(),
+                List.of(),
+                null,
+                null,
+                null,
+                null
+        );
+        Library legacyNative = new Library(
+                "org.example:legacy-native:1.0:natives-linux",
+                "https://maven.example/repo/",
+                null,
+                Map.of(),
+                null,
+                List.of(),
+                List.of("legacy-sha1"),
+                true,
+                null,
+                null,
+                null
         );
         VersionInfo manifest = new VersionInfo(
                 "1.20.1", "release", null, "net.minecraft.client.main.Main", "5", null, null, null,
-                null, new JavaVersion("java-runtime-gamma", 17), List.of(library), null,
-                null, null, null, null
+                null, new JavaVersion("java-runtime-gamma", 17), List.of(library, legacyNative), null,
+                null, null, null, null, null
         );
         InstalledVersion instance = new InstalledVersion(
                 "1.20.1",
@@ -92,6 +117,7 @@ class NativeExtractorTest {
         ).extract(plan);
 
         assertTrue(Files.isRegularFile(nativesDirectory.resolve("libtest.so")));
+        assertTrue(Files.isRegularFile(nativesDirectory.resolve("liblegacy.so")));
         assertFalse(Files.exists(nativesDirectory.resolve("stale.txt")));
         assertFalse(Files.exists(nativesDirectory.resolve("META-INF")));
         assertFalse(Files.exists(nativesDirectory.resolve("excluded")));
@@ -106,7 +132,7 @@ class NativeExtractorTest {
                         List.of(new StringArgument("-Djava.library.path=${natives_directory}/java"))
                 ),
                 null, new JavaVersion("java-runtime-gamma", 25), List.of(), null,
-                null, null, null, null
+                null, null, null, null, null
         );
         Path nativesDirectory = gameDirectory.resolve("versions/26.3/natives");
 

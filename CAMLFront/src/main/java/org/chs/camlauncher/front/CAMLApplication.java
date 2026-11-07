@@ -40,6 +40,7 @@ public final class CAMLApplication extends Application {
     private Path gameDirectory;
     private boolean fullVersionIsolation = SettingsService.DEFAULT_VERSION_ISOLATION
             == VersionIsolationMode.FULL;
+    private String lastLaunchedInstanceId = "1.21.4";
 
     @Override
     public void init() throws Exception {
@@ -76,6 +77,11 @@ public final class CAMLApplication extends Application {
                     == VersionIsolationMode.FULL;
             logger.warn("无法读取版本隔离设置，使用默认值 {}", SettingsService.DEFAULT_VERSION_ISOLATION, e);
         }
+        try {
+            lastLaunchedInstanceId = backend.lastLaunchedInstanceId().orElse(lastLaunchedInstanceId);
+        } catch (IOException e) {
+            logger.warn("无法读取最后启动实例，使用默认实例 {}", lastLaunchedInstanceId, e);
+        }
         systemMemory = backend.systemMemory();
 
         logger.info("CAML frontend initialized");
@@ -86,7 +92,8 @@ public final class CAMLApplication extends Application {
         // 2. 组装 Controller 和 View
         controller = new MainController(backend);
         MainView view = new MainView(
-                controller, savedMaxMemoryMb, systemMemory, gameDirectory, fullVersionIsolation);
+                controller, savedMaxMemoryMb, systemMemory, gameDirectory,
+                fullVersionIsolation, lastLaunchedInstanceId);
 
         // 3. 按主屏幕可用区域决定窗口尺寸：小屏不溢出，大屏不过小，默认居中
         Rectangle2D screen = Screen.getPrimary().getVisualBounds();

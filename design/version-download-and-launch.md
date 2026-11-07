@@ -141,13 +141,20 @@ versions/<parentId>/<parentId>.json
 
 合并由 `ManifestResolver` 负责：
 
-- 父版本在前，子版本覆盖标量字段。
+- 标量字段由子版本覆盖父版本；`jar` 未指定时继承父版本。
 - `arguments.game` 和 `arguments.jvm` 合并。
-- `libraries` 合并。
+- `libraries` 合并为“子版本库在前、父版本库在后”，classpath 按路径去重时子库优先。
 - `downloads` 和 `logging` 合并。
 - 清除 `inheritsFrom`，得到可下载的解析后 manifest。
 
-当前没有实现从远程自动安装加载器版本，所以加载器版本的 `inheritsFrom` 依赖本地已经存在的父版本。
+加载器版本的 `inheritsFrom` 依赖本地已经存在的父版本。Fabric 安装会先确保原版父版本存在。
+
+Fabric 安装流程：
+
+- 从 `https://meta.fabricmc.net/v2/versions/loader/<game>` 获取 Loader 版本。
+- 获取 `<game>/<loader>/profile/json`，写入 `versions/<instance>/<instance>.json`。
+- profile 没有 `jar` 时复用父版本客户端 jar。
+- Fabric API 从 Modrinth `fabric-api` 项目获取，并写入实际游戏目录的 `mods`。
 
 ### 2.6 生成基础下载计划
 
@@ -155,12 +162,14 @@ versions/<parentId>/<parentId>.json
 
 - 客户端 jar：`versions/<id>/<id>.jar`。
 - libraries：`libraries/<Maven 路径>`。
+- 旧式 Forge library 没有 `downloads` 时，从 `name` 推导 Maven 路径，从 `url` 补下载地址，并使用 `checksums` 第一个 SHA-1。
 - 当前系统的 native classifier。
 - asset index：`assets/indexes/<assetIndexId>.json`。
 
 规则处理：
 
 - 使用 `RuleEvaluator` 过滤 library 的 `rules`。
+- `clientreq=false` 的 library 在客户端下载和 classpath 中跳过。
 - 最后一个匹配规则的 action 生效。
 - native classifier 中的 `${arch}` 替换为当前位数。
 - 相同目标路径会去重。
@@ -283,7 +292,7 @@ assetIndexFile
 
 ### 2.13 当前下载限制
 
-- 只支持原版安装；加载器安装尚未实现。
+- 支持原版和 Fabric Loader/Fabric API 安装；Quilt、Forge、NeoForge 尚未实现。
 - `inheritsFrom` 只读取本地父版本，不会自动安装父版本。
 - 只有官方下载源，镜像源接口尚未接入配置。
 - 下载使用有界线程池并发执行，并发数可配置为 1–256；下载取消尚未实现。
@@ -406,7 +415,7 @@ classpath 由 `ClasspathBuilder` 单独生成。Java 检测和匹配细节见 [r
 遍历 resolved manifest 的 libraries
 → 按 RuleEvaluator 过滤 rules
 → 排除 native-only library
-→ 读取 downloads.artifact
+→ 读取 downloads.artifact，缺失时从 name 推导 Maven 路径
 → 解析 libraries/<path> 路径
 → 去重并保持顺序
 → 最后追加客户端 jar
@@ -414,11 +423,13 @@ classpath 由 `ClasspathBuilder` 单独生成。Java 检测和匹配细节见 [r
 
 规则：
 
-- `downloads.artifact` 存在时才加入 classpath。
+- 新式 library 使用 `downloads.artifact.path`；旧式 Forge library 从 `name` 推导 Maven 路径。
+- `clientreq=false` 的库不加入 classpath。
 - classifier 为 `natives-*` 的 native-only 库不加入 classpath。
 - 有 native classifier 的普通库仍保留主 artifact。
-- 同一个目标路径只加入一次。
+- 先按 `group:artifact:classifier` 去重，保留先出现的子版本库；再按目标路径去重。
 - 客户端 jar 固定放在最后。
+- 客户端 jar 路径来自 manifest 的 `jar` 字段，未指定时回退到实例 ID。
 - `join(List<Path>)` 使用 `File.pathSeparator` 拼接。
 
 对外入口：
@@ -451,10 +462,10 @@ String joined = backend.classpathBuilder().join(classpath);
 
 `PlaceholderResolver` 和 `LaunchPlaceholders` 负责：
 
-- 玩家名、UUID、accessToken。
+- 玩家名、UUID、accessToken、旧版 `auth_session`。
 - 版本名、版本类型、游戏目录。
 - assets 目录、asset index、natives 目录。
-- classpath、libraries 目录。
+- classpath、libraries 目录、`jar` 指定的客户端 jar。
 - 启动器名称和版本。
 - 分辨率。
 

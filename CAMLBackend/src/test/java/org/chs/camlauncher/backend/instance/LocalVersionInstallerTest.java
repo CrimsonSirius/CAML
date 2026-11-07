@@ -48,6 +48,8 @@ class LocalVersionInstallerTest {
                 }
                 """;
         Path customFile = writeVersionJson("1.21.4-DeepSeek", customJson);
+        Files.write(gameDirectory.resolve("versions/1.21.4-DeepSeek/1.21.4-DeepSeek.jar"),
+                new byte[]{1});
 
         VersionInstaller installer = new VersionInstaller(
                 new MetadataService(),
