@@ -5,7 +5,7 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import javafx.stage.DirectoryChooser;
-import org.chs.camlauncher.front.controller.MainController;
+import org.chs.camlauncher.front.controller.SettingsController;
 import org.chs.camlauncher.ui.control.CamlButton;
 import org.chs.camlauncher.ui.control.CamlTextField;
 
@@ -16,12 +16,12 @@ import java.nio.file.Path;
 /** 设置页中的“游戏位置”分组。草稿只有点击保存后才写入共享状态和后端。 */
 final class GameLocationSettingsView extends VBox {
     private final LaunchSettings launchSettings;
-    private final MainController controller;
+    private final SettingsController controller;
     private final CamlTextField pathField;
     private final Label statusLabel;
     private final CamlButton saveButton;
 
-    GameLocationSettingsView(LaunchSettings launchSettings, MainController controller) {
+    GameLocationSettingsView(LaunchSettings launchSettings, SettingsController controller) {
         this.launchSettings = launchSettings;
         this.controller = controller;
 

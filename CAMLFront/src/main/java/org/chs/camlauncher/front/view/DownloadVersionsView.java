@@ -9,8 +9,8 @@ import javafx.scene.control.ScrollPane;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
-import org.chs.camlauncher.backend.metadata.VersionManifest;
-import org.chs.camlauncher.front.controller.MainController;
+import org.chs.camlauncher.backend.metadata.model.VersionManifest;
+import org.chs.camlauncher.front.controller.DownloadsController;
 import org.chs.camlauncher.ui.control.CamlButton;
 
 import java.util.List;
@@ -21,7 +21,7 @@ final class DownloadVersionsView extends VBox {
     private final Label statusLabel = new Label("正在从官方源获取正式版列表...");
     private final ScrollPane scroll = new ScrollPane();
 
-    DownloadVersionsView(MainController controller,
+    DownloadVersionsView(DownloadsController controller,
                          Consumer<VersionManifest.Version> onVersionSelected) {
         getStyleClass().add("app-download-content");
         setPadding(new Insets(32, 40, 32, 40));

@@ -1,6 +1,6 @@
 package org.chs.camlauncher.backend.loader.fabric;
 
-import org.chs.camlauncher.backend.download.DownloadItem;
+import org.chs.camlauncher.backend.download.model.DownloadItem;
 import org.chs.camlauncher.backend.download.DownloadListener;
 import org.chs.camlauncher.backend.download.FileDownloader;
 import org.chs.camlauncher.backend.instance.InstalledVersion;

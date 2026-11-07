@@ -3,6 +3,11 @@ package org.chs.camlauncher.backend.metadata;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import org.chs.camlauncher.backend.json.JsonService;
+import org.chs.camlauncher.backend.metadata.model.Argument;
+import org.chs.camlauncher.backend.metadata.model.AssetIndexFile;
+import org.chs.camlauncher.backend.metadata.model.VersionInfo;
+import org.chs.camlauncher.backend.metadata.model.VersionManifest;
+import org.chs.camlauncher.backend.metadata.parse.ArgumentAdapter;
 
 import java.io.IOException;
 import java.nio.file.Path;

@@ -7,6 +7,13 @@ import org.chs.camlauncher.backend.instance.GameDataLayout;
 import org.chs.camlauncher.backend.instance.InstalledVersion;
 import org.chs.camlauncher.backend.instance.VersionIsolationMode;
 import org.chs.camlauncher.backend.instance.VersionInstaller;
+import org.chs.camlauncher.backend.launch.classpath.ClasspathBuilder;
+import org.chs.camlauncher.backend.launch.patch.NeoForge262VulkanFix;
+import org.chs.camlauncher.backend.launch.prepare.NativeExtractor;
+import org.chs.camlauncher.backend.launch.prepare.VirtualAssetInstaller;
+import org.chs.camlauncher.backend.launch.process.GameProcess;
+import org.chs.camlauncher.backend.launch.process.ProcessLauncher;
+import org.chs.camlauncher.backend.launch.process.ProcessListener;
 import org.chs.camlauncher.backend.runtime.JavaLocator;
 import org.chs.camlauncher.backend.runtime.JavaRequirement;
 import org.chs.camlauncher.backend.runtime.JavaRuntime;
@@ -130,16 +137,19 @@ public final class GameLaunchService {
                         null
                 ));
 
+        Path gameDataDirectory = GameDataLayout.resolve(
+                installed.gameDirectory(),
+                installed.versionDirectory(),
+                isolationMode
+        );
+        NeoForge262VulkanFix.apply(installed.manifest(), gameDataDirectory);
+
         LaunchPlan plan = launchPlanner.create(
                 installed,
                 auth,
                 java,
                 options,
-                GameDataLayout.resolve(
-                        installed.gameDirectory(),
-                        installed.versionDirectory(),
-                        isolationMode
-                )
+                gameDataDirectory
         );
 
         plan = virtualAssetInstaller.prepare(plan);

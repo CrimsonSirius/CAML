@@ -3,14 +3,14 @@ package org.chs.camlauncher.front.view;
 import javafx.geometry.Orientation;
 import javafx.scene.control.SplitPane;
 import javafx.scene.layout.StackPane;
-import org.chs.camlauncher.front.controller.MainController;
+import org.chs.camlauncher.front.controller.HomeController;
 import org.chs.camlauncher.ui.control.CamlPageHost;
 
 /**
  * 主页：启动表单 + 运行日志，以及二级游戏实例选择页。
  */
 final class HomeView extends StackPane {
-    private final MainController controller;
+    private final HomeController controller;
     private final LaunchSettings launchSettings;
     private final LaunchFormView formPane;
     private final LogPaneView logPane;
@@ -18,7 +18,7 @@ final class HomeView extends StackPane {
     private final CamlPageHost pageHost;
     private WorkspaceLayout.Plan appliedLayout;
 
-    HomeView(MainController controller, LaunchSettings launchSettings) {
+    HomeView(HomeController controller, LaunchSettings launchSettings) {
         this.controller = controller;
         this.launchSettings = launchSettings;
 

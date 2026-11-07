@@ -6,10 +6,10 @@ import org.chs.camlauncher.backend.auth.AuthSession;
 import org.chs.camlauncher.backend.auth.OfflineAccount;
 import org.chs.camlauncher.backend.config.BackendConfig;
 import org.chs.camlauncher.backend.config.BackendPaths;
-import org.chs.camlauncher.backend.download.AssetDownloadPlanner;
+import org.chs.camlauncher.backend.download.plan.AssetDownloadPlanner;
 import org.chs.camlauncher.backend.download.DownloadListener;
 import org.chs.camlauncher.backend.download.DownloadConcurrency;
-import org.chs.camlauncher.backend.download.DownloadPlanner;
+import org.chs.camlauncher.backend.download.plan.DownloadPlanner;
 import org.chs.camlauncher.backend.download.FileDownloader;
 import org.chs.camlauncher.backend.instance.GameDataLayout;
 import org.chs.camlauncher.backend.instance.InstalledVersion;
@@ -20,21 +20,26 @@ import org.chs.camlauncher.backend.loader.fabric.FabricApiVersion;
 import org.chs.camlauncher.backend.loader.fabric.FabricInstaller;
 import org.chs.camlauncher.backend.loader.fabric.FabricLoaderVersion;
 import org.chs.camlauncher.backend.loader.fabric.FabricService;
+import org.chs.camlauncher.backend.loader.ExternalLoaderInstaller;
+import org.chs.camlauncher.backend.loader.forge.ForgeService;
+import org.chs.camlauncher.backend.loader.forge.ForgeVersion;
+import org.chs.camlauncher.backend.loader.neoforge.NeoForgeService;
+import org.chs.camlauncher.backend.loader.neoforge.NeoForgeVersion;
+import org.chs.camlauncher.backend.launch.GameLaunch;
+import org.chs.camlauncher.backend.launch.GameLaunchService;
 import org.chs.camlauncher.backend.launch.LaunchOptions;
 import org.chs.camlauncher.backend.launch.LaunchPlan;
 import org.chs.camlauncher.backend.launch.LaunchPlanner;
-import org.chs.camlauncher.backend.launch.LaunchCommandBuilder;
-import org.chs.camlauncher.backend.launch.ProcessLauncher;
-import org.chs.camlauncher.backend.launch.ClasspathBuilder;
-import org.chs.camlauncher.backend.launch.GameArgumentsBuilder;
-import org.chs.camlauncher.backend.launch.GameLaunch;
-import org.chs.camlauncher.backend.launch.GameLaunchService;
-import org.chs.camlauncher.backend.launch.JvmArgumentsBuilder;
-import org.chs.camlauncher.backend.launch.NativeExtractor;
-import org.chs.camlauncher.backend.launch.ProcessListener;
-import org.chs.camlauncher.backend.launch.VirtualAssetInstaller;
+import org.chs.camlauncher.backend.launch.classpath.ClasspathBuilder;
+import org.chs.camlauncher.backend.launch.command.GameArgumentsBuilder;
+import org.chs.camlauncher.backend.launch.command.JvmArgumentsBuilder;
+import org.chs.camlauncher.backend.launch.command.LaunchCommandBuilder;
+import org.chs.camlauncher.backend.launch.prepare.NativeExtractor;
+import org.chs.camlauncher.backend.launch.prepare.VirtualAssetInstaller;
+import org.chs.camlauncher.backend.launch.process.ProcessLauncher;
+import org.chs.camlauncher.backend.launch.process.ProcessListener;
 import org.chs.camlauncher.backend.metadata.MetadataService;
-import org.chs.camlauncher.backend.metadata.VersionManifest;
+import org.chs.camlauncher.backend.metadata.model.VersionManifest;
 import org.chs.camlauncher.backend.metadata.VersionManifestService;
 import org.chs.camlauncher.backend.runtime.JavaLocator;
 import org.chs.camlauncher.backend.settings.SettingsService;
@@ -68,6 +73,9 @@ public final class CAMLBackend implements AutoCloseable {
     private final VersionInstaller versionInstaller;
     private final FabricService fabricService;
     private final FabricInstaller fabricInstaller;
+    private final ForgeService forgeService;
+    private final NeoForgeService neoForgeService;
+    private final ExternalLoaderInstaller externalLoaderInstaller;
     private final LaunchPlanner launchPlanner;
     private final ClasspathBuilder classpathBuilder;
     private final JvmArgumentsBuilder jvmArgumentsBuilder;
@@ -104,6 +112,16 @@ public final class CAMLBackend implements AutoCloseable {
                 versionInstaller,
                 fabricService,
                 fileDownloader,
+                VersionManifestService.DEFAULT_MANIFEST_URI,
+                config.dataDirectory().resolve("cache").resolve("version_manifest_v2.json")
+        );
+        this.forgeService = new ForgeService();
+        this.neoForgeService = new NeoForgeService();
+        this.externalLoaderInstaller = new ExternalLoaderInstaller(
+                versionInstaller,
+                javaLocator,
+                fileDownloader,
+                metadata,
                 VersionManifestService.DEFAULT_MANIFEST_URI,
                 config.dataDirectory().resolve("cache").resolve("version_manifest_v2.json")
         );
@@ -321,6 +339,52 @@ public final class CAMLBackend implements AutoCloseable {
                 apiVersion,
                 gameDirectory,
                 fullVersionIsolation,
+                listener
+        );
+    }
+
+    public List<ForgeVersion> fetchForgeVersions(String gameVersion)
+            throws IOException, InterruptedException {
+        return forgeService.fetchVersions(gameVersion);
+    }
+
+    public List<NeoForgeVersion> fetchNeoForgeVersions(String gameVersion)
+            throws IOException, InterruptedException {
+        return neoForgeService.fetchVersions(gameVersion);
+    }
+
+    public InstalledVersion installForgeVersion(
+            String gameVersion,
+            String instanceId,
+            ForgeVersion version,
+            Path gameDirectory,
+            DownloadListener listener
+    ) throws IOException, InterruptedException {
+        Objects.requireNonNull(version, "version");
+        return externalLoaderInstaller.install(
+                "Forge",
+                gameVersion,
+                instanceId,
+                version.installerUri(),
+                gameDirectory,
+                listener
+        );
+    }
+
+    public InstalledVersion installNeoForgeVersion(
+            String gameVersion,
+            String instanceId,
+            NeoForgeVersion version,
+            Path gameDirectory,
+            DownloadListener listener
+    ) throws IOException, InterruptedException {
+        Objects.requireNonNull(version, "version");
+        return externalLoaderInstaller.install(
+                "NeoForge",
+                gameVersion,
+                instanceId,
+                version.installerUri(),
+                gameDirectory,
                 listener
         );
     }

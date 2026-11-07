@@ -7,7 +7,7 @@ import javafx.scene.control.ScrollPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
-import org.chs.camlauncher.front.controller.MainController;
+import org.chs.camlauncher.front.controller.HomeController;
 import org.chs.camlauncher.ui.control.CamlButton;
 
 import java.nio.file.Path;
@@ -18,7 +18,7 @@ final class InstancePickerView extends VBox {
     private final Label statusLabel = new Label("正在扫描游戏实例...");
     private final ScrollPane scroll = new ScrollPane();
 
-    InstancePickerView(MainController controller, Path gameDirectory,
+    InstancePickerView(HomeController controller, Path gameDirectory,
                        Consumer<String> onSelected, Runnable onBack) {
         getStyleClass().add("app-instance-picker");
         setPadding(new Insets(32, 40, 32, 40));

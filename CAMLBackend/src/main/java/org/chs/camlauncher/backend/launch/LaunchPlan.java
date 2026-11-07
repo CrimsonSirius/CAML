@@ -2,7 +2,7 @@ package org.chs.camlauncher.backend.launch;
 
 import org.chs.camlauncher.backend.auth.AuthSession;
 import org.chs.camlauncher.backend.instance.InstalledVersion;
-import org.chs.camlauncher.backend.metadata.VersionInfo;
+import org.chs.camlauncher.backend.metadata.model.VersionInfo;
 import org.chs.camlauncher.backend.runtime.JavaRuntime;
 
 import java.nio.file.Path;

@@ -19,20 +19,20 @@ CAML 是一个基于 **Java 25 + JavaFX** 的 Minecraft 启动器，采用前后
 | 元数据 | 解析 `version_manifest_v2.json`、单版本 JSON、字符串/带规则参数、libraries、asset index、downloads、javaVersion、logging、`jar`；处理 OS / 架构 / 版本正则 / features 规则；合并 `inheritsFrom` 父版本，子库优先 |
 | 远程元数据 | 拉取官方版本清单与单版本 JSON，本地缓存，网络失败时回退缓存 |
 | 下载 | 客户端 jar、libraries、natives、asset index、assets objects 下载计划；SHA-1 校验；`.part` 临时文件 + 原子移动；失败重试；并发下载数可设 1–256；已有有效文件跳过 |
-| 版本安装 | 本地已安装版本直接复用（支持第三方启动器/整合包的自定义版本 ID），下载时可用自定义实例名；官方版本 ID 负责元数据，实例 ID 作为 `versions/<id>` 目录名；支持 Fabric Loader 和可选 Fabric API 安装；支持旧式 Forge `name/url/checksums/clientreq` 库、Maven 路径推导和子版本库优先去重；缺失文件自动补齐；兼容 PCL/HMCL 版本隔离布局；基础文件完成后才写入版本 JSON |
+| 版本安装 | 本地已安装版本直接复用（支持第三方启动器/整合包的自定义版本 ID），下载时可用自定义实例名；官方版本 ID 负责元数据，实例 ID 作为 `versions/<id>` 目录名；支持 Fabric Loader/Fabric API、Forge、NeoForge 安装；支持旧式 Forge library、Maven 路径推导和子版本库优先去重；缺失文件自动补齐；兼容 PCL/HMCL 版本隔离布局；基础文件完成后才写入版本 JSON |
 | 账号 | 离线登录，稳定离线 UUID，生成 `AuthSession` |
 | Java | 扫描 `java.home`、`JAVA_HOME`、`PATH` 及常见 JDK 目录；读取版本、供应商、架构、位数；按版本要求选择运行时；Windows 优先 `javaw.exe` |
 | 启动 | 不可变 `LaunchPlan`、classpath 构建、JVM/游戏参数与 `${...}` 占位符、natives 子目录解压、Log4j 配置、旧版本 virtual assets 重建；根据设置选择，`--gameDir` 指向 `versions/<id>` 或 `.minecraft` 根目录 |
 | 进程 | `ProcessBuilder` 启动、工作目录与环境变量、stdout/stderr 转发、退出码回调、停止能力；命令行过长时自动回退 `@argfile` / manifest classpath jar；`LaunchException` 分类错误并提供中文提示 |
-| 界面 | CAML 组件库；外部 CSS 主题（`~/.caml/themes`）；顶部“主页 / 下载 / 设置”导航；窗口尺寸按主屏可用区域自适应并居中（小屏收缩、大屏限幅）；下载页“添加游戏实例”胶囊、官方正式版列表和下载设置页（实例名输入、版本信息、Forge/Fabric/Fabric API/NeoForge 选择条、底部原版或 Fabric 下载按钮）；设置页“游戏设置 / 下载设置 / 启动器设置”侧边栏；“游戏位置”设置组（输入、浏览、显式保存）；“版本隔离”单选组；“设定下载并发数”滑块组；主页“浏览游戏实例”二级列表和“管理实例”空页；启动成功后记住最后启动实例并在下次启动恢复；叠层内存滑块（灰色=系统已使用+游戏分配，淡灰=未使用），每 0.5 秒刷新；游戏位置、版本隔离、下载并发数和内存设置持久化；宽屏左右分栏、窄屏上下堆叠 |
+| 界面 | CAML 组件库；外部 CSS 主题（`~/.caml/themes`）；顶部“主页 / 下载 / 设置”导航；窗口尺寸按主屏可用区域自适应并居中（小屏收缩、大屏限幅）；下载页“添加游戏实例”胶囊、官方正式版列表和下载设置页（实例名输入、版本信息、Forge/Fabric/Fabric API/NeoForge 选择条、底部原版或加载器下载按钮）；设置页“游戏设置 / 下载设置 / 启动器设置”侧边栏；“游戏位置”设置组（输入、浏览、显式保存）；“版本隔离”单选组；“设定下载并发数”滑块组；主页“浏览游戏实例”二级列表和“管理实例”空页；启动成功后记住最后启动实例并在下次启动恢复；叠层内存滑块（灰色=系统已使用+游戏分配，淡灰=未使用），每 0.5 秒刷新；游戏位置、版本隔离、下载并发数和内存设置持久化；宽屏左右分栏、窄屏上下堆叠 |
 
 ### 尚未实现
 
 - 微软账号登录、token 刷新与安全存储
-- Quilt / Forge / NeoForge 等加载器安装
+- Quilt 加载器安装
 - CAMLFront 启动错误对话框、停止按钮、启动器隐藏 / 保留 / 关闭策略
 - 崩溃分析、异常退出分类和真实 Minecraft 客户端端到端验证
-- Forge、NeoForge 加载器安装
+- Quilt 加载器安装
 - 镜像源、下载取消与内容寻址缓存
 - quick play、服务器直连、整合包与模组管理
 
@@ -46,14 +46,13 @@ CAML/
 │  ├─ src/main/java/org/chs/camlauncher/backend/
 │  │  ├─ api/         后端 facade 与状态 DTO
 │  │  ├─ config/      配置与目录约定
-│  │  ├─ metadata/    版本清单、版本 JSON、规则、继承合并
+│  │  ├─ metadata/    版本清单和 JSON；model/rule/parse/resolve 子包
 │  │  ├─ instance/    实例模型、版本安装与版本隔离判定
-│  │  ├─ download/    下载源、下载计划、SHA-1、原子落盘
-│  │  │                并发执行器与并发数约束
+│  │  ├─ download/    下载入口；model/plan/source/io/hash 子包
 │  │  ├─ auth/        账号与离线登录
 │  │  ├─ runtime/     Java 运行时检测与匹配
-│  │  ├─ launch/      LaunchPlan、classpath、参数、进程启动
-│  │  ├─ loader/      Fabric Loader/Fabric API 安装编排
+│  │  ├─ launch/      启动编排；command/classpath/prepare/process/patch 子包
+│  │  ├─ loader/      Fabric/Forge/NeoForge 安装编排
 │  │  ├─ theme/       主题目录、默认主题复制和当前主题配置
 │  │  ├─ settings/    启动器设置持久化
 │  │  ├─ system/      物理内存读取（Linux MemAvailable）
@@ -69,7 +68,12 @@ CAML/
 │  ├─ src/main/java/org/chs/camlauncher/front/
 │  │  ├─ CAMLApplication.java         应用入口
 │  │  ├─ WindowSizePlanner.java       窗口尺寸与居中计算
-│  │  ├─ controller/                  MainController
+│  │  ├─ controller/
+│  │  │  ├─ MainController.java       页面控制器组合入口
+│  │  │  ├─ HomeController.java       启动、日志回调和实例扫描
+│  │  │  ├─ DownloadsController.java  版本列表和实例安装
+│  │  │  ├─ SettingsController.java   设置持久化和内存监视
+│  │  │  └─ ControllerContext.java    后端访问、I/O 线程和 UI 回调
 │  │  └─ view/
 │  │     ├─ MainView.java             应用壳层、顶部导航和页面宿主
 │  │     ├─ HomeView.java             主页分栏与自适应
@@ -77,7 +81,7 @@ CAML/
 │  │     ├─ LogPaneView.java          运行日志面板
 │  │     ├─ DownloadsView.java        下载页导航与内部页面切换
 │  │     ├─ DownloadVersionsView.java 官方正式版列表
-│  │     ├─ DownloadVersionSetupView.java 版本信息、Fabric 加载器/API 选择与下载
+│  │     ├─ DownloadVersionSetupView.java 版本信息、Fabric/Forge/NeoForge 选择与下载
 │  │     ├─ SettingsView.java         设置页侧边栏
 │  │     ├─ GameSettingsView.java     游戏设置分组
 │  │     ├─ DownloadSettingsView.java 下载并发数设置
@@ -104,6 +108,7 @@ CAML/
 - `CAMLUI` 不内置任何固定配色；所有颜色令牌来自外部主题文件。
 - `CAMLFront` 只通过 CAMLUI 组件搭建界面，不直接读写文件、不直接发 HTTP、不直接启动进程。
 - `MainView` 只负责壳层和页面切换；各页面、表单、日志和设置内容独立成类。
+- `MainController` 只组合 `HomeController`、`DownloadsController` 和 `SettingsController`，具体交互按页面拆分。
 - 前后端通过 facade、DTO、事件和 `CompletableFuture` 交互。
 - 网络、磁盘、进程和认证操作不得在 JavaFX Application Thread 执行。
 

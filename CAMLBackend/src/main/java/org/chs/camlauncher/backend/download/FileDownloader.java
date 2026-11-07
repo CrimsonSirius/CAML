@@ -1,5 +1,8 @@
 package org.chs.camlauncher.backend.download;
 
+import org.chs.camlauncher.backend.download.hash.HashVerifier;
+import org.chs.camlauncher.backend.download.model.DownloadItem;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;

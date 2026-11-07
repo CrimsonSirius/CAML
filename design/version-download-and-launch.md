@@ -156,6 +156,14 @@ Fabric 安装流程：
 - profile 没有 `jar` 时复用父版本客户端 jar。
 - Fabric API 从 Modrinth `fabric-api` 项目获取，并写入实际游戏目录的 `mods`。
 
+Forge/NeoForge 安装流程：
+
+- 从 Forge/NeoForge Maven `maven-metadata.xml` 筛选当前 Minecraft 版本的 installer。
+- 先确保原版父版本存在，再创建 staging 目录并复制父版本 JSON 和客户端 jar。
+- 运行官方 installer 的 headless `--installClient <staging>`，由官方 processor 生成运行时库和版本文件。
+- 把 staging libraries 合并回共享 `libraries`，再按用户实例名移动版本目录。
+- 最后用 `VersionInstaller` 读取安装结果，解析 `inheritsFrom` 并校验启动所需文件。
+
 ### 2.6 生成基础下载计划
 
 `DownloadPlanner.plan(resolved, gameDirectory)` 生成基础文件计划，包含：
@@ -292,11 +300,33 @@ assetIndexFile
 
 ### 2.13 当前下载限制
 
-- 支持原版和 Fabric Loader/Fabric API 安装；Quilt、Forge、NeoForge 尚未实现。
+- 支持原版、Fabric Loader/Fabric API、Forge 和 NeoForge 安装；Quilt 尚未实现。
 - `inheritsFrom` 只读取本地父版本，不会自动安装父版本。
 - 只有官方下载源，镜像源接口尚未接入配置。
 - 下载使用有界线程池并发执行，并发数可配置为 1–256；下载取消尚未实现。
 - 没有内容寻址缓存，只有目标文件存在且 SHA-1 匹配时跳过。
+
+### 2.14 metadata / download 包结构
+
+```text
+metadata/
+├─ MetadataService.java         JSON 解析入口
+├─ VersionManifestService.java  版本清单/单版本 JSON 获取与缓存
+├─ model/                       版本、库、资源和参数 DTO
+├─ rule/                        规则模型和系统匹配
+├─ parse/                       自定义 Gson 解析
+└─ resolve/                     inheritsFrom 合并
+
+download/
+├─ FileDownloader.java          文件下载入口
+├─ DownloadListener.java        进度回调
+├─ DownloadConcurrency.java     并发数约束
+├─ model/                       DownloadItem、DownloadPlan
+├─ plan/                        版本和资源下载计划
+├─ source/                      下载源和候选地址
+├─ io/                          并发任务执行
+└─ hash/                        SHA-1 计算与校验
+```
 
 ## 3. 启动链路
 
@@ -581,6 +611,7 @@ GameProcess process = backend.processLauncher().launch(plan, classpath, listener
 → 离线登录
 → 选择游戏 Java
 → GameDataLayout.resolve 应用版本隔离模式
+→ NeoForge 26.2 Vulkan 兼容修复
 → 创建 LaunchPlan
 → 重建 virtual assets
 → 解压 natives
@@ -631,6 +662,42 @@ command_history.txt
 `libraries` 和 `assets` 都来自 `.minecraft` 根目录。主页根据当前显式模式显示实际
 存档位置；`GameDirectoryInfo.isolatedVersions()` 仍保留给目录扫描和兼容用途。
 
+### 3.13 NeoForge 26.2 + Vulkan 兼容修复
+
+NeoForge 26.2 会把早期加载屏创建器创建的 OpenGL 窗口交给 Minecraft 作为主窗口。
+Vulkan 后端随后尝试在该窗口上创建 surface，GLFW 因窗口的 client API 不是
+`GLFW_NO_API` 而报 65540。
+
+`GameLaunchService` 在创建 `LaunchPlan` 前调用 `NeoForge262VulkanFix`：
+
+- 仅匹配主类为 `net.neoforged.fml.startup.Client` 且
+  `--fml.neoForgeVersion` 为 `26.2.*` 的实例。
+- 仅在实际游戏数据目录的 `options.txt` 选择 `vulkan` 时生效。
+- 把该目录的 `config/fml.toml` 中 `earlyWindowControl` 改为 `false`；
+  文件不存在时创建最小配置。
+- 其他 NeoForge 版本、OpenGL 实例和原版实例不受影响。
+
+关闭早期窗口后，Minecraft 会自行创建带 `GLFW_NO_API` 的窗口，Vulkan surface
+可以正常初始化。
+
+### 3.14 launch 包结构
+
+```text
+launch/
+├─ GameLaunchService.java       启动编排入口
+├─ GameLaunch.java              启动结果
+├─ LaunchPlan.java              启动计划
+├─ LaunchPlanner.java           启动计划构建
+├─ LaunchOptions.java           启动选项
+├─ LaunchException.java         启动错误
+├─ LaunchFailure.java           启动错误分类
+├─ command/                     参数、占位符和启动命令
+├─ classpath/                   classpath 构建
+├─ prepare/                     natives 和 virtual assets
+├─ process/                     进程、参数文件/manifest 回退和输出监控
+└─ patch/                       版本专用兼容修复
+```
+
 ## 4. 相关源码
 
 - `CAMLBackend/src/main/java/org/chs/camlauncher/backend/instance/VersionInstaller.java`
@@ -638,25 +705,26 @@ command_history.txt
 - `CAMLBackend/src/main/java/org/chs/camlauncher/backend/instance/VersionIsolationMode.java`
 - `CAMLBackend/src/main/java/org/chs/camlauncher/backend/api/GameDirectoryInfo.java`
 - `CAMLBackend/src/main/java/org/chs/camlauncher/backend/metadata/VersionManifestService.java`
-- `CAMLBackend/src/main/java/org/chs/camlauncher/backend/download/DownloadPlanner.java`
-- `CAMLBackend/src/main/java/org/chs/camlauncher/backend/download/AssetDownloadPlanner.java`
+- `CAMLBackend/src/main/java/org/chs/camlauncher/backend/download/plan/DownloadPlanner.java`
+- `CAMLBackend/src/main/java/org/chs/camlauncher/backend/download/plan/AssetDownloadPlanner.java`
 - `CAMLBackend/src/main/java/org/chs/camlauncher/backend/download/FileDownloader.java`
-- `CAMLBackend/src/main/java/org/chs/camlauncher/backend/launch/ClasspathBuilder.java`
-- `CAMLBackend/src/main/java/org/chs/camlauncher/backend/launch/PlaceholderResolver.java`
-- `CAMLBackend/src/main/java/org/chs/camlauncher/backend/launch/LaunchPlaceholders.java`
-- `CAMLBackend/src/main/java/org/chs/camlauncher/backend/launch/JvmArgumentsBuilder.java`
-- `CAMLBackend/src/main/java/org/chs/camlauncher/backend/launch/GameArgumentsBuilder.java`
-- `CAMLBackend/src/main/java/org/chs/camlauncher/backend/launch/NativeExtractor.java`
-- `CAMLBackend/src/main/java/org/chs/camlauncher/backend/launch/VirtualAssetInstaller.java`
-- `CAMLBackend/src/main/java/org/chs/camlauncher/backend/launch/LaunchCommand.java`
-- `CAMLBackend/src/main/java/org/chs/camlauncher/backend/launch/LaunchCommandBuilder.java`
-- `CAMLBackend/src/main/java/org/chs/camlauncher/backend/launch/ProcessLauncher.java`
-- `CAMLBackend/src/main/java/org/chs/camlauncher/backend/launch/GameProcess.java`
-- `CAMLBackend/src/main/java/org/chs/camlauncher/backend/launch/ProcessListener.java`
-- `CAMLBackend/src/main/java/org/chs/camlauncher/backend/launch/ArgumentFile.java`
-- `CAMLBackend/src/main/java/org/chs/camlauncher/backend/launch/ClasspathManifest.java`
+- `CAMLBackend/src/main/java/org/chs/camlauncher/backend/launch/classpath/ClasspathBuilder.java`
+- `CAMLBackend/src/main/java/org/chs/camlauncher/backend/launch/command/PlaceholderResolver.java`
+- `CAMLBackend/src/main/java/org/chs/camlauncher/backend/launch/command/LaunchPlaceholders.java`
+- `CAMLBackend/src/main/java/org/chs/camlauncher/backend/launch/command/JvmArgumentsBuilder.java`
+- `CAMLBackend/src/main/java/org/chs/camlauncher/backend/launch/command/GameArgumentsBuilder.java`
+- `CAMLBackend/src/main/java/org/chs/camlauncher/backend/launch/prepare/NativeExtractor.java`
+- `CAMLBackend/src/main/java/org/chs/camlauncher/backend/launch/prepare/VirtualAssetInstaller.java`
+- `CAMLBackend/src/main/java/org/chs/camlauncher/backend/launch/command/LaunchCommand.java`
+- `CAMLBackend/src/main/java/org/chs/camlauncher/backend/launch/command/LaunchCommandBuilder.java`
+- `CAMLBackend/src/main/java/org/chs/camlauncher/backend/launch/process/ProcessLauncher.java`
+- `CAMLBackend/src/main/java/org/chs/camlauncher/backend/launch/process/GameProcess.java`
+- `CAMLBackend/src/main/java/org/chs/camlauncher/backend/launch/process/ProcessListener.java`
+- `CAMLBackend/src/main/java/org/chs/camlauncher/backend/launch/process/ArgumentFile.java`
+- `CAMLBackend/src/main/java/org/chs/camlauncher/backend/launch/process/ClasspathManifest.java`
 - `CAMLBackend/src/main/java/org/chs/camlauncher/backend/launch/LaunchFailure.java`
 - `CAMLBackend/src/main/java/org/chs/camlauncher/backend/launch/LaunchException.java`
 - `CAMLBackend/src/main/java/org/chs/camlauncher/backend/launch/GameLaunch.java`
 - `CAMLBackend/src/main/java/org/chs/camlauncher/backend/launch/GameLaunchService.java`
+- `CAMLBackend/src/main/java/org/chs/camlauncher/backend/launch/patch/NeoForge262VulkanFix.java`
 - `CAMLBackend/src/main/java/org/chs/camlauncher/backend/launch/`

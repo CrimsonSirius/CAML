@@ -2,6 +2,8 @@ package org.chs.camlauncher.backend.metadata;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.chs.camlauncher.backend.metadata.model.VersionInfo;
+import org.chs.camlauncher.backend.metadata.model.VersionManifest;
 
 import java.io.IOException;
 import java.net.URI;

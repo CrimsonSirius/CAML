@@ -27,16 +27,16 @@ CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
 |---|---|---|
 | `api` | 后端 facade 和状态 DTO | 已有 |
 | `config` | 配置、目录约定和路径初始化 | 已有 |
-| `metadata` | 版本清单、版本 JSON、参数、规则、库、继承合并 | 已有 |
+| `metadata` | 版本清单和 JSON；子包 `model`、`rule`、`parse`、`resolve` | 已有 |
 | `instance` | 实例模型、本地版本复用、版本安装和隔离判定 | 已有 |
-| `download` | 下载源、下载计划、SHA-1、临时文件和原子落盘 | 已有基础能力 |
+| `download` | 下载入口；子包 `model`、`plan`、`source`、`io`、`hash` | 已有基础能力 |
 | `auth` | 账号、AuthSession、离线登录 | 已有离线能力 |
 | `runtime` | Java 运行时检测、版本/架构/位数匹配 | 已有 |
-| `launch` | LaunchPlan、classpath、参数、进程启动 | 已有 |
+| `launch` | 启动编排；子包 `command`、`classpath`、`prepare`、`process`、`patch` | 已有 |
 | `theme` | 主题目录、默认主题复制和当前主题配置 | 已有 |
 | `settings` | 启动器设置持久化（游戏位置、最大内存、版本隔离、下载并发数） | 已有 |
 | `system` | 物理内存与可用内存读取 | 已有 |
-| `loader` | Fabric Loader/Fabric API 安装；Quilt、Forge、NeoForge 待实现 | Fabric 已实现 |
+| `loader` | Fabric Loader/Fabric API、Forge、NeoForge 安装；Quilt 待实现 | 已有 |
 | `json` | 通用 JSON 文件读写 | 已有 |
 
 ## 3. 当前已实现能力
@@ -76,6 +76,7 @@ CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
 - 基础文件下载完成后才写入版本 JSON。
 - 返回 `InstalledVersion`，包含后续启动需要的路径。
 - Fabric 安装先确保原版父版本存在，再写入 Fabric Meta profile JSON，并把可选 Fabric API jar 放入实际游戏目录的 `mods`。
+- Forge/NeoForge 通过官方 installer 的 `--installClient` 在 staging 目录执行 processor，再合并 libraries 和版本目录。
 - `CAMLBackend.inspectGameDirectory` 扫描 `versions/<id>/<id>.json`，返回已安装版本和隔离版本列表。
 
 ### 3.4 账号
@@ -154,23 +155,26 @@ CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
 
 - `CAMLApplication` 初始化后端并创建 `MainView`。
 - `MainView` 只负责壳层：顶栏、主导航、`CamlPageHost` 和底栏。
+- `MainController` 只组合 `HomeController`、`DownloadsController` 和 `SettingsController`；
+  共享的 `ControllerContext` 负责后端访问、I/O 线程和日志回调。
 - `HomeView` 组合 `LaunchFormView` 与 `LogPaneView`，负责主页分栏和 900px 断点。
 - `LaunchFormView` 负责当前实例、用户名、状态提示和启动交互；
   “浏览游戏实例”打开二级列表，“管理实例”打开空管理页。
 - `GameLocationSettingsView` 负责游戏位置草稿、浏览、显式保存和目录校验。
 - `InstancePickerView` 扫描当前游戏位置并列出全部已安装实例。
 - `DownloadsView` 负责下载页子导航；`DownloadVersionsView` 加载官方正式版列表，
-  `DownloadVersionSetupView` 负责实例命名、版本信息、Fabric Loader/API 选择，底部按钮通过后端安装原版或 Fabric 游戏。
+  `DownloadVersionSetupView` 负责实例命名、版本信息、Fabric/Forge/NeoForge 选择，底部按钮通过后端安装原版或加载器游戏。
 - `GameSettingsView` 负责叠层内存滑块，`DownloadSettingsView` 负责 1–256 下载并发滑块，
   `LauncherSettingsView` 负责主题选择。
 - `SystemMemoryService` 在 Linux 读取 `/proc/meminfo` 的 `MemAvailable`，避免把
   `MemFree` 误当成任务管理器显示的可用内存。
-- `MainController` 每 500ms 在后台线程读取一次系统内存，并通过 `Platform.runLater`
+- `SettingsController` 每 500ms 在后台线程读取一次系统内存，并通过 `Platform.runLater`
   立即刷新设置页。
 - 游戏位置、版本隔离、下载并发数、最大内存和最后启动实例保存在 `~/.caml/settings.properties`，启动时加载；游戏位置只有点击保存才写入，版本隔离和下载并发数选择立即写入，最后启动实例在启动成功后写入。
 - `LaunchSettings` 在主页和设置页之间共享游戏位置、版本隔离和最大内存值；`ViewSupport` 提供通用字段与侧边栏布局。
 - 当前实例通过共享 `LaunchSettings.selectedVersion` 管理；启动器初始化时恢复 `lastInstanceId`，实例信息下方显示存档位置。
-- `MainController` 使用独立 I/O 线程执行目录探测和启动，不阻塞 JavaFX Application Thread。
+- `ControllerContext` 使用独立 I/O 线程执行目录探测和下载；`HomeController` 负责启动派发，
+  不阻塞 JavaFX Application Thread。
 - 下载日志按文件切换和每 10% 进度节流，避免刷屏。
 - 主工作区使用 `SplitPane`：宽度 `< 900` 时上下堆叠，`>= 900` 时左右分栏。
 - 断点切换时放宽表单和日志的最小高度，表单和日志在堆叠时仍然都能看到。
@@ -213,7 +217,7 @@ CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
 - 启动脚本导出。
 - 微软账号登录。
 - token 刷新和安全存储。
-- Quilt、Forge、NeoForge 等加载器安装。
+- Quilt 加载器安装。
 - 镜像源、并发下载、取消和内容寻址缓存。
 - 整合包和模组管理。
 

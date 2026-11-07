@@ -1,6 +1,8 @@
 package org.chs.camlauncher.backend.download;
 
 import com.sun.net.httpserver.HttpServer;
+import org.chs.camlauncher.backend.download.hash.HashVerifier;
+import org.chs.camlauncher.backend.download.model.DownloadItem;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 

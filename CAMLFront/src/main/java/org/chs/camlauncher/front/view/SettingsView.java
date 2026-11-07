@@ -12,7 +12,7 @@ import javafx.scene.layout.VBox;
 import javafx.util.Duration;
 import org.chs.camlauncher.backend.theme.ThemeInfo;
 import org.chs.camlauncher.backend.system.SystemMemoryInfo;
-import org.chs.camlauncher.front.controller.MainController;
+import org.chs.camlauncher.front.controller.SettingsController;
 import org.chs.camlauncher.ui.control.CamlSideNav;
 import org.chs.camlauncher.ui.control.CamlSideNavItem;
 
@@ -31,7 +31,7 @@ final class SettingsView extends VBox implements SidebarPage {
 
     SettingsView(LaunchSettings launchSettings, IntConsumer onMemoryChanged,
                  Consumer<Boolean> onVersionIsolationChanged,
-                 SystemMemoryInfo systemMemory, MainController controller) {
+                 SystemMemoryInfo systemMemory, SettingsController controller) {
         GameSettingsView gameSettings = new GameSettingsView(
                 launchSettings, onMemoryChanged, onVersionIsolationChanged, systemMemory, controller);
         controller.setOnSystemMemoryUpdated(gameSettings::updateSystemMemory);
