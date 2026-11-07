@@ -77,9 +77,15 @@ public final class GameProcess implements AutoCloseable {
         Thread thread = new Thread(() -> {
             try (BufferedReader reader = new BufferedReader(
                     new InputStreamReader(input, StandardCharsets.UTF_8))) {
+                MinecraftLogFormatter formatter = new MinecraftLogFormatter();
                 String line;
                 while ((line = reader.readLine()) != null) {
-                    listener.onLog(line, error);
+                    for (String formatted : formatter.accept(line)) {
+                        listener.onLog(formatted, error);
+                    }
+                }
+                for (String formatted : formatter.flush()) {
+                    listener.onLog(formatted, error);
                 }
             } catch (IOException e) {
                 listener.onLog("Failed to read process output: " + e.getMessage(), true);

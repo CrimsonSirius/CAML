@@ -66,7 +66,7 @@ public final class HomeController {
         ProcessListener processListener = new ProcessListener() {
             @Override
             public void onLog(String line, boolean error) {
-                context.sendLog((error ? "[ERR] " : "[OUT] ") + line);
+                context.sendLog(error ? "[ERR] " + line : line);
             }
 
             @Override

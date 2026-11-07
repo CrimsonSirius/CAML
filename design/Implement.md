@@ -252,6 +252,8 @@ CAML
 
 - Log4j 控制台输出。
 - 文件日志：`~/.caml/logs/caml.log`。
+- 游戏进程的 Log4j `LegacyXMLLayout` 输出会转换为
+  `[HH:mm:ss] [线程/级别]: 消息`，异常堆栈保留后续行；界面不再显示 `[OUT]` 前缀。
 
 ### 3.14 进程启动
 
