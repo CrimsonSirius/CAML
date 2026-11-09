@@ -1,6 +1,6 @@
 # CAML 当前实现情况
 
-更新日期：2026-11-05
+更新日期：2026-11-07
 
 ## 1. 总体状态
 
@@ -85,6 +85,8 @@ CAML
 - 最终失败信息包含下载项、尝试次数和最后请求地址。
 - `DownloadExecutor` 使用有界线程池并发下载，并发数为 1–256（默认 8）。
 - 下载并发数持久化到 `~/.caml/settings.properties`，并同时用于实例安装和启动前补文件。
+- 下载源支持镜像、官方和自定义镜像根地址；镜像源默认使用 BMCLAPI，失败时回退原始官方地址；
+  同时用于原版文件、资源、Forge/NeoForge installer 和 Fabric API 下载。
 - 已有有效文件时跳过。
 
 ### 3.4 版本安装
@@ -100,6 +102,8 @@ CAML
 - `clientreq=false` 的库在客户端下载和 classpath 中跳过。
 - Fabric 安装：确保原版父版本、写入 Fabric profile、可选下载 Fabric API 到实际 `mods` 目录。
 - Forge/NeoForge 安装：调用官方 installer 的 headless `--installClient`，在 staging 中完成 processor，再合并库并重命名实例目录。
+- OptiFine 安装：BMCLAPI 获取版本和 installer，先安装 Forge，再调用官方
+  `optifine.Installer.doInstall`，合并 OptiFine 库和 Forge 启动参数；仅允许与 Forge 组合。
 - 支持本地已安装父版本。
 - 下载完成后才写入版本 JSON；复用本地版本时保持原文件不变。
 - 补齐本地版本缺失的库、资源和客户端 jar。
@@ -168,7 +172,8 @@ CAML
 - `MainView` 只负责应用壳层、导航和页面宿主；页面与表单拆分为独立视图类。
 - 主页由 `HomeView` 组合 `LaunchFormView` 与 `LogPaneView`；设置页由
   `SettingsView` 组合 `GameSettingsView` 与 `LauncherSettingsView`；
-  `DownloadsView` 负责下载页侧边栏和内部页面。
+  `DownloadsView` 负责下载页侧边栏和内部页面，`DownloadVersionsView` 负责正式版列表，
+  `DownloadVersionSetupView` 负责实例命名和加载器选择。
 - `LaunchSettings` 共享主页和设置页的游戏位置、版本隔离和最大内存值，`ViewSupport` 提供通用布局工具。
 - 游戏位置从主页移除；设置页新增“游戏位置”圆角分组，包含路径输入、浏览和保存。
 - 只有点击保存并校验目录存在后，才更新共享位置并写入 `~/.caml/settings.properties`。
@@ -206,12 +211,15 @@ CAML
 - 顶栏主导航提供“主页 / 下载 / 设置”，主页为当前启动界面。
 - 下载页侧边栏提供“添加游戏实例”胶囊；`DownloadVersionsView` 通过后端异步获取官方
   版本清单，只保留 `type=release`，按 `releaseTime` 从新到旧排列。
-- 点击正式版后进入 `DownloadVersionSetupView`，页面由版本信息、Forge、Fabric、
-  Fabric API、NeoForge 五条组成；顶部实例名输入框默认官方版本号。Fabric Loader
+- 点击正式版后进入 `DownloadVersionSetupView`，页面由版本信息、Forge、OptiFine、Fabric、
+  Fabric API、NeoForge 六条组成；顶部实例名输入框默认官方版本号。OptiFine
+  只有选择 Forge 后才可用，选择 Fabric/NeoForge 会清空并禁用。Fabric Loader
   从 Fabric Meta 获取，Fabric API 从 Modrinth 获取，Forge/NeoForge 从各自 Maven
   获取；三种加载器互斥，选择后自动更新实例默认名。底部“下载实例”安装原版或所选加载器。
 - 设置页侧边栏提供“游戏设置 / 下载设置 / 启动器设置”。
-- 下载设置使用“设定下载并发数”圆角组和 1–256 整数滑块，文字大小与游戏设置一致。
+- 下载设置包含“下载源”和“设定下载并发数”两个圆角组。下载源提供镜像/官方/自定义
+  三个单选项；自定义输入框只在自定义模式可用，切换源后禁用但保留已输入地址。
+  下载并发数使用 1–256 整数滑块，文字大小与游戏设置一致。
 - 游戏设置使用圆角分组承载整个内存区域，左上角标题为“内存”；
   组内使用叠层滑块显示系统已使用、游戏分配和未使用内存。
 - 游戏位置、版本隔离和内存三个分组按设置内容区宽度拉齐，组内灰色辅助文字统一放大，
@@ -262,7 +270,7 @@ CAML
 - 合并环境变量。
 - Windows 条件设置 `APPDATA`。
 - 启动 `ProcessBuilder`。
-- 转发 stdout/stderr。
+- 读取 stdout/stderr，经 `MinecraftLogFormatter` 将 Log4j XML 转为原版日志风格后再转发。
 - 回调退出码。
 - 支持等待和停止进程。
 - Java 9+ 命令行过长时自动使用 `@argfile`。
@@ -326,13 +334,14 @@ PATH=/usr/lib/jvm/zulu-25/bin:$PATH \
 
 - 后端构建通过。
 - JavaFX 启动冒烟测试通过。
-- 99 个后端测试和 11 个前端测试全部通过（共 110 个）。
+- 115 个后端测试和 11 个前端测试全部通过（共 126 个）。
 - 集成测试覆盖：
   - 版本清单获取与缓存。
   - 版本 JSON 获取。
   - 客户端、library、asset index、asset object 下载。
   - SHA-1 校验和原子落盘。
   - 下载并发上限和并发数设置持久化/边界校验。
+  - 下载源模式、自定义 API 持久化、镜像 URL 重写和非法地址回退。
   - 离线账号。
   - Java 检测和匹配。
   - LaunchPlan 创建和 Java 要求校验。
@@ -364,6 +373,9 @@ PATH=/usr/lib/jvm/zulu-25/bin:$PATH \
   - PCL/HMCL 版本隔离自动判定、显式完全隔离/不隔离和设置持久化。
   - 官方正式版过滤、发布时间排序和快照排除。
   - 下载被截断后的重试。
+  - Minecraft Log4j XML 事件转换为原版日志风格。
+  - NeoForge 26.2 + Vulkan 的 `earlyWindowControl` 兼容修复。
+  - OptiFine BMCLAPI 版本解析、installer URL 和 Forge 清单合并。
 
 ## 7. 当前未实现
 
@@ -376,12 +388,13 @@ PATH=/usr/lib/jvm/zulu-25/bin:$PATH \
 - 微软账号登录。
 - token 刷新和安全存储。
 - Quilt 加载器。
-- 镜像源、下载取消和内容寻址缓存。
+- 下载取消和内容寻址缓存。
 - quick play 和服务器直连。
 - 整合包和模组管理。
 
 ## 8. 相关文档
 
 - [总体架构](architecture.md)
+- [界面设计](ui.md)
 - [版本下载与启动链路](version-download-and-launch.md)
 - [runtime 包](runtime.md)

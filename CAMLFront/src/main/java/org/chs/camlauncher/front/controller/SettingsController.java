@@ -4,6 +4,7 @@ import javafx.application.Platform;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.chs.camlauncher.backend.api.GameDirectoryInfo;
+import org.chs.camlauncher.backend.download.source.DownloadSourceMode;
 import org.chs.camlauncher.backend.instance.VersionIsolationMode;
 import org.chs.camlauncher.backend.system.SystemMemoryInfo;
 
@@ -40,6 +41,14 @@ public final class SettingsController {
 
     public int downloadConcurrency() {
         return context.backend().downloadConcurrency();
+    }
+
+    public DownloadSourceMode downloadSourceMode() {
+        return context.backend().downloadSourceMode();
+    }
+
+    public String customDownloadApi() {
+        return context.backend().customDownloadApi();
     }
 
     public void inspectGameDirectory(Path directory, Consumer<GameDirectoryInfo> callback) {
@@ -88,6 +97,16 @@ public final class SettingsController {
                 context.backend().setDownloadConcurrency(downloadConcurrency);
             } catch (IOException | RuntimeException e) {
                 LOGGER.warn("保存下载并发数失败: {}", downloadConcurrency, e);
+            }
+        });
+    }
+
+    public void saveDownloadSourceAsync(DownloadSourceMode mode, String customApi) {
+        context.executeIo(() -> {
+            try {
+                context.backend().setDownloadSource(mode, customApi);
+            } catch (IOException | RuntimeException e) {
+                LOGGER.warn("保存下载源设置失败: {} / {}", mode, customApi, e);
             }
         });
     }

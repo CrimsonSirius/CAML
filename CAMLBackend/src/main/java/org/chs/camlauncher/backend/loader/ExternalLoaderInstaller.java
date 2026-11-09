@@ -3,6 +3,9 @@ package org.chs.camlauncher.backend.loader;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import org.chs.camlauncher.backend.download.model.DownloadItem;
+import org.chs.camlauncher.backend.download.source.DownloadSource;
+import org.chs.camlauncher.backend.download.source.DownloadSources;
+import org.chs.camlauncher.backend.download.source.OfficialDownloadSource;
 import org.chs.camlauncher.backend.download.DownloadListener;
 import org.chs.camlauncher.backend.download.FileDownloader;
 import org.chs.camlauncher.backend.instance.InstalledVersion;
@@ -39,6 +42,7 @@ public final class ExternalLoaderInstaller {
     private final MetadataService metadata;
     private final URI manifestUri;
     private final Path manifestCacheFile;
+    private volatile List<DownloadSource> sources = List.of(OfficialDownloadSource.INSTANCE);
 
     public ExternalLoaderInstaller(
             VersionInstaller versionInstaller,
@@ -54,6 +58,10 @@ public final class ExternalLoaderInstaller {
         this.metadata = Objects.requireNonNull(metadata, "metadata");
         this.manifestUri = Objects.requireNonNull(manifestUri, "manifestUri");
         this.manifestCacheFile = Objects.requireNonNull(manifestCacheFile, "manifestCacheFile");
+    }
+
+    public void setSources(List<DownloadSource> sources) {
+        this.sources = List.copyOf(Objects.requireNonNull(sources, "sources"));
     }
 
     public InstalledVersion install(
@@ -103,7 +111,7 @@ public final class ExternalLoaderInstaller {
             Path installerJar = staging.resolve("installer.jar");
             fileDownloader.download(new DownloadItem(
                     loaderName + " installer",
-                    List.of(installerUri),
+                    DownloadSources.candidates(sources, installerUri.toString()),
                     installerJar,
                     null,
                     -1

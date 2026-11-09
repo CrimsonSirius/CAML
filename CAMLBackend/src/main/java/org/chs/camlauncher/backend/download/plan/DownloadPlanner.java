@@ -21,7 +21,7 @@ import java.util.Map;
 import java.util.Objects;
 
 public final class DownloadPlanner {
-    private final List<DownloadSource> sources;
+    private volatile List<DownloadSource> sources;
     private final RuleEvaluator ruleEvaluator;
     private final String osKey;
     private final int bits;
@@ -46,6 +46,10 @@ public final class DownloadPlanner {
             throw new IllegalArgumentException("bits must be positive");
         }
         this.bits = bits;
+    }
+
+    public void setSources(List<DownloadSource> sources) {
+        this.sources = List.copyOf(Objects.requireNonNull(sources, "sources"));
     }
 
     public DownloadPlan plan(VersionInfo version, Path gameDirectory) {

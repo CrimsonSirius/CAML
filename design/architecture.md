@@ -1,6 +1,6 @@
 # CAML 总体架构
 
-更新日期：2026-11-05
+更新日期：2026-11-07
 
 ## 1. 架构目标
 
@@ -29,14 +29,14 @@ CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
 | `config` | 配置、目录约定和路径初始化 | 已有 |
 | `metadata` | 版本清单和 JSON；子包 `model`、`rule`、`parse`、`resolve` | 已有 |
 | `instance` | 实例模型、本地版本复用、版本安装和隔离判定 | 已有 |
-| `download` | 下载入口；子包 `model`、`plan`、`source`、`io`、`hash` | 已有基础能力 |
+| `download` | 下载入口；子包 `model`、`plan`、`source`、`io`、`hash` | 已有 |
 | `auth` | 账号、AuthSession、离线登录 | 已有离线能力 |
 | `runtime` | Java 运行时检测、版本/架构/位数匹配 | 已有 |
 | `launch` | 启动编排；子包 `command`、`classpath`、`prepare`、`process`、`patch` | 已有 |
 | `theme` | 主题目录、默认主题复制和当前主题配置 | 已有 |
-| `settings` | 启动器设置持久化（游戏位置、最大内存、版本隔离、下载并发数） | 已有 |
+| `settings` | 启动器设置持久化（游戏位置、最大内存、版本隔离、下载源、下载并发数） | 已有 |
 | `system` | 物理内存与可用内存读取 | 已有 |
-| `loader` | Fabric Loader/Fabric API、Forge、NeoForge 安装；Quilt 待实现 | 已有 |
+| `loader` | Fabric Loader/Fabric API、Forge、NeoForge、OptiFine（仅 Forge）安装；Quilt 待实现 | 已有 |
 | `json` | 通用 JSON 文件读写 | 已有 |
 
 ## 3. 当前已实现能力
@@ -62,6 +62,8 @@ CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
 - 使用 `.part` 临时文件和原子移动。
 - 下载使用 HTTP/1.1；失败重试并短暂退避，最终错误包含下载项和地址。
 - 使用有界线程池并发执行下载，并发数由设置决定（1–256，默认 8）。
+- 下载源支持“尽可能使用镜像源”“尽可能使用官方源”和“自定义镜像根地址”三种模式；
+  默认镜像源，镜像失败时回退原始官方地址；覆盖版本文件、库、资源、加载器 installer/API。
 - 已有有效文件时跳过。
 
 ### 3.3 实例安装
@@ -77,6 +79,9 @@ CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
 - 返回 `InstalledVersion`，包含后续启动需要的路径。
 - Fabric 安装先确保原版父版本存在，再写入 Fabric Meta profile JSON，并把可选 Fabric API jar 放入实际游戏目录的 `mods`。
 - Forge/NeoForge 通过官方 installer 的 `--installClient` 在 staging 目录执行 processor，再合并 libraries 和版本目录。
+- OptiFine 从 BMCLAPI 获取版本和 installer；先安装 Forge，再调用 OptiFine 官方 installer 的
+  `doInstall` 生成补丁库，最后把 OptiFine 库和启动参数合并进 Forge 版本 JSON。
+- OptiFine 只允许与 Forge 组合；选择 Fabric/NeoForge 时 OptiFine 选项会被清空并禁用。
 - `CAMLBackend.inspectGameDirectory` 扫描 `versions/<id>/<id>.json`，返回已安装版本和隔离版本列表。
 
 ### 3.4 账号
@@ -141,7 +146,8 @@ CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
 - 设置工作目录和环境变量。
 - 仅在 Windows 设置 `APPDATA`。
 - 使用 `ProcessBuilder` 启动。
-- 后台线程转发 stdout/stderr。
+- 后台线程读取 stdout/stderr；Minecraft Log4j `LegacyXMLLayout` 事件转换为
+  `[HH:mm:ss] [线程/级别]: 消息` 后再转发到界面。
 - 提供退出码回调和停止能力。
 - 命令行过长时，Java 9+ 自动使用 `@argfile`。
 - Java 8 或 argfile 失败时使用 manifest classpath jar。
@@ -163,14 +169,17 @@ CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
 - `GameLocationSettingsView` 负责游戏位置草稿、浏览、显式保存和目录校验。
 - `InstancePickerView` 扫描当前游戏位置并列出全部已安装实例。
 - `DownloadsView` 负责下载页子导航；`DownloadVersionsView` 加载官方正式版列表，
-  `DownloadVersionSetupView` 负责实例命名、版本信息、Fabric/Forge/NeoForge 选择，底部按钮通过后端安装原版或加载器游戏。
-- `GameSettingsView` 负责叠层内存滑块，`DownloadSettingsView` 负责 1–256 下载并发滑块，
+  `DownloadVersionSetupView` 负责实例命名、版本信息、Forge/OptiFine/Fabric/NeoForge 选择；
+  OptiFine 只有在选择 Forge 后才可用，底部按钮通过后端安装原版或加载器游戏。
+- `GameSettingsView` 负责叠层内存滑块，`DownloadSettingsView` 负责下载源三选一、
+  自定义 API 输入和 1–256 下载并发滑块，
   `LauncherSettingsView` 负责主题选择。
 - `SystemMemoryService` 在 Linux 读取 `/proc/meminfo` 的 `MemAvailable`，避免把
   `MemFree` 误当成任务管理器显示的可用内存。
 - `SettingsController` 每 500ms 在后台线程读取一次系统内存，并通过 `Platform.runLater`
   立即刷新设置页。
-- 游戏位置、版本隔离、下载并发数、最大内存和最后启动实例保存在 `~/.caml/settings.properties`，启动时加载；游戏位置只有点击保存才写入，版本隔离和下载并发数选择立即写入，最后启动实例在启动成功后写入。
+- 游戏位置、版本隔离、下载源、下载并发数、最大内存和最后启动实例保存在
+  `~/.caml/settings.properties`，启动时加载；游戏位置只有点击保存才写入，其余选项立即写入。
 - `LaunchSettings` 在主页和设置页之间共享游戏位置、版本隔离和最大内存值；`ViewSupport` 提供通用字段与侧边栏布局。
 - 当前实例通过共享 `LaunchSettings.selectedVersion` 管理；启动器初始化时恢复 `lastInstanceId`，实例信息下方显示存档位置。
 - `ControllerContext` 使用独立 I/O 线程执行目录探测和下载；`HomeController` 负责启动派发，
@@ -203,7 +212,7 @@ CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
 - 默认主题使用白底、灰色表面、黄色强调色和深色文字。
 - 组件 API 包括 `CamlButton`、`CamlCard`、`CamlTextField`、`CamlTextArea`、
   `CamlComboBox`、`CamlSpinner`、`CamlSwitch`、`CamlCheckBox`、`CamlSlider`、
-  `CamlMemorySlider`、`CamlProgressBar`、`CamlSideNav`、`CamlSideNavItem`、`CamlTopNav`、
+  `CamlMemorySlider`、`CamlRadioButton`、`CamlProgressBar`、`CamlSideNav`、`CamlSideNavItem`、`CamlTopNav`、
   `CamlTopNavItem`、`CamlPageHost` 和 `CamlTopBar`。
 - `CAMLFront` 依赖 `CAMLUI`，不再把控件外观写死在业务界面里。
 
@@ -218,7 +227,7 @@ CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
 - 微软账号登录。
 - token 刷新和安全存储。
 - Quilt 加载器安装。
-- 镜像源、并发下载、取消和内容寻址缓存。
+- 下载取消和内容寻址缓存。
 - 整合包和模组管理。
 
 ## 5. 数据与安全原则
@@ -269,6 +278,7 @@ info.isolatedVersions();
 ## 7. 相关文档
 
 - 版本下载和启动链路详见 [version-download-and-launch.md](version-download-and-launch.md)。
+- 界面布局、组件映射和动效详见 [ui.md](ui.md)。
 - runtime 包详见 [runtime.md](runtime.md)。
 - 当前实现情况详见 [Implement.md](Implement.md)。
 - 开发任务和阶段计划由本地 `TODO.md` 维护。

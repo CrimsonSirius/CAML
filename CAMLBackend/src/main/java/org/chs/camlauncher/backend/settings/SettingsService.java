@@ -1,6 +1,7 @@
 package org.chs.camlauncher.backend.settings;
 
 import org.chs.camlauncher.backend.download.DownloadConcurrency;
+import org.chs.camlauncher.backend.download.source.DownloadSourceMode;
 import org.chs.camlauncher.backend.instance.VersionIsolationMode;
 
 import java.io.IOException;
@@ -21,11 +22,14 @@ public final class SettingsService {
     public static final int MIN_DOWNLOAD_CONCURRENCY = DownloadConcurrency.MIN;
     public static final int MAX_DOWNLOAD_CONCURRENCY = DownloadConcurrency.MAX;
     public static final int DEFAULT_DOWNLOAD_CONCURRENCY = DownloadConcurrency.DEFAULT;
+    public static final DownloadSourceMode DEFAULT_DOWNLOAD_SOURCE = DownloadSourceMode.MIRROR;
 
     private static final String MAX_MEMORY_KEY = "maxMemoryMb";
     private static final String GAME_DIRECTORY_KEY = "gameDirectory";
     private static final String VERSION_ISOLATION_KEY = "versionIsolation";
     private static final String DOWNLOAD_CONCURRENCY_KEY = "downloadConcurrency";
+    private static final String DOWNLOAD_SOURCE_KEY = "downloadSource";
+    private static final String CUSTOM_DOWNLOAD_API_KEY = "customDownloadApi";
     private static final String LAST_LAUNCHED_INSTANCE_KEY = "lastInstanceId";
 
     private final Path settingsFile;
@@ -123,6 +127,24 @@ public final class SettingsService {
         }
         Properties properties = load();
         properties.setProperty(DOWNLOAD_CONCURRENCY_KEY, Integer.toString(value));
+        store(properties);
+    }
+
+    public DownloadSourceMode downloadSourceMode() throws IOException {
+        return DownloadSourceMode.fromStored(load().getProperty(DOWNLOAD_SOURCE_KEY));
+    }
+
+    public String customDownloadApi() throws IOException {
+        String value = load().getProperty(CUSTOM_DOWNLOAD_API_KEY);
+        return value == null ? "" : value.trim();
+    }
+
+    public void setDownloadSource(DownloadSourceMode mode, String customApi) throws IOException {
+        Objects.requireNonNull(mode, "mode");
+        Properties properties = load();
+        properties.setProperty(DOWNLOAD_SOURCE_KEY, mode.storedName());
+        properties.setProperty(CUSTOM_DOWNLOAD_API_KEY,
+                customApi == null ? "" : customApi.trim());
         store(properties);
     }
 

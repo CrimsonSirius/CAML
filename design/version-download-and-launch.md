@@ -1,6 +1,6 @@
 # CAML 版本下载与启动链路
 
-更新日期：2026-11-05
+更新日期：2026-11-07
 
 ## 1. 文档范围
 
@@ -164,6 +164,15 @@ Forge/NeoForge 安装流程：
 - 把 staging libraries 合并回共享 `libraries`，再按用户实例名移动版本目录。
 - 最后用 `VersionInstaller` 读取安装结果，解析 `inheritsFrom` 并校验启动所需文件。
 
+OptiFine 安装流程（仅 Forge）：
+
+- 从 BMCLAPI `https://bmclapi2.bangbang93.com/optifine/<gameVersion>` 获取 OptiFine 版本。
+- 先安装 Forge 实例，再把原版版本 JSON 和客户端 jar 放入 staging。
+- 通过独立 Java 进程调用 OptiFine 官方 installer 的 `optifine.Installer.doInstall(staging)`。
+- 合并生成的 OptiFine 库；传统 LaunchWrapper Forge 追加
+  `--tweakClass optifine.OptiFineForgeTweaker`，现代 Forge 保留 Forge 主类并加入 OptiFine 库。
+- 删除 OptiFine 库中的 `META-INF/mods.toml`，避免 Forge 将其当作普通 mod 加载。
+
 ### 2.6 生成基础下载计划
 
 `DownloadPlanner.plan(resolved, gameDirectory)` 生成基础文件计划，包含：
@@ -204,7 +213,11 @@ plan.missing()
 → 失败重试
 ```
 
-默认最多重试 3 轮。当前候选 URL 只有官方源。
+默认最多重试 3 轮。候选 URL 按下载源设置生成：
+
+- 镜像源：BMCLAPI 地址优先，原始官方地址兜底。
+- 官方源：原始官方地址优先。
+- 自定义 API：用户填写的镜像根地址优先，原始官方地址兜底；无效地址回退官方源。
 
 ### 2.8 下载资源对象
 
@@ -300,9 +313,10 @@ assetIndexFile
 
 ### 2.13 当前下载限制
 
-- 支持原版、Fabric Loader/Fabric API、Forge 和 NeoForge 安装；Quilt 尚未实现。
+- 支持原版、Fabric Loader/Fabric API、Forge、NeoForge 和 OptiFine（仅 Forge）安装；Quilt 尚未实现。
 - `inheritsFrom` 只读取本地父版本，不会自动安装父版本。
-- 只有官方下载源，镜像源接口尚未接入配置。
+- 下载源支持镜像、官方和自定义镜像根地址；应用于版本文件、libraries、asset index、assets objects、
+  Forge/NeoForge installer 和 Fabric API 下载；版本清单/加载器元数据仍使用各自官方接口。
 - 下载使用有界线程池并发执行，并发数可配置为 1–256；下载取消尚未实现。
 - 没有内容寻址缓存，只有目标文件存在且 SHA-1 匹配时跳过。
 
@@ -323,7 +337,7 @@ download/
 ├─ DownloadConcurrency.java     并发数约束
 ├─ model/                       DownloadItem、DownloadPlan
 ├─ plan/                        版本和资源下载计划
-├─ source/                      下载源和候选地址
+├─ source/                      DownloadSource、镜像/官方源和源工厂
 ├─ io/                          并发任务执行
 └─ hash/                        SHA-1 计算与校验
 ```
@@ -352,7 +366,7 @@ JavaRuntime       实际 Java 可执行文件、版本、架构、位数
 
 这些类型已经存在，并由 `LaunchPlanner` 组合成不可变的 `LaunchPlan`。
 
-### 3.3 计划中的启动流程
+### 3.3 当前启动流程
 
 ```text
 读取 InstalledVersion
@@ -710,6 +724,8 @@ launch/
 - `CAMLBackend/src/main/java/org/chs/camlauncher/backend/download/plan/DownloadPlanner.java`
 - `CAMLBackend/src/main/java/org/chs/camlauncher/backend/download/plan/AssetDownloadPlanner.java`
 - `CAMLBackend/src/main/java/org/chs/camlauncher/backend/download/FileDownloader.java`
+- `CAMLBackend/src/main/java/org/chs/camlauncher/backend/loader/optifine/OptiFineService.java`
+- `CAMLBackend/src/main/java/org/chs/camlauncher/backend/loader/optifine/OptiFineInstaller.java`
 - `CAMLBackend/src/main/java/org/chs/camlauncher/backend/launch/classpath/ClasspathBuilder.java`
 - `CAMLBackend/src/main/java/org/chs/camlauncher/backend/launch/command/PlaceholderResolver.java`
 - `CAMLBackend/src/main/java/org/chs/camlauncher/backend/launch/command/LaunchPlaceholders.java`
@@ -721,6 +737,7 @@ launch/
 - `CAMLBackend/src/main/java/org/chs/camlauncher/backend/launch/command/LaunchCommandBuilder.java`
 - `CAMLBackend/src/main/java/org/chs/camlauncher/backend/launch/process/ProcessLauncher.java`
 - `CAMLBackend/src/main/java/org/chs/camlauncher/backend/launch/process/GameProcess.java`
+- `CAMLBackend/src/main/java/org/chs/camlauncher/backend/launch/process/MinecraftLogFormatter.java`
 - `CAMLBackend/src/main/java/org/chs/camlauncher/backend/launch/process/ProcessListener.java`
 - `CAMLBackend/src/main/java/org/chs/camlauncher/backend/launch/process/ArgumentFile.java`
 - `CAMLBackend/src/main/java/org/chs/camlauncher/backend/launch/process/ClasspathManifest.java`

@@ -36,7 +36,12 @@ final class SettingsView extends VBox implements SidebarPage {
                 launchSettings, onMemoryChanged, onVersionIsolationChanged, systemMemory, controller);
         controller.setOnSystemMemoryUpdated(gameSettings::updateSystemMemory);
         DownloadSettingsView downloadSettings = new DownloadSettingsView(
-                controller.downloadConcurrency(), controller::saveDownloadConcurrencyAsync);
+                controller.downloadConcurrency(),
+                controller::saveDownloadConcurrencyAsync,
+                controller.downloadSourceMode(),
+                controller.customDownloadApi(),
+                controller::saveDownloadSourceAsync
+        );
         launcherSettings = new LauncherSettingsView();
 
         sideNav = new CamlSideNav();

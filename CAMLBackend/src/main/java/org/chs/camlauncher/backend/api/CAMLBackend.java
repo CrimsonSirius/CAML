@@ -9,6 +9,9 @@ import org.chs.camlauncher.backend.config.BackendPaths;
 import org.chs.camlauncher.backend.download.plan.AssetDownloadPlanner;
 import org.chs.camlauncher.backend.download.DownloadListener;
 import org.chs.camlauncher.backend.download.DownloadConcurrency;
+import org.chs.camlauncher.backend.download.source.DownloadSource;
+import org.chs.camlauncher.backend.download.source.DownloadSourceFactory;
+import org.chs.camlauncher.backend.download.source.DownloadSourceMode;
 import org.chs.camlauncher.backend.download.plan.DownloadPlanner;
 import org.chs.camlauncher.backend.download.FileDownloader;
 import org.chs.camlauncher.backend.instance.GameDataLayout;
@@ -25,6 +28,9 @@ import org.chs.camlauncher.backend.loader.forge.ForgeService;
 import org.chs.camlauncher.backend.loader.forge.ForgeVersion;
 import org.chs.camlauncher.backend.loader.neoforge.NeoForgeService;
 import org.chs.camlauncher.backend.loader.neoforge.NeoForgeVersion;
+import org.chs.camlauncher.backend.loader.optifine.OptiFineInstaller;
+import org.chs.camlauncher.backend.loader.optifine.OptiFineService;
+import org.chs.camlauncher.backend.loader.optifine.OptiFineVersion;
 import org.chs.camlauncher.backend.launch.GameLaunch;
 import org.chs.camlauncher.backend.launch.GameLaunchService;
 import org.chs.camlauncher.backend.launch.LaunchOptions;
@@ -75,6 +81,8 @@ public final class CAMLBackend implements AutoCloseable {
     private final FabricInstaller fabricInstaller;
     private final ForgeService forgeService;
     private final NeoForgeService neoForgeService;
+    private final OptiFineService optiFineService;
+    private final OptiFineInstaller optiFineInstaller;
     private final ExternalLoaderInstaller externalLoaderInstaller;
     private final LaunchPlanner launchPlanner;
     private final ClasspathBuilder classpathBuilder;
@@ -89,6 +97,8 @@ public final class CAMLBackend implements AutoCloseable {
     private final SettingsService settingsService;
     private final SystemMemoryService systemMemoryService;
     private volatile int downloadConcurrency = DownloadConcurrency.DEFAULT;
+    private volatile DownloadSourceMode downloadSourceMode = SettingsService.DEFAULT_DOWNLOAD_SOURCE;
+    private volatile String customDownloadApi = "";
     private boolean started;
 
     public CAMLBackend(BackendConfig config) {
@@ -117,11 +127,20 @@ public final class CAMLBackend implements AutoCloseable {
         );
         this.forgeService = new ForgeService();
         this.neoForgeService = new NeoForgeService();
+        this.optiFineService = new OptiFineService();
         this.externalLoaderInstaller = new ExternalLoaderInstaller(
                 versionInstaller,
                 javaLocator,
                 fileDownloader,
                 metadata,
+                VersionManifestService.DEFAULT_MANIFEST_URI,
+                config.dataDirectory().resolve("cache").resolve("version_manifest_v2.json")
+        );
+        this.optiFineInstaller = new OptiFineInstaller(
+                versionInstaller,
+                externalLoaderInstaller,
+                javaLocator,
+                fileDownloader,
                 VersionManifestService.DEFAULT_MANIFEST_URI,
                 config.dataDirectory().resolve("cache").resolve("version_manifest_v2.json")
         );
@@ -168,6 +187,15 @@ public final class CAMLBackend implements AutoCloseable {
             downloadConcurrency = DownloadConcurrency.DEFAULT;
         }
         versionInstaller.setDownloadConcurrency(downloadConcurrency);
+        try {
+            downloadSourceMode = settingsService.downloadSourceMode();
+            customDownloadApi = settingsService.customDownloadApi();
+        } catch (IOException e) {
+            LOGGER.warn("无法读取下载源设置，使用默认值 {}", SettingsService.DEFAULT_DOWNLOAD_SOURCE, e);
+            downloadSourceMode = SettingsService.DEFAULT_DOWNLOAD_SOURCE;
+            customDownloadApi = "";
+        }
+        applyDownloadSources();
 
         started = true;
         LOGGER.info("CAML backend {} started", VERSION);
@@ -232,6 +260,32 @@ public final class CAMLBackend implements AutoCloseable {
         settingsService.setDownloadConcurrency(value);
         downloadConcurrency = value;
         versionInstaller.setDownloadConcurrency(value);
+    }
+
+    public DownloadSourceMode downloadSourceMode() {
+        return downloadSourceMode;
+    }
+
+    public String customDownloadApi() {
+        return customDownloadApi;
+    }
+
+    public void setDownloadSource(DownloadSourceMode mode, String customApi) throws IOException {
+        Objects.requireNonNull(mode, "mode");
+        String value = customApi == null ? "" : customApi.trim();
+        settingsService.setDownloadSource(mode, value);
+        downloadSourceMode = mode;
+        customDownloadApi = value;
+        applyDownloadSources();
+    }
+
+    private void applyDownloadSources() {
+        List<DownloadSource> sources = DownloadSourceFactory.create(
+                downloadSourceMode, customDownloadApi);
+        downloadPlanner.setSources(sources);
+        assetDownloadPlanner.setSources(sources);
+        externalLoaderInstaller.setSources(sources);
+        fabricInstaller.setSources(sources);
     }
 
     public Optional<String> lastLaunchedInstanceId() throws IOException {
@@ -384,6 +438,34 @@ public final class CAMLBackend implements AutoCloseable {
                 gameVersion,
                 instanceId,
                 version.installerUri(),
+                gameDirectory,
+                listener
+        );
+    }
+
+    public List<OptiFineVersion> fetchOptiFineVersions(String gameVersion)
+            throws IOException, InterruptedException {
+        return optiFineService.fetchVersions(gameVersion);
+    }
+
+    /**
+     * 安装 Forge + OptiFine。OptiFine 只允许与 Forge 组合。
+     */
+    public InstalledVersion installForgeOptiFineVersion(
+            String gameVersion,
+            String instanceId,
+            ForgeVersion forgeVersion,
+            OptiFineVersion optiFineVersion,
+            Path gameDirectory,
+            DownloadListener listener
+    ) throws IOException, InterruptedException {
+        Objects.requireNonNull(forgeVersion, "forgeVersion");
+        Objects.requireNonNull(optiFineVersion, "optiFineVersion");
+        return optiFineInstaller.install(
+                gameVersion,
+                instanceId,
+                forgeVersion,
+                optiFineVersion,
                 gameDirectory,
                 listener
         );

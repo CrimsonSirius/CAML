@@ -1,6 +1,6 @@
 # CAML 界面设计
 
-更新日期：2026-11-05
+更新日期：2026-11-07
 
 ## 1. 设计意图
 
@@ -16,10 +16,11 @@
 - 下载页：左侧“添加游戏实例”胶囊。“添加游戏实例”内容页从官方清单读取正式版，
   排除快照和非正式版本，按发布时间从新到旧列出；版本号左对齐，最后更新时间右对齐。
   点击版本进入下载设置页，顶部是取消、实例名字标签和输入框，输入框默认官方版本号。
-  页面主体由五条组成：版本信息、选择 Forge 版本、选择 Fabric 版本、选择 Fabric API 版本、
-  选择 NeoForge 版本；取消位于左上角，底部整宽“下载实例”按钮安装原版或所选加载器。
+  页面主体由六条组成：版本信息、选择 Forge 版本、选择 OptiFine 版本、选择 Fabric 版本、
+  选择 Fabric API 版本、选择 NeoForge 版本；取消位于左上角，底部整宽“下载实例”按钮安装原版或所选加载器。
   Fabric Loader 从 Fabric Meta 获取，Fabric API 从 Modrinth 获取；Forge/NeoForge 从各自 Maven 获取。
-  Forge、Fabric、NeoForge 互斥，未选择加载器时安装原版。
+  Forge、Fabric、NeoForge 互斥；OptiFine 只与 Forge 兼容，选择 Fabric 或 NeoForge 时会清空并禁用 OptiFine。
+  未选择加载器时安装原版。
 - 设置页：左侧“游戏设置 / 下载设置 / 启动器设置”侧边栏，右侧对应内容，不显示页面标题。
 - 游戏设置：三个圆角分组。“游戏位置”组包含路径输入、浏览和保存；“版本隔离”组包含“完全版本隔离”和“不进行版本隔离”两个圆形单选项；“内存”组包含描述、内存摘要和叠层滑块。
 - 三个分组按内容区宽度拉齐；“已使用 / 游戏 / 可用 / 总内存”保持单行，灰色辅助文字统一放大。
@@ -28,7 +29,9 @@
   实例条目使用淡灰底，悬停时变为淡黄色，保留橙黄描边；返回按钮使用同样的底色和悬停状态。
 - “管理实例”进入独立二级页，当前只显示返回和标题，内容为空。
 - 启动器设置：主题选择。
-- 下载设置：“设定下载并发数”圆角组，使用 1–256 的整数滑块和并发数文字；字号与游戏设置一致。
+- 下载设置：上方“下载源”圆角组，包含“尽可能使用镜像源 / 尽可能使用官方源 / 导入自定义 API”
+  三个圆角单选项；只有选择自定义时输入框可用，切换到其他源时输入框禁用但保留网址。
+  下方“设定下载并发数”圆角组使用 1–256 的整数滑块和并发数文字；字号与游戏设置一致。
 - 两个侧边栏都不使用灰色背景，只用一条右侧分隔线，并从顶栏底部铺到页脚。
 - 主工作区：左侧启动设置，右侧运行日志。
 - 窗口初始尺寸按主屏幕可用区域计算：约为宽 `68%`、高 `74%`，并限制在 `720x700` 与 `1440x960` 之间。
@@ -41,10 +44,14 @@
 - 表单使用“标签在上、控件在下”的纵向结构，避免窄窗口下标签被挤压。
 - 启动按钮固定在表单底部；字段区域独立滚动，主操作始终可见。
 - 底栏显示后端状态和数据目录。
-- 视图拆分：`MainView` 是壳层；主页由 `HomeView`、`LaunchFormView` 和
-  `LogPaneView` 组成；设置页由 `SettingsView`、`GameSettingsView`、
-  `GameLocationSettingsView`、`VersionIsolationSettingsView` 和
-  `LauncherSettingsView` 组成；`LaunchSettings` 共享内存值。
+- 视图拆分：`MainView` 是壳层；主页由 `HomeView`、`LaunchFormView`、
+  `LogPaneView`、`InstancePickerView` 和 `ManageInstancesView` 组成；下载页由
+  `DownloadsView`、`DownloadVersionsView` 和 `DownloadVersionSetupView` 组成；设置页由
+  `SettingsView`、`GameSettingsView`、`GameLocationSettingsView`、
+  `VersionIsolationSettingsView`、`DownloadSettingsView` 和 `LauncherSettingsView` 组成；
+  `LaunchSettings` 共享内存值。
+- 控制器按页面拆分：`MainController` 组合 `HomeController`、`DownloadsController`
+  和 `SettingsController`，`ControllerContext` 提供共享 I/O 和日志回调。
 
 ## 3. 组件映射
 
@@ -55,12 +62,13 @@
 | 游戏位置 | `CamlTextField` + 浏览/保存 `CamlButton`（游戏设置组） |
 | 版本隔离 | `CamlRadioButton` + `ToggleGroup`（游戏设置组） |
 | 下载并发数 | `CamlSlider`（下载设置组，1–256） |
+| 下载源 | `CamlRadioButton` × 3 + `CamlTextField`（下载设置组） |
 | 下载版本列表 | `CamlButton` 列表 + `CamlPageHost` 内部切页 |
-| 下载设置页 | 五个圆角信息条 + Fabric/Fabric API `CamlComboBox` + 整宽 `CamlButton` |
+| 下载设置页 | 六个圆角信息条 + Forge/OptiFine/Fabric/Fabric API/NeoForge `CamlComboBox` + 整宽 `CamlButton` |
 | 浏览游戏实例 | outlined `CamlButton` → `InstancePickerView` |
 | 管理实例 | outlined `CamlButton` → `ManageInstancesView` |
 | 当前实例信息 | 圆角 `VBox`，三行标签 |
-| 游戏版本 | 可编辑 `CamlComboBox` |
+| 游戏实例 | outlined `CamlButton` → `InstancePickerView` |
 | 离线用户名 | `CamlTextField` |
 | 最大内存 | `CamlMemorySlider`（游戏设置） |
 | 启动游戏 | filled `CamlButton` |
@@ -83,9 +91,10 @@
 
 ## 5. 状态与反馈
 
-- 默认：显示“准备就绪”。
+- 默认：不显示状态文字；启动中、成功或失败时才显示状态标签。
 - 启动中：按钮变为“启动中...”并禁用。
 - 失败：状态文字切换为错误文案和错误色，日志保留诊断信息。
+- 游戏日志会过滤 Log4j XML，显示为 `[HH:mm:ss] [线程/级别]: 消息`，堆栈保留后续行。
 - 主题切换：立即应用，选择写入 `~/.caml/theme.txt`。
 - 主导航：同一时间只保留一个选中项，主页状态在切换页面时保留。
 - 内存滑块：同一条轨道上下叠层。底层灰色条宽度为 `系统已使用 + 游戏分配`，
@@ -95,6 +104,9 @@
 - 游戏位置输入是草稿；只有点击“保存”并通过目录校验后，才更新共享状态和后端配置。
 - 版本隔离选择立即写入共享状态和 `~/.caml/settings.properties`，下一次启动使用所选模式；
   主页“存档位置”随选择立即切换。
+- 下载源选择立即写入设置；自定义 API 地址会缓存到设置文件，切回镜像/官方源后仍保留在输入框中。
+- 加载器下拉框切换时，被清空的 Forge/Fabric/NeoForge 选项会恢复
+  `请选择 ... 版本` 提示文字，不会留下空白选项框。
 - 启动成功后把实例 ID 写入 `~/.caml/settings.properties` 的 `lastInstanceId`；
   下次启动优先恢复该实例，实例不存在时才回退到目录扫描结果。
 - 最大内存保存到 `~/.caml/settings.properties`，滑块停止变化约 300ms 后持久化。
