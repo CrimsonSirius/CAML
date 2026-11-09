@@ -2,6 +2,7 @@ package org.chs.camlauncher.backend.loader.fabric;
 
 import com.google.gson.Gson;
 import com.sun.net.httpserver.HttpServer;
+import org.chs.camlauncher.backend.download.source.MirrorDownloadSource;
 import org.junit.jupiter.api.Test;
 
 import java.net.InetSocketAddress;
@@ -75,6 +76,37 @@ class FabricServiceTest {
             assertEquals(1, apis.size());
             assertEquals("0.119.4+1.21.4", apis.getFirst().versionNumber());
             assertEquals("api-sha1", apis.getFirst().sha1());
+        } finally {
+            server.stop(0);
+        }
+    }
+
+    @Test
+    void fetchesLoaderVersionsFromMirror() throws Exception {
+        String loaderJson = """
+                [
+                  {"loader":{"version":"0.20.1","stable":true}}
+                ]
+                """;
+        HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        server.createContext("/fabric-meta/v2/versions/loader/1.21.4",
+                exchange -> respond(exchange, loaderJson));
+        server.start();
+
+        try {
+            FabricService service = new FabricService(
+                    HttpClient.newBuilder().version(HttpClient.Version.HTTP_1_1).build(),
+                    new Gson(),
+                    URI.create("https://meta.fabricmc.net/"),
+                    URI.create("https://api.modrinth.com/")
+            );
+            service.setSources(List.of(new MirrorDownloadSource(
+                    "http://127.0.0.1:" + server.getAddress().getPort())));
+
+            List<FabricLoaderVersion> loaders = service.fetchLoaderVersions("1.21.4");
+
+            assertEquals(1, loaders.size());
+            assertEquals("0.20.1", loaders.getFirst().version());
         } finally {
             server.stop(0);
         }

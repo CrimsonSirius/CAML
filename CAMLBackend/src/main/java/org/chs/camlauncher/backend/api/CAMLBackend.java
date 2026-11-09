@@ -142,7 +142,8 @@ public final class CAMLBackend implements AutoCloseable {
                 javaLocator,
                 fileDownloader,
                 VersionManifestService.DEFAULT_MANIFEST_URI,
-                config.dataDirectory().resolve("cache").resolve("version_manifest_v2.json")
+                config.dataDirectory().resolve("cache").resolve("version_manifest_v2.json"),
+                optiFineService
         );
         this.launchPlanner = new LaunchPlanner();
         this.classpathBuilder = new ClasspathBuilder();
@@ -287,6 +288,12 @@ public final class CAMLBackend implements AutoCloseable {
         assetDownloadPlanner.setSources(sources);
         externalLoaderInstaller.setSources(sources);
         fabricInstaller.setSources(sources);
+        fabricService.setSources(sources);
+        forgeService.setSources(sources);
+        neoForgeService.setSources(sources);
+        optiFineService.setSources(sources);
+        optiFineService.setSourceMode(downloadSourceMode, customDownloadApi);
+        optiFineInstaller.setSources(sources);
     }
 
     public Optional<String> lastLaunchedInstanceId() throws IOException {

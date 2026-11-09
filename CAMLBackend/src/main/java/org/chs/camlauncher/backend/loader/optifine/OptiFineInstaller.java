@@ -8,6 +8,9 @@ import com.google.gson.JsonParser;
 import org.chs.camlauncher.backend.download.DownloadListener;
 import org.chs.camlauncher.backend.download.FileDownloader;
 import org.chs.camlauncher.backend.download.model.DownloadItem;
+import org.chs.camlauncher.backend.download.source.DownloadSource;
+import org.chs.camlauncher.backend.download.source.DownloadSources;
+import org.chs.camlauncher.backend.download.source.OfficialDownloadSource;
 import org.chs.camlauncher.backend.instance.InstalledVersion;
 import org.chs.camlauncher.backend.instance.VersionInstaller;
 import org.chs.camlauncher.backend.loader.ExternalLoaderInstaller;
@@ -55,6 +58,8 @@ public final class OptiFineInstaller {
     private final FileDownloader fileDownloader;
     private final URI manifestUri;
     private final Path manifestCacheFile;
+    private final OptiFineService optiFineService;
+    private volatile List<DownloadSource> sources = List.of(OfficialDownloadSource.INSTANCE);
 
     public OptiFineInstaller(
             VersionInstaller versionInstaller,
@@ -64,6 +69,19 @@ public final class OptiFineInstaller {
             URI manifestUri,
             Path manifestCacheFile
     ) {
+        this(versionInstaller, externalLoaderInstaller, javaLocator, fileDownloader,
+                manifestUri, manifestCacheFile, new OptiFineService());
+    }
+
+    public OptiFineInstaller(
+            VersionInstaller versionInstaller,
+            ExternalLoaderInstaller externalLoaderInstaller,
+            JavaLocator javaLocator,
+            FileDownloader fileDownloader,
+            URI manifestUri,
+            Path manifestCacheFile,
+            OptiFineService optiFineService
+    ) {
         this.versionInstaller = Objects.requireNonNull(versionInstaller, "versionInstaller");
         this.externalLoaderInstaller = Objects.requireNonNull(
                 externalLoaderInstaller, "externalLoaderInstaller");
@@ -71,6 +89,11 @@ public final class OptiFineInstaller {
         this.fileDownloader = Objects.requireNonNull(fileDownloader, "fileDownloader");
         this.manifestUri = Objects.requireNonNull(manifestUri, "manifestUri");
         this.manifestCacheFile = Objects.requireNonNull(manifestCacheFile, "manifestCacheFile");
+        this.optiFineService = Objects.requireNonNull(optiFineService, "optiFineService");
+    }
+
+    public void setSources(List<DownloadSource> sources) {
+        this.sources = List.copyOf(Objects.requireNonNull(sources, "sources"));
     }
 
     public InstalledVersion install(
@@ -108,9 +131,10 @@ public final class OptiFineInstaller {
         Path installer = Files.createTempFile("caml-optifine-", ".jar");
         Path staging = Files.createTempDirectory(gameDirectory, ".caml-optifine-install-");
         try {
+            URI installerUri = optiFineService.resolveDownloadUri(optiFineVersion);
             fileDownloader.download(new DownloadItem(
                     "OptiFine installer",
-                    List.of(optiFineVersion.downloadUri()),
+                    DownloadSources.candidates(sources, installerUri.toString()),
                     installer,
                     null,
                     -1

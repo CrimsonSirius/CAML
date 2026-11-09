@@ -63,7 +63,8 @@ CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
 - 下载使用 HTTP/1.1；失败重试并短暂退避，最终错误包含下载项和地址。
 - 使用有界线程池并发执行下载，并发数由设置决定（1–256，默认 8）。
 - 下载源支持“尽可能使用镜像源”“尽可能使用官方源”和“自定义镜像根地址”三种模式；
-  默认镜像源，镜像失败时回退原始官方地址；覆盖版本清单、版本 JSON、版本文件、库、资源、加载器 installer/API。
+  默认镜像源，镜像失败时回退原始官方地址；覆盖版本清单、版本 JSON、版本文件、库、资源、
+  Fabric/Forge/NeoForge/OptiFine 元数据、Fabric Maven 依赖和加载器 installer/API。
 - 已有有效文件时跳过。
 
 ### 3.3 实例安装
@@ -79,8 +80,8 @@ CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
 - 返回 `InstalledVersion`，包含后续启动需要的路径。
 - Fabric 安装先确保原版父版本存在，再写入 Fabric Meta profile JSON，并把可选 Fabric API jar 放入实际游戏目录的 `mods`。
 - Forge/NeoForge 通过官方 installer 的 `--installClient` 在 staging 目录执行 processor，再合并 libraries 和版本目录。
-- OptiFine 从 BMCLAPI 获取版本和 installer；先安装 Forge，再调用 OptiFine 官方 installer 的
-  `doInstall` 生成补丁库，最后把 OptiFine 库和启动参数合并进 Forge 版本 JSON。
+- OptiFine 按下载源选择官方下载页或 BMCLAPI 获取版本和 installer；先安装 Forge，再调用 OptiFine
+  官方 installer 的 `doInstall` 生成补丁库，最后把 OptiFine 库和启动参数合并进 Forge 版本 JSON。
 - OptiFine 只允许与 Forge 组合；选择 Fabric/NeoForge 时 OptiFine 选项会被清空并禁用。
 - `CAMLBackend.inspectGameDirectory` 扫描 `versions/<id>/<id>.json`，返回已安装版本和隔离版本列表。
 

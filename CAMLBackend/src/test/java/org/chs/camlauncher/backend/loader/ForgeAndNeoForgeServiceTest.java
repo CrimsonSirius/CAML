@@ -1,6 +1,7 @@
 package org.chs.camlauncher.backend.loader;
 
 import com.sun.net.httpserver.HttpServer;
+import org.chs.camlauncher.backend.download.source.MirrorDownloadSource;
 import org.chs.camlauncher.backend.loader.forge.ForgeService;
 import org.chs.camlauncher.backend.loader.forge.ForgeVersion;
 import org.chs.camlauncher.backend.loader.neoforge.NeoForgeService;
@@ -69,6 +70,32 @@ class ForgeAndNeoForgeServiceTest {
                     base + "neoforge/20.2.86/neoforge-20.2.86-installer.jar",
                     neoForge.getFirst().installerUri().toString()
             );
+        } finally {
+            server.stop(0);
+        }
+    }
+
+    @Test
+    void fetchesForgeMetadataFromMirror() throws Exception {
+        String forgeXml = """
+                <metadata><versioning><versions>
+                  <version>1.20.1-47.4.0</version>
+                </versions></versioning></metadata>
+                """;
+        HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        server.createContext("/maven/net/minecraftforge/forge/maven-metadata.xml",
+                exchange -> respond(exchange, forgeXml));
+        server.start();
+
+        try {
+            ForgeService service = new ForgeService();
+            service.setSources(List.of(new MirrorDownloadSource(
+                    "http://127.0.0.1:" + server.getAddress().getPort())));
+
+            List<ForgeVersion> versions = service.fetchVersions("1.20.1");
+
+            assertEquals(1, versions.size());
+            assertEquals("47.4.0", versions.getFirst().version());
         } finally {
             server.stop(0);
         }

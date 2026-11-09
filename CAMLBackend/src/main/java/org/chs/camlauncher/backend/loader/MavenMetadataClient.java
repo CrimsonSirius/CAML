@@ -2,6 +2,8 @@ package org.chs.camlauncher.backend.loader;
 
 import org.w3c.dom.Document;
 import org.w3c.dom.NodeList;
+import org.chs.camlauncher.backend.download.source.DownloadSource;
+import org.chs.camlauncher.backend.download.source.SourceAwareHttpClient;
 
 import javax.xml.XMLConstants;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -9,9 +11,6 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
-import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
@@ -19,29 +18,22 @@ import java.util.Objects;
 
 /** 读取 Maven maven-metadata.xml 中的版本列表。 */
 public final class MavenMetadataClient {
-    private final HttpClient httpClient;
+    private final SourceAwareHttpClient httpClient;
 
     public MavenMetadataClient() {
         this(defaultClient());
     }
 
     public MavenMetadataClient(HttpClient httpClient) {
-        this.httpClient = Objects.requireNonNull(httpClient, "httpClient");
+        this.httpClient = new SourceAwareHttpClient(Objects.requireNonNull(httpClient, "httpClient"));
+    }
+
+    public void setSources(List<DownloadSource> sources) {
+        httpClient.setSources(sources);
     }
 
     public List<String> fetchVersions(URI uri) throws IOException, InterruptedException {
-        HttpRequest request = HttpRequest.newBuilder(uri)
-                .timeout(Duration.ofSeconds(30))
-                .header("User-Agent", "CAML/1.0")
-                .GET()
-                .build();
-        HttpResponse<byte[]> response = httpClient.send(
-                request,
-                HttpResponse.BodyHandlers.ofByteArray()
-        );
-        if (response.statusCode() < 200 || response.statusCode() >= 300) {
-            throw new IOException("HTTP " + response.statusCode() + " for " + uri);
-        }
+        byte[] body = httpClient.getBytes(uri, Duration.ofSeconds(30), "application/xml,text/xml,*/*");
 
         try {
             DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
@@ -54,7 +46,7 @@ public final class MavenMetadataClient {
             factory.setExpandEntityReferences(false);
 
             Document document = factory.newDocumentBuilder().parse(
-                    new ByteArrayInputStream(response.body())
+                    new ByteArrayInputStream(body)
             );
             NodeList nodes = document.getElementsByTagName("version");
             List<String> versions = new ArrayList<>(nodes.getLength());
