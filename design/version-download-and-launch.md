@@ -159,10 +159,11 @@ Fabric 安装流程：
 
 Forge/NeoForge 安装流程：
 
-- 从 Forge/NeoForge Maven `maven-metadata.xml` 筛选当前 Minecraft 版本的 installer。
-- NeoForge 通过 HTTP Range 读取 installer 内 `version.json` 的 `inheritsFrom`，按实际继承的
-  Minecraft 版本精确过滤，不再仅依赖 NeoForge 版本号前缀。
+- Forge/NeoForge 在镜像源下优先读取 BMCLAPI 的按 Minecraft 版本 JSON 接口；
+  官方源从 Maven `maven-metadata.xml` 筛选，NeoForge 再用版本号规则映射 Minecraft 版本。
 - 先确保原版父版本存在，再创建 staging 目录并复制父版本 JSON 和客户端 jar。
+- 读取 installer 的 `version.json` 与 `install_profile.json`，按当前下载源预下载其中声明的依赖库，
+  让 installer 直接校验并跳过下载，避免其直连 `maven.neoforged.net` 造成长时间超时。
 - 运行官方 installer 的 headless `--installClient <staging>`，由官方 processor 生成运行时库和版本文件。
 - 把 staging libraries 合并回共享 `libraries`，再按用户实例名移动版本目录。
 - 最后用 `VersionInstaller` 读取安装结果，解析 `inheritsFrom` 并校验启动所需文件。

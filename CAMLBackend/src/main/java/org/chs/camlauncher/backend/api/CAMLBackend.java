@@ -51,6 +51,9 @@ import org.chs.camlauncher.backend.metadata.MetadataService;
 import org.chs.camlauncher.backend.metadata.model.VersionManifest;
 import org.chs.camlauncher.backend.metadata.VersionManifestService;
 import org.chs.camlauncher.backend.runtime.JavaLocator;
+import org.chs.camlauncher.backend.runtime.JavaCandidate;
+import org.chs.camlauncher.backend.runtime.JavaRuntime;
+import org.chs.camlauncher.backend.runtime.JavaSelectionMode;
 import org.chs.camlauncher.backend.settings.SettingsService;
 import org.chs.camlauncher.backend.system.SystemMemoryInfo;
 import org.chs.camlauncher.backend.system.SystemMemoryService;
@@ -61,21 +64,26 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Stream;
 
 public final class CAMLBackend implements AutoCloseable {
     public static final String VERSION = "1.0-SNAPSHOT";
 
     private static final Logger LOGGER = LogManager.getLogger(CAMLBackend.class);
+    private static final Duration VERSION_MANIFEST_CACHE_TTL = Duration.ofMinutes(5);
 
     private final BackendConfig config;
     private final JsonService json;
     private final MetadataService metadata;
     private final JavaLocator javaLocator;
     private final VersionManifestService versionManifestService;
+    private final AtomicLong versionManifestGeneration = new AtomicLong();
     private final DownloadPlanner downloadPlanner;
     private final AssetDownloadPlanner assetDownloadPlanner;
     private final FileDownloader fileDownloader;
@@ -103,6 +111,7 @@ public final class CAMLBackend implements AutoCloseable {
     private volatile int downloadConcurrency = DownloadConcurrency.DEFAULT;
     private volatile DownloadSourceMode downloadSourceMode = SettingsService.DEFAULT_DOWNLOAD_SOURCE;
     private volatile String customDownloadApi = "";
+    private volatile CachedVersionManifest cachedVersionManifest;
     private boolean started;
 
     public CAMLBackend(BackendConfig config) {
@@ -195,6 +204,7 @@ public final class CAMLBackend implements AutoCloseable {
             downloadConcurrency = DownloadConcurrency.DEFAULT;
         }
         versionInstaller.setDownloadConcurrency(downloadConcurrency);
+        externalLoaderInstaller.setDownloadConcurrency(downloadConcurrency);
         try {
             downloadSourceMode = settingsService.downloadSourceMode();
             customDownloadApi = settingsService.customDownloadApi();
@@ -204,6 +214,15 @@ public final class CAMLBackend implements AutoCloseable {
             customDownloadApi = "";
         }
         applyDownloadSources();
+        try {
+            gameLaunchService.setJavaSelection(
+                    settingsService.javaSelectionMode(),
+                    settingsService.selectedJavaPath().orElse(null)
+            );
+        } catch (IOException e) {
+            LOGGER.warn("无法读取 Java 选择设置，使用自动选择", e);
+            gameLaunchService.setJavaSelection(JavaSelectionMode.AUTO, null);
+        }
 
         started = true;
         LOGGER.info("CAML backend {} started", VERSION);
@@ -276,6 +295,7 @@ public final class CAMLBackend implements AutoCloseable {
         settingsService.setDownloadConcurrency(value);
         downloadConcurrency = value;
         versionInstaller.setDownloadConcurrency(value);
+        externalLoaderInstaller.setDownloadConcurrency(value);
     }
 
     public DownloadSourceMode downloadSourceMode() {
@@ -293,6 +313,8 @@ public final class CAMLBackend implements AutoCloseable {
         downloadSourceMode = mode;
         customDownloadApi = value;
         applyDownloadSources();
+        versionManifestGeneration.incrementAndGet();
+        cachedVersionManifest = null;
     }
 
     private void applyDownloadSources() {
@@ -305,7 +327,9 @@ public final class CAMLBackend implements AutoCloseable {
         fabricInstaller.setSources(sources);
         fabricService.setSources(sources);
         forgeService.setSources(sources);
+        forgeService.setSourceMode(downloadSourceMode, customDownloadApi);
         neoForgeService.setSources(sources);
+        neoForgeService.setSourceMode(downloadSourceMode, customDownloadApi);
         optiFineService.setSources(sources);
         optiFineService.setSourceMode(downloadSourceMode, customDownloadApi);
         optiFineInstaller.setSources(sources);
@@ -327,15 +351,63 @@ public final class CAMLBackend implements AutoCloseable {
         return javaLocator;
     }
 
+    public JavaSelectionMode javaSelectionMode() throws IOException {
+        return settingsService.javaSelectionMode();
+    }
+
+    public Optional<Path> selectedJavaPath() throws IOException {
+        return settingsService.selectedJavaPath();
+    }
+
+    public List<Path> manualJavaPaths() throws IOException {
+        return settingsService.manualJavaPaths();
+    }
+
+    public List<JavaCandidate> listJavaCandidates() throws IOException {
+        return javaLocator.discoverCandidates(
+                settingsService.manualJavaPaths(),
+                settingsService.selectedJavaPath().orElse(null)
+        );
+    }
+
+    public JavaCandidate addManualJavaPath(Path executable) throws IOException {
+        Objects.requireNonNull(executable, "executable");
+        Path normalized = executable.toAbsolutePath().normalize();
+        JavaRuntime runtime = javaLocator.inspect(normalized)
+                .orElseThrow(() -> new IOException("不是有效的 Java 可执行文件：" + normalized));
+        settingsService.addManualJavaPath(normalized);
+        return JavaCandidate.from(runtime, true);
+    }
+
+    public void setJavaSelection(JavaSelectionMode mode, Path selectedJavaPath) throws IOException {
+        Objects.requireNonNull(mode, "mode");
+        Path normalized = selectedJavaPath == null
+                ? null
+                : selectedJavaPath.toAbsolutePath().normalize();
+        settingsService.setJavaSelection(mode, normalized);
+        gameLaunchService.setJavaSelection(mode, normalized);
+    }
+
     public VersionManifestService versionManifestService() {
         return versionManifestService;
     }
 
     public VersionManifest fetchVersionManifest() throws java.io.IOException, InterruptedException {
-        return versionManifestService.fetchManifestOrCache(
+        CachedVersionManifest cached = cachedVersionManifest;
+        if (cached != null && Instant.now().isBefore(cached.expiresAt())) {
+            return cached.manifest();
+        }
+
+        long generation = versionManifestGeneration.get();
+        VersionManifest manifest = versionManifestService.fetchManifestOrCache(
                 VersionManifestService.DEFAULT_MANIFEST_URI,
                 config.dataDirectory().resolve("cache").resolve("version_manifest_v2.json")
         );
+        if (versionManifestGeneration.get() == generation) {
+            cachedVersionManifest = new CachedVersionManifest(
+                    manifest, Instant.now().plus(VERSION_MANIFEST_CACHE_TTL));
+        }
+        return manifest;
     }
 
     public DownloadPlanner downloadPlanner() {
@@ -664,5 +736,8 @@ public final class CAMLBackend implements AutoCloseable {
             LOGGER.info("CAML backend stopped");
         }
         latestLogService.close();
+    }
+
+    private record CachedVersionManifest(VersionManifest manifest, Instant expiresAt) {
     }
 }

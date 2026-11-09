@@ -33,6 +33,21 @@ final class ControllerContext {
         thread.setDaemon(true);
         return thread;
     });
+    private final ExecutorService checkExecutor = Executors.newSingleThreadExecutor(runnable -> {
+        Thread thread = new Thread(runnable, "caml-check-worker");
+        thread.setDaemon(true);
+        return thread;
+    });
+    private final ExecutorService metadataExecutor = Executors.newFixedThreadPool(6, runnable -> {
+        Thread thread = new Thread(runnable, "caml-metadata-worker");
+        thread.setDaemon(true);
+        return thread;
+    });
+    private final ExecutorService javaExecutor = Executors.newSingleThreadExecutor(runnable -> {
+        Thread thread = new Thread(runnable, "caml-java-worker");
+        thread.setDaemon(true);
+        return thread;
+    });
 
     private volatile Consumer<String> logSink;
 
@@ -61,6 +76,22 @@ final class ControllerContext {
     }
 
     <T> CompletableFuture<T> supplyAsync(IoSupplier<T> supplier) {
+        return supplyAsync(supplier, downloadExecutor);
+    }
+
+    <T> CompletableFuture<T> supplyCheckAsync(IoSupplier<T> supplier) {
+        return supplyAsync(supplier, checkExecutor);
+    }
+
+    <T> CompletableFuture<T> supplyMetadataAsync(IoSupplier<T> supplier) {
+        return supplyAsync(supplier, metadataExecutor);
+    }
+
+    <T> CompletableFuture<T> supplyJavaAsync(IoSupplier<T> supplier) {
+        return supplyAsync(supplier, javaExecutor);
+    }
+
+    private <T> CompletableFuture<T> supplyAsync(IoSupplier<T> supplier, ExecutorService executor) {
         Objects.requireNonNull(supplier, "supplier");
         return CompletableFuture.supplyAsync(() -> {
             try {
@@ -71,7 +102,7 @@ final class ControllerContext {
                 }
                 throw new CompletionException(e);
             }
-        }, downloadExecutor);
+        }, executor);
     }
 
     void executeSettings(Runnable task) {
@@ -107,6 +138,9 @@ final class ControllerContext {
 
     void shutdown() {
         downloadExecutor.shutdownNow();
+        checkExecutor.shutdownNow();
+        metadataExecutor.shutdownNow();
+        javaExecutor.shutdownNow();
         settingsExecutor.shutdown();
         try {
             if (!settingsExecutor.awaitTermination(5, TimeUnit.SECONDS)) {

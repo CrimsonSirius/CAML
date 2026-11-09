@@ -1,6 +1,6 @@
 # CAML 界面设计
 
-更新日期：2026-11-07
+更新日期：2026-11-09
 
 ## 1. 设计意图
 
@@ -18,11 +18,19 @@
   点击版本进入下载设置页，顶部是取消、实例名字标签和输入框，输入框默认官方版本号。
   页面主体由六条组成：版本信息、选择 Forge 版本、选择 OptiFine 版本、选择 Fabric 版本、
   选择 Fabric API 版本、选择 NeoForge 版本；取消位于左上角，底部整宽“下载实例”按钮安装原版或所选加载器。
-  Fabric Loader 从 Fabric Meta 获取，Fabric API 从 Modrinth 获取；Forge/NeoForge 从各自 Maven 获取。
+  Fabric Loader 从 Fabric Meta 获取，Fabric API 从 Modrinth 获取；Forge/NeoForge 镜像源优先读取 BMCLAPI JSON，
+  官方源读取各自 Maven 元数据。五类加载器请求并发执行，先返回的选项先显示。
   Forge、Fabric、NeoForge 互斥；OptiFine 只与 Forge 兼容，选择 Fabric 或 NeoForge 时会清空并禁用 OptiFine。
   未选择加载器时安装原版。
+- 实例名输入停止约 0.5 秒后自动调用后端检查格式、重复目录和加载器同名校验，
+  结果显示在输入框下方；检查通过前“下载实例”保持禁用。
+- 点击“下载实例”后进入独立下载进度页：左侧卡片显示实时网速和累计下载量，
+  右侧卡片显示总进度、当前文件、当前阶段和按顺序增长的阶段列表。
+  返回下载列表后下载继续，完成或失败状态仍写入启动器日志。
 - 设置页：左侧“游戏设置 / 下载设置 / 外观”侧边栏，右侧对应内容，不显示页面标题。
-- 游戏设置：三个圆角分组。“游戏位置”组包含路径输入、浏览和保存；“版本隔离”组包含“完全版本隔离”和“不进行版本隔离”两个圆形单选项；“内存”组包含描述、内存摘要和叠层滑块。
+- 设置页右侧内容支持纵向滚动，内容较长时可以从上向下滚动查看。
+- 游戏设置：“游戏位置”圆角分组包含路径输入、浏览和保存；“版本隔离”组包含“完全版本隔离”和“不进行版本隔离”两个圆形单选项；“Java”组包含“自动选择 / 手动选择”两个圆形单选项、重新扫描按钮、添加 Java 按钮、Java 地址下拉框和选中 Java 的版本信息；“内存”组包含描述、内存摘要和叠层滑块。
+- Java 自动选择时下拉框禁用并呈灰色；手动选择时下拉框可用，列出整机扫描结果和手动添加的 Java，按真实路径去重合并，框内只显示 Java 可执行文件地址。
 - 三个分组按内容区宽度拉齐；“已使用 / 游戏 / 可用 / 总内存”保持单行，灰色辅助文字统一放大。
 - 主页“浏览游戏实例”进入二级列表，列出当前游戏位置扫描出的全部实例；
   进入和返回都通过 `CamlPageHost` 播放与顶级页面一致的淡入/位移动画。
@@ -47,7 +55,8 @@
 - 底栏显示后端状态和数据目录。
 - 视图拆分：`MainView` 是壳层；主页由 `HomeView`、`LaunchFormView`、
   `LogPaneView`、`InstancePickerView` 和 `ManageInstancesView` 组成；下载页由
-  `DownloadsView`、`DownloadVersionsView` 和 `DownloadVersionSetupView` 组成；设置页由
+  `DownloadsView`、`DownloadVersionsView`、`DownloadVersionSetupView`、
+  `DownloadProgressView`、`DownloadTelemetry` 和 `DownloadRequest` 组成；设置页由
   `SettingsView`、`GameSettingsView`、`GameLocationSettingsView`、
   `VersionIsolationSettingsView`、`DownloadSettingsView` 和 `LauncherSettingsView` 组成；
   `LaunchSettings` 共享内存值。

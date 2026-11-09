@@ -2,11 +2,13 @@ package org.chs.camlauncher.backend.settings;
 
 import org.chs.camlauncher.backend.instance.VersionIsolationMode;
 import org.chs.camlauncher.backend.download.source.DownloadSourceMode;
+import org.chs.camlauncher.backend.runtime.JavaSelectionMode;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -222,5 +224,30 @@ class SettingsServiceTest {
                 IllegalArgumentException.class,
                 () -> service.setLastLaunchedInstanceId("  ")
         );
+    }
+
+    @Test
+    void defaultsToAutomaticJavaSelection() throws Exception {
+        SettingsService service = new SettingsService(dataDirectory);
+
+        assertEquals(JavaSelectionMode.AUTO, service.javaSelectionMode());
+        assertTrue(service.selectedJavaPath().isEmpty());
+        assertTrue(service.manualJavaPaths().isEmpty());
+    }
+
+    @Test
+    void persistsJavaSelectionAndDeduplicatesManualPaths() throws Exception {
+        Path first = dataDirectory.resolve("java-a/bin/java").toAbsolutePath().normalize();
+        Path second = dataDirectory.resolve("java-b/bin/java").toAbsolutePath().normalize();
+        SettingsService service = new SettingsService(dataDirectory);
+        service.addManualJavaPath(first);
+        service.addManualJavaPath(second);
+        service.addManualJavaPath(first);
+        service.setJavaSelection(JavaSelectionMode.MANUAL, second);
+
+        SettingsService loaded = new SettingsService(dataDirectory);
+        assertEquals(JavaSelectionMode.MANUAL, loaded.javaSelectionMode());
+        assertEquals(second, loaded.selectedJavaPath().orElseThrow());
+        assertEquals(List.of(first, second), loaded.manualJavaPaths());
     }
 }

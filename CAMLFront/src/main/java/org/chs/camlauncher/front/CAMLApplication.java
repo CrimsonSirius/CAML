@@ -10,6 +10,7 @@ import org.apache.logging.log4j.Logger;
 import org.chs.camlauncher.backend.api.CAMLBackend;
 import org.chs.camlauncher.backend.config.BackendConfig;
 import org.chs.camlauncher.backend.instance.VersionIsolationMode;
+import org.chs.camlauncher.backend.runtime.JavaSelectionMode;
 import org.chs.camlauncher.backend.settings.SettingsService;
 import org.chs.camlauncher.backend.system.SystemMemoryInfo;
 import org.chs.camlauncher.backend.theme.ThemeInfo;
@@ -40,6 +41,8 @@ public final class CAMLApplication extends Application {
     private Path gameDirectory;
     private boolean fullVersionIsolation = SettingsService.DEFAULT_VERSION_ISOLATION
             == VersionIsolationMode.FULL;
+    private JavaSelectionMode javaSelectionMode = JavaSelectionMode.AUTO;
+    private Path selectedJavaPath;
     private String lastLaunchedInstanceId = "1.21.4";
 
     @Override
@@ -82,6 +85,12 @@ public final class CAMLApplication extends Application {
         } catch (IOException e) {
             logger.warn("无法读取最后启动实例，使用默认实例 {}", lastLaunchedInstanceId, e);
         }
+        try {
+            javaSelectionMode = backend.javaSelectionMode();
+            selectedJavaPath = backend.selectedJavaPath().orElse(null);
+        } catch (IOException e) {
+            logger.warn("无法读取 Java 选择设置，使用自动选择", e);
+        }
         systemMemory = backend.systemMemory();
 
         logger.info("CAML frontend initialized");
@@ -93,7 +102,7 @@ public final class CAMLApplication extends Application {
         controller = new MainController(backend);
         view = new MainView(
                 controller, savedMaxMemoryMb, systemMemory, gameDirectory,
-                fullVersionIsolation, lastLaunchedInstanceId);
+                fullVersionIsolation, lastLaunchedInstanceId, javaSelectionMode, selectedJavaPath);
 
         // 3. 按主屏幕可用区域决定窗口尺寸：小屏不溢出，大屏不过小，默认居中
         Rectangle2D screen = Screen.getPrimary().getVisualBounds();

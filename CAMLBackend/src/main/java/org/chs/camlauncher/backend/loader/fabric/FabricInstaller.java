@@ -77,7 +77,9 @@ public final class FabricInstaller {
                     listener
             );
 
+            DownloadListener.notifyStage(listener, "获取 Fabric 配置");
             String profileJson = fabricService.fetchLoaderProfile(gameVersion, loaderVersion);
+            DownloadListener.notifyStage(listener, "安装 Fabric Loader");
             InstalledVersion installed = versionInstaller.installProfile(
                     normalizedInstanceId,
                     gameDirectory,
@@ -86,6 +88,7 @@ public final class FabricInstaller {
             );
 
             if (apiVersion != null) {
+                DownloadListener.notifyStage(listener, "下载 Fabric API");
                 Path versionMods = targetVersionDirectory.resolve("mods");
                 Path apiFile = downloadApi(apiVersion, versionMods, listener);
                 Path rootMods = gameDirectory.resolve("mods");
@@ -93,6 +96,7 @@ public final class FabricInstaller {
                         rootMods, apiFile.getFileName().toString(), "Fabric API file");
                 copyIfDifferent(apiFile, rootApiFile);
             }
+            DownloadListener.notifyStage(listener, "校验 Fabric 安装结果");
             return installed;
         } catch (IOException | RuntimeException | InterruptedException e) {
             deleteRecursively(targetVersionDirectory);

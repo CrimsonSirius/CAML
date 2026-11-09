@@ -86,6 +86,94 @@
     -fx-padding: 0 0 4 0;
 }
 
+.app-download-progress-page {
+    -fx-background-color: -caml-surface;
+}
+
+.app-download-progress-heading {
+    -fx-font-size: 30px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -caml-on-surface;
+}
+
+.app-download-card {
+    -fx-background-color: -caml-surface-low;
+    -fx-background-radius: 16;
+    -fx-border-color: -caml-border-subtle;
+    -fx-border-width: 1;
+    -fx-border-radius: 16;
+    -fx-padding: 24;
+}
+
+.app-download-card-title {
+    -fx-font-size: 18px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -caml-on-surface;
+}
+
+.app-download-speed-value {
+    -fx-font-size: 40px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -caml-accent-text;
+}
+
+.app-download-progress-detail {
+    -fx-font-size: 16px;
+    -fx-text-fill: -caml-on-surface-muted;
+}
+
+.app-download-stage-current {
+    -fx-font-size: 18px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -caml-on-surface;
+}
+
+.app-download-stage-list {
+    -fx-padding: 6 0 0 0;
+}
+
+.app-download-stage-row {
+    -fx-padding: 6 0;
+}
+
+.app-download-stage-marker {
+    -fx-min-width: 22;
+    -fx-font-size: 16px;
+    -fx-text-fill: -caml-on-surface-muted;
+}
+
+.app-download-stage-title {
+    -fx-font-size: 16px;
+    -fx-text-fill: -caml-on-surface-muted;
+}
+
+.app-download-stage-done .app-download-stage-marker {
+    -fx-text-fill: -caml-accent-text;
+}
+
+.app-download-stage-done .app-download-stage-title {
+    -fx-text-fill: -caml-on-surface;
+}
+
+.app-download-stage-active .app-download-stage-marker {
+    -fx-text-fill: -caml-accent;
+}
+
+.app-download-stage-active .app-download-stage-title {
+    -fx-font-weight: bold;
+    -fx-text-fill: -caml-on-surface;
+}
+
+.app-download-stage-failed .app-download-stage-marker,
+.app-download-stage-failed .app-download-stage-title,
+.app-download-status-error {
+    -fx-text-fill: -caml-danger;
+}
+
+.app-download-status-success {
+    -fx-text-fill: -caml-accent-text;
+}
+
 .app-sidebar,
 .app-settings-sidebar {
     -fx-background-color: transparent;
@@ -156,6 +244,32 @@
 
 .app-settings-group .app-memory-summary {
     -fx-font-size: 17px;
+}
+
+.app-settings-scroll {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-border-color: transparent;
+    -fx-padding: 0;
+}
+
+.app-settings-scroll > .viewport {
+    -fx-background-color: transparent;
+}
+
+.app-settings-group .caml-combo-box {
+    -fx-font-size: 16px;
+    -fx-min-height: 42;
+}
+
+.app-java-tool-button {
+    -fx-background-radius: 8;
+    -fx-min-height: 40;
+}
+
+.app-java-detail {
+    -fx-font-size: 14px;
+    -fx-text-fill: -caml-on-surface-muted;
 }
 
 .app-instance-picker {

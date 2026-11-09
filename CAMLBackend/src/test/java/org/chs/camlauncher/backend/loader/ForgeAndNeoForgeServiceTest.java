@@ -2,6 +2,7 @@ package org.chs.camlauncher.backend.loader;
 
 import com.sun.net.httpserver.HttpServer;
 import org.chs.camlauncher.backend.download.source.MirrorDownloadSource;
+import org.chs.camlauncher.backend.download.source.DownloadSourceMode;
 import org.chs.camlauncher.backend.loader.forge.ForgeService;
 import org.chs.camlauncher.backend.loader.forge.ForgeVersion;
 import org.chs.camlauncher.backend.loader.neoforge.NeoForgeService;
@@ -126,6 +127,51 @@ class ForgeAndNeoForgeServiceTest {
 
             assertEquals(1, versions.size());
             assertEquals("47.4.0", versions.getFirst().version());
+        } finally {
+            server.stop(0);
+        }
+    }
+
+    @Test
+    void fetchesLoaderListsFromBmclJsonApi() throws Exception {
+        String forgeJson = """
+                [
+                  {"version":"52.0.0","files":[{"category":"installer","format":"jar"}]},
+                  {"version":"52.1.21","files":[{"category":"installer","format":"jar"}]}
+                ]
+                """;
+        String neoForgeJson = """
+                [
+                  {"version":"21.1.1","mcversion":"1.21.1"},
+                  {"version":"21.1.265","mcversion":"1.21.1"},
+                  {"version":"21.2.0","mcversion":"1.21.2"}
+                ]
+                """;
+
+        HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        server.createContext("/forge/minecraft/1.21.1", exchange -> respond(exchange, forgeJson));
+        server.createContext("/neoforge/list/1.21.1", exchange -> respond(exchange, neoForgeJson));
+        server.start();
+
+        try {
+            String base = "http://127.0.0.1:" + server.getAddress().getPort();
+            ForgeService forgeService = new ForgeService();
+            forgeService.setSourceMode(DownloadSourceMode.CUSTOM, base);
+            NeoForgeService neoForgeService = new NeoForgeService();
+            neoForgeService.setSourceMode(DownloadSourceMode.CUSTOM, base);
+
+            List<ForgeVersion> forge = forgeService.fetchVersions("1.21.1");
+            assertEquals(2, forge.size());
+            assertEquals("52.1.21", forge.getFirst().version());
+
+            List<NeoForgeVersion> neoForge = neoForgeService.fetchVersions("1.21.1");
+            assertEquals(2, neoForge.size());
+            assertEquals("21.1.265", neoForge.getFirst().version());
+            assertEquals(
+                    "https://maven.neoforged.net/releases/net/neoforged/neoforge/"
+                            + "21.1.265/neoforge-21.1.265-installer.jar",
+                    neoForge.getFirst().installerUri().toString()
+            );
         } finally {
             server.stop(0);
         }

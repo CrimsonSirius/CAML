@@ -6,6 +6,7 @@ import javafx.scene.layout.BorderPane;
 import org.chs.camlauncher.backend.api.BackendStatus;
 import org.chs.camlauncher.backend.theme.ThemeInfo;
 import org.chs.camlauncher.backend.system.SystemMemoryInfo;
+import org.chs.camlauncher.backend.runtime.JavaSelectionMode;
 import org.chs.camlauncher.front.controller.DownloadsController;
 import org.chs.camlauncher.front.controller.HomeController;
 import org.chs.camlauncher.front.controller.MainController;
@@ -34,7 +35,8 @@ public final class MainView extends BorderPane {
 
     public MainView(MainController controller, int initialMaxMemoryMb,
                     SystemMemoryInfo systemMemory, Path initialGameDirectory,
-                    boolean fullVersionIsolation, String initialSelectedInstance) {
+                    boolean fullVersionIsolation, String initialSelectedInstance,
+                    JavaSelectionMode initialJavaSelectionMode, Path initialJavaPath) {
         this.controller = controller;
         getStyleClass().add("app-root");
 
@@ -42,7 +44,9 @@ public final class MainView extends BorderPane {
                 initialMaxMemoryMb,
                 initialGameDirectory,
                 fullVersionIsolation,
-                initialSelectedInstance
+                initialSelectedInstance,
+                initialJavaSelectionMode,
+                initialJavaPath
         );
         HomeController homeController = controller.homeController();
         DownloadsController downloadsController = controller.downloadsController();

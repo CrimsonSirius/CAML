@@ -1,6 +1,6 @@
 # CAML 总体架构
 
-更新日期：2026-11-07
+更新日期：2026-11-09
 
 ## 1. 架构目标
 
@@ -61,7 +61,11 @@ CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
 - 使用 SHA-1 校验。
 - 使用 `.part` 临时文件和原子移动。
 - 下载使用 HTTP/1.1；默认总计最多 6 次尝试，候选源按轮次轮流并短暂退避，最终错误包含下载项和地址。
+- 版本清单和版本 JSON 使用手动逐跳重定向和整次请求总截止时间；同一候选地址超时或连接失败时
+  重试一次，避免 BMCLAPI 单次 302 落到慢节点后长时间卡住，仍失败才切换下一个下载源或读取缓存。
 - 使用有界线程池并发执行下载，并发数由设置决定（1–256，默认 8）。
+- 下载监听同时提供单文件进度、计划级聚合摘要和阶段事件；聚合摘要包含已下载字节、
+  已知总字节、已完成文件数和总文件数，供进度页计算总进度。
 - 下载源支持“尽可能使用镜像源”“尽可能使用官方源”和“自定义镜像根地址”三种模式；
   默认镜像源，镜像失败时回退原始官方地址；覆盖版本清单、版本 JSON、版本文件、库、资源、
   Fabric/Forge/NeoForge/OptiFine 元数据、Fabric Maven 依赖和加载器 installer/API。
@@ -71,8 +75,9 @@ CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
 
 - 按版本 ID 安装原版。
 - 远程安装区分官方版本 ID 和实例 ID：官方 ID 用于拉取元数据，实例 ID 用作 `versions/<id>` 目录名和当前实例名。
-- 实例名默认官方版本号；原版、Fabric、Forge、NeoForge 统一拒绝空名、非法字符和已存在实例目录，
-  前端在开始下载前异步调用后端检查并提前提示。
+- 实例名默认官方版本号；原版、Fabric、Forge、NeoForge 统一拒绝空名、非法字符和已存在实例目录。
+  前端在输入停止约 0.5 秒后异步检查，并在输入框下方显示格式、重复目录和加载器同名提示；
+  检查通过前下载按钮保持禁用。
 - 本地已安装的版本（包括第三方启动器/整合包的自定义版本 ID）直接复用，不访问官方清单。
 - 复用本地版本时保持版本 JSON 不变，只补齐缺失文件。
 - 本地版本以 `versions/<id>` 文件夹名作为版本 ID；`inheritsFrom` 也按文件夹名查找父版本。
@@ -80,9 +85,10 @@ CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
 - 基础文件下载完成后才写入版本 JSON。
 - 返回 `InstalledVersion`，包含后续启动需要的路径。
 - Fabric 安装先确保原版父版本存在，再写入 Fabric Meta profile JSON，并把可选 Fabric API jar 放入实际游戏目录的 `mods`。
-- Forge/NeoForge 通过官方 installer 的 `--installClient` 在 staging 目录执行 processor，再合并 libraries 和版本目录。
-- NeoForge 版本列表不再只按版本号前缀猜测；通过 HTTP Range 读取 installer ZIP 内的 `version.json`，
-  使用实际 `inheritsFrom` 过滤当前 Minecraft 版本。
+- Forge/NeoForge 先按当前下载源把 installer 的 `version.json` / `install_profile.json` 依赖预下载到 staging，
+  再通过官方 installer 的 `--installClient` 执行 processor，避免 installer 绕过镜像直连官方 Maven。
+- Forge/NeoForge 版本列表在镜像源下优先读取 BMCLAPI 的按 Minecraft 版本 JSON 接口；
+  官方源使用 Maven 元数据，NeoForge 通过版本号规则映射到实际 Minecraft 版本，不再逐个下载 installer 探测。
 - OptiFine 按下载源选择官方下载页或 BMCLAPI 获取版本和 installer；先安装 Forge，再调用 OptiFine
   官方 installer 的 `doInstall` 生成补丁库，最后把 OptiFine 库和启动参数合并进 Forge 版本 JSON。
 - OptiFine I6 与 Forge 47.4.27+ 存在 `ResourceLocation.parse` 冲突；选择 OptiFine 时限制并自动切换到兼容的 Forge 版本。
@@ -175,7 +181,9 @@ CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
 - `InstancePickerView` 扫描当前游戏位置并列出全部已安装实例。
 - `DownloadsView` 负责下载页子导航；`DownloadVersionsView` 加载正式版、快照版和远古版列表，
   `DownloadVersionSetupView` 负责实例命名、版本信息、Forge/OptiFine/Fabric/NeoForge 选择；
-  OptiFine 只有在选择 Forge 后才可用，底部按钮通过后端安装原版或加载器游戏。
+  OptiFine 只有在选择 Forge 后才可用。下载设置页提交不可变 `DownloadRequest` 后，
+  `DownloadProgressView` 接管页面，展示网速、总进度、当前文件和阶段列表；
+  `DownloadTelemetry` 在后台事件与 JavaFX 轮询之间聚合进度和网速。
 - `GameSettingsView` 负责叠层内存滑块，`DownloadSettingsView` 负责下载源三选一、
   自定义 API 输入和 1–256 下载并发滑块，
   `LauncherSettingsView` 负责外观设置中的主题选择。
@@ -186,9 +194,14 @@ CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
 - 游戏位置、版本隔离、下载源、下载并发数、最大内存和最后启动实例保存在
   `~/.caml/settings.properties`，启动时加载；游戏位置只有点击保存才写入，其余选项立即写入。
   设置写入由串行写锁保护，并通过临时文件原子替换设置文件。
+- Java 选择模式、当前 Java 路径和手动 Java 列表保存在 `~/.caml/settings.properties`；
+  自动模式按版本 Java 要求选择运行时，手动模式在启动时使用用户选中的可执行文件。
+- Java 候选由 `JavaLocator` 扫描结果和手动列表按真实路径去重合并；设置页“重新扫描”
+  只刷新扫描结果，不丢弃手动添加项。
 - `LaunchSettings` 在主页和设置页之间共享游戏位置、版本隔离和最大内存值；`ViewSupport` 提供通用字段与侧边栏布局。
 - 当前实例通过共享 `LaunchSettings.selectedVersion` 管理；启动器初始化时恢复 `lastInstanceId`，实例信息下方显示存档位置。
-- `ControllerContext` 使用独立下载线程执行目录探测和下载，设置保存使用单独的串行设置线程；
+- `ControllerContext` 使用独立下载线程执行目录探测和下载，实例名检查使用独立短任务线程，
+  设置保存使用单独的串行设置线程；
   `HomeController` 负责启动派发，不阻塞 JavaFX Application Thread。
 - 下载日志按文件切换和每 10% 进度节流，避免刷屏。
 - 主工作区使用 `SplitPane`：宽度 `< 900` 时上下堆叠，`>= 900` 时左右分栏。

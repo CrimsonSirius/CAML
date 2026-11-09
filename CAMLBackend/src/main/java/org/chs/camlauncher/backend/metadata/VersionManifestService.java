@@ -21,6 +21,10 @@ import java.nio.file.StandardCopyOption;
 import java.time.Duration;
 import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 public final class VersionManifestService {
     public static final URI DEFAULT_MANIFEST_URI = URI.create(
@@ -28,18 +32,36 @@ public final class VersionManifestService {
     );
 
     private static final Logger LOGGER = LogManager.getLogger(VersionManifestService.class);
+    private static final Duration DEFAULT_REQUEST_TIMEOUT = Duration.ofSeconds(10);
+    private static final int DEFAULT_SOURCE_ATTEMPTS = 1;
+    private static final int MAX_REDIRECTS = 10;
 
     private final HttpClient httpClient;
     private final MetadataService metadata;
+    private final Duration requestTimeout;
+    private final int sourceAttempts;
     private volatile List<DownloadSource> sources = List.of(OfficialDownloadSource.INSTANCE);
 
     public VersionManifestService() {
-        this(defaultClient(), new MetadataService());
+        this(defaultClient(), new MetadataService(), DEFAULT_REQUEST_TIMEOUT, DEFAULT_SOURCE_ATTEMPTS);
     }
 
     public VersionManifestService(HttpClient httpClient, MetadataService metadata) {
+        this(httpClient, metadata, DEFAULT_REQUEST_TIMEOUT, DEFAULT_SOURCE_ATTEMPTS);
+    }
+
+    VersionManifestService(HttpClient httpClient, MetadataService metadata,
+                           Duration requestTimeout, int sourceAttempts) {
         this.httpClient = Objects.requireNonNull(httpClient, "httpClient");
         this.metadata = Objects.requireNonNull(metadata, "metadata");
+        this.requestTimeout = Objects.requireNonNull(requestTimeout, "requestTimeout");
+        if (requestTimeout.isZero() || requestTimeout.isNegative()) {
+            throw new IllegalArgumentException("requestTimeout must be positive");
+        }
+        if (sourceAttempts < 1) {
+            throw new IllegalArgumentException("sourceAttempts must be positive");
+        }
+        this.sourceAttempts = sourceAttempts;
     }
 
     public VersionManifest fetchManifest() throws IOException, InterruptedException {
@@ -103,19 +125,79 @@ public final class VersionManifestService {
     }
 
     private String fetchText(URI uri) throws IOException, InterruptedException {
-        HttpRequest request = HttpRequest.newBuilder(uri)
-                .timeout(Duration.ofSeconds(30))
-                .header("User-Agent", "CAML")
-                .GET()
-                .build();
-        HttpResponse<String> response = httpClient.send(
-                request,
-                HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8)
-        );
-        if (response.statusCode() < 200 || response.statusCode() >= 300) {
-            throw new IOException("HTTP " + response.statusCode() + " for " + uri);
+        IOException lastFailure = null;
+        for (int attempt = 1; attempt <= sourceAttempts; attempt++) {
+            try {
+                long deadline = System.nanoTime() + requestTimeout.toNanos();
+                return fetchFollowingRedirects(uri, deadline);
+            } catch (IOException e) {
+                lastFailure = e;
+            }
+
+            if (attempt < sourceAttempts) {
+                LOGGER.warn("请求 {} 失败，重试 {}/{}: {}",
+                        uri, attempt + 1, sourceAttempts, lastFailure.getMessage());
+            }
         }
-        return response.body();
+        throw lastFailure == null ? new IOException("请求失败：" + uri) : lastFailure;
+    }
+
+    private String fetchFollowingRedirects(URI uri, long deadline)
+            throws IOException, InterruptedException {
+        URI current = uri;
+        for (int redirects = 0; redirects <= MAX_REDIRECTS; redirects++) {
+            long remainingNanos = deadline - System.nanoTime();
+            if (remainingNanos <= 0) {
+                throw new IOException("请求超时（" + requestTimeout.toMillis() + "ms）：" + uri);
+            }
+
+            HttpRequest request = HttpRequest.newBuilder(current)
+                    .header("User-Agent", "CAML")
+                    .GET()
+                    .build();
+            CompletableFuture<HttpResponse<String>> future = httpClient.sendAsync(
+                    request,
+                    HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8)
+            );
+
+            HttpResponse<String> response;
+            try {
+                response = future.get(remainingNanos, TimeUnit.NANOSECONDS);
+            } catch (TimeoutException e) {
+                future.cancel(true);
+                throw new IOException(
+                        "请求超时（" + requestTimeout.toMillis() + "ms）：" + uri, e);
+            } catch (ExecutionException e) {
+                Throwable cause = e.getCause() == null ? e : e.getCause();
+                throw cause instanceof IOException ioException
+                        ? ioException
+                        : new IOException("请求失败：" + current, cause);
+            } catch (InterruptedException e) {
+                future.cancel(true);
+                Thread.currentThread().interrupt();
+                throw e;
+            }
+
+            int status = response.statusCode();
+            if (status >= 200 && status < 300) {
+                return response.body();
+            }
+            if (isRedirect(status)) {
+                String location = response.headers().firstValue("Location").orElse(null);
+                if (location == null || location.isBlank()) {
+                    throw new IOException("重定向缺少 Location：" + current);
+                }
+                current = current.resolve(location);
+                continue;
+            }
+            throw new IOException("HTTP " + status + " for " + current);
+        }
+        throw new IOException("重定向次数过多：" + uri);
+    }
+
+    private static boolean isRedirect(int status) {
+        return status == 301 || status == 302 || status == 303
+                || status == 307 || status == 308;
     }
 
     private <T> T fetchParsedFromSources(URI uri, TextParser<T> parser)
@@ -181,7 +263,7 @@ public final class VersionManifestService {
 
     private static HttpClient defaultClient() {
         return HttpClient.newBuilder()
-                .followRedirects(HttpClient.Redirect.NORMAL)
+                .followRedirects(HttpClient.Redirect.NEVER)
                 .connectTimeout(Duration.ofSeconds(15))
                 .build();
     }

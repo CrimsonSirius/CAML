@@ -6,10 +6,13 @@ import org.apache.logging.log4j.Logger;
 import org.chs.camlauncher.backend.api.GameDirectoryInfo;
 import org.chs.camlauncher.backend.download.source.DownloadSourceMode;
 import org.chs.camlauncher.backend.instance.VersionIsolationMode;
+import org.chs.camlauncher.backend.runtime.JavaCandidate;
+import org.chs.camlauncher.backend.runtime.JavaSelectionMode;
 import org.chs.camlauncher.backend.system.SystemMemoryInfo;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -50,6 +53,42 @@ public final class SettingsController {
 
     public String customDownloadApi() {
         return context.backend().customDownloadApi();
+    }
+
+    public void scanJavaCandidates(Consumer<List<JavaCandidate>> onLoaded,
+                                   Consumer<String> onError) {
+        context.supplyJavaAsync(() -> context.backend().listJavaCandidates())
+                .thenAccept(candidates -> Platform.runLater(() -> onLoaded.accept(candidates)))
+                .exceptionally(ex -> {
+                    Throwable cause = ex.getCause() != null ? ex.getCause() : ex;
+                    String message = ControllerContext.messageOf(cause);
+                    LOGGER.warn("扫描 Java 失败", cause);
+                    Platform.runLater(() -> onError.accept(message));
+                    return null;
+                });
+    }
+
+    public void addManualJava(Path executable, Consumer<JavaCandidate> onAdded,
+                              Consumer<String> onError) {
+        context.supplyJavaAsync(() -> context.backend().addManualJavaPath(executable))
+                .thenAccept(candidate -> Platform.runLater(() -> onAdded.accept(candidate)))
+                .exceptionally(ex -> {
+                    Throwable cause = ex.getCause() != null ? ex.getCause() : ex;
+                    String message = ControllerContext.messageOf(cause);
+                    LOGGER.warn("添加手动 Java 失败: {}", executable, cause);
+                    Platform.runLater(() -> onError.accept(message));
+                    return null;
+                });
+    }
+
+    public void saveJavaSelectionAsync(JavaSelectionMode mode, Path selectedJavaPath) {
+        context.executeSettings(() -> {
+            try {
+                context.backend().setJavaSelection(mode, selectedJavaPath);
+            } catch (IOException | RuntimeException e) {
+                LOGGER.warn("保存 Java 选择失败: {} / {}", mode, selectedJavaPath, e);
+            }
+        });
     }
 
     public void inspectGameDirectory(Path directory, Consumer<GameDirectoryInfo> callback) {

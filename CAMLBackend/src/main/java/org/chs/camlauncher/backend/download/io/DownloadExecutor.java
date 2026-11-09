@@ -41,11 +41,47 @@ public final class DownloadExecutor {
         });
         CompletionService<Void> completion = new ExecutorCompletionService<>(executor);
         DownloadListener actualListener = listener == null ? DownloadListener.NONE : listener;
+        long totalBytes = items.stream()
+                .mapToLong(item -> Math.max(0L, item.size()))
+                .sum();
+        long[] itemDownloaded = new long[items.size()];
+        long[] aggregateDownloaded = {0L};
+        int[] completedItems = {0};
+        Object summaryLock = new Object();
 
         try {
+            actualListener.onSummary(new DownloadListener.DownloadSummary(
+                    0L, totalBytes, 0, items.size()));
+
+            int itemIndex = 0;
             for (DownloadItem item : items) {
+                int index = itemIndex++;
                 completion.submit(() -> {
-                    task.run(item, actualListener);
+                    task.run(item, progress -> {
+                        actualListener.onProgress(progress);
+
+                        synchronized (summaryLock) {
+                            long previous = itemDownloaded[index];
+                            itemDownloaded[index] = progress.downloaded();
+                            aggregateDownloaded[0] += progress.downloaded() - previous;
+                            actualListener.onSummary(new DownloadListener.DownloadSummary(
+                                    aggregateDownloaded[0],
+                                    totalBytes,
+                                    completedItems[0],
+                                    items.size()
+                            ));
+                        }
+                    });
+
+                    synchronized (summaryLock) {
+                        completedItems[0]++;
+                        actualListener.onSummary(new DownloadListener.DownloadSummary(
+                                aggregateDownloaded[0],
+                                totalBytes,
+                                completedItems[0],
+                                items.size()
+                        ));
+                    }
                     return null;
                 });
             }

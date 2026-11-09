@@ -102,10 +102,12 @@ public final class VersionInstaller {
     ) throws IOException, InterruptedException {
         Objects.requireNonNull(versionId, "versionId");
         instanceId = validateInstanceId(instanceId);
+        DownloadListener.notifyStage(listener, "获取版本信息");
         Path localVersionFile = versionFile(instanceId, gameDirectory);
 
         // 1. 本地已安装：直接读取本地版本 JSON。
         if (Files.isRegularFile(localVersionFile)) {
+            DownloadListener.notifyStage(listener, "检查本地版本");
             String localJson = Files.readString(localVersionFile, StandardCharsets.UTF_8);
             return complete(instanceId, gameDirectory, localJson, listener, false);
         }
@@ -184,10 +186,12 @@ public final class VersionInstaller {
         Path librariesDirectory = gameDirectory.resolve("libraries");
         Path assetsDirectory = gameDirectory.resolve("assets");
 
+        DownloadListener.notifyStage(listener, "下载游戏文件与依赖库");
         downloadPlan(downloadPlanner.plan(resolved, gameDirectory, clientJarId), listener);
 
         Path assetIndexFile = null;
         if (resolved.assetIndex() != null) {
+            DownloadListener.notifyStage(listener, "下载资源文件");
             assetIndexFile = SafePaths.resolveChild(
                     assetsDirectory.resolve("indexes"),
                     resolved.assetIndex().id() + ".json",
@@ -197,6 +201,7 @@ public final class VersionInstaller {
         }
 
         if (writeVersionJson) {
+            DownloadListener.notifyStage(listener, "写入版本信息");
             writeAtomically(versionFile, versionJson);
         }
 
