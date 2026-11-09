@@ -181,10 +181,11 @@ CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
   立即刷新设置页。
 - 游戏位置、版本隔离、下载源、下载并发数、最大内存和最后启动实例保存在
   `~/.caml/settings.properties`，启动时加载；游戏位置只有点击保存才写入，其余选项立即写入。
+  设置写入由串行写锁保护，并通过临时文件原子替换设置文件。
 - `LaunchSettings` 在主页和设置页之间共享游戏位置、版本隔离和最大内存值；`ViewSupport` 提供通用字段与侧边栏布局。
 - 当前实例通过共享 `LaunchSettings.selectedVersion` 管理；启动器初始化时恢复 `lastInstanceId`，实例信息下方显示存档位置。
-- `ControllerContext` 使用独立 I/O 线程执行目录探测和下载；`HomeController` 负责启动派发，
-  不阻塞 JavaFX Application Thread。
+- `ControllerContext` 使用独立下载线程执行目录探测和下载，设置保存使用单独的串行设置线程；
+  `HomeController` 负责启动派发，不阻塞 JavaFX Application Thread。
 - 下载日志按文件切换和每 10% 进度节流，避免刷屏。
 - 主工作区使用 `SplitPane`：宽度 `< 900` 时上下堆叠，`>= 900` 时左右分栏。
 - 断点切换时放宽表单和日志的最小高度，表单和日志在堆叠时仍然都能看到。

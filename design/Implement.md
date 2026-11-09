@@ -192,8 +192,8 @@ CAML
 - “浏览游戏实例”和“管理实例”等宽，并共同占满启动按钮上方一行。
 - 显示存档位置：选择完全版本隔离时提示 `versions/<id>/saves`，否则提示 `.minecraft/saves`。
 - 离线用户名、启动按钮、状态提示和日志窗口；最大内存位于设置 → 游戏设置。
-- `ControllerContext` 用独立 I/O 线程执行目录探测；`HomeController` 负责启动派发，
-  `DownloadsController` 负责下载，下载日志每 10% 节流。
+- `ControllerContext` 用下载线程执行目录探测和下载，用独立设置线程串行保存设置；
+  `HomeController` 负责启动派发，`DownloadsController` 负责下载，下载日志每 10% 节流。
 - 主工作区宽屏左右分栏，窄屏上下堆叠；断点为 900px。
 - 断点规则集中在纯计算的 `WorkspaceLayout`：跨过断点时切换 `SplitPane` 方向、放宽最小高度
   （表单 320→240、日志面板 220→140、日志文本区 200→120，首选高度 460→260）并重置分隔条

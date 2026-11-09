@@ -7,12 +7,15 @@ import org.chs.camlauncher.backend.instance.VersionIsolationMode;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
 import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Properties;
+import java.util.function.Consumer;
 
 /** 启动器设置持久化：游戏位置、最大内存、版本隔离和下载并发数。 */
 public final class SettingsService {
@@ -33,6 +36,7 @@ public final class SettingsService {
     private static final String LAST_LAUNCHED_INSTANCE_KEY = "lastInstanceId";
 
     private final Path settingsFile;
+    private final Object writeLock = new Object();
 
     public SettingsService(Path dataDirectory) {
         Objects.requireNonNull(dataDirectory, "dataDirectory");
@@ -57,9 +61,7 @@ public final class SettingsService {
             throw new IllegalArgumentException("最大内存不能小于 " + MIN_MAX_MEMORY_MB + " MB");
         }
 
-        Properties properties = load();
-        properties.setProperty(MAX_MEMORY_KEY, Integer.toString(value));
-        store(properties);
+        update(properties -> properties.setProperty(MAX_MEMORY_KEY, Integer.toString(value)));
     }
 
     public Optional<Path> gameDirectory() throws IOException {
@@ -76,10 +78,8 @@ public final class SettingsService {
 
     public void setGameDirectory(Path directory) throws IOException {
         Objects.requireNonNull(directory, "directory");
-        Properties properties = load();
-        properties.setProperty(GAME_DIRECTORY_KEY,
-                directory.toAbsolutePath().normalize().toString());
-        store(properties);
+        update(properties -> properties.setProperty(GAME_DIRECTORY_KEY,
+                directory.toAbsolutePath().normalize().toString()));
     }
 
     public VersionIsolationMode versionIsolationMode() throws IOException {
@@ -99,9 +99,8 @@ public final class SettingsService {
         if (mode == VersionIsolationMode.AUTO) {
             throw new IllegalArgumentException("界面设置不能持久化自动隔离模式");
         }
-        Properties properties = load();
-        properties.setProperty(VERSION_ISOLATION_KEY, mode.name().toLowerCase());
-        store(properties);
+        update(properties -> properties.setProperty(
+                VERSION_ISOLATION_KEY, mode.name().toLowerCase()));
     }
 
     public int downloadConcurrency() throws IOException {
@@ -125,9 +124,8 @@ public final class SettingsService {
                     "下载并发数必须在 " + MIN_DOWNLOAD_CONCURRENCY + " 到 "
                             + MAX_DOWNLOAD_CONCURRENCY + " 之间");
         }
-        Properties properties = load();
-        properties.setProperty(DOWNLOAD_CONCURRENCY_KEY, Integer.toString(value));
-        store(properties);
+        update(properties -> properties.setProperty(
+                DOWNLOAD_CONCURRENCY_KEY, Integer.toString(value)));
     }
 
     public DownloadSourceMode downloadSourceMode() throws IOException {
@@ -141,11 +139,11 @@ public final class SettingsService {
 
     public void setDownloadSource(DownloadSourceMode mode, String customApi) throws IOException {
         Objects.requireNonNull(mode, "mode");
-        Properties properties = load();
-        properties.setProperty(DOWNLOAD_SOURCE_KEY, mode.storedName());
-        properties.setProperty(CUSTOM_DOWNLOAD_API_KEY,
-                customApi == null ? "" : customApi.trim());
-        store(properties);
+        update(properties -> {
+            properties.setProperty(DOWNLOAD_SOURCE_KEY, mode.storedName());
+            properties.setProperty(CUSTOM_DOWNLOAD_API_KEY,
+                    customApi == null ? "" : customApi.trim());
+        });
     }
 
     public Optional<String> lastLaunchedInstanceId() throws IOException {
@@ -161,25 +159,46 @@ public final class SettingsService {
         if (value.isEmpty()) {
             throw new IllegalArgumentException("最后启动的实例不能为空");
         }
-        Properties properties = load();
-        properties.setProperty(LAST_LAUNCHED_INSTANCE_KEY, value);
-        store(properties);
+        update(properties -> properties.setProperty(LAST_LAUNCHED_INSTANCE_KEY, value));
     }
 
     private Properties load() throws IOException {
-        Properties properties = new Properties();
-        if (Files.isRegularFile(settingsFile)) {
-            try (InputStream input = Files.newInputStream(settingsFile)) {
-                properties.load(input);
+        synchronized (writeLock) {
+            Properties properties = new Properties();
+            if (Files.isRegularFile(settingsFile)) {
+                try (InputStream input = Files.newInputStream(settingsFile)) {
+                    properties.load(input);
+                }
             }
+            return properties;
         }
-        return properties;
+    }
+
+    private void update(Consumer<Properties> change) throws IOException {
+        synchronized (writeLock) {
+            Properties properties = load();
+            change.accept(properties);
+            store(properties);
+        }
     }
 
     private void store(Properties properties) throws IOException {
-        Files.createDirectories(settingsFile.getParent());
-        try (OutputStream output = Files.newOutputStream(settingsFile)) {
-            properties.store(output, "CAML settings");
+        Path parent = settingsFile.toAbsolutePath().getParent();
+        Files.createDirectories(parent);
+        Path temporary = Files.createTempFile(parent, "caml-settings-", ".tmp");
+        try {
+            try (OutputStream output = Files.newOutputStream(temporary)) {
+                properties.store(output, "CAML settings");
+            }
+            try {
+                Files.move(temporary, settingsFile,
+                        StandardCopyOption.ATOMIC_MOVE,
+                        StandardCopyOption.REPLACE_EXISTING);
+            } catch (AtomicMoveNotSupportedException e) {
+                Files.move(temporary, settingsFile, StandardCopyOption.REPLACE_EXISTING);
+            }
+        } finally {
+            Files.deleteIfExists(temporary);
         }
     }
 }

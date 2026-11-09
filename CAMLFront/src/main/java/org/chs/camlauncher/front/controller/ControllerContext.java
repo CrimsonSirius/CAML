@@ -22,8 +22,13 @@ import java.util.function.Consumer;
  */
 final class ControllerContext {
     private final CAMLBackend backend;
-    private final ExecutorService ioExecutor = Executors.newSingleThreadExecutor(runnable -> {
-        Thread thread = new Thread(runnable, "caml-io-worker");
+    private final ExecutorService downloadExecutor = Executors.newSingleThreadExecutor(runnable -> {
+        Thread thread = new Thread(runnable, "caml-download-worker");
+        thread.setDaemon(true);
+        return thread;
+    });
+    private final ExecutorService settingsExecutor = Executors.newSingleThreadExecutor(runnable -> {
+        Thread thread = new Thread(runnable, "caml-settings-worker");
         thread.setDaemon(true);
         return thread;
     });
@@ -60,12 +65,12 @@ final class ControllerContext {
                 }
                 throw new CompletionException(e);
             }
-        }, ioExecutor);
+        }, downloadExecutor);
     }
 
-    void executeIo(Runnable task) {
+    void executeSettings(Runnable task) {
         try {
-            ioExecutor.execute(task);
+            settingsExecutor.execute(task);
         } catch (RejectedExecutionException ignored) {
             // 应用正在退出，不再接受新的持久化任务。
         }
@@ -95,7 +100,8 @@ final class ControllerContext {
     }
 
     void shutdown() {
-        ioExecutor.shutdownNow();
+        downloadExecutor.shutdownNow();
+        settingsExecutor.shutdownNow();
     }
 
     @FunctionalInterface

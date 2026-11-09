@@ -72,7 +72,7 @@ CAML/
 │  │  │  ├─ HomeController.java       启动、日志回调和实例扫描
 │  │  │  ├─ DownloadsController.java  版本列表和实例安装
 │  │  │  ├─ SettingsController.java   设置持久化和内存监视
-│  │  │  └─ ControllerContext.java    后端访问、I/O 线程和 UI 回调
+│  │  │  └─ ControllerContext.java    后端访问、下载/设置线程和 UI 回调
 │  │  └─ view/
 │  │     ├─ MainView.java             应用壳层、顶部导航和页面宿主
 │  │     ├─ HomeView.java             主页分栏与自适应

@@ -27,6 +27,8 @@ public record DownloadItem(
     }
 
     public boolean existsAndValid() throws IOException {
-        return Files.isRegularFile(destination) && HashVerifier.matches(destination, sha1);
+        return Files.isRegularFile(destination)
+                && Files.size(destination) > 0
+                && HashVerifier.matches(destination, sha1);
     }
 }
