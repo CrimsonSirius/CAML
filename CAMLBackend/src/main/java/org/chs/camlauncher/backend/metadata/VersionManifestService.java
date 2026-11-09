@@ -51,7 +51,7 @@ public final class VersionManifestService {
     }
 
     public VersionManifest fetchManifest(URI uri) throws IOException, InterruptedException {
-        return metadata.parseVersionManifest(fetchTextFromSources(uri));
+        return fetchParsedFromSources(uri, this::parseManifest);
     }
 
     public VersionInfo fetchVersionInfo(VersionManifest.Version version) throws IOException, InterruptedException {
@@ -59,14 +59,17 @@ public final class VersionManifestService {
     }
 
     public VersionInfo fetchVersionInfo(URI uri) throws IOException, InterruptedException {
-        return metadata.parseVersionInfo(fetchTextFromSources(uri));
+        return fetchParsedFromSources(uri, this::parseVersionInfo);
     }
 
     public String fetchVersionJson(VersionManifest.Version version) throws IOException, InterruptedException {
         if (version.url() == null || version.url().isBlank()) {
             throw new IOException("Version has no metadata URL: " + version.id());
         }
-        return fetchTextFromSources(URI.create(version.url()));
+        return fetchParsedFromSources(URI.create(version.url()), text -> {
+            parseVersionInfo(text);
+            return text;
+        });
     }
 
     public VersionManifest fetchManifestOrCache(URI uri, Path cacheFile)
@@ -75,11 +78,15 @@ public final class VersionManifestService {
         for (URI candidate : DownloadSources.candidates(sources, uri.toString())) {
             try {
                 String text = fetchText(candidate);
+                VersionManifest manifest = parseManifest(text);
                 writeCache(cacheFile, text);
-                return metadata.parseVersionManifest(text);
+                return manifest;
             } catch (IOException e) {
                 lastFailure = e;
                 LOGGER.warn("Failed to fetch version manifest from {}, trying next source", candidate, e);
+            } catch (RuntimeException e) {
+                lastFailure = new IOException("Invalid version manifest from " + candidate, e);
+                LOGGER.warn("Invalid version manifest from {}, trying next source", candidate, e);
             }
         }
         if (Files.isRegularFile(cacheFile)) {
@@ -111,19 +118,44 @@ public final class VersionManifestService {
         return response.body();
     }
 
-    private String fetchTextFromSources(URI uri) throws IOException, InterruptedException {
+    private <T> T fetchParsedFromSources(URI uri, TextParser<T> parser)
+            throws IOException, InterruptedException {
         IOException lastFailure = null;
         for (URI candidate : DownloadSources.candidates(sources, uri.toString())) {
             try {
-                return fetchText(candidate);
+                return parser.parse(fetchText(candidate));
             } catch (IOException e) {
                 lastFailure = e;
                 LOGGER.warn("Failed to fetch metadata from {}, trying next source", candidate, e);
+            } catch (RuntimeException e) {
+                lastFailure = new IOException("Invalid metadata from " + candidate, e);
+                LOGGER.warn("Invalid metadata from {}, trying next source", candidate, e);
             }
         }
         throw lastFailure == null
                 ? new IOException("No download source available for " + uri)
                 : lastFailure;
+    }
+
+    private VersionManifest parseManifest(String text) throws IOException {
+        VersionManifest manifest = metadata.parseVersionManifest(text);
+        if (manifest == null || manifest.versions().isEmpty()) {
+            throw new IOException("版本清单为空");
+        }
+        return manifest;
+    }
+
+    private VersionInfo parseVersionInfo(String text) throws IOException {
+        VersionInfo info = metadata.parseVersionInfo(text);
+        if (info == null) {
+            throw new IOException("版本 JSON 为空");
+        }
+        return info;
+    }
+
+    @FunctionalInterface
+    private interface TextParser<T> {
+        T parse(String text) throws IOException;
     }
 
     private static void writeCache(Path cacheFile, String text) throws IOException {

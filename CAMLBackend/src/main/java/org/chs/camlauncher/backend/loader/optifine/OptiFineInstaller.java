@@ -12,7 +12,9 @@ import org.chs.camlauncher.backend.download.source.DownloadSource;
 import org.chs.camlauncher.backend.download.source.DownloadSources;
 import org.chs.camlauncher.backend.download.source.OfficialDownloadSource;
 import org.chs.camlauncher.backend.instance.InstalledVersion;
+import org.chs.camlauncher.backend.instance.InstanceNameRules;
 import org.chs.camlauncher.backend.instance.VersionInstaller;
+import org.chs.camlauncher.backend.io.SafePaths;
 import org.chs.camlauncher.backend.loader.ExternalLoaderInstaller;
 import org.chs.camlauncher.backend.loader.forge.ForgeVersion;
 import org.chs.camlauncher.backend.runtime.JavaLocator;
@@ -98,6 +100,27 @@ public final class OptiFineInstaller {
     }
 
     public InstalledVersion install(
+            String gameVersion,
+            String instanceId,
+            ForgeVersion forgeVersion,
+            OptiFineVersion optiFineVersion,
+            Path gameDirectory,
+            DownloadListener listener
+    ) throws IOException, InterruptedException {
+        Objects.requireNonNull(gameDirectory, "gameDirectory");
+        InstanceNameRules.ensureNewInstance(gameDirectory, instanceId);
+        Path targetVersionDirectory = SafePaths.resolveChild(
+                gameDirectory.resolve("versions"), instanceId, "version id");
+        try {
+            return installInternal(
+                    gameVersion, instanceId, forgeVersion, optiFineVersion, gameDirectory, listener);
+        } catch (IOException | RuntimeException | InterruptedException e) {
+            deleteRecursively(targetVersionDirectory);
+            throw e;
+        }
+    }
+
+    private InstalledVersion installInternal(
             String gameVersion,
             String instanceId,
             ForgeVersion forgeVersion,

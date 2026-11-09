@@ -15,6 +15,10 @@ import org.chs.camlauncher.backend.instance.InstalledVersion;
 import org.chs.camlauncher.backend.instance.InstanceNameRules;
 import org.chs.camlauncher.backend.instance.VersionInstaller;
 import org.chs.camlauncher.backend.metadata.MetadataService;
+import org.chs.camlauncher.backend.metadata.model.Library;
+import org.chs.camlauncher.backend.metadata.model.LibraryArtifact;
+import org.chs.camlauncher.backend.metadata.model.VersionInfo;
+import org.chs.camlauncher.backend.metadata.rule.RuleEvaluator;
 import org.chs.camlauncher.backend.runtime.JavaLocator;
 import org.chs.camlauncher.backend.runtime.JavaRequirement;
 import org.chs.camlauncher.backend.runtime.JavaRuntime;
@@ -30,8 +34,10 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 import java.util.zip.ZipFile;
@@ -144,6 +150,7 @@ public final class ExternalLoaderInstaller {
                         loaderName + " 安装器没有生成版本目录: " + installedVersionDirectory
                                 + "\n安装器输出:\n" + installerOutput);
             }
+            validateGeneratedVersion(loaderName, installedVersionDirectory, installedVersionId);
 
             mergeLibraries(staging.resolve("libraries"), gameDirectory.resolve("libraries"));
             moveVersionDirectory(
@@ -152,17 +159,21 @@ public final class ExternalLoaderInstaller {
                     installedVersionId,
                     normalizedInstanceId
             );
+            InstalledVersion installed = versionInstaller.install(
+                    normalizedInstanceId,
+                    gameDirectory,
+                    manifestUri,
+                    manifestCacheFile,
+                    listener
+            );
+            verifyInstalledLibraries(loaderName, installed);
+            return installed;
+        } catch (IOException | RuntimeException | InterruptedException e) {
+            deleteRecursively(targetVersionDirectory);
+            throw e;
         } finally {
             deleteRecursively(staging);
         }
-
-        return versionInstaller.install(
-                normalizedInstanceId,
-                gameDirectory,
-                manifestUri,
-                manifestCacheFile,
-                listener
-        );
     }
 
     private String resolveSha1(URI installerUri) throws InterruptedException {
@@ -309,6 +320,58 @@ public final class ExternalLoaderInstaller {
             }
         }
         throw new IOException("安装器缺少 version.json 或 install_profile.version: " + installerJar);
+    }
+
+    private void validateGeneratedVersion(
+            String loaderName,
+            Path versionDirectory,
+            String installedVersionId
+    ) throws IOException {
+        Path versionJson = versionDirectory.resolve(installedVersionId + ".json");
+        if (!Files.isRegularFile(versionJson)) {
+            throw new IOException(loaderName + " 安装器没有生成版本 JSON: " + versionJson);
+        }
+        VersionInfo version;
+        try {
+            version = metadata.parseVersionInfo(Files.readString(versionJson, StandardCharsets.UTF_8));
+        } catch (RuntimeException e) {
+            throw new IOException(loaderName + " 安装器生成的版本 JSON 无法解析: " + versionJson, e);
+        }
+        if (version == null || version.mainClass() == null || version.mainClass().isBlank()) {
+            throw new IOException(loaderName + " 安装器生成的版本 JSON 缺少 mainClass: " + versionJson);
+        }
+    }
+
+    static void verifyInstalledLibraries(String loaderName, InstalledVersion installed)
+            throws IOException {
+        RuleEvaluator evaluator = new RuleEvaluator();
+        Set<String> coordinates = new LinkedHashSet<>();
+        for (Library library : installed.manifest().libraries()) {
+            if (!evaluator.isAllowed(library.rules())
+                    || !library.isClientRequired()
+                    || isNativeOnly(library)
+                    || !coordinates.add(LibraryArtifact.coordinateKey(library.name()))) {
+                continue;
+            }
+            String relativePath = LibraryArtifact.relativePath(library);
+            if (relativePath == null || relativePath.isBlank()) {
+                continue;
+            }
+            Path path = org.chs.camlauncher.backend.io.SafePaths.resolveUnder(
+                    installed.librariesDirectory(), relativePath, "installed library");
+            if (!Files.isRegularFile(path)) {
+                throw new IOException(loaderName + " 安装结果缺少库文件: " + path);
+            }
+        }
+    }
+
+    private static boolean isNativeOnly(Library library) {
+        String[] parts = library.name().split(":");
+        if (parts.length < 4) {
+            return false;
+        }
+        String classifier = parts[3].toLowerCase(Locale.ROOT);
+        return classifier.startsWith("natives-") || classifier.contains("-natives-");
     }
 
     private static void mergeLibraries(Path source, Path target) throws IOException {

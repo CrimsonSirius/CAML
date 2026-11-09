@@ -8,6 +8,7 @@ import org.chs.camlauncher.backend.metadata.model.LibraryArtifact;
 import org.chs.camlauncher.backend.metadata.rule.RuleEvaluator;
 import org.chs.camlauncher.backend.metadata.model.VersionInfo;
 import org.chs.camlauncher.backend.runtime.JavaRuntimeParser;
+import org.chs.camlauncher.backend.io.SafePaths;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -120,7 +121,7 @@ public final class NativeExtractor {
                 return List.of();
             }
             return List.of(new NativeJar(
-                    librariesDirectory.resolve(path).toAbsolutePath().normalize(),
+                    SafePaths.resolveUnder(librariesDirectory, path, "native library"),
                     library.extract()
             ));
         }
@@ -145,7 +146,7 @@ public final class NativeExtractor {
     ) {
         if (info != null && info.path() != null && !info.path().isBlank()) {
             result.add(new NativeJar(
-                    librariesDirectory.resolve(info.path()).toAbsolutePath().normalize(),
+                    SafePaths.resolveUnder(librariesDirectory, info.path(), "native library"),
                     extract
             ));
         }

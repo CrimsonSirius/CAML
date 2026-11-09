@@ -14,6 +14,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class DownloadPlannerTest {
@@ -187,5 +188,32 @@ class DownloadPlannerTest {
                 "https://libraries.minecraft.net/org/ow2/asm/asm-all/5.0.3/asm-all-5.0.3.jar",
                 asm.candidates().getFirst().toString()
         );
+    }
+
+    @Test
+    void rejectsLibraryPathThatEscapesLibrariesDirectory() throws Exception {
+        VersionInfo version = new MetadataService().parseVersionInfo("""
+                {
+                  "id": "malicious",
+                  "libraries": [{
+                    "name": "evil:lib:1.0",
+                    "downloads": {
+                      "artifact": {
+                        "path": "../../outside.jar",
+                        "url": "https://example.com/outside.jar"
+                      }
+                    }
+                  }]
+                }
+                """);
+
+        DownloadPlanner planner = new DownloadPlanner(
+                List.of(OfficialDownloadSource.INSTANCE),
+                new RuleEvaluator("linux", "x86_64", "6.0", Map.of()),
+                "linux",
+                64
+        );
+
+        assertThrows(IllegalArgumentException.class, () -> planner.plan(version, gameDirectory));
     }
 }

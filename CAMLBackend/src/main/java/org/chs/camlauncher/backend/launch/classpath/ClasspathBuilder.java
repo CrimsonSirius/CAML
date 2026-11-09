@@ -4,6 +4,7 @@ import org.chs.camlauncher.backend.launch.LaunchPlan;
 import org.chs.camlauncher.backend.metadata.model.Library;
 import org.chs.camlauncher.backend.metadata.model.LibraryArtifact;
 import org.chs.camlauncher.backend.metadata.rule.RuleEvaluator;
+import org.chs.camlauncher.backend.io.SafePaths;
 
 import java.io.File;
 import java.nio.file.Path;
@@ -46,7 +47,7 @@ public final class ClasspathBuilder {
             if (relativePath == null || relativePath.isBlank()) {
                 continue;
             }
-            Path artifact = librariesDirectory.resolve(relativePath).toAbsolutePath().normalize();
+            Path artifact = SafePaths.resolveUnder(librariesDirectory, relativePath, "library");
             if (paths.add(artifact)) {
                 classpath.add(artifact);
             }

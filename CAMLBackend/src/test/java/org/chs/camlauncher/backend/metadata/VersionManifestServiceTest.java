@@ -4,6 +4,7 @@ import com.sun.net.httpserver.HttpServer;
 import org.chs.camlauncher.backend.download.source.MirrorDownloadSource;
 import org.chs.camlauncher.backend.metadata.model.VersionInfo;
 import org.chs.camlauncher.backend.metadata.model.VersionManifest;
+import org.chs.camlauncher.backend.download.source.DownloadSource;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -69,7 +70,12 @@ class VersionManifestServiceTest {
         String manifestJson = """
                 {
                   "latest": {"release": "1.21.5", "snapshot": "25w14a"},
-                  "versions": []
+                  "versions": [{
+                    "id": "1.21.5",
+                    "type": "release",
+                    "url": "http://127.0.0.1:1/1.21.5.json",
+                    "releaseTime": "2026-01-01T00:00:00+00:00"
+                  }]
                 }
                 """;
         Path cacheFile = tempDirectory.resolve("cache/version_manifest_v2.json");
@@ -97,7 +103,12 @@ class VersionManifestServiceTest {
         String manifestJson = """
                 {
                   "latest": {"release": "1.21.5", "snapshot": "25w14a"},
-                  "versions": []
+                  "versions": [{
+                    "id": "1.21.5",
+                    "type": "release",
+                    "url": "http://127.0.0.1:1/1.21.5.json",
+                    "releaseTime": "2026-01-01T00:00:00+00:00"
+                  }]
                 }
                 """;
         Path cacheFile = tempDirectory.resolve("cache/version_manifest_v2.json");
@@ -115,6 +126,68 @@ class VersionManifestServiceTest {
 
             assertEquals("1.21.5", manifest.latest().release());
             assertTrue(Files.isRegularFile(cacheFile));
+        }
+    }
+
+    @Test
+    void switchesToNextSourceWhenFirstSourceReturnsInvalidJson() throws Exception {
+        String goodManifest = """
+                {
+                  "latest": {"release": "1.21.5", "snapshot": "25w14a"},
+                  "versions": [{
+                    "id": "1.21.5",
+                    "type": "release",
+                    "url": "http://127.0.0.1:1/1.21.5.json",
+                    "releaseTime": "2026-01-01T00:00:00+00:00"
+                  }]
+                }
+                """;
+        Path cacheFile = tempDirectory.resolve("cache/version_manifest_v2.json");
+
+        try (TestHttpServer server = new TestHttpServer()) {
+            server.handle("/bad.json", "<html>not json</html>");
+            server.handle("/good.json", goodManifest);
+            VersionManifestService service = new VersionManifestService();
+            service.setSources(List.of(
+                    fixedSource(server.uri("/bad.json")),
+                    fixedSource(server.uri("/good.json"))
+            ));
+
+            VersionManifest manifest = service.fetchManifestOrCache(
+                    server.uri("/manifest.json"), cacheFile);
+
+            assertEquals("1.21.5", manifest.latest().release());
+            assertTrue(Files.readString(cacheFile).contains("1.21.5"));
+        }
+    }
+
+    @Test
+    void doesNotOverwriteCacheWhenAllResponsesAreInvalid() throws Exception {
+        String cachedManifest = """
+                {
+                  "latest": {"release": "cached", "snapshot": "cached"},
+                  "versions": [{
+                    "id": "cached",
+                    "type": "release",
+                    "url": "http://127.0.0.1:1/cached.json",
+                    "releaseTime": "2020-01-01T00:00:00+00:00"
+                  }]
+                }
+                """;
+        Path cacheFile = tempDirectory.resolve("cache/version_manifest_v2.json");
+        Files.createDirectories(cacheFile.getParent());
+        Files.writeString(cacheFile, cachedManifest);
+
+        try (TestHttpServer server = new TestHttpServer()) {
+            server.handle("/bad.json", "<html>bad</html>");
+            VersionManifestService service = new VersionManifestService();
+            service.setSources(List.of(fixedSource(server.uri("/bad.json"))));
+
+            VersionManifest manifest = service.fetchManifestOrCache(
+                    server.uri("/bad.json"), cacheFile);
+
+            assertEquals("cached", manifest.latest().release());
+            assertEquals(cachedManifest, Files.readString(cacheFile));
         }
     }
 
@@ -148,5 +221,19 @@ class VersionManifestServiceTest {
         public void close() {
             server.stop(0);
         }
+    }
+
+    private static DownloadSource fixedSource(URI uri) {
+        return new DownloadSource() {
+            @Override
+            public String name() {
+                return "fixed";
+            }
+
+            @Override
+            public List<URI> candidates(URI original) {
+                return List.of(uri);
+            }
+        };
     }
 }
