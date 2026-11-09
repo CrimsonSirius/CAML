@@ -161,6 +161,7 @@ public final class OptiFineInstaller {
         Path staging = Files.createTempDirectory(gameDirectory, ".caml-optifine-install-");
         try {
             URI installerUri = optiFineService.resolveDownloadUri(optiFineVersion);
+            DownloadListener.notifyStage(listener, "下载 OptiFine 安装器");
             fileDownloader.download(new DownloadItem(
                     "OptiFine installer",
                     DownloadSources.candidates(sources, installerUri.toString()),
@@ -170,8 +171,10 @@ public final class OptiFineInstaller {
             ), listener, OptiFineInstaller::validateInstallerArchive);
 
             prepareStaging(staging, gameVersion, base);
+            DownloadListener.notifyStage(listener, "运行 OptiFine 安装器");
             runInstaller(java, installer, staging);
             OptiFineVersionFiles generated = findGeneratedVersion(staging, gameVersion);
+            DownloadListener.notifyStage(listener, "合并 OptiFine 文件");
             mergeLibraries(staging.resolve("libraries"), gameDirectory.resolve("libraries"));
             removeModsToml(gameDirectory.resolve("libraries").resolve("optifine"));
 

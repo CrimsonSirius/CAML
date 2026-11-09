@@ -8,6 +8,7 @@ import org.chs.camlauncher.backend.download.source.DownloadSource;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import java.io.IOException;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.net.URI;
@@ -17,6 +18,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -191,11 +195,93 @@ class VersionManifestServiceTest {
         }
     }
 
+    @Test
+    void retriesWhenRequestTimesOut() throws Exception {
+        String manifestJson = """
+                {
+                  "latest": {"release": "1.21.5", "snapshot": "25w14a"},
+                  "versions": [{
+                    "id": "1.21.5",
+                    "type": "release",
+                    "url": "http://127.0.0.1:1/1.21.5.json",
+                    "releaseTime": "2026-01-01T00:00:00+00:00"
+                  }]
+                }
+                """;
+        byte[] body = manifestJson.getBytes(StandardCharsets.UTF_8);
+        AtomicInteger requests = new AtomicInteger();
+        Path cacheFile = tempDirectory.resolve("cache/version_manifest_v2.json");
+
+        try (TestHttpServer server = new TestHttpServer()) {
+            server.server.createContext("/slow", exchange -> {
+                if (requests.incrementAndGet() == 1) {
+                    try {
+                        Thread.sleep(1200);
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                    }
+                }
+                try {
+                    exchange.sendResponseHeaders(200, body.length);
+                    try (OutputStream output = exchange.getResponseBody()) {
+                        output.write(body);
+                    }
+                } catch (IOException ignored) {
+                    // 第一次请求可能已被客户端取消。
+                }
+            });
+
+            VersionManifestService service = new VersionManifestService(
+                    HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(2)).build(),
+                    new MetadataService(),
+                    Duration.ofMillis(200),
+                    2
+            );
+            VersionManifest manifest = service.fetchManifestOrCache(
+                    server.uri("/slow"), cacheFile);
+
+            assertEquals("1.21.5", manifest.latest().release());
+            assertTrue(requests.get() >= 2);
+        }
+    }
+
+    @Test
+    void followsRedirectsManually() throws Exception {
+        String manifestJson = """
+                {
+                  "latest": {"release": "1.21.5", "snapshot": "25w14a"},
+                  "versions": [{
+                    "id": "1.21.5",
+                    "type": "release",
+                    "url": "http://127.0.0.1:1/1.21.5.json",
+                    "releaseTime": "2026-01-01T00:00:00+00:00"
+                  }]
+                }
+                """;
+        Path cacheFile = tempDirectory.resolve("cache/version_manifest_v2.json");
+
+        try (TestHttpServer server = new TestHttpServer()) {
+            server.redirect("/redirect", "/manifest.json");
+            server.handle("/manifest.json", manifestJson);
+
+            VersionManifest manifest = new VersionManifestService().fetchManifestOrCache(
+                    server.uri("/redirect"), cacheFile);
+
+            assertEquals("1.21.5", manifest.latest().release());
+        }
+    }
+
     private static final class TestHttpServer implements AutoCloseable {
         private final HttpServer server;
+        private final ExecutorService executor = Executors.newCachedThreadPool(runnable -> {
+            Thread thread = new Thread(runnable, "version-manifest-test-http");
+            thread.setDaemon(true);
+            return thread;
+        });
 
         private TestHttpServer() throws Exception {
             server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+            server.setExecutor(executor);
             server.start();
         }
 
@@ -206,6 +292,14 @@ class VersionManifestServiceTest {
                 try (OutputStream output = exchange.getResponseBody()) {
                     output.write(bytes);
                 }
+            });
+        }
+
+        private void redirect(String path, String location) {
+            server.createContext(path, exchange -> {
+                exchange.getResponseHeaders().add("Location", location);
+                exchange.sendResponseHeaders(302, -1);
+                exchange.close();
             });
         }
 
@@ -220,6 +314,7 @@ class VersionManifestServiceTest {
         @Override
         public void close() {
             server.stop(0);
+            executor.shutdownNow();
         }
     }
 

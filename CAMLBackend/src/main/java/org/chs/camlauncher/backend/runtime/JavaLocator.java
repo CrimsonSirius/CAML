@@ -9,10 +9,12 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.LinkedHashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 
@@ -34,6 +36,62 @@ public final class JavaLocator {
         result.sort(Comparator
                 .comparingInt(JavaRuntime::majorVersion).reversed()
                 .thenComparing(runtime -> runtime.executable().toString()));
+        return List.copyOf(result);
+    }
+
+    /**
+     * 扫描 Java，并合并持久化的手动 Java；同一真实路径只保留一项。
+     *
+     * @param manualPaths 用户手动添加的 Java
+     * @param selectedPath 当前选中的 Java，即使已经不可用也保留在结果中
+     */
+    public List<JavaCandidate> discoverCandidates(List<Path> manualPaths, Path selectedPath) {
+        Map<String, JavaCandidate> candidates = new LinkedHashMap<>();
+        Set<String> manualKeys = new LinkedHashSet<>();
+        for (Path path : manualPaths) {
+            if (path != null) {
+                manualKeys.add(canonicalKey(path));
+            }
+        }
+
+        for (JavaRuntime runtime : discover()) {
+            String key = canonicalKey(runtime.executable());
+            candidates.put(key, JavaCandidate.from(runtime, manualKeys.contains(key)));
+        }
+
+        for (Path path : manualPaths) {
+            if (path == null) {
+                continue;
+            }
+            String key = canonicalKey(path);
+            JavaCandidate existing = candidates.get(key);
+            if (existing != null) {
+                candidates.put(key, existing.withManual(true));
+                continue;
+            }
+            inspect(path).ifPresentOrElse(
+                    runtime -> candidates.put(key, JavaCandidate.from(runtime, true)),
+                    () -> candidates.put(key, JavaCandidate.unavailable(
+                            path.toAbsolutePath().normalize(), true))
+            );
+        }
+
+        if (selectedPath != null) {
+            String selectedKey = canonicalKey(selectedPath);
+            if (!candidates.containsKey(selectedKey)) {
+                inspect(selectedPath).ifPresentOrElse(
+                        runtime -> candidates.put(selectedKey, JavaCandidate.from(runtime, false)),
+                        () -> candidates.put(selectedKey, JavaCandidate.unavailable(
+                                selectedPath.toAbsolutePath().normalize(), false))
+                );
+            }
+        }
+
+        List<JavaCandidate> result = new ArrayList<>(candidates.values());
+        result.sort(Comparator
+                .comparing(JavaCandidate::available).reversed()
+                .thenComparing(Comparator.comparingInt(JavaCandidate::majorVersion).reversed())
+                .thenComparing(candidate -> candidate.executable().toString()));
         return List.copyOf(result);
     }
 
@@ -193,5 +251,13 @@ public final class JavaLocator {
 
     private static boolean isWindows() {
         return "windows".equals(RuleEvaluator.currentOsName());
+    }
+
+    private static String canonicalKey(Path path) {
+        try {
+            return path.toRealPath().toString();
+        } catch (IOException e) {
+            return path.toAbsolutePath().normalize().toString();
+        }
     }
 }

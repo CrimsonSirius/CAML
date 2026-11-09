@@ -12,6 +12,7 @@ import org.chs.camlauncher.ui.control.CamlSideNavItem;
 
 import java.util.EnumMap;
 import java.util.Map;
+import java.util.function.Consumer;
 
 /** 下载页：左侧版本类别导航和右侧版本列表/下载设置页。 */
 final class DownloadsView extends HBox implements SidebarPage {
@@ -23,6 +24,7 @@ final class DownloadsView extends HBox implements SidebarPage {
             new EnumMap<>(VersionCategory.class);
     private VersionCategory currentCategory = VersionCategory.RELEASE;
     private boolean showingVersionList = true;
+    private DownloadProgressView progressView;
 
     DownloadsView(DownloadsController controller, LaunchSettings launchSettings) {
         this.controller = controller;
@@ -67,19 +69,79 @@ final class DownloadsView extends HBox implements SidebarPage {
     }
 
     private void showVersionSetupPage(VersionManifest.Version version) {
+        disposeProgressView();
+        setDownloadNavigationVisible(true);
         showingVersionList = false;
         contentHost.setPage(new DownloadVersionSetupView(
                 version,
                 controller,
                 launchSettings,
-                () -> showVersions(currentCategory)
+                () -> showVersions(currentCategory),
+                this::startDownload
         ));
     }
 
     private void showVersions(VersionCategory category) {
+        disposeProgressView();
+        setDownloadNavigationVisible(true);
         showingVersionList = true;
         currentCategory = category;
         contentHost.setPage(versionsView(category));
+    }
+
+    private void startDownload(DownloadRequest request) {
+        disposeProgressView();
+        setDownloadNavigationVisible(false);
+        DownloadTelemetry telemetry = new DownloadTelemetry();
+        DownloadProgressView page = new DownloadProgressView(
+                request,
+                telemetry,
+                () -> showVersions(currentCategory)
+        );
+        progressView = page;
+        showingVersionList = false;
+        contentHost.setPage(page);
+
+        Runnable onSuccess = () -> {
+            telemetry.markCompleted();
+            launchSettings.setSelectedVersion(request.instanceId());
+            page.refreshNow();
+        };
+        Consumer<String> onError = message -> {
+            telemetry.markFailed(message);
+            page.refreshNow();
+        };
+
+        if (request.optiFine() != null) {
+            controller.downloadForgeOptiFineVersion(request.version().id(), request.instanceId(),
+                    request.forge(), request.optiFine(), request.gameDirectory(),
+                    telemetry, onSuccess, onError);
+        } else if (request.forge() != null) {
+            controller.downloadForgeVersion(request.version().id(), request.instanceId(),
+                    request.forge(), request.gameDirectory(), telemetry, onSuccess, onError);
+        } else if (request.fabricLoader() != null) {
+            controller.downloadFabricVersion(request.version().id(), request.instanceId(),
+                    request.fabricLoader().version(), request.fabricApi(), request.gameDirectory(),
+                    telemetry, onSuccess, onError);
+        } else if (request.neoForge() != null) {
+            controller.downloadNeoForgeVersion(request.version().id(), request.instanceId(),
+                    request.neoForge(), request.gameDirectory(), telemetry, onSuccess, onError);
+        } else {
+            controller.downloadVersion(request.version().id(), request.instanceId(),
+                    request.gameDirectory(), telemetry, onSuccess, onError);
+        }
+    }
+
+    private void disposeProgressView() {
+        if (progressView != null) {
+            progressView.dispose();
+            progressView = null;
+        }
+    }
+
+    private void setDownloadNavigationVisible(boolean visible) {
+        sidebar.setVisible(visible);
+        sidebar.setManaged(visible);
     }
 
     private DownloadVersionsView versionsView(VersionCategory category) {

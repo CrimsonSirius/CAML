@@ -1,9 +1,13 @@
 package org.chs.camlauncher.backend.loader;
 
+import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import com.google.gson.reflect.TypeToken;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.chs.camlauncher.backend.download.DownloadConcurrency;
+import org.chs.camlauncher.backend.download.io.DownloadExecutor;
 import org.chs.camlauncher.backend.download.model.DownloadItem;
 import org.chs.camlauncher.backend.download.source.DownloadSource;
 import org.chs.camlauncher.backend.download.source.DownloadSources;
@@ -11,6 +15,7 @@ import org.chs.camlauncher.backend.download.source.OfficialDownloadSource;
 import org.chs.camlauncher.backend.download.source.SourceAwareHttpClient;
 import org.chs.camlauncher.backend.download.DownloadListener;
 import org.chs.camlauncher.backend.download.FileDownloader;
+import org.chs.camlauncher.backend.io.SafePaths;
 import org.chs.camlauncher.backend.instance.InstalledVersion;
 import org.chs.camlauncher.backend.instance.InstanceNameRules;
 import org.chs.camlauncher.backend.instance.VersionInstaller;
@@ -34,8 +39,10 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
@@ -53,6 +60,7 @@ public final class ExternalLoaderInstaller {
     private static final int OUTPUT_LIMIT = 64 * 1024;
     private static final int INSTALL_ATTEMPTS = 2;
     private static final Pattern SHA1_PATTERN = Pattern.compile("\\b[0-9a-fA-F]{40}\\b");
+    private static final Gson GSON = new Gson();
 
     private final VersionInstaller versionInstaller;
     private final JavaLocator javaLocator;
@@ -62,6 +70,7 @@ public final class ExternalLoaderInstaller {
     private final Path manifestCacheFile;
     private final SourceAwareHttpClient shaClient = new SourceAwareHttpClient(defaultClient());
     private volatile List<DownloadSource> sources = List.of(OfficialDownloadSource.INSTANCE);
+    private volatile int downloadConcurrency = DownloadConcurrency.DEFAULT;
 
     public ExternalLoaderInstaller(
             VersionInstaller versionInstaller,
@@ -82,6 +91,10 @@ public final class ExternalLoaderInstaller {
     public void setSources(List<DownloadSource> sources) {
         this.sources = List.copyOf(Objects.requireNonNull(sources, "sources"));
         shaClient.setSources(sources);
+    }
+
+    public void setDownloadConcurrency(int downloadConcurrency) {
+        this.downloadConcurrency = DownloadConcurrency.clamp(downloadConcurrency);
     }
 
     public InstalledVersion install(
@@ -116,6 +129,7 @@ public final class ExternalLoaderInstaller {
                 manifestCacheFile,
                 listener
         );
+        DownloadListener.notifyStage(listener, "准备 " + loaderName + " 安装器");
         JavaRuntime java = javaLocator.findSuitable(JavaRequirement.from(base.manifest()))
                 .orElseThrow(() -> new IOException(
                         "找不到可用于运行 " + loaderName + " 安装器的 Java"));
@@ -128,6 +142,7 @@ public final class ExternalLoaderInstaller {
             prepareStaging(staging, gameVersion, base);
             Path installerJar = staging.resolve("installer.jar");
             String installerSha1 = resolveSha1(installerUri);
+            DownloadListener.notifyStage(listener, "下载 " + loaderName + " 安装器");
             fileDownloader.download(new DownloadItem(
                     loaderName + " installer",
                     DownloadSources.candidates(sources, installerUri.toString()),
@@ -139,6 +154,8 @@ public final class ExternalLoaderInstaller {
             String installedVersionId = readInstallerVersionId(installerJar);
             Path installedVersionDirectory = staging.resolve("versions").resolve(installedVersionId);
             String installerOutput = "";
+            predownloadInstallerLibraries(loaderName, installerJar, staging, listener);
+            DownloadListener.notifyStage(listener, "运行 " + loaderName + " 安装器");
             for (int attempt = 0; attempt < INSTALL_ATTEMPTS; attempt++) {
                 installerOutput = runInstaller(loaderName, java, installerJar, staging);
                 if (Files.isDirectory(installedVersionDirectory)) {
@@ -152,6 +169,7 @@ public final class ExternalLoaderInstaller {
             }
             validateGeneratedVersion(loaderName, installedVersionDirectory, installedVersionId);
 
+            DownloadListener.notifyStage(listener, "合并 " + loaderName + " 文件");
             mergeLibraries(staging.resolve("libraries"), gameDirectory.resolve("libraries"));
             moveVersionDirectory(
                     installedVersionDirectory,
@@ -159,6 +177,7 @@ public final class ExternalLoaderInstaller {
                     installedVersionId,
                     normalizedInstanceId
             );
+            DownloadListener.notifyStage(listener, "校验 " + loaderName + " 安装结果");
             InstalledVersion installed = versionInstaller.install(
                     normalizedInstanceId,
                     gameDirectory,
@@ -320,6 +339,79 @@ public final class ExternalLoaderInstaller {
             }
         }
         throw new IOException("安装器缺少 version.json 或 install_profile.version: " + installerJar);
+    }
+
+    private void predownloadInstallerLibraries(
+            String loaderName,
+            Path installerJar,
+            Path staging,
+            DownloadListener listener
+    ) throws IOException, InterruptedException {
+        Map<Path, DownloadItem> items = new LinkedHashMap<>();
+        for (Library library : readInstallerLibraries(installerJar)) {
+            String relativePath = LibraryArtifact.relativePath(library);
+            String url = LibraryArtifact.downloadUrl(library);
+            if (relativePath == null || relativePath.isBlank() || url == null || url.isBlank()) {
+                continue;
+            }
+
+            Path destination = SafePaths.resolveUnder(
+                    staging.resolve("libraries"), relativePath, "installer library");
+            Long size = LibraryArtifact.size(library);
+            items.putIfAbsent(destination.toAbsolutePath().normalize(), new DownloadItem(
+                    library.name(),
+                    DownloadSources.candidates(sources, url),
+                    destination,
+                    LibraryArtifact.sha1(library),
+                    size == null ? -1 : size
+            ));
+        }
+        if (items.isEmpty()) {
+            return;
+        }
+
+        DownloadListener.notifyStage(listener, "下载 " + loaderName + " 依赖库");
+        DownloadExecutor.download(
+                items.values().stream().toList(),
+                downloadConcurrency,
+                listener,
+                fileDownloader::download
+        );
+    }
+
+    private List<Library> readInstallerLibraries(Path installerJar) throws IOException {
+        List<Library> libraries = new ArrayList<>();
+        try (ZipFile zip = new ZipFile(installerJar.toFile())) {
+            var versionEntry = zip.getEntry("version.json");
+            if (versionEntry != null) {
+                String text;
+                try (var input = zip.getInputStream(versionEntry)) {
+                    text = new String(input.readAllBytes(), StandardCharsets.UTF_8);
+                }
+                libraries.addAll(metadata.parseVersionInfo(text).libraries());
+            }
+
+            var profileEntry = zip.getEntry("install_profile.json");
+            if (profileEntry != null) {
+                String text;
+                try (var input = zip.getInputStream(profileEntry)) {
+                    text = new String(input.readAllBytes(), StandardCharsets.UTF_8);
+                }
+                JsonObject profile = JsonParser.parseString(text).getAsJsonObject();
+                if (profile.has("libraries") && profile.get("libraries").isJsonArray()) {
+                    List<Library> profileLibraries = GSON.fromJson(
+                            profile.get("libraries"),
+                            new TypeToken<List<Library>>() { }.getType()
+                    );
+                    if (profileLibraries != null) {
+                        libraries.addAll(profileLibraries);
+                    }
+                }
+            }
+        } catch (RuntimeException e) {
+            throw new IOException("无法读取安装器依赖库列表: " + installerJar, e);
+        }
+        return libraries;
     }
 
     private void validateGeneratedVersion(

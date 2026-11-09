@@ -13,9 +13,11 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.IntStream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 class DownloadExecutorTest {
     @TempDir
@@ -58,5 +60,49 @@ class DownloadExecutorTest {
         }
 
         assertEquals(3, maximum.get());
+    }
+
+    @Test
+    void reportsAggregateSummary() throws Exception {
+        List<DownloadItem> items = List.of(
+                new DownloadItem(
+                        "first",
+                        List.of(URI.create("https://example.invalid/first")),
+                        tempDirectory.resolve("first"),
+                        null,
+                        100
+                ),
+                new DownloadItem(
+                        "second",
+                        List.of(URI.create("https://example.invalid/second")),
+                        tempDirectory.resolve("second"),
+                        null,
+                        200
+                )
+        );
+        AtomicReference<DownloadListener.DownloadSummary> lastSummary = new AtomicReference<>();
+
+        DownloadExecutor.download(items, 2, new DownloadListener() {
+            @Override
+            public void onProgress(DownloadListener.DownloadProgress progress) {
+            }
+
+            @Override
+            public void onSummary(DownloadListener.DownloadSummary summary) {
+                lastSummary.set(summary);
+            }
+        }, (item, listener) -> {
+            listener.onProgress(new DownloadListener.DownloadProgress(
+                    item.label(), item.size() / 2, item.size()));
+            listener.onProgress(new DownloadListener.DownloadProgress(
+                    item.label(), item.size(), item.size()));
+        });
+
+        DownloadListener.DownloadSummary summary = lastSummary.get();
+        assertNotNull(summary);
+        assertEquals(300, summary.downloaded());
+        assertEquals(300, summary.total());
+        assertEquals(2, summary.completedItems());
+        assertEquals(2, summary.totalItems());
     }
 }

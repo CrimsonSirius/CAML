@@ -3,6 +3,7 @@ package org.chs.camlauncher.backend.settings;
 import org.chs.camlauncher.backend.download.DownloadConcurrency;
 import org.chs.camlauncher.backend.download.source.DownloadSourceMode;
 import org.chs.camlauncher.backend.instance.VersionIsolationMode;
+import org.chs.camlauncher.backend.runtime.JavaSelectionMode;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -12,6 +13,8 @@ import java.nio.file.Files;
 import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Properties;
@@ -34,6 +37,9 @@ public final class SettingsService {
     private static final String DOWNLOAD_SOURCE_KEY = "downloadSource";
     private static final String CUSTOM_DOWNLOAD_API_KEY = "customDownloadApi";
     private static final String LAST_LAUNCHED_INSTANCE_KEY = "lastInstanceId";
+    private static final String JAVA_SELECTION_MODE_KEY = "javaSelectionMode";
+    private static final String SELECTED_JAVA_PATH_KEY = "selectedJavaPath";
+    private static final String MANUAL_JAVA_PATHS_KEY = "manualJavaPaths";
 
     private final Path settingsFile;
     private final Object writeLock = new Object();
@@ -162,6 +168,59 @@ public final class SettingsService {
         update(properties -> properties.setProperty(LAST_LAUNCHED_INSTANCE_KEY, value));
     }
 
+    public JavaSelectionMode javaSelectionMode() throws IOException {
+        return JavaSelectionMode.fromStored(load().getProperty(JAVA_SELECTION_MODE_KEY));
+    }
+
+    public Optional<Path> selectedJavaPath() throws IOException {
+        return parsePath(load().getProperty(SELECTED_JAVA_PATH_KEY));
+    }
+
+    public List<Path> manualJavaPaths() throws IOException {
+        String raw = load().getProperty(MANUAL_JAVA_PATHS_KEY);
+        if (raw == null || raw.isBlank()) {
+            return List.of();
+        }
+        List<Path> paths = new ArrayList<>();
+        for (String line : raw.split("\\R")) {
+            parsePath(line).ifPresent(paths::add);
+        }
+        return List.copyOf(paths);
+    }
+
+    public void addManualJavaPath(Path path) throws IOException {
+        Objects.requireNonNull(path, "path");
+        String value = path.toAbsolutePath().normalize().toString();
+        update(properties -> {
+            List<String> values = new ArrayList<>();
+            String raw = properties.getProperty(MANUAL_JAVA_PATHS_KEY);
+            if (raw != null && !raw.isBlank()) {
+                for (String line : raw.split("\\R")) {
+                    if (!line.isBlank()) {
+                        values.add(line.trim());
+                    }
+                }
+            }
+            if (values.stream().noneMatch(value::equals)) {
+                values.add(value);
+            }
+            properties.setProperty(MANUAL_JAVA_PATHS_KEY, String.join("\n", values));
+        });
+    }
+
+    public void setJavaSelection(JavaSelectionMode mode, Path selectedJavaPath) throws IOException {
+        Objects.requireNonNull(mode, "mode");
+        update(properties -> {
+            properties.setProperty(JAVA_SELECTION_MODE_KEY, mode.storedName());
+            if (selectedJavaPath == null) {
+                properties.remove(SELECTED_JAVA_PATH_KEY);
+            } else {
+                properties.setProperty(SELECTED_JAVA_PATH_KEY,
+                        selectedJavaPath.toAbsolutePath().normalize().toString());
+            }
+        });
+    }
+
     private Properties load() throws IOException {
         synchronized (writeLock) {
             Properties properties = new Properties();
@@ -171,6 +230,17 @@ public final class SettingsService {
                 }
             }
             return properties;
+        }
+    }
+
+    private static Optional<Path> parsePath(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return Optional.empty();
+        }
+        try {
+            return Optional.of(Path.of(raw.trim()).toAbsolutePath().normalize());
+        } catch (InvalidPathException ignored) {
+            return Optional.empty();
         }
     }
 

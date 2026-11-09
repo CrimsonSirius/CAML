@@ -137,7 +137,90 @@ class ExternalLoaderInstallerTest {
                 () -> ExternalLoaderInstaller.verifyInstalledLibraries("Forge", installed));
     }
 
+    @org.junit.jupiter.api.Test
+    void predownloadsInstallerLibrariesFromConfiguredSources() throws Exception {
+        Path baseDirectory = gameDirectory.resolve("versions/1.20.1");
+        Files.createDirectories(baseDirectory);
+        Files.writeString(baseDirectory.resolve("1.20.1.json"), """
+                {
+                  "id": "1.20.1",
+                  "mainClass": "base.Main",
+                  "javaVersion": {"component": "test", "majorVersion": 21}
+                }
+                """, StandardCharsets.UTF_8);
+        Files.write(baseDirectory.resolve("1.20.1.jar"), new byte[]{1});
+
+        byte[] libraryBytes = "pre-downloaded-library".getBytes(StandardCharsets.UTF_8);
+        Path installerJar = gameDirectory.resolve("fake-installer.jar");
+        HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        server.createContext("/installer.jar", exchange -> {
+            byte[] bytes = Files.readAllBytes(installerJar);
+            exchange.sendResponseHeaders(200, bytes.length);
+            try (var output = exchange.getResponseBody()) {
+                output.write(bytes);
+            }
+        });
+        server.createContext("/lib.jar", exchange -> {
+            exchange.sendResponseHeaders(200, libraryBytes.length);
+            try (var output = exchange.getResponseBody()) {
+                output.write(libraryBytes);
+            }
+        });
+        server.start();
+
+        try {
+            String libraryUrl = "http://127.0.0.1:" + server.getAddress().getPort() + "/lib.jar";
+            createFakeInstallerJar(installerJar, """
+                    [{
+                      "name": "org.example:pre:1.0",
+                      "downloads": {
+                        "artifact": {
+                          "url": "%s",
+                          "path": "org/example/pre/1.0/pre-1.0.jar",
+                          "size": %d
+                        }
+                      }
+                    }]
+                    """.formatted(libraryUrl, libraryBytes.length));
+
+            ExternalLoaderInstaller installer = new ExternalLoaderInstaller(
+                    new VersionInstaller(
+                            new MetadataService(),
+                            new VersionManifestService(),
+                            new DownloadPlanner(),
+                            new AssetDownloadPlanner(),
+                            new FileDownloader()
+                    ),
+                    new JavaLocator(),
+                    new FileDownloader(),
+                    new MetadataService(),
+                    URI.create("https://example.invalid/version_manifest_v2.json"),
+                    gameDirectory.resolve("cache/version_manifest_v2.json")
+            );
+            installer.install(
+                    "Forge",
+                    "1.20.1",
+                    "pre-download-instance",
+                    URI.create("http://127.0.0.1:"
+                            + server.getAddress().getPort() + "/installer.jar"),
+                    gameDirectory,
+                    DownloadListener.NONE
+            );
+
+            Path library = gameDirectory.resolve(
+                    "libraries/org/example/pre/1.0/pre-1.0.jar");
+            assertTrue(Files.isRegularFile(library));
+            assertTrue(java.util.Arrays.equals(libraryBytes, Files.readAllBytes(library)));
+        } finally {
+            server.stop(0);
+        }
+    }
+
     private static void createFakeInstallerJar(Path jar) throws Exception {
+        createFakeInstallerJar(jar, null);
+    }
+
+    private static void createFakeInstallerJar(Path jar, String librariesJson) throws Exception {
         Manifest manifest = new Manifest();
         manifest.getMainAttributes().put(Attributes.Name.MANIFEST_VERSION, "1.0");
         manifest.getMainAttributes().put(Attributes.Name.MAIN_CLASS,
@@ -156,14 +239,17 @@ class ExternalLoaderInstallerTest {
             output.closeEntry();
 
             output.putNextEntry(new JarEntry("version.json"));
-            output.write("""
+            output.write(("""
                     {
                       "id": "test-forge-id",
                       "inheritsFrom": "1.20.1",
                       "mainClass": "test.ForgeMain",
-                      "type": "release"
+                      "type": "release"%s
                     }
-                    """.getBytes(StandardCharsets.UTF_8));
+                    """.formatted(librariesJson == null
+                    ? ""
+                    : ",\n  \"libraries\": " + librariesJson))
+                    .getBytes(StandardCharsets.UTF_8));
             output.closeEntry();
         }
     }

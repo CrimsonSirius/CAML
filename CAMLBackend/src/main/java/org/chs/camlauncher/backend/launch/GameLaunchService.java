@@ -17,6 +17,7 @@ import org.chs.camlauncher.backend.launch.process.ProcessListener;
 import org.chs.camlauncher.backend.runtime.JavaLocator;
 import org.chs.camlauncher.backend.runtime.JavaRequirement;
 import org.chs.camlauncher.backend.runtime.JavaRuntime;
+import org.chs.camlauncher.backend.runtime.JavaSelectionMode;
 
 import java.io.IOException;
 import java.net.URI;
@@ -36,6 +37,8 @@ public final class GameLaunchService {
     private final NativeExtractor nativeExtractor;
     private final VirtualAssetInstaller virtualAssetInstaller;
     private final ProcessLauncher processLauncher;
+    private volatile JavaSelectionMode javaSelectionMode = JavaSelectionMode.AUTO;
+    private volatile Path selectedJavaPath;
 
     public GameLaunchService(
             Path gameDirectory,
@@ -59,6 +62,13 @@ public final class GameLaunchService {
         this.nativeExtractor = Objects.requireNonNull(nativeExtractor, "nativeExtractor");
         this.virtualAssetInstaller = Objects.requireNonNull(virtualAssetInstaller, "virtualAssetInstaller");
         this.processLauncher = Objects.requireNonNull(processLauncher, "processLauncher");
+    }
+
+    public void setJavaSelection(JavaSelectionMode mode, Path selectedJavaPath) {
+        this.javaSelectionMode = Objects.requireNonNull(mode, "mode");
+        this.selectedJavaPath = selectedJavaPath == null
+                ? null
+                : selectedJavaPath.toAbsolutePath().normalize();
     }
 
     /**
@@ -129,13 +139,7 @@ public final class GameLaunchService {
         );
         AuthSession auth = new OfflineAccount(username).login();
 
-        JavaRequirement requirement = JavaRequirement.from(installed.manifest());
-        JavaRuntime java = javaLocator.findSuitable(requirement).orElseThrow(() ->
-                new LaunchException(
-                        LaunchFailure.EXECUTABLE_NOT_FOUND,
-                        "找不到满足版本要求的 Java " + requirement.majorVersion() + "，请安装或选择 Java。",
-                        null
-                ));
+        JavaRuntime java = selectJava(installed);
 
         Path gameDataDirectory = GameDataLayout.resolve(
                 installed.gameDirectory(),
@@ -158,5 +162,30 @@ public final class GameLaunchService {
         GameProcess process = processLauncher.launch(plan, classpath, processListener);
 
         return new GameLaunch(installed, auth, java, plan, classpath, process);
+    }
+
+    private JavaRuntime selectJava(InstalledVersion installed) throws LaunchException {
+        if (javaSelectionMode == JavaSelectionMode.MANUAL) {
+            Path path = selectedJavaPath;
+            if (path == null) {
+                throw new LaunchException(
+                        LaunchFailure.EXECUTABLE_NOT_FOUND,
+                        "已启用手动 Java 选择，但没有选择 Java 路径。",
+                        null
+                );
+            }
+            return javaLocator.inspect(path).orElseThrow(() -> new LaunchException(
+                    LaunchFailure.EXECUTABLE_NOT_FOUND,
+                    "手动选择的 Java 不可用：" + path,
+                    null
+            ));
+        }
+
+        JavaRequirement requirement = JavaRequirement.from(installed.manifest());
+        return javaLocator.findSuitable(requirement).orElseThrow(() -> new LaunchException(
+                LaunchFailure.EXECUTABLE_NOT_FOUND,
+                "找不到满足版本要求的 Java " + requirement.majorVersion() + "，请安装或选择 Java。",
+                null
+        ));
     }
 }

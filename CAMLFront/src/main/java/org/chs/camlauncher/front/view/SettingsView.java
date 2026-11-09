@@ -5,6 +5,7 @@ import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.Label;
+import javafx.scene.control.ScrollPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.StackPane;
@@ -28,7 +29,9 @@ final class SettingsView extends VBox implements SidebarPage {
     private final DownloadSettingsView downloadSettings;
     private final LauncherSettingsView launcherSettings;
     private final CamlSideNav sideNav;
+    private final ScrollPane contentScroll = new ScrollPane();
     private final StackPane contentHost;
+    private Node currentContent;
     private FadeTransition contentTransition;
 
     SettingsView(LaunchSettings launchSettings, IntConsumer onMemoryChanged,
@@ -57,17 +60,26 @@ final class SettingsView extends VBox implements SidebarPage {
         sideNav.addItem(launcherItem);
         sideNav.select(gameItem);
 
-        contentHost = new StackPane(gameSettings);
+        contentScroll.setFitToWidth(true);
+        contentScroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+        contentScroll.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
+        contentScroll.getStyleClass().add("app-settings-scroll");
+        contentScroll.setContent(gameSettings);
+        currentContent = gameSettings;
+
+        contentHost = new StackPane(contentScroll);
         contentHost.setAlignment(Pos.TOP_LEFT);
         contentHost.setMaxHeight(Double.MAX_VALUE);
         contentHost.setPadding(new Insets(32, 40, 32, 40));
         HBox.setHgrow(contentHost, Priority.ALWAYS);
-        contentHost.widthProperty().addListener((observable, oldValue, newValue) -> {
-            double innerWidth = Math.max(0, newValue.doubleValue() - 80);
+        contentScroll.viewportBoundsProperty().addListener((observable, oldValue, newValue) -> {
+            double innerWidth = Math.max(0, newValue.getWidth());
             gameSettings.setPrefWidth(innerWidth);
             gameSettings.setMaxWidth(innerWidth);
             downloadSettings.setPrefWidth(innerWidth);
             downloadSettings.setMaxWidth(innerWidth);
+            launcherSettings.setPrefWidth(innerWidth);
+            launcherSettings.setMaxWidth(innerWidth);
         });
         sideNav.selectedItemProperty().addListener((observable, oldValue, selected) -> {
             if (selected == launcherItem) {
@@ -107,37 +119,36 @@ final class SettingsView extends VBox implements SidebarPage {
     }
 
     private void showContent(Node next) {
-        if (contentHost.getChildren().size() == 1 && contentHost.getChildren().get(0) == next) {
+        if (currentContent == next) {
             return;
         }
         if (REDUCE_MOTION) {
-            contentHost.getChildren().setAll(next);
-            next.setOpacity(1);
+            setContent(next);
             return;
         }
 
         if (contentTransition != null) {
             contentTransition.stop();
         }
-        Node current = contentHost.getChildren().isEmpty() ? null : contentHost.getChildren().get(0);
-        if (current == null) {
-            contentHost.getChildren().setAll(next);
-            next.setOpacity(1);
-            return;
-        }
-
-        current.setOpacity(1);
-        FadeTransition fadeOut = new FadeTransition(Duration.millis(80), current);
+        contentScroll.setOpacity(1);
+        FadeTransition fadeOut = new FadeTransition(Duration.millis(80), contentScroll);
         fadeOut.setToValue(0);
         fadeOut.setOnFinished(event -> {
-            contentHost.getChildren().setAll(next);
-            next.setOpacity(0);
-            contentTransition = new FadeTransition(Duration.millis(180), next);
+            setContent(next);
+            contentScroll.setOpacity(0);
+            contentTransition = new FadeTransition(Duration.millis(180), contentScroll);
             contentTransition.setFromValue(0);
             contentTransition.setToValue(1);
             contentTransition.play();
         });
         contentTransition = fadeOut;
         fadeOut.play();
+    }
+
+    private void setContent(Node next) {
+        currentContent = next;
+        next.setOpacity(1);
+        contentScroll.setContent(next);
+        contentScroll.setVvalue(0);
     }
 }

@@ -1,5 +1,6 @@
 package org.chs.camlauncher.front.view;
 
+import javafx.animation.PauseTransition;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
@@ -8,6 +9,7 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
+import javafx.util.Duration;
 import javafx.util.StringConverter;
 import org.chs.camlauncher.backend.loader.fabric.FabricApiVersion;
 import org.chs.camlauncher.backend.loader.fabric.FabricLoaderVersion;
@@ -15,7 +17,6 @@ import org.chs.camlauncher.backend.loader.forge.ForgeVersion;
 import org.chs.camlauncher.backend.loader.neoforge.NeoForgeVersion;
 import org.chs.camlauncher.backend.loader.optifine.OptiFineVersion;
 import org.chs.camlauncher.backend.loader.optifine.OptiFineCompatibility;
-import org.chs.camlauncher.backend.instance.InstanceNameCheck;
 import org.chs.camlauncher.backend.metadata.model.VersionManifest;
 import org.chs.camlauncher.front.controller.DownloadsController;
 import org.chs.camlauncher.ui.control.CamlButton;
@@ -24,23 +25,37 @@ import org.chs.camlauncher.ui.control.CamlTextField;
 
 import java.nio.file.Path;
 import java.util.List;
+import java.util.function.Consumer;
 
 /** 选择版本后的下载设置页：实例名、版本信息和加载器选择。 */
 final class DownloadVersionSetupView extends VBox {
     private final Label statusLabel = new Label("未选择加载器时下载原版游戏。");
     private final CamlTextField instanceNameField;
+    private final Label instanceNameHint = new Label();
+    private final CamlButton downloadButton;
+    private final PauseTransition instanceNameDebounce = new PauseTransition(Duration.millis(500));
     private final CamlComboBox<FabricLoaderVersion> fabricLoaderSelector = new CamlComboBox<>();
     private final CamlComboBox<FabricApiVersion> fabricApiSelector = new CamlComboBox<>();
     private final CamlComboBox<ForgeVersion> forgeSelector = new CamlComboBox<>();
     private final CamlComboBox<OptiFineVersion> optiFineSelector = new CamlComboBox<>();
     private final CamlComboBox<NeoForgeVersion> neoForgeSelector = new CamlComboBox<>();
+    private final VersionManifest.Version version;
     private final String gameVersion;
-    private boolean downloading;
+    private final DownloadsController controller;
+    private final LaunchSettings launchSettings;
+    private final Consumer<DownloadRequest> onStartDownload;
     private boolean updatingLoaders;
     private String lastAutoName;
+    private String availableInstanceName = "";
+    private int instanceNameCheckGeneration;
 
     DownloadVersionSetupView(VersionManifest.Version version, DownloadsController controller,
-                             LaunchSettings launchSettings, Runnable onCancel) {
+                             LaunchSettings launchSettings, Runnable onCancel,
+                             Consumer<DownloadRequest> onStartDownload) {
+        this.version = version;
+        this.controller = controller;
+        this.launchSettings = launchSettings;
+        this.onStartDownload = onStartDownload;
         getStyleClass().add("app-download-setup-page");
         setPadding(new Insets(32, 40, 32, 40));
         setSpacing(12);
@@ -54,9 +69,14 @@ final class DownloadVersionSetupView extends VBox {
         nameLabel.getStyleClass().add("app-download-option-title");
         instanceNameField = new CamlTextField(version.id());
         instanceNameField.setMaxWidth(Double.MAX_VALUE);
-        HBox.setHgrow(instanceNameField, Priority.ALWAYS);
-        HBox nameRow = new HBox(12, cancel, nameLabel, instanceNameField);
-        nameRow.setAlignment(Pos.CENTER_LEFT);
+        instanceNameHint.getStyleClass().addAll("caml-body-small", "field-hint");
+        instanceNameHint.setWrapText(true);
+        instanceNameHint.setVisible(false);
+        instanceNameHint.setManaged(false);
+        VBox nameInput = new VBox(6, instanceNameField, instanceNameHint);
+        HBox.setHgrow(nameInput, Priority.ALWAYS);
+        HBox nameRow = new HBox(12, cancel, nameLabel, nameInput);
+        nameRow.setAlignment(Pos.TOP_LEFT);
 
         gameVersion = version.id();
         lastAutoName = gameVersion;
@@ -83,13 +103,20 @@ final class DownloadVersionSetupView extends VBox {
         statusLabel.getStyleClass().addAll("caml-body-small", "field-hint");
         statusLabel.setWrapText(true);
 
-        CamlButton download = CamlButton.filled("下载实例");
-        download.getStyleClass().add("app-download-primary-button");
-        download.setMaxWidth(Double.MAX_VALUE);
-        download.setOnAction(event -> startDownload(
-                version, controller, launchSettings, cancel, download));
+        downloadButton = CamlButton.filled("下载实例");
+        downloadButton.getStyleClass().add("app-download-primary-button");
+        downloadButton.setMaxWidth(Double.MAX_VALUE);
+        downloadButton.setDisable(true);
+        downloadButton.setOnAction(event -> startDownload());
 
-        getChildren().addAll(nameRow, options, spacer, statusLabel, download);
+        getChildren().addAll(nameRow, options, spacer, statusLabel, downloadButton);
+
+        instanceNameDebounce.setOnFinished(event -> checkInstanceNameNow());
+        instanceNameField.textProperty().addListener((observable, oldValue, newValue) ->
+                scheduleInstanceNameCheck());
+        launchSettings.gameDirectoryProperty().addListener((observable, oldValue, newValue) ->
+                scheduleInstanceNameCheck());
+        scheduleInstanceNameCheck();
     }
 
     private void configureSelectors(VersionManifest.Version version) {
@@ -118,6 +145,7 @@ final class DownloadVersionSetupView extends VBox {
             if (updatingLoaders) {
                 return;
             }
+            scheduleInstanceNameCheck();
             if (loader == null) {
                 updateFabricApiState();
                 return;
@@ -163,6 +191,7 @@ final class DownloadVersionSetupView extends VBox {
             if (updatingLoaders || forge == null) {
                 return;
             }
+            scheduleInstanceNameCheck();
             OptiFineVersion optiFine = optiFineSelector.getValue();
             if (optiFine != null && !OptiFineCompatibility.isForgeCompatible(forge, optiFine)) {
                 clearSelection(optiFineSelector, "当前 Forge 与 OptiFine 不兼容");
@@ -247,6 +276,7 @@ final class DownloadVersionSetupView extends VBox {
             if (updatingLoaders || neoForge == null) {
                 return;
             }
+            scheduleInstanceNameCheck();
             updatingLoaders = true;
             clearSelection(forgeSelector, "请选择 Forge 版本");
             clearSelection(fabricLoaderSelector, "请选择 Fabric 版本");
@@ -264,6 +294,75 @@ final class DownloadVersionSetupView extends VBox {
             instanceNameField.setText(newName);
             lastAutoName = newName;
         }
+    }
+
+    private void scheduleInstanceNameCheck() {
+        instanceNameCheckGeneration++;
+        availableInstanceName = "";
+        downloadButton.setDisable(true);
+        String name = instanceNameField.getText().trim();
+        if (name.isEmpty()) {
+            instanceNameDebounce.stop();
+            showInstanceNameHint("实例名字不能为空", true);
+            return;
+        }
+
+        showInstanceNameHint("", false);
+        instanceNameDebounce.playFromStart();
+    }
+
+    private void checkInstanceNameNow() {
+        String name = instanceNameField.getText().trim();
+        Path gameDirectory = launchSettings.gameDirectory();
+        int generation = instanceNameCheckGeneration;
+        if (name.isEmpty()) {
+            showInstanceNameHint("实例名字不能为空", true);
+            return;
+        }
+        if (gameDirectory == null) {
+            showInstanceNameHint("尚未设置游戏位置", true);
+            return;
+        }
+
+        showInstanceNameHint("正在检查实例名...", false);
+        controller.checkInstanceName(gameDirectory, name, check -> {
+            if (generation != instanceNameCheckGeneration
+                    || !name.equals(instanceNameField.getText().trim())) {
+                return;
+            }
+            if (!check.available()) {
+                showInstanceNameHint(check.message(), true);
+                return;
+            }
+            if (hasLoaderSelected() && name.equals(gameVersion)) {
+                showInstanceNameHint("安装加载器时实例名不能与游戏版本号相同", true);
+                return;
+            }
+            availableInstanceName = name;
+            downloadButton.setDisable(false);
+            showInstanceNameHint("实例名可用", false);
+        }, message -> {
+            if (generation != instanceNameCheckGeneration
+                    || !name.equals(instanceNameField.getText().trim())) {
+                return;
+            }
+            showInstanceNameHint("检查实例名失败：" + message, true);
+        });
+    }
+
+    private void showInstanceNameHint(String text, boolean error) {
+        instanceNameHint.setText(text == null ? "" : text);
+        boolean visible = text != null && !text.isBlank();
+        instanceNameHint.setVisible(visible);
+        instanceNameHint.setManaged(visible);
+        instanceNameHint.getStyleClass().removeAll("field-hint", "field-hint-error");
+        instanceNameHint.getStyleClass().add(error ? "field-hint-error" : "field-hint");
+    }
+
+    private boolean hasLoaderSelected() {
+        return forgeSelector.getValue() != null
+                || fabricLoaderSelector.getValue() != null
+                || neoForgeSelector.getValue() != null;
     }
 
     private void clearOtherLoaders(CamlComboBox<?> selected) {
@@ -372,7 +471,7 @@ final class DownloadVersionSetupView extends VBox {
             return;
         }
 
-        optiFineSelector.setDisable(downloading || optiFineSelector.getItems().isEmpty());
+        optiFineSelector.setDisable(optiFineSelector.getItems().isEmpty());
         if (!optiFineSelector.getItems().isEmpty() && optiFineSelector.getValue() == null) {
             optiFineSelector.setPromptText("请选择 OptiFine 版本");
         }
@@ -387,17 +486,14 @@ final class DownloadVersionSetupView extends VBox {
         } else if (fabricApiSelector.getValue() == null && !fabricApiSelector.getItems().isEmpty()) {
             fabricApiSelector.setPromptText("请选择 Fabric API 版本");
         }
-        fabricApiSelector.setDisable(
-                downloading || !hasFabric || fabricApiSelector.getItems().isEmpty());
+        fabricApiSelector.setDisable(!hasFabric || fabricApiSelector.getItems().isEmpty());
     }
 
-    private void startDownload(VersionManifest.Version version, DownloadsController controller,
-                               LaunchSettings launchSettings, CamlButton cancel,
-                               CamlButton download) {
+    private void startDownload() {
         Path gameDirectory = launchSettings.gameDirectory();
         String instanceId = instanceNameField.getText().trim();
-        if (instanceId.isEmpty()) {
-            showStatus("实例名字不能为空。", true);
+        if (!instanceId.equals(availableInstanceName)) {
+            showStatus("实例名尚未通过检查，请稍候再试。", true);
             return;
         }
         if (gameDirectory == null) {
@@ -418,119 +514,14 @@ final class DownloadVersionSetupView extends VBox {
             showStatus(OptiFineCompatibility.incompatibleMessage(forge, optiFine), true);
             return;
         }
-        boolean loaderSelected = forge != null || fabricLoader != null || neoForge != null;
-        if (loaderSelected && instanceId.equals(version.id())) {
+        if (hasLoaderSelected() && instanceId.equals(version.id())) {
             showStatus("安装加载器时实例名不能与游戏版本号相同。", true);
             return;
         }
 
-        download.setDisable(true);
-        cancel.setDisable(true);
-        controller.checkInstanceName(gameDirectory, instanceId,
-                check -> {
-                    if (!check.available()) {
-                        download.setDisable(false);
-                        cancel.setDisable(false);
-                        showStatus(check.message(), true);
-                        return;
-                    }
-                    beginDownload(version, controller, launchSettings, cancel, download,
-                            instanceId, gameDirectory, forge, fabricLoader, fabricApi,
-                            optiFine, neoForge);
-                },
-                message -> {
-                    download.setDisable(false);
-                    cancel.setDisable(false);
-                    showStatus("检查实例名失败：" + message, true);
-                });
-    }
-
-    private void beginDownload(VersionManifest.Version version, DownloadsController controller,
-                               LaunchSettings launchSettings, CamlButton cancel, CamlButton download,
-                               String instanceId, Path gameDirectory, ForgeVersion forge,
-                               FabricLoaderVersion fabricLoader, FabricApiVersion fabricApi,
-                               OptiFineVersion optiFine, NeoForgeVersion neoForge) {
-        cancel.setDisable(true);
-        downloading = true;
-        instanceNameField.setDisable(true);
-        forgeSelector.setDisable(true);
-        fabricLoaderSelector.setDisable(true);
-        fabricApiSelector.setDisable(true);
-        optiFineSelector.setDisable(true);
-        neoForgeSelector.setDisable(true);
-        download.setDisable(true);
-        download.setText("正在下载...");
-
-        if (forge != null) {
-            if (optiFine != null) {
-                showStatus("正在安装 Forge " + forge.version() + " + OptiFine "
-                        + optiFine.version() + "，实例名：" + instanceId, false);
-                controller.downloadForgeOptiFineVersion(version.id(), instanceId, forge, optiFine,
-                        gameDirectory,
-                        () -> completeDownload(launchSettings, instanceId, gameDirectory, cancel, download,
-                                "下载完成：实例 " + instanceId + " 已安装 Forge " + forge.version()
-                                        + " + OptiFine " + optiFine.version()),
-                        message -> failDownload(message, cancel, download));
-            } else {
-                showStatus("正在安装 Forge " + forge.version() + "，实例名：" + instanceId, false);
-                controller.downloadForgeVersion(version.id(), instanceId, forge, gameDirectory,
-                        () -> completeDownload(launchSettings, instanceId, gameDirectory, cancel, download,
-                                "下载完成：实例 " + instanceId + " 已安装 Forge " + forge.version()),
-                        message -> failDownload(message, cancel, download));
-            }
-        } else if (fabricLoader != null) {
-            String apiText = fabricApi == null ? "" : "，Fabric API：" + fabricApi.versionNumber();
-            showStatus("正在安装 Fabric Loader " + fabricLoader.version()
-                    + apiText + "，实例名：" + instanceId, false);
-            controller.downloadFabricVersion(
-                    version.id(),
-                    instanceId,
-                    fabricLoader.version(),
-                    fabricApi,
-                    gameDirectory,
-                    () -> completeDownload(launchSettings, instanceId, gameDirectory, cancel, download,
-                            "下载完成：实例 " + instanceId + " 已安装 Fabric Loader "
-                                    + fabricLoader.version() + apiText),
-                    message -> failDownload(message, cancel, download)
-            );
-        } else if (neoForge != null) {
-            showStatus("正在安装 NeoForge " + neoForge.version()
-                    + "，实例名：" + instanceId, false);
-            controller.downloadNeoForgeVersion(version.id(), instanceId, neoForge, gameDirectory,
-                    () -> completeDownload(launchSettings, instanceId, gameDirectory, cancel, download,
-                            "下载完成：实例 " + instanceId + " 已安装 NeoForge " + neoForge.version()),
-                    message -> failDownload(message, cancel, download));
-        } else {
-            showStatus("正在下载 Minecraft " + version.id() + "，实例名：" + instanceId, false);
-            controller.downloadVersion(version.id(), instanceId, gameDirectory,
-                    () -> completeDownload(launchSettings, instanceId, gameDirectory, cancel, download,
-                            "下载完成：实例 " + instanceId + "（Minecraft " + version.id()
-                                    + "）已安装到 " + gameDirectory),
-                    message -> failDownload(message, cancel, download));
-        }
-    }
-
-    private void completeDownload(LaunchSettings launchSettings, String instanceId,
-                                  Path gameDirectory, CamlButton cancel,
-                                  CamlButton download, String message) {
-        launchSettings.setSelectedVersion(instanceId);
-        download.setText("下载完成");
-        cancel.setDisable(false);
-        showStatus(message + "（游戏位置：" + gameDirectory + "）", false);
-    }
-
-    private void failDownload(String message, CamlButton cancel, CamlButton download) {
-        downloading = false;
-        download.setDisable(false);
-        download.setText("下载实例");
-        cancel.setDisable(false);
-        instanceNameField.setDisable(false);
-        forgeSelector.setDisable(false);
-        fabricLoaderSelector.setDisable(false);
-        neoForgeSelector.setDisable(false);
-        updateOptiFineState();
-        updateFabricApiState();
-        showStatus("下载失败：" + message, true);
+        onStartDownload.accept(new DownloadRequest(
+                version, instanceId, gameDirectory, forge, fabricLoader, fabricApi,
+                optiFine, neoForge));
     }
 
     private void showStatus(String text, boolean error) {

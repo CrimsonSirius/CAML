@@ -44,7 +44,7 @@ public final class DownloadsController {
     public void checkInstanceName(Path gameDirectory, String instanceId,
                                   Consumer<InstanceNameCheck> onChecked,
                                   Consumer<String> onError) {
-        context.supplyAsync(() -> context.backend().checkInstanceName(gameDirectory, instanceId))
+        context.supplyCheckAsync(() -> context.backend().checkInstanceName(gameDirectory, instanceId))
                 .thenAccept(check -> Platform.runLater(() -> onChecked.accept(check)))
                 .exceptionally(ex -> {
                     Throwable cause = ex.getCause() != null ? ex.getCause() : ex;
@@ -76,7 +76,7 @@ public final class DownloadsController {
                                Function<VersionManifest, List<VersionManifest.Version>> selector,
                                Consumer<List<VersionManifest.Version>> onLoaded,
                                Consumer<String> onError) {
-        context.supplyAsync(() -> context.backend().fetchVersionManifest())
+        context.supplyMetadataAsync(() -> context.backend().fetchVersionManifest())
                 .thenAccept(manifest -> {
                     List<VersionManifest.Version> versions = selector.apply(manifest);
                     Platform.runLater(() -> onLoaded.accept(versions));
@@ -93,10 +93,11 @@ public final class DownloadsController {
 
     /** 异步下载官方原版实例。 */
     public void downloadVersion(String versionId, String instanceId, Path gameDirectory,
+                                DownloadListener listener,
                                 Runnable onSuccess, Consumer<String> onError) {
         Objects.requireNonNull(gameDirectory, "gameDirectory");
         context.supplyAsync(() -> context.backend().installVersion(
-                        versionId, instanceId, gameDirectory, DownloadListener.NONE))
+                        versionId, instanceId, gameDirectory, listener))
                 .thenAccept(installed -> {
                     LOGGER.info("官方原版实例安装完成: {} / {} -> {}",
                             instanceId, versionId, installed.gameDirectory());
@@ -118,7 +119,7 @@ public final class DownloadsController {
     public void fetchFabricLoaderVersions(String gameVersion,
                                           Consumer<List<FabricLoaderVersion>> onLoaded,
                                           Consumer<String> onError) {
-        context.supplyAsync(() -> context.backend().fetchFabricLoaderVersions(gameVersion))
+        context.supplyMetadataAsync(() -> context.backend().fetchFabricLoaderVersions(gameVersion))
                 .thenAccept(versions -> Platform.runLater(() -> onLoaded.accept(versions)))
                 .exceptionally(ex -> {
                     Throwable cause = ex.getCause() != null ? ex.getCause() : ex;
@@ -132,7 +133,7 @@ public final class DownloadsController {
     public void fetchFabricApiVersions(String gameVersion,
                                        Consumer<List<FabricApiVersion>> onLoaded,
                                        Consumer<String> onError) {
-        context.supplyAsync(() -> context.backend().fetchFabricApiVersions(gameVersion))
+        context.supplyMetadataAsync(() -> context.backend().fetchFabricApiVersions(gameVersion))
                 .thenAccept(versions -> Platform.runLater(() -> onLoaded.accept(versions)))
                 .exceptionally(ex -> {
                     Throwable cause = ex.getCause() != null ? ex.getCause() : ex;
@@ -149,6 +150,7 @@ public final class DownloadsController {
             String loaderVersion,
             FabricApiVersion apiVersion,
             Path gameDirectory,
+            DownloadListener listener,
             Runnable onSuccess,
             Consumer<String> onError
     ) {
@@ -159,7 +161,7 @@ public final class DownloadsController {
                         loaderVersion,
                         apiVersion,
                         gameDirectory,
-                        DownloadListener.NONE
+                        listener
                 ))
                 .thenAccept(installed -> {
                     LOGGER.info("Fabric 实例安装完成: {} / {} -> {}",
@@ -201,7 +203,7 @@ public final class DownloadsController {
 
     private <T> void fetchLoaderVersions(String name, LoaderSupplier<T> supplier,
                                          Consumer<List<T>> onLoaded, Consumer<String> onError) {
-        context.supplyAsync(supplier::get)
+        context.supplyMetadataAsync(supplier::get)
                 .thenAccept(versions -> Platform.runLater(() -> onLoaded.accept(versions)))
                 .exceptionally(ex -> {
                     Throwable cause = ex.getCause() != null ? ex.getCause() : ex;
@@ -213,20 +215,22 @@ public final class DownloadsController {
     }
 
     public void downloadForgeVersion(String gameVersion, String instanceId, ForgeVersion version,
-                                     Path gameDirectory, Runnable onSuccess,
+                                     Path gameDirectory, DownloadListener listener,
+                                     Runnable onSuccess,
                                      Consumer<String> onError) {
         downloadExternalLoaderVersion("Forge", gameVersion, instanceId, gameDirectory,
                 () -> context.backend().installForgeVersion(gameVersion, instanceId, version,
-                        gameDirectory, DownloadListener.NONE),
+                        gameDirectory, listener),
                 onSuccess, onError);
     }
 
     public void downloadNeoForgeVersion(String gameVersion, String instanceId, NeoForgeVersion version,
-                                        Path gameDirectory, Runnable onSuccess,
+                                        Path gameDirectory, DownloadListener listener,
+                                        Runnable onSuccess,
                                         Consumer<String> onError) {
         downloadExternalLoaderVersion("NeoForge", gameVersion, instanceId, gameDirectory,
                 () -> context.backend().installNeoForgeVersion(gameVersion, instanceId, version,
-                        gameDirectory, DownloadListener.NONE),
+                        gameDirectory, listener),
                 onSuccess, onError);
     }
 
@@ -236,13 +240,14 @@ public final class DownloadsController {
             ForgeVersion forgeVersion,
             OptiFineVersion optiFineVersion,
             Path gameDirectory,
+            DownloadListener listener,
             Runnable onSuccess,
             Consumer<String> onError
     ) {
         downloadExternalLoaderVersion("Forge + OptiFine", gameVersion, instanceId, gameDirectory,
                 () -> context.backend().installForgeOptiFineVersion(
                         gameVersion, instanceId, forgeVersion, optiFineVersion,
-                        gameDirectory, DownloadListener.NONE),
+                        gameDirectory, listener),
                 onSuccess, onError);
     }
 

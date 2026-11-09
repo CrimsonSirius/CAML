@@ -1,6 +1,6 @@
 # CAML 当前实现情况
 
-更新日期：2026-11-07
+更新日期：2026-11-09
 
 ## 1. 总体状态
 
@@ -82,8 +82,13 @@ CAML
 - `.part` 临时文件。
 - 校验通过后原子移动。
 - 下载使用 HTTP/1.1，失败后重试并短暂退避，避免部分 CDN 的 HTTP/2 连接 EOF。
+- 版本清单与版本 JSON 请求使用手动的 `Location` 逐跳解析和整次请求 10 秒总超时；
+  同源失败重试一次。BMCLAPI 重定向到慢节点时不会无限等待，重新请求可换到新的镜像节点，
+  仍失败才回退官方源或缓存。
 - 最终失败信息包含下载项、尝试次数和最后请求地址。
 - `DownloadExecutor` 使用有界线程池并发下载，并发数为 1–256（默认 8）。
+- `DownloadExecutor` 聚合各文件进度，向监听器发送总下载量、已知总量、已完成文件和
+  总文件数；安装器在关键步骤发送阶段事件，供下载进度页展示。
 - 下载并发数持久化到 `~/.caml/settings.properties`，并同时用于实例安装和启动前补文件。
 - 下载源支持镜像、官方和自定义镜像根地址；镜像源默认使用 BMCLAPI，失败时回退原始官方地址；
   同时用于版本清单、版本 JSON、原版文件、资源、Fabric/Forge/NeoForge/OptiFine 元数据、
@@ -103,9 +108,10 @@ CAML
 - 子版本 libraries 排在父版本之前，classpath 去重时子版本优先。
 - `clientreq=false` 的库在客户端下载和 classpath 中跳过。
 - Fabric 安装：确保原版父版本、写入 Fabric profile、可选下载 Fabric API 到实际 `mods` 目录。
-- Forge/NeoForge 安装：调用官方 installer 的 headless `--installClient`，在 staging 中完成 processor，再合并库并重命名实例目录。
-- NeoForge 版本匹配：先用 Maven 元数据缩小范围，再通过 HTTP Range 读取 installer 的 `version.json`，
-  按实际 `inheritsFrom` 精确过滤，避免 `1.20` 误匹配 `1.20.2` 等补丁版本。
+- Forge/NeoForge 安装：先用 CAML 下载器把 installer 声明的依赖库从当前下载源预下载到 staging，
+  再调用官方 installer 的 headless `--installClient` 完成 processor，最后合并库并重命名实例目录。
+- NeoForge 版本匹配：镜像源优先读取 BMCLAPI 的 `/neoforge/list/<mcversion>` JSON；
+  官方源用 Maven 元数据和版本号规则映射，避免 `1.20` 误匹配 `1.20.2` 等补丁版本。
 - OptiFine 安装：按下载源从官方下载页或 BMCLAPI 获取版本和 installer，先安装 Forge，再调用官方
   `optifine.Installer.doInstall`，合并 OptiFine 库和 Forge 启动参数；仅允许与 Forge 组合。
 - 支持本地已安装父版本。
@@ -177,7 +183,10 @@ CAML
 - 主页由 `HomeView` 组合 `LaunchFormView` 与 `LogPaneView`；设置页由
   `SettingsView` 组合 `GameSettingsView` 与 `LauncherSettingsView`；
   `DownloadsView` 负责下载页侧边栏和内部页面，`DownloadVersionsView` 负责分类版本列表，
-  `DownloadVersionSetupView` 负责实例命名和加载器选择。
+  `DownloadVersionSetupView` 负责实例命名和加载器选择。实例名输入停止约 0.5 秒后
+  异步检查，并通过代际计数丢弃过期结果；检查结果显示在输入框下方，未通过时禁用下载按钮。
+- 点击下载后，`DownloadsView` 切换为 `DownloadProgressView`，左侧显示实时网速，
+  右侧显示总进度、当前文件和后端阶段事件；`DownloadTelemetry` 负责聚合跨线程事件。
 - `LaunchSettings` 共享主页和设置页的游戏位置、版本隔离和最大内存值，`ViewSupport` 提供通用布局工具。
 - 游戏位置从主页移除；设置页新增“游戏位置”圆角分组，包含路径输入、浏览和保存。
 - 只有点击保存并校验目录存在后，才更新共享位置并写入 `~/.caml/settings.properties`。
@@ -221,6 +230,10 @@ CAML
   从 Fabric Meta 获取，Fabric API 从 Modrinth 获取，Forge/NeoForge 从各自 Maven
   获取；三种加载器互斥，选择后自动更新实例默认名。底部“下载实例”安装原版或所选加载器。
 - 设置页侧边栏提供“游戏设置 / 下载设置 / 外观”。
+- 设置页右侧内容放入透明 `ScrollPane`，内容超过可用高度时支持纵向滚动。
+- 游戏设置新增“Java”圆角组：自动/手动两个圆形单选项、手动模式下的 Java 地址下拉框、
+  “重新扫描”和“添加 Java”按钮。自动模式禁用下拉框；手动模式合并整机扫描结果和
+  手动列表，并按真实路径去重。Java 选择持久化到设置文件，手动模式启动时强制使用所选 Java。
 - 下载设置包含“下载源”和“设定下载并发数”两个圆角组。下载源提供镜像/官方/自定义
   三个单选项；自定义输入框只在自定义模式可用，切换源后禁用但保留已输入地址。
   下载并发数使用 1–256 整数滑块，文字大小与游戏设置一致。

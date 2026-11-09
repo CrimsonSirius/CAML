@@ -18,6 +18,7 @@ final class GameSettingsView extends VBox {
     private final SettingsController controller;
     private final IntConsumer onMemoryChanged;
     private final Consumer<Boolean> onVersionIsolationChanged;
+    private final JavaSettingsView javaSettings;
     private final CamlMemorySlider memorySlider;
     private final Label memorySummary;
     private long totalMemoryMb;
@@ -33,6 +34,7 @@ final class GameSettingsView extends VBox {
         this.controller = controller;
         this.onMemoryChanged = onMemoryChanged;
         this.onVersionIsolationChanged = onVersionIsolationChanged;
+        javaSettings = new JavaSettingsView(launchSettings, controller);
 
         totalMemoryMb = systemMemory.totalMb();
         availableMemoryMb = systemMemory.availableMb();
@@ -116,6 +118,7 @@ final class GameSettingsView extends VBox {
         getChildren().addAll(
                 new GameLocationSettingsView(launchSettings, controller),
                 new VersionIsolationSettingsView(launchSettings, onVersionIsolationChanged),
+                javaSettings,
                 group
         );
     }
