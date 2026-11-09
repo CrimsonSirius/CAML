@@ -6,6 +6,7 @@ import org.chs.camlauncher.backend.download.model.DownloadItem;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import java.io.IOException;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.net.URI;
@@ -16,6 +17,8 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class FileDownloaderTest {
@@ -118,6 +121,40 @@ class FileDownloaderTest {
             new FileDownloader().download(item, DownloadListener.NONE);
 
             assertArrayEquals(content, Files.readAllBytes(destination));
+        } finally {
+            server.stop(0);
+        }
+    }
+
+    @Test
+    void attemptsEachCandidateUntilSixTotalAttempts() throws Exception {
+        AtomicInteger requests = new AtomicInteger();
+        HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        server.createContext("/first.jar", exchange -> {
+            requests.incrementAndGet();
+            exchange.sendResponseHeaders(500, -1);
+            exchange.close();
+        });
+        server.createContext("/second.jar", exchange -> {
+            requests.incrementAndGet();
+            exchange.sendResponseHeaders(500, -1);
+            exchange.close();
+        });
+        server.start();
+
+        try {
+            String base = "http://127.0.0.1:" + server.getAddress().getPort();
+            DownloadItem item = new DownloadItem(
+                    "retry-all",
+                    List.of(URI.create(base + "/first.jar"), URI.create(base + "/second.jar")),
+                    tempDirectory.resolve("retry-all.jar"),
+                    null,
+                    -1
+            );
+
+            assertThrows(IOException.class,
+                    () -> new FileDownloader().download(item, DownloadListener.NONE));
+            assertEquals(6, requests.get());
         } finally {
             server.stop(0);
         }
