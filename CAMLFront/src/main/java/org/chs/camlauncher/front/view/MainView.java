@@ -57,6 +57,7 @@ public final class MainView extends BorderPane {
         );
         homeView = new HomeView(homeController, launchSettings);
         downloadsView = new DownloadsView(downloadsController, launchSettings);
+        settingsController.setOnDownloadSourceSaved(downloadsView::refreshVersions);
         pageHost = new CamlPageHost(homeView);
 
         setTop(buildTopBar());

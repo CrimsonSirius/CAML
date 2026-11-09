@@ -22,6 +22,7 @@ final class DownloadsView extends HBox implements SidebarPage {
     private final Map<VersionCategory, DownloadVersionsView> versionsViews =
             new EnumMap<>(VersionCategory.class);
     private VersionCategory currentCategory = VersionCategory.RELEASE;
+    private boolean showingVersionList = true;
 
     DownloadsView(DownloadsController controller, LaunchSettings launchSettings) {
         this.controller = controller;
@@ -58,16 +59,25 @@ final class DownloadsView extends HBox implements SidebarPage {
         return sidebar;
     }
 
+    void refreshVersions() {
+        versionsViews.clear();
+        if (showingVersionList) {
+            contentHost.setPage(versionsView(currentCategory));
+        }
+    }
+
     private void showVersionSetupPage(VersionManifest.Version version) {
+        showingVersionList = false;
         contentHost.setPage(new DownloadVersionSetupView(
                 version,
                 controller,
                 launchSettings,
-                () -> contentHost.setPage(versionsView(currentCategory))
+                () -> showVersions(currentCategory)
         ));
     }
 
     private void showVersions(VersionCategory category) {
+        showingVersionList = true;
         currentCategory = category;
         contentHost.setPage(versionsView(category));
     }
