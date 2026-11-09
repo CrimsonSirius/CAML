@@ -21,11 +21,11 @@ import java.util.stream.Stream;
  * 添加、删除或修改主题文件。</p>
  */
 public final class ThemeService {
-    public static final String DEFAULT_THEME_ID = "default";
+    public static final String DEFAULT_THEME_ID = "mango";
 
     private static final String THEMES_DIRECTORY = "themes";
     private static final String THEME_EXTENSION = ".css";
-    private static final String DEFAULT_THEME_RESOURCE = "/themes/default.css";
+    private static final String DEFAULT_THEME_RESOURCE = "/themes/mango.css";
     private static final String CONFIG_FILE = "theme.txt";
 
     private final Path themesDirectory;
