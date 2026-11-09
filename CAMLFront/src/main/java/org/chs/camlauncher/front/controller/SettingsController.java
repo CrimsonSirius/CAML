@@ -29,6 +29,7 @@ public final class SettingsController {
             });
 
     private volatile Consumer<SystemMemoryInfo> onSystemMemoryUpdated;
+    private volatile Runnable onDownloadSourceSaved;
     private boolean memoryMonitorStarted;
 
     SettingsController(ControllerContext context) {
@@ -105,10 +106,18 @@ public final class SettingsController {
         context.executeIo(() -> {
             try {
                 context.backend().setDownloadSource(mode, customApi);
+                Runnable listener = onDownloadSourceSaved;
+                if (listener != null) {
+                    Platform.runLater(listener);
+                }
             } catch (IOException | RuntimeException e) {
                 LOGGER.warn("保存下载源设置失败: {} / {}", mode, customApi, e);
             }
         });
+    }
+
+    public void setOnDownloadSourceSaved(Runnable listener) {
+        onDownloadSourceSaved = listener;
     }
 
     /** 每 500ms 读取一次系统内存，并立即在 JavaFX 线程刷新监听者。 */
