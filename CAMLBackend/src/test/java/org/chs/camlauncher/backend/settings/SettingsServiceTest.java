@@ -1,6 +1,7 @@
 package org.chs.camlauncher.backend.settings;
 
 import org.chs.camlauncher.backend.instance.VersionIsolationMode;
+import org.chs.camlauncher.backend.download.source.DownloadSourceMode;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -137,6 +138,27 @@ class SettingsServiceTest {
                 IllegalArgumentException.class,
                 () -> service.setDownloadConcurrency(SettingsService.MAX_DOWNLOAD_CONCURRENCY + 1)
         );
+    }
+
+    @Test
+    void defaultsToMirrorDownloadSource() throws Exception {
+        assertEquals(
+                DownloadSourceMode.MIRROR,
+                new SettingsService(dataDirectory).downloadSourceMode()
+        );
+        assertEquals("", new SettingsService(dataDirectory).customDownloadApi());
+    }
+
+    @Test
+    void persistsDownloadSourceAndCustomApiAcrossInstances() throws Exception {
+        new SettingsService(dataDirectory).setDownloadSource(
+                DownloadSourceMode.CUSTOM, "https://mirror.example/api/");
+        new SettingsService(dataDirectory).setDownloadSource(
+                DownloadSourceMode.OFFICIAL, "https://mirror.example/api/");
+
+        SettingsService loaded = new SettingsService(dataDirectory);
+        assertEquals(DownloadSourceMode.OFFICIAL, loaded.downloadSourceMode());
+        assertEquals("https://mirror.example/api/", loaded.customDownloadApi());
     }
 
     @Test

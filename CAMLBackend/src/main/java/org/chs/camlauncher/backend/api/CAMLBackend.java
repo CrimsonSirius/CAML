@@ -9,6 +9,9 @@ import org.chs.camlauncher.backend.config.BackendPaths;
 import org.chs.camlauncher.backend.download.plan.AssetDownloadPlanner;
 import org.chs.camlauncher.backend.download.DownloadListener;
 import org.chs.camlauncher.backend.download.DownloadConcurrency;
+import org.chs.camlauncher.backend.download.source.DownloadSource;
+import org.chs.camlauncher.backend.download.source.DownloadSourceFactory;
+import org.chs.camlauncher.backend.download.source.DownloadSourceMode;
 import org.chs.camlauncher.backend.download.plan.DownloadPlanner;
 import org.chs.camlauncher.backend.download.FileDownloader;
 import org.chs.camlauncher.backend.instance.GameDataLayout;
@@ -94,6 +97,8 @@ public final class CAMLBackend implements AutoCloseable {
     private final SettingsService settingsService;
     private final SystemMemoryService systemMemoryService;
     private volatile int downloadConcurrency = DownloadConcurrency.DEFAULT;
+    private volatile DownloadSourceMode downloadSourceMode = SettingsService.DEFAULT_DOWNLOAD_SOURCE;
+    private volatile String customDownloadApi = "";
     private boolean started;
 
     public CAMLBackend(BackendConfig config) {
@@ -182,6 +187,15 @@ public final class CAMLBackend implements AutoCloseable {
             downloadConcurrency = DownloadConcurrency.DEFAULT;
         }
         versionInstaller.setDownloadConcurrency(downloadConcurrency);
+        try {
+            downloadSourceMode = settingsService.downloadSourceMode();
+            customDownloadApi = settingsService.customDownloadApi();
+        } catch (IOException e) {
+            LOGGER.warn("无法读取下载源设置，使用默认值 {}", SettingsService.DEFAULT_DOWNLOAD_SOURCE, e);
+            downloadSourceMode = SettingsService.DEFAULT_DOWNLOAD_SOURCE;
+            customDownloadApi = "";
+        }
+        applyDownloadSources();
 
         started = true;
         LOGGER.info("CAML backend {} started", VERSION);
@@ -246,6 +260,32 @@ public final class CAMLBackend implements AutoCloseable {
         settingsService.setDownloadConcurrency(value);
         downloadConcurrency = value;
         versionInstaller.setDownloadConcurrency(value);
+    }
+
+    public DownloadSourceMode downloadSourceMode() {
+        return downloadSourceMode;
+    }
+
+    public String customDownloadApi() {
+        return customDownloadApi;
+    }
+
+    public void setDownloadSource(DownloadSourceMode mode, String customApi) throws IOException {
+        Objects.requireNonNull(mode, "mode");
+        String value = customApi == null ? "" : customApi.trim();
+        settingsService.setDownloadSource(mode, value);
+        downloadSourceMode = mode;
+        customDownloadApi = value;
+        applyDownloadSources();
+    }
+
+    private void applyDownloadSources() {
+        List<DownloadSource> sources = DownloadSourceFactory.create(
+                downloadSourceMode, customDownloadApi);
+        downloadPlanner.setSources(sources);
+        assetDownloadPlanner.setSources(sources);
+        externalLoaderInstaller.setSources(sources);
+        fabricInstaller.setSources(sources);
     }
 
     public Optional<String> lastLaunchedInstanceId() throws IOException {

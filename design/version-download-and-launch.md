@@ -213,7 +213,11 @@ plan.missing()
 → 失败重试
 ```
 
-默认最多重试 3 轮。当前候选 URL 只有官方源。
+默认最多重试 3 轮。候选 URL 按下载源设置生成：
+
+- 镜像源：BMCLAPI 地址优先，原始官方地址兜底。
+- 官方源：原始官方地址优先。
+- 自定义 API：用户填写的镜像根地址优先，原始官方地址兜底；无效地址回退官方源。
 
 ### 2.8 下载资源对象
 
@@ -311,7 +315,8 @@ assetIndexFile
 
 - 支持原版、Fabric Loader/Fabric API、Forge、NeoForge 和 OptiFine（仅 Forge）安装；Quilt 尚未实现。
 - `inheritsFrom` 只读取本地父版本，不会自动安装父版本。
-- 只有官方下载源，镜像源接口尚未接入配置。
+- 下载源支持镜像、官方和自定义镜像根地址；应用于版本文件、libraries、asset index、assets objects、
+  Forge/NeoForge installer 和 Fabric API 下载；版本清单/加载器元数据仍使用各自官方接口。
 - 下载使用有界线程池并发执行，并发数可配置为 1–256；下载取消尚未实现。
 - 没有内容寻址缓存，只有目标文件存在且 SHA-1 匹配时跳过。
 
@@ -332,7 +337,7 @@ download/
 ├─ DownloadConcurrency.java     并发数约束
 ├─ model/                       DownloadItem、DownloadPlan
 ├─ plan/                        版本和资源下载计划
-├─ source/                      下载源和候选地址
+├─ source/                      DownloadSource、镜像/官方源和源工厂
 ├─ io/                          并发任务执行
 └─ hash/                        SHA-1 计算与校验
 ```

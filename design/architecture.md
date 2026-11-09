@@ -34,7 +34,7 @@ CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
 | `runtime` | Java 运行时检测、版本/架构/位数匹配 | 已有 |
 | `launch` | 启动编排；子包 `command`、`classpath`、`prepare`、`process`、`patch` | 已有 |
 | `theme` | 主题目录、默认主题复制和当前主题配置 | 已有 |
-| `settings` | 启动器设置持久化（游戏位置、最大内存、版本隔离、下载并发数） | 已有 |
+| `settings` | 启动器设置持久化（游戏位置、最大内存、版本隔离、下载源、下载并发数） | 已有 |
 | `system` | 物理内存与可用内存读取 | 已有 |
 | `loader` | Fabric Loader/Fabric API、Forge、NeoForge、OptiFine（仅 Forge）安装；Quilt 待实现 | 已有 |
 | `json` | 通用 JSON 文件读写 | 已有 |
@@ -62,6 +62,8 @@ CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
 - 使用 `.part` 临时文件和原子移动。
 - 下载使用 HTTP/1.1；失败重试并短暂退避，最终错误包含下载项和地址。
 - 使用有界线程池并发执行下载，并发数由设置决定（1–256，默认 8）。
+- 下载源支持“尽可能使用镜像源”“尽可能使用官方源”和“自定义镜像根地址”三种模式；
+  默认镜像源，镜像失败时回退原始官方地址；覆盖版本文件、库、资源、加载器 installer/API。
 - 已有有效文件时跳过。
 
 ### 3.3 实例安装
@@ -169,13 +171,15 @@ CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
 - `DownloadsView` 负责下载页子导航；`DownloadVersionsView` 加载官方正式版列表，
   `DownloadVersionSetupView` 负责实例命名、版本信息、Forge/OptiFine/Fabric/NeoForge 选择；
   OptiFine 只有在选择 Forge 后才可用，底部按钮通过后端安装原版或加载器游戏。
-- `GameSettingsView` 负责叠层内存滑块，`DownloadSettingsView` 负责 1–256 下载并发滑块，
+- `GameSettingsView` 负责叠层内存滑块，`DownloadSettingsView` 负责下载源三选一、
+  自定义 API 输入和 1–256 下载并发滑块，
   `LauncherSettingsView` 负责主题选择。
 - `SystemMemoryService` 在 Linux 读取 `/proc/meminfo` 的 `MemAvailable`，避免把
   `MemFree` 误当成任务管理器显示的可用内存。
 - `SettingsController` 每 500ms 在后台线程读取一次系统内存，并通过 `Platform.runLater`
   立即刷新设置页。
-- 游戏位置、版本隔离、下载并发数、最大内存和最后启动实例保存在 `~/.caml/settings.properties`，启动时加载；游戏位置只有点击保存才写入，版本隔离和下载并发数选择立即写入，最后启动实例在启动成功后写入。
+- 游戏位置、版本隔离、下载源、下载并发数、最大内存和最后启动实例保存在
+  `~/.caml/settings.properties`，启动时加载；游戏位置只有点击保存才写入，其余选项立即写入。
 - `LaunchSettings` 在主页和设置页之间共享游戏位置、版本隔离和最大内存值；`ViewSupport` 提供通用字段与侧边栏布局。
 - 当前实例通过共享 `LaunchSettings.selectedVersion` 管理；启动器初始化时恢复 `lastInstanceId`，实例信息下方显示存档位置。
 - `ControllerContext` 使用独立 I/O 线程执行目录探测和下载；`HomeController` 负责启动派发，
@@ -223,7 +227,7 @@ CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
 - 微软账号登录。
 - token 刷新和安全存储。
 - Quilt 加载器安装。
-- 镜像源、下载取消和内容寻址缓存。
+- 下载取消和内容寻址缓存。
 - 整合包和模组管理。
 
 ## 5. 数据与安全原则

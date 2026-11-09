@@ -3,6 +3,9 @@ package org.chs.camlauncher.backend.loader.fabric;
 import org.chs.camlauncher.backend.download.model.DownloadItem;
 import org.chs.camlauncher.backend.download.DownloadListener;
 import org.chs.camlauncher.backend.download.FileDownloader;
+import org.chs.camlauncher.backend.download.source.DownloadSource;
+import org.chs.camlauncher.backend.download.source.DownloadSources;
+import org.chs.camlauncher.backend.download.source.OfficialDownloadSource;
 import org.chs.camlauncher.backend.instance.InstalledVersion;
 import org.chs.camlauncher.backend.instance.VersionInstaller;
 
@@ -20,6 +23,7 @@ public final class FabricInstaller {
     private final FileDownloader fileDownloader;
     private final URI manifestUri;
     private final Path manifestCacheFile;
+    private volatile List<DownloadSource> sources = List.of(OfficialDownloadSource.INSTANCE);
 
     public FabricInstaller(
             VersionInstaller versionInstaller,
@@ -33,6 +37,10 @@ public final class FabricInstaller {
         this.fileDownloader = Objects.requireNonNull(fileDownloader, "fileDownloader");
         this.manifestUri = Objects.requireNonNull(manifestUri, "manifestUri");
         this.manifestCacheFile = Objects.requireNonNull(manifestCacheFile, "manifestCacheFile");
+    }
+
+    public void setSources(List<DownloadSource> sources) {
+        this.sources = List.copyOf(Objects.requireNonNull(sources, "sources"));
     }
 
     public InstalledVersion install(
@@ -96,7 +104,7 @@ public final class FabricInstaller {
 
         fileDownloader.download(new DownloadItem(
                 apiVersion.name(),
-                List.of(apiVersion.downloadUri()),
+                DownloadSources.candidates(sources, apiVersion.downloadUri().toString()),
                 destination,
                 apiVersion.sha1(),
                 apiVersion.size()

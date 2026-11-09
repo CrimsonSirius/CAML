@@ -17,7 +17,7 @@ import java.util.Objects;
 public final class AssetDownloadPlanner {
     private static final String DEFAULT_BASE_URL = "https://resources.download.minecraft.net/";
 
-    private final List<DownloadSource> sources;
+    private volatile List<DownloadSource> sources;
     private final String baseUrl;
 
     public AssetDownloadPlanner() {
@@ -29,6 +29,10 @@ public final class AssetDownloadPlanner {
         this.baseUrl = Objects.requireNonNull(baseUrl, "baseUrl").endsWith("/")
                 ? baseUrl
                 : baseUrl + "/";
+    }
+
+    public void setSources(List<DownloadSource> sources) {
+        this.sources = List.copyOf(Objects.requireNonNull(sources, "sources"));
     }
 
     public DownloadPlan plan(AssetIndexFile index, Path assetsDirectory) {
