@@ -8,6 +8,10 @@ import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 /** 按下载源候选顺序执行 HTTP 请求。 */
 public final class SourceAwareHttpClient {
@@ -59,7 +63,28 @@ public final class SourceAwareHttpClient {
         if (accept != null && !accept.isBlank()) {
             builder.header("Accept", accept);
         }
-        HttpResponse<T> response = httpClient.send(builder.build(), bodyHandler);
+        CompletableFuture<HttpResponse<T>> future = httpClient.sendAsync(
+                builder.build(), bodyHandler);
+        HttpResponse<T> response;
+        try {
+            response = future.get(Math.max(1, timeout.toMillis()), TimeUnit.MILLISECONDS);
+        } catch (TimeoutException e) {
+            future.cancel(true);
+            throw new IOException("请求超时（" + timeout.toMillis() + "ms）：" + uri, e);
+        } catch (ExecutionException e) {
+            Throwable cause = e.getCause() == null ? e : e.getCause();
+            if (cause instanceof IOException ioException) {
+                throw ioException;
+            }
+            if (cause instanceof RuntimeException runtimeException) {
+                throw runtimeException;
+            }
+            throw new IOException("请求失败：" + uri, cause);
+        } catch (InterruptedException e) {
+            future.cancel(true);
+            Thread.currentThread().interrupt();
+            throw e;
+        }
         if (response.statusCode() < 200 || response.statusCode() >= 300) {
             throw new IOException("HTTP " + response.statusCode() + " for " + uri);
         }
