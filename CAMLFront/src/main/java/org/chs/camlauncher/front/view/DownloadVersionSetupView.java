@@ -488,7 +488,6 @@ final class DownloadVersionSetupView extends VBox {
                     fabricLoader.version(),
                     fabricApi,
                     gameDirectory,
-                    launchSettings.fullVersionIsolation(),
                     () -> completeDownload(launchSettings, instanceId, gameDirectory, cancel, download,
                             "下载完成：实例 " + instanceId + " 已安装 Fabric Loader "
                                     + fabricLoader.version() + apiText),

@@ -53,7 +53,6 @@ public final class FabricInstaller {
             String loaderVersion,
             FabricApiVersion apiVersion,
             Path gameDirectory,
-            boolean fullVersionIsolation,
             DownloadListener listener
     ) throws IOException, InterruptedException {
         Objects.requireNonNull(gameVersion, "gameVersion");
@@ -87,10 +86,12 @@ public final class FabricInstaller {
             );
 
             if (apiVersion != null) {
-                Path modsDirectory = fullVersionIsolation
-                        ? targetVersionDirectory.resolve("mods")
-                        : gameDirectory.resolve("mods");
-                downloadApi(apiVersion, modsDirectory, listener);
+                Path versionMods = targetVersionDirectory.resolve("mods");
+                Path apiFile = downloadApi(apiVersion, versionMods, listener);
+                Path rootMods = gameDirectory.resolve("mods");
+                Path rootApiFile = SafePaths.resolveChild(
+                        rootMods, apiFile.getFileName().toString(), "Fabric API file");
+                copyIfDifferent(apiFile, rootApiFile);
             }
             return installed;
         } catch (IOException | RuntimeException | InterruptedException e) {
@@ -99,7 +100,7 @@ public final class FabricInstaller {
         }
     }
 
-    private void downloadApi(FabricApiVersion apiVersion, Path modsDirectory, DownloadListener listener)
+    private Path downloadApi(FabricApiVersion apiVersion, Path modsDirectory, DownloadListener listener)
             throws IOException, InterruptedException {
         String filename;
         try {
@@ -121,6 +122,17 @@ public final class FabricInstaller {
                 apiVersion.sha1(),
                 apiVersion.size()
         ), listener);
+        return destination;
+    }
+
+    private static void copyIfDifferent(Path source, Path target) throws IOException {
+        if (Files.isRegularFile(target)
+                && Files.size(source) == Files.size(target)
+                && Files.mismatch(source, target) == -1) {
+            return;
+        }
+        Files.createDirectories(target.getParent());
+        Files.copy(source, target, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
     }
 
     private static void deleteRecursively(Path root) {

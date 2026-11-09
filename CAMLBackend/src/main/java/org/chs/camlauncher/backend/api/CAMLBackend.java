@@ -398,7 +398,6 @@ public final class CAMLBackend implements AutoCloseable {
             String loaderVersion,
             FabricApiVersion apiVersion,
             Path gameDirectory,
-            boolean fullVersionIsolation,
             DownloadListener listener
     ) throws IOException, InterruptedException {
         return fabricInstaller.install(
@@ -407,7 +406,6 @@ public final class CAMLBackend implements AutoCloseable {
                 loaderVersion,
                 apiVersion,
                 gameDirectory,
-                fullVersionIsolation,
                 listener
         );
     }
