@@ -38,6 +38,12 @@ public final class FileDownloader {
 
     public void download(DownloadItem item, DownloadListener listener)
             throws IOException, InterruptedException {
+        download(item, listener, null);
+    }
+
+    public void download(DownloadItem item, DownloadListener listener,
+                         DownloadValidator validator)
+            throws IOException, InterruptedException {
         DownloadListener progress = listener == null ? DownloadListener.NONE : listener;
         if (item.existsAndValid()) {
             progress.onProgress(new DownloadListener.DownloadProgress(item.label(), item.size(), item.size()));
@@ -61,7 +67,7 @@ public final class FileDownloader {
                 attempted++;
                 lastUri = uri;
                 try {
-                    downloadOnce(uri, item, progress);
+                    downloadOnce(uri, item, progress, validator);
                     return;
                 } catch (IOException e) {
                     lastFailure = e;
@@ -80,7 +86,8 @@ public final class FileDownloader {
         );
     }
 
-    private void downloadOnce(URI uri, DownloadItem item, DownloadListener listener)
+    private void downloadOnce(URI uri, DownloadItem item, DownloadListener listener,
+                              DownloadValidator validator)
             throws IOException, InterruptedException {
         HttpRequest request = HttpRequest.newBuilder(uri)
                 .timeout(Duration.ofMinutes(2))
@@ -122,6 +129,9 @@ public final class FileDownloader {
 
                 if (!HashVerifier.matches(temporary, item.sha1())) {
                     throw new IOException("SHA-1 mismatch for " + item.label());
+                }
+                if (validator != null) {
+                    validator.validate(temporary);
                 }
                 move(temporary, destination);
             } finally {

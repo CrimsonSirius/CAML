@@ -2,10 +2,13 @@ package org.chs.camlauncher.backend.loader;
 
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.chs.camlauncher.backend.download.model.DownloadItem;
 import org.chs.camlauncher.backend.download.source.DownloadSource;
 import org.chs.camlauncher.backend.download.source.DownloadSources;
 import org.chs.camlauncher.backend.download.source.OfficialDownloadSource;
+import org.chs.camlauncher.backend.download.source.SourceAwareHttpClient;
 import org.chs.camlauncher.backend.download.DownloadListener;
 import org.chs.camlauncher.backend.download.FileDownloader;
 import org.chs.camlauncher.backend.instance.InstalledVersion;
@@ -20,6 +23,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.URI;
+import java.net.http.HttpClient;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
@@ -31,12 +35,18 @@ import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 import java.util.zip.ZipFile;
+import java.time.Duration;
+import java.util.Locale;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /** 调用 Forge/NeoForge 官方 installer 的 headless client 安装。 */
 public final class ExternalLoaderInstaller {
+    private static final Logger LOGGER = LogManager.getLogger(ExternalLoaderInstaller.class);
     private static final long INSTALL_TIMEOUT_MINUTES = 20;
     private static final int OUTPUT_LIMIT = 64 * 1024;
     private static final int INSTALL_ATTEMPTS = 2;
+    private static final Pattern SHA1_PATTERN = Pattern.compile("\\b[0-9a-fA-F]{40}\\b");
 
     private final VersionInstaller versionInstaller;
     private final JavaLocator javaLocator;
@@ -44,6 +54,7 @@ public final class ExternalLoaderInstaller {
     private final MetadataService metadata;
     private final URI manifestUri;
     private final Path manifestCacheFile;
+    private final SourceAwareHttpClient shaClient = new SourceAwareHttpClient(defaultClient());
     private volatile List<DownloadSource> sources = List.of(OfficialDownloadSource.INSTANCE);
 
     public ExternalLoaderInstaller(
@@ -64,6 +75,7 @@ public final class ExternalLoaderInstaller {
 
     public void setSources(List<DownloadSource> sources) {
         this.sources = List.copyOf(Objects.requireNonNull(sources, "sources"));
+        shaClient.setSources(sources);
     }
 
     public InstalledVersion install(
@@ -109,13 +121,14 @@ public final class ExternalLoaderInstaller {
         try {
             prepareStaging(staging, gameVersion, base);
             Path installerJar = staging.resolve("installer.jar");
+            String installerSha1 = resolveSha1(installerUri);
             fileDownloader.download(new DownloadItem(
                     loaderName + " installer",
                     DownloadSources.candidates(sources, installerUri.toString()),
                     installerJar,
-                    null,
+                    installerSha1,
                     -1
-            ), listener);
+            ), listener, ExternalLoaderInstaller::validateInstallerArchive);
 
             String installedVersionId = readInstallerVersionId(installerJar);
             Path installedVersionDirectory = staging.resolve("versions").resolve(installedVersionId);
@@ -150,6 +163,41 @@ public final class ExternalLoaderInstaller {
                 manifestCacheFile,
                 listener
         );
+    }
+
+    private String resolveSha1(URI installerUri) throws InterruptedException {
+        try {
+            String text = shaClient.getText(
+                    URI.create(installerUri + ".sha1"),
+                    Duration.ofSeconds(15),
+                    "text/plain"
+            );
+            Matcher matcher = SHA1_PATTERN.matcher(text);
+            if (matcher.find()) {
+                return matcher.group().toLowerCase(Locale.ROOT);
+            }
+            LOGGER.warn("{} 的 .sha1 内容无效，改由 ZIP 结构校验", installerUri);
+        } catch (IOException | RuntimeException e) {
+            LOGGER.warn("无法获取 {} 的 .sha1，改由 ZIP 结构校验", installerUri, e);
+        }
+        return null;
+    }
+
+    private static void validateInstallerArchive(Path installer) throws IOException {
+        try (ZipFile zip = new ZipFile(installer.toFile())) {
+            if (zip.getEntry("version.json") == null
+                    && zip.getEntry("install_profile.json") == null) {
+                throw new IOException("installer 不是有效的 Forge/NeoForge 归档: " + installer);
+            }
+        }
+    }
+
+    private static HttpClient defaultClient() {
+        return HttpClient.newBuilder()
+                .version(HttpClient.Version.HTTP_1_1)
+                .followRedirects(HttpClient.Redirect.NORMAL)
+                .connectTimeout(Duration.ofSeconds(15))
+                .build();
     }
 
     private static void prepareStaging(Path staging, String gameVersion, InstalledVersion base)

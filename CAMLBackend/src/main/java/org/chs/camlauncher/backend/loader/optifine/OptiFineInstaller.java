@@ -40,6 +40,7 @@ import java.util.stream.Stream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 import java.util.zip.ZipOutputStream;
+import java.util.zip.ZipFile;
 
 /**
  * 在 Forge 实例上安装 OptiFine。
@@ -143,7 +144,7 @@ public final class OptiFineInstaller {
                     installer,
                     null,
                     -1
-            ), listener);
+            ), listener, OptiFineInstaller::validateInstallerArchive);
 
             prepareStaging(staging, gameVersion, base);
             runInstaller(java, installer, staging);
@@ -180,6 +181,14 @@ public final class OptiFineInstaller {
         }
         Files.writeString(staging.resolve("launcher_profiles.json"),
                 "{\"profiles\":{},\"settings\":{}}\n", StandardCharsets.UTF_8);
+    }
+
+    private static void validateInstallerArchive(Path installer) throws IOException {
+        try (ZipFile zip = new ZipFile(installer.toFile())) {
+            if (zip.getEntry("optifine/Installer.class") == null) {
+                throw new IOException("OptiFine installer 缺少 optifine/Installer.class: " + installer);
+            }
+        }
     }
 
     private static void runInstaller(JavaRuntime java, Path installer, Path staging)
