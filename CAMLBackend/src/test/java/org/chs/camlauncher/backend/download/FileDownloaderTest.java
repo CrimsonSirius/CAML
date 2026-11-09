@@ -14,6 +14,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
@@ -206,6 +207,123 @@ class FileDownloaderTest {
             assertEquals(1, secondRequests.get());
         } finally {
             server.stop(0);
+        }
+    }
+
+    @Test
+    void downloadsLargeFileInSegments() throws Exception {
+        byte[] content = new byte[5 * 1024 * 1024];
+        for (int index = 0; index < content.length; index++) {
+            content[index] = (byte) (index % 251);
+        }
+        AtomicInteger requests = new AtomicInteger();
+        HttpServer server = rangeServer(content, requests, new AtomicBoolean(false), new AtomicBoolean(false));
+
+        try {
+            Path destination = tempDirectory.resolve("segmented.bin");
+            DownloadItem item = new DownloadItem(
+                    "segmented",
+                    List.of(URI.create("http://127.0.0.1:"
+                            + server.getAddress().getPort() + "/segmented.bin")),
+                    destination,
+                    sha1(content),
+                    content.length
+            );
+
+            new FileDownloader().download(item, DownloadListener.NONE);
+
+            assertArrayEquals(content, Files.readAllBytes(destination));
+            assertTrue(requests.get() > 2);
+            assertTrue(Files.notExists(tempDirectory.resolve("segmented.bin.part")));
+            assertTrue(Files.notExists(tempDirectory.resolve("segmented.bin.part.json")));
+        } finally {
+            server.stop(0);
+        }
+    }
+
+    @Test
+    void resumesInterruptedSegmentFromCheckpoint() throws Exception {
+        byte[] content = new byte[5 * 1024 * 1024];
+        for (int index = 0; index < content.length; index++) {
+            content[index] = (byte) (index % 241);
+        }
+        AtomicInteger requests = new AtomicInteger();
+        AtomicBoolean resumedMidFirstSegment = new AtomicBoolean();
+        HttpServer server = rangeServer(
+                content,
+                requests,
+                new AtomicBoolean(true),
+                resumedMidFirstSegment
+        );
+
+        try {
+            Path destination = tempDirectory.resolve("resumed.bin");
+            DownloadItem item = new DownloadItem(
+                    "resumed",
+                    List.of(URI.create("http://127.0.0.1:"
+                            + server.getAddress().getPort() + "/resumed.bin")),
+                    destination,
+                    sha1(content),
+                    content.length
+            );
+
+            new FileDownloader().download(item, DownloadListener.NONE);
+
+            assertArrayEquals(content, Files.readAllBytes(destination));
+            assertTrue(resumedMidFirstSegment.get(), "应至少出现一次从分片中间位置继续的 Range 请求");
+        } finally {
+            server.stop(0);
+        }
+    }
+
+    private static HttpServer rangeServer(byte[] content, AtomicInteger requests,
+                                          AtomicBoolean failFirstSegment,
+                                          AtomicBoolean resumedMidFirstSegment) throws IOException {
+        HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        server.createContext("/segmented.bin", exchange -> handleRange(
+                exchange, content, requests, failFirstSegment, resumedMidFirstSegment));
+        server.createContext("/resumed.bin", exchange -> handleRange(
+                exchange, content, requests, failFirstSegment, resumedMidFirstSegment));
+        server.start();
+        return server;
+    }
+
+    private static void handleRange(com.sun.net.httpserver.HttpExchange exchange,
+                                    byte[] content, AtomicInteger requests,
+                                    AtomicBoolean failFirstSegment,
+                                    AtomicBoolean resumedMidFirstSegment) throws IOException {
+        String range = exchange.getRequestHeaders().getFirst("Range");
+        if (range == null || !range.startsWith("bytes=")) {
+            exchange.sendResponseHeaders(200, content.length);
+            try (OutputStream output = exchange.getResponseBody()) {
+                output.write(content);
+            }
+            return;
+        }
+
+        String[] bounds = range.substring("bytes=".length()).split("-", -1);
+        long start = Long.parseLong(bounds[0]);
+        long end = bounds.length < 2 || bounds[1].isBlank()
+                ? content.length - 1
+                : Long.parseLong(bounds[1]);
+        end = Math.min(end, content.length - 1L);
+        long length = end - start + 1;
+        requests.incrementAndGet();
+
+        if (start > 0 && start < content.length / 2L) {
+            resumedMidFirstSegment.set(true);
+        }
+
+        exchange.getResponseHeaders().add(
+                "Content-Range", "bytes " + start + "-" + end + "/" + content.length);
+        exchange.sendResponseHeaders(206, length);
+        try (OutputStream output = exchange.getResponseBody()) {
+            if (start == 0 && end > 0 && failFirstSegment.compareAndSet(true, false)) {
+                output.write(content, 0, (int) (length / 2));
+                output.flush();
+                return;
+            }
+            output.write(content, (int) start, (int) length);
         }
     }
 
