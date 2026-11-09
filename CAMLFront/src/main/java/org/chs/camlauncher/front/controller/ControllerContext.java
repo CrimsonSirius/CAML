@@ -48,10 +48,15 @@ final class ControllerContext {
     }
 
     void sendLog(String log) {
+        backend.appendUiLog(log);
         Consumer<String> current = logSink;
         if (current != null) {
             Platform.runLater(() -> current.accept(log));
         }
+    }
+
+    void markFailure() {
+        backend.markUiFailure();
     }
 
     <T> CompletableFuture<T> supplyAsync(IoSupplier<T> supplier) {

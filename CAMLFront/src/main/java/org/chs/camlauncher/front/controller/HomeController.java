@@ -71,7 +71,12 @@ public final class HomeController {
 
             @Override
             public void onExit(int exitCode) {
-                context.sendLog("游戏进程已退出，代码: " + exitCode);
+                if (exitCode != 0) {
+                    context.markFailure();
+                    context.sendLog("游戏进程异常退出，代码: " + exitCode);
+                } else {
+                    context.sendLog("游戏进程已退出，代码: 0");
+                }
                 notifyLaunchFinished();
             }
         };
@@ -87,6 +92,7 @@ public final class HomeController {
                 saveLastLaunchedInstance(version);
                 sendStatus("启动指令已发送");
             } catch (Exception ex) {
+                context.markFailure();
                 context.sendLog("[FATAL] " + ex.getMessage());
                 sendStatus("启动失败！");
                 notifyLaunchFinished();
