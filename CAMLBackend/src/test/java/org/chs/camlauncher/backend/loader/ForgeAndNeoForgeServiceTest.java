@@ -8,10 +8,15 @@ import org.chs.camlauncher.backend.loader.neoforge.NeoForgeService;
 import org.chs.camlauncher.backend.loader.neoforge.NeoForgeVersion;
 import org.junit.jupiter.api.Test;
 
+import java.io.ByteArrayOutputStream;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -31,13 +36,34 @@ class ForgeAndNeoForgeServiceTest {
                   <version>20.2.85-beta</version>
                   <version>20.1.0</version>
                   <version>20.2.86</version>
+                  <version>20.0.1</version>
                   <version>21.1.0</version>
                 </versions></versioning></metadata>
                 """;
 
         HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        Map<String, byte[]> installerJars = new HashMap<>();
+        installerJars.put("20.2.85-beta", installerJar("20.2.85-beta", "1.20.2"));
+        installerJars.put("20.2.86", installerJar("20.2.86", "1.20.2"));
+        installerJars.put("20.1.0", installerJar("20.1.0", "1.20.1"));
+        installerJars.put("20.0.1", installerJar("20.0.1", "1.20"));
+        installerJars.put("21.1.0", installerJar("21.1.0", "1.21.1"));
+
         server.createContext("/forge.xml", exchange -> respond(exchange, forgeXml));
         server.createContext("/neoforge.xml", exchange -> respond(exchange, neoForgeXml));
+        server.createContext("/neoforge/", exchange -> {
+            String path = exchange.getRequestURI().getPath();
+            String filename = path.substring(path.lastIndexOf('/') + 1);
+            String version = filename.substring("neoforge-".length(),
+                    filename.length() - "-installer.jar".length());
+            byte[] body = installerJars.get(version);
+            if (body == null) {
+                exchange.sendResponseHeaders(404, -1);
+                exchange.close();
+                return;
+            }
+            respondRange(exchange, body);
+        });
         server.start();
 
         try {
@@ -70,6 +96,10 @@ class ForgeAndNeoForgeServiceTest {
                     base + "neoforge/20.2.86/neoforge-20.2.86-installer.jar",
                     neoForge.getFirst().installerUri().toString()
             );
+
+            List<NeoForgeVersion> baseVersion = neoForgeService.fetchVersions("1.20");
+            assertEquals(1, baseVersion.size());
+            assertEquals("20.0.1", baseVersion.getFirst().version());
         } finally {
             server.stop(0);
         }
@@ -103,10 +133,46 @@ class ForgeAndNeoForgeServiceTest {
 
     private static void respond(com.sun.net.httpserver.HttpExchange exchange, String content)
             throws java.io.IOException {
-        byte[] bytes = content.getBytes(StandardCharsets.UTF_8);
-        exchange.sendResponseHeaders(200, bytes.length);
+        respondRange(exchange, content.getBytes(StandardCharsets.UTF_8));
+    }
+
+    private static void respondRange(com.sun.net.httpserver.HttpExchange exchange, byte[] content)
+            throws java.io.IOException {
+        String range = exchange.getRequestHeaders().getFirst("Range");
+        if (range == null || !range.startsWith("bytes=")) {
+            exchange.sendResponseHeaders(200, content.length);
+            try (var output = exchange.getResponseBody()) {
+                output.write(content);
+            }
+            return;
+        }
+
+        String[] bounds = range.substring("bytes=".length()).split("-", -1);
+        int start = Integer.parseInt(bounds[0]);
+        int end = bounds.length < 2 || bounds[1].isBlank()
+                ? content.length - 1
+                : Integer.parseInt(bounds[1]);
+        int length = end - start + 1;
+        exchange.getResponseHeaders().add("Content-Range",
+                "bytes " + start + "-" + end + "/" + content.length);
+        exchange.sendResponseHeaders(206, length);
         try (var output = exchange.getResponseBody()) {
-            output.write(bytes);
+            output.write(content, start, length);
+        }
+    }
+
+    private static byte[] installerJar(String version, String inheritsFrom) {
+        try (ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+             ZipOutputStream zip = new ZipOutputStream(bytes)) {
+            zip.putNextEntry(new ZipEntry("version.json"));
+            zip.write(("{\"id\":\"neoforge-" + version
+                    + "\",\"inheritsFrom\":\"" + inheritsFrom + "\"}")
+                    .getBytes(StandardCharsets.UTF_8));
+            zip.closeEntry();
+            zip.finish();
+            return bytes.toByteArray();
+        } catch (java.io.IOException e) {
+            throw new IllegalStateException(e);
         }
     }
 }

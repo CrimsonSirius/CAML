@@ -104,6 +104,8 @@ CAML
 - `clientreq=false` 的库在客户端下载和 classpath 中跳过。
 - Fabric 安装：确保原版父版本、写入 Fabric profile、可选下载 Fabric API 到实际 `mods` 目录。
 - Forge/NeoForge 安装：调用官方 installer 的 headless `--installClient`，在 staging 中完成 processor，再合并库并重命名实例目录。
+- NeoForge 版本匹配：先用 Maven 元数据缩小范围，再通过 HTTP Range 读取 installer 的 `version.json`，
+  按实际 `inheritsFrom` 精确过滤，避免 `1.20` 误匹配 `1.20.2` 等补丁版本。
 - OptiFine 安装：按下载源从官方下载页或 BMCLAPI 获取版本和 installer，先安装 Forge，再调用官方
   `optifine.Installer.doInstall`，合并 OptiFine 库和 Forge 启动参数；仅允许与 Forge 组合。
 - 支持本地已安装父版本。

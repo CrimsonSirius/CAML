@@ -81,6 +81,8 @@ CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
 - 返回 `InstalledVersion`，包含后续启动需要的路径。
 - Fabric 安装先确保原版父版本存在，再写入 Fabric Meta profile JSON，并把可选 Fabric API jar 放入实际游戏目录的 `mods`。
 - Forge/NeoForge 通过官方 installer 的 `--installClient` 在 staging 目录执行 processor，再合并 libraries 和版本目录。
+- NeoForge 版本列表不再只按版本号前缀猜测；通过 HTTP Range 读取 installer ZIP 内的 `version.json`，
+  使用实际 `inheritsFrom` 过滤当前 Minecraft 版本。
 - OptiFine 按下载源选择官方下载页或 BMCLAPI 获取版本和 installer；先安装 Forge，再调用 OptiFine
   官方 installer 的 `doInstall` 生成补丁库，最后把 OptiFine 库和启动参数合并进 Forge 版本 JSON。
 - OptiFine I6 与 Forge 47.4.27+ 存在 `ResourceLocation.parse` 冲突；选择 OptiFine 时限制并自动切换到兼容的 Forge 版本。
