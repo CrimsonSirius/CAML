@@ -86,7 +86,8 @@ CAML
 - `DownloadExecutor` 使用有界线程池并发下载，并发数为 1–256（默认 8）。
 - 下载并发数持久化到 `~/.caml/settings.properties`，并同时用于实例安装和启动前补文件。
 - 下载源支持镜像、官方和自定义镜像根地址；镜像源默认使用 BMCLAPI，失败时回退原始官方地址；
-  同时用于版本清单、版本 JSON、原版文件、资源、Forge/NeoForge installer 和 Fabric API 下载。
+  同时用于版本清单、版本 JSON、原版文件、资源、Fabric/Forge/NeoForge/OptiFine 元数据、
+  Fabric Maven 依赖、Forge/NeoForge installer 和 Fabric API 下载。
 - 已有有效文件时跳过。
 
 ### 3.4 版本安装
@@ -102,7 +103,7 @@ CAML
 - `clientreq=false` 的库在客户端下载和 classpath 中跳过。
 - Fabric 安装：确保原版父版本、写入 Fabric profile、可选下载 Fabric API 到实际 `mods` 目录。
 - Forge/NeoForge 安装：调用官方 installer 的 headless `--installClient`，在 staging 中完成 processor，再合并库并重命名实例目录。
-- OptiFine 安装：BMCLAPI 获取版本和 installer，先安装 Forge，再调用官方
+- OptiFine 安装：按下载源从官方下载页或 BMCLAPI 获取版本和 installer，先安装 Forge，再调用官方
   `optifine.Installer.doInstall`，合并 OptiFine 库和 Forge 启动参数；仅允许与 Forge 组合。
 - 支持本地已安装父版本。
 - 下载完成后才写入版本 JSON；复用本地版本时保持原文件不变。
@@ -375,7 +376,7 @@ PATH=/usr/lib/jvm/zulu-25/bin:$PATH \
   - 下载被截断后的重试。
   - Minecraft Log4j XML 事件转换为原版日志风格。
   - NeoForge 26.2 + Vulkan 的 `earlyWindowControl` 兼容修复。
-  - OptiFine BMCLAPI 版本解析、installer URL 和 Forge 清单合并。
+  - OptiFine 官方/镜像版本解析、installer URL 和 Forge 清单合并。
 
 ## 7. 当前未实现
 

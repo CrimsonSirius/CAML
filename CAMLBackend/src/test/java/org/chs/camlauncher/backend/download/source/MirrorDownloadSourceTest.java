@@ -27,6 +27,12 @@ class MirrorDownloadSourceTest {
                 source.candidates(URI.create(
                         "https://resources.download.minecraft.net/aa/abcdef")).get(0).toString()
         );
+        assertEquals(
+                "https://mirror.example/root/maven/net/fabricmc/fabric-loader/0.16.14/fabric-loader-0.16.14.jar",
+                source.candidates(URI.create(
+                        "https://maven.fabricmc.net/net/fabricmc/fabric-loader/0.16.14/fabric-loader-0.16.14.jar"))
+                        .get(0).toString()
+        );
         assertTrue(source.candidates(URI.create("https://other.example/a.jar")).isEmpty());
     }
 

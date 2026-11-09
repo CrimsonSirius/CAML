@@ -1,5 +1,6 @@
 package org.chs.camlauncher.backend.loader.neoforge;
 
+import org.chs.camlauncher.backend.download.source.DownloadSource;
 import org.chs.camlauncher.backend.loader.MavenMetadataClient;
 
 import java.io.IOException;
@@ -28,6 +29,10 @@ public final class NeoForgeService {
         this.metadataClient = metadataClient;
         this.metadataUri = metadataUri;
         this.mavenBase = mavenBase.endsWith("/") ? mavenBase : mavenBase + "/";
+    }
+
+    public void setSources(List<DownloadSource> sources) {
+        metadataClient.setSources(sources);
     }
 
     public List<NeoForgeVersion> fetchVersions(String gameVersion)

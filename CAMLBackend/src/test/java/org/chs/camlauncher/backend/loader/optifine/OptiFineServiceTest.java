@@ -2,6 +2,7 @@ package org.chs.camlauncher.backend.loader.optifine;
 
 import com.google.gson.Gson;
 import com.sun.net.httpserver.HttpServer;
+import org.chs.camlauncher.backend.download.source.DownloadSourceMode;
 import org.junit.jupiter.api.Test;
 
 import java.net.InetSocketAddress;
@@ -48,6 +49,63 @@ class OptiFineServiceTest {
             assertEquals(
                     "http://127.0.0.1:" + server.getAddress().getPort()
                             + "/optifine/1.20.1/HD_U/I6",
+                    versions.get(0).downloadUri().toString()
+            );
+        } finally {
+            server.stop(0);
+        }
+    }
+
+    @Test
+    void parsesOfficialDownloadsPageInOfficialMode() throws Exception {
+        String html = """
+                <html><body>
+                <h2>Minecraft 1.20.1</h2>
+                <table>
+                  <tr class='downloadLine downloadLineMain'>
+                    <td class='colFile'>OptiFine HD U I6</td>
+                    <td class='colMirror'><a href="http://optifine.net/adloadx?f=OptiFine_1.20.1_HD_U_I6.jar">(Mirror)</a></td>
+                    <td class='colForge'>Forge 47.2.18</td>
+                  </tr>
+                  <tr class='downloadLine downloadLinePreview'>
+                    <td class='colFile'>OptiFine HD U I6 pre4</td>
+                    <td class='colMirror'><a href="http://optifine.net/adloadx?f=preview_OptiFine_1.20.1_HD_U_I6_pre4.jar">(Mirror)</a></td>
+                    <td class='colForge'>Forge 47.1.0</td>
+                  </tr>
+                </table>
+                <h2>Minecraft 1.20.2</h2>
+                <table>
+                  <tr class='downloadLine downloadLineMain'>
+                    <td class='colMirror'><a href="http://optifine.net/adloadx?f=OptiFine_1.20.2_HD_U_I7.jar">(Mirror)</a></td>
+                  </tr>
+                </table>
+                </body></html>
+                """;
+        HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        server.createContext("/downloads", exchange -> {
+            byte[] bytes = html.getBytes(StandardCharsets.UTF_8);
+            exchange.getResponseHeaders().add("Content-Type", "text/html");
+            exchange.sendResponseHeaders(200, bytes.length);
+            exchange.getResponseBody().write(bytes);
+            exchange.close();
+        });
+        server.start();
+
+        try {
+            URI downloads = URI.create("http://127.0.0.1:" + server.getAddress().getPort() + "/downloads");
+            OptiFineService service = new OptiFineService(
+                    HttpClient.newHttpClient(), new Gson(), URI.create("https://example.invalid/"), downloads);
+            service.setSourceMode(DownloadSourceMode.OFFICIAL, "");
+
+            var versions = service.fetchVersions("1.20.1");
+
+            assertEquals(2, versions.size());
+            assertEquals("HD_U_I6", versions.get(0).version());
+            assertEquals("Forge 47.2.18", versions.get(0).forgeVersion());
+            assertEquals("HD_U_I6_pre4", versions.get(1).version());
+            assertTrue(versions.get(1).preview());
+            assertEquals(
+                    "https://optifine.net/adloadx?f=OptiFine_1.20.1_HD_U_I6.jar",
                     versions.get(0).downloadUri().toString()
             );
         } finally {

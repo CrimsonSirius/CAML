@@ -2,13 +2,13 @@ package org.chs.camlauncher.backend.loader.fabric;
 
 import com.google.gson.Gson;
 import com.google.gson.annotations.SerializedName;
+import org.chs.camlauncher.backend.download.source.DownloadSource;
+import org.chs.camlauncher.backend.download.source.SourceAwareHttpClient;
 
 import java.io.IOException;
 import java.net.URI;
 import java.net.URLEncoder;
 import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -21,7 +21,7 @@ public final class FabricService {
     private static final URI DEFAULT_META_BASE = URI.create("https://meta.fabricmc.net/");
     private static final URI DEFAULT_MODRINTH_BASE = URI.create("https://api.modrinth.com/");
 
-    private final HttpClient httpClient;
+    private final SourceAwareHttpClient httpClient;
     private final Gson gson;
     private final URI metaBase;
     private final URI modrinthBase;
@@ -31,10 +31,14 @@ public final class FabricService {
     }
 
     public FabricService(HttpClient httpClient, Gson gson, URI metaBase, URI modrinthBase) {
-        this.httpClient = Objects.requireNonNull(httpClient, "httpClient");
+        this.httpClient = new SourceAwareHttpClient(Objects.requireNonNull(httpClient, "httpClient"));
         this.gson = Objects.requireNonNull(gson, "gson");
         this.metaBase = ensureTrailingSlash(metaBase);
         this.modrinthBase = ensureTrailingSlash(modrinthBase);
+    }
+
+    public void setSources(List<DownloadSource> sources) {
+        httpClient.setSources(sources);
     }
 
     public List<FabricLoaderVersion> fetchLoaderVersions(String gameVersion)
@@ -123,20 +127,7 @@ public final class FabricService {
     }
 
     private String fetchText(URI uri) throws IOException, InterruptedException {
-        HttpRequest request = HttpRequest.newBuilder(uri)
-                .timeout(Duration.ofSeconds(30))
-                .header("User-Agent", "CAML/1.0")
-                .header("Accept", "application/json")
-                .GET()
-                .build();
-        HttpResponse<String> response = httpClient.send(
-                request,
-                HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8)
-        );
-        if (response.statusCode() < 200 || response.statusCode() >= 300) {
-            throw new IOException("HTTP " + response.statusCode() + " for " + uri);
-        }
-        return response.body();
+        return httpClient.getText(uri, Duration.ofSeconds(30), "application/json");
     }
 
     private static URI ensureTrailingSlash(URI uri) {

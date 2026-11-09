@@ -166,7 +166,8 @@ Forge/NeoForge 安装流程：
 
 OptiFine 安装流程（仅 Forge）：
 
-- 从 BMCLAPI `https://bmclapi2.bangbang93.com/optifine/<gameVersion>` 获取 OptiFine 版本。
+- 官方源模式从 `https://optifine.net/downloads` 解析版本；镜像/自定义源模式从
+  `https://bmclapi2.bangbang93.com/optifine/<gameVersion>` 或自定义镜像根地址获取。
 - 先安装 Forge 实例，再把原版版本 JSON 和客户端 jar 放入 staging。
 - 通过独立 Java 进程调用 OptiFine 官方 installer 的 `optifine.Installer.doInstall(staging)`。
 - 合并生成的 OptiFine 库；传统 LaunchWrapper Forge 追加
@@ -316,7 +317,8 @@ assetIndexFile
 - 支持原版、Fabric Loader/Fabric API、Forge、NeoForge 和 OptiFine（仅 Forge）安装；Quilt 尚未实现。
 - `inheritsFrom` 只读取本地父版本，不会自动安装父版本。
 - 下载源支持镜像、官方和自定义镜像根地址；应用于版本文件、libraries、asset index、assets objects、
-  Forge/NeoForge installer 和 Fabric API 下载；版本清单与版本 JSON 也按下载源重写地址。
+  Fabric/Forge/NeoForge/OptiFine 元数据、Fabric Maven 依赖、Forge/NeoForge installer 和 Fabric API 下载；
+  版本清单与版本 JSON 也按下载源重写地址。Fabric API 的 Modrinth API/CDN 没有 BMCLAPI 镜像时仍回退官方地址。
 - 下载使用有界线程池并发执行，并发数可配置为 1–256；下载取消尚未实现。
 - 没有内容寻址缓存，只有目标文件存在且 SHA-1 匹配时跳过。
 
