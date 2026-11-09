@@ -282,6 +282,7 @@ public final class CAMLBackend implements AutoCloseable {
     private void applyDownloadSources() {
         List<DownloadSource> sources = DownloadSourceFactory.create(
                 downloadSourceMode, customDownloadApi);
+        versionManifestService.setSources(sources);
         downloadPlanner.setSources(sources);
         assetDownloadPlanner.setSources(sources);
         externalLoaderInstaller.setSources(sources);

@@ -23,6 +23,35 @@ class VersionManifestTest {
         );
     }
 
+    @Test
+    void returnsOnlySnapshotsSortedNewestFirst() {
+        VersionManifest manifest = new VersionManifest(null, List.of(
+                version("snapshot-old", "snapshot", "2024-01-01T00:00:00+00:00"),
+                version("release", "release", "2026-01-01T00:00:00+00:00"),
+                version("snapshot-new", "snapshot", "2025-01-01T00:00:00+00:00")
+        ));
+
+        assertEquals(
+                List.of("snapshot-new", "snapshot-old"),
+                manifest.snapshotsNewestFirst().stream().map(VersionManifest.Version::id).toList()
+        );
+    }
+
+    @Test
+    void returnsOldAlphaAndBetaVersionsSortedNewestFirst() {
+        VersionManifest manifest = new VersionManifest(null, List.of(
+                version("alpha-old", "old_alpha", "2010-01-01T00:00:00+00:00"),
+                version("snapshot", "snapshot", "2025-01-01T00:00:00+00:00"),
+                version("beta", "old_beta", "2011-01-01T00:00:00+00:00"),
+                version("alpha-new", "old_alpha", "2010-06-01T00:00:00+00:00")
+        ));
+
+        assertEquals(
+                List.of("beta", "alpha-new", "alpha-old"),
+                manifest.oldVersionsNewestFirst().stream().map(VersionManifest.Version::id).toList()
+        );
+    }
+
     private static VersionManifest.Version version(String id, String type, String releaseTime) {
         return new VersionManifest.Version(
                 id, type, "https://example.invalid/" + id + ".json",

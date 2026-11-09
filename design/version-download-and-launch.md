@@ -316,7 +316,7 @@ assetIndexFile
 - 支持原版、Fabric Loader/Fabric API、Forge、NeoForge 和 OptiFine（仅 Forge）安装；Quilt 尚未实现。
 - `inheritsFrom` 只读取本地父版本，不会自动安装父版本。
 - 下载源支持镜像、官方和自定义镜像根地址；应用于版本文件、libraries、asset index、assets objects、
-  Forge/NeoForge installer 和 Fabric API 下载；版本清单/加载器元数据仍使用各自官方接口。
+  Forge/NeoForge installer 和 Fabric API 下载；版本清单与版本 JSON 也按下载源重写地址。
 - 下载使用有界线程池并发执行，并发数可配置为 1–256；下载取消尚未实现。
 - 没有内容寻址缓存，只有目标文件存在且 SHA-1 匹配时跳过。
 

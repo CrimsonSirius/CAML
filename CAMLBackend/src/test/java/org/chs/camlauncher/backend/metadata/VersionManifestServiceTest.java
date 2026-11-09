@@ -1,6 +1,7 @@
 package org.chs.camlauncher.backend.metadata;
 
 import com.sun.net.httpserver.HttpServer;
+import org.chs.camlauncher.backend.download.source.MirrorDownloadSource;
 import org.chs.camlauncher.backend.metadata.model.VersionInfo;
 import org.chs.camlauncher.backend.metadata.model.VersionManifest;
 import org.junit.jupiter.api.Test;
@@ -14,6 +15,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -87,6 +89,32 @@ class VersionManifestServiceTest {
                     cacheFile
             );
             assertEquals("1.21.5", cached.latest().release());
+        }
+    }
+
+    @Test
+    void usesConfiguredMirrorForManifest() throws Exception {
+        String manifestJson = """
+                {
+                  "latest": {"release": "1.21.5", "snapshot": "25w14a"},
+                  "versions": []
+                }
+                """;
+        Path cacheFile = tempDirectory.resolve("cache/version_manifest_v2.json");
+
+        try (TestHttpServer server = new TestHttpServer()) {
+            server.handle("/mc/game/version_manifest_v2.json", manifestJson);
+            VersionManifestService service = new VersionManifestService();
+            service.setSources(List.of(new MirrorDownloadSource(
+                    "http://127.0.0.1:" + server.port())));
+
+            VersionManifest manifest = service.fetchManifestOrCache(
+                    VersionManifestService.DEFAULT_MANIFEST_URI,
+                    cacheFile
+            );
+
+            assertEquals("1.21.5", manifest.latest().release());
+            assertTrue(Files.isRegularFile(cacheFile));
         }
     }
 

@@ -40,6 +40,7 @@ bin/
 ### Project docs ###
 AGENTS.md
 TODO.md
+DANGER.md
 
 ### VS Code ###
 .vscode/

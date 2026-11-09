@@ -4,6 +4,8 @@ import javafx.application.Platform;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.chs.camlauncher.backend.download.DownloadListener;
+import org.chs.camlauncher.backend.download.source.DownloadSourceFactory;
+import org.chs.camlauncher.backend.download.source.DownloadSourceMode;
 import org.chs.camlauncher.backend.loader.fabric.FabricApiVersion;
 import org.chs.camlauncher.backend.loader.fabric.FabricLoaderVersion;
 import org.chs.camlauncher.backend.loader.forge.ForgeVersion;
@@ -16,6 +18,7 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.Objects;
 import java.util.function.Consumer;
+import java.util.function.Function;
 
 /** 下载页控制器：版本列表和原版/加载器实例安装。 */
 public final class DownloadsController {
@@ -27,19 +30,48 @@ public final class DownloadsController {
         this.context = Objects.requireNonNull(context, "context");
     }
 
+    public String downloadSourceLabel() {
+        DownloadSourceMode mode = context.backend().downloadSourceMode();
+        return switch (mode) {
+            case MIRROR -> "镜像源";
+            case OFFICIAL -> "官方源";
+            case CUSTOM -> DownloadSourceFactory.isValidCustomApi(
+                    context.backend().customDownloadApi()) ? "自定义源" : "官方源";
+        };
+    }
+
     /** 异步获取官方版本清单中的正式版。 */
     public void fetchReleaseVersions(Consumer<List<VersionManifest.Version>> onLoaded,
                                      Consumer<String> onError) {
+        fetchVersions("正式版", VersionManifest::releasesNewestFirst, onLoaded, onError);
+    }
+
+    /** 异步获取官方版本清单中的快照版。 */
+    public void fetchSnapshotVersions(Consumer<List<VersionManifest.Version>> onLoaded,
+                                      Consumer<String> onError) {
+        fetchVersions("快照版", VersionManifest::snapshotsNewestFirst, onLoaded, onError);
+    }
+
+    /** 异步获取官方版本清单中的远古版（Alpha/Beta）。 */
+    public void fetchOldVersions(Consumer<List<VersionManifest.Version>> onLoaded,
+                                 Consumer<String> onError) {
+        fetchVersions("远古版", VersionManifest::oldVersionsNewestFirst, onLoaded, onError);
+    }
+
+    private void fetchVersions(String category,
+                               Function<VersionManifest, List<VersionManifest.Version>> selector,
+                               Consumer<List<VersionManifest.Version>> onLoaded,
+                               Consumer<String> onError) {
         context.supplyAsync(() -> context.backend().fetchVersionManifest())
                 .thenAccept(manifest -> {
-                    List<VersionManifest.Version> releases = manifest.releasesNewestFirst();
-                    Platform.runLater(() -> onLoaded.accept(releases));
+                    List<VersionManifest.Version> versions = selector.apply(manifest);
+                    Platform.runLater(() -> onLoaded.accept(versions));
                 })
                 .exceptionally(ex -> {
                     Throwable cause = ex.getCause() != null ? ex.getCause() : ex;
                     String message = ControllerContext.messageOf(cause);
-                    LOGGER.warn("获取官方版本列表失败", cause);
-                    context.sendLog("[版本列表] 获取失败: " + message);
+                    LOGGER.warn("获取官方{}列表失败", category, cause);
+                    context.sendLog("[版本列表] 获取" + category + "失败: " + message);
                     Platform.runLater(() -> onError.accept(message));
                     return null;
                 });
