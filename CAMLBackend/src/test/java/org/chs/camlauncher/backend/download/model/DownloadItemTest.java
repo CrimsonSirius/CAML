@@ -8,6 +8,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class DownloadItemTest {
@@ -28,5 +29,21 @@ class DownloadItemTest {
         );
 
         assertTrue(item.existsAndValid());
+    }
+
+    @Test
+    void rejectsEmptyExistingFileWithoutChecksum() throws Exception {
+        Path file = tempDirectory.resolve("empty.jar");
+        Files.createFile(file);
+
+        DownloadItem item = new DownloadItem(
+                "empty",
+                List.of(URI.create("https://example.com/empty.jar")),
+                file,
+                null,
+                -1
+        );
+
+        assertFalse(item.existsAndValid());
     }
 }

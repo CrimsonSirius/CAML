@@ -7,6 +7,11 @@ import org.junit.jupiter.api.io.TempDir;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -174,6 +179,39 @@ class SettingsServiceTest {
                 "我的 1.21.4",
                 new SettingsService(dataDirectory).lastLaunchedInstanceId().orElseThrow()
         );
+    }
+
+    @Test
+    void serializesConcurrentWritesWithoutLosingUpdates() throws Exception {
+        SettingsService service = new SettingsService(dataDirectory);
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+        try {
+            CountDownLatch start = new CountDownLatch(1);
+            Future<?> memory = executor.submit(() -> {
+                start.await();
+                for (int index = 0; index < 100; index++) {
+                    service.setMaxMemoryMb(8192);
+                }
+                return null;
+            });
+            Future<?> lastInstance = executor.submit(() -> {
+                start.await();
+                for (int index = 0; index < 100; index++) {
+                    service.setLastLaunchedInstanceId("并发实例");
+                }
+                return null;
+            });
+
+            start.countDown();
+            memory.get(10, TimeUnit.SECONDS);
+            lastInstance.get(10, TimeUnit.SECONDS);
+        } finally {
+            executor.shutdownNow();
+        }
+
+        SettingsService loaded = new SettingsService(dataDirectory);
+        assertEquals(8192, loaded.maxMemoryMb());
+        assertEquals("并发实例", loaded.lastLaunchedInstanceId().orElseThrow());
     }
 
     @Test

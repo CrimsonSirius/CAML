@@ -6,6 +6,7 @@ import org.chs.camlauncher.backend.download.model.DownloadItem;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import java.io.IOException;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.net.URI;
@@ -16,6 +17,8 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class FileDownloaderTest {
@@ -86,6 +89,72 @@ class FileDownloaderTest {
 
             assertArrayEquals(content, Files.readAllBytes(destination));
             assertTrue(requests.get() >= 2);
+        } finally {
+            server.stop(0);
+        }
+    }
+
+    @Test
+    void downloadsWhenDestinationAlreadyExistsButIsEmpty() throws Exception {
+        byte[] content = "installer".getBytes(StandardCharsets.UTF_8);
+        HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        server.createContext("/installer.jar", exchange -> {
+            exchange.sendResponseHeaders(200, content.length);
+            try (OutputStream output = exchange.getResponseBody()) {
+                output.write(content);
+            }
+        });
+        server.start();
+
+        try {
+            Path destination = tempDirectory.resolve("installer.jar");
+            Files.createFile(destination);
+            DownloadItem item = new DownloadItem(
+                    "installer",
+                    List.of(URI.create("http://127.0.0.1:" + server.getAddress().getPort()
+                            + "/installer.jar")),
+                    destination,
+                    null,
+                    -1
+            );
+
+            new FileDownloader().download(item, DownloadListener.NONE);
+
+            assertArrayEquals(content, Files.readAllBytes(destination));
+        } finally {
+            server.stop(0);
+        }
+    }
+
+    @Test
+    void attemptsEachCandidateUntilSixTotalAttempts() throws Exception {
+        AtomicInteger requests = new AtomicInteger();
+        HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        server.createContext("/first.jar", exchange -> {
+            requests.incrementAndGet();
+            exchange.sendResponseHeaders(500, -1);
+            exchange.close();
+        });
+        server.createContext("/second.jar", exchange -> {
+            requests.incrementAndGet();
+            exchange.sendResponseHeaders(500, -1);
+            exchange.close();
+        });
+        server.start();
+
+        try {
+            String base = "http://127.0.0.1:" + server.getAddress().getPort();
+            DownloadItem item = new DownloadItem(
+                    "retry-all",
+                    List.of(URI.create(base + "/first.jar"), URI.create(base + "/second.jar")),
+                    tempDirectory.resolve("retry-all.jar"),
+                    null,
+                    -1
+            );
+
+            assertThrows(IOException.class,
+                    () -> new FileDownloader().download(item, DownloadListener.NONE));
+            assertEquals(6, requests.get());
         } finally {
             server.stop(0);
         }

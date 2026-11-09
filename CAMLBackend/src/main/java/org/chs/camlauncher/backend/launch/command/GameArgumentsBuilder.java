@@ -30,7 +30,7 @@ public final class GameArgumentsBuilder {
             result.add("--fullscreen");
         }
 
-        return result.stream().filter(argument -> !argument.isBlank()).toList();
+        return List.copyOf(result);
     }
 
     private static List<String> resolve(

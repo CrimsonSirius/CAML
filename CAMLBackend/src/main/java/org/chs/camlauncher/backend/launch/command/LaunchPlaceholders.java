@@ -33,6 +33,8 @@ public final class LaunchPlaceholders {
         values.put("auth_uuid", plan.auth().uuid().toString().replace("-", ""));
         values.put("auth_access_token", plan.auth().accessToken());
         values.put("auth_session", plan.auth().accessToken());
+        values.put("auth_xuid", "");
+        values.put("clientid", "");
         values.put("user_type", plan.auth().userType());
         values.put("user_properties", plan.auth().userProperties());
         values.put("version_type", plan.manifest().type() == null ? "release" : plan.manifest().type());

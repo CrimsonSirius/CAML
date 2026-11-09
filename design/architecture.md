@@ -60,7 +60,7 @@ CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
 - 生成 assets objects 下载计划。
 - 使用 SHA-1 校验。
 - 使用 `.part` 临时文件和原子移动。
-- 下载使用 HTTP/1.1；失败重试并短暂退避，最终错误包含下载项和地址。
+- 下载使用 HTTP/1.1；默认总计最多 6 次尝试，候选源按轮次轮流并短暂退避，最终错误包含下载项和地址。
 - 使用有界线程池并发执行下载，并发数由设置决定（1–256，默认 8）。
 - 下载源支持“尽可能使用镜像源”“尽可能使用官方源”和“自定义镜像根地址”三种模式；
   默认镜像源，镜像失败时回退原始官方地址；覆盖版本清单、版本 JSON、版本文件、库、资源、
@@ -71,7 +71,8 @@ CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
 
 - 按版本 ID 安装原版。
 - 远程安装区分官方版本 ID 和实例 ID：官方 ID 用于拉取元数据，实例 ID 用作 `versions/<id>` 目录名和当前实例名。
-- 实例名默认官方版本号，拒绝空名、路径分隔符和 Windows 非法字符。
+- 实例名默认官方版本号；原版、Fabric、Forge、NeoForge 统一拒绝空名、非法字符和已存在实例目录，
+  前端在开始下载前异步调用后端检查并提前提示。
 - 本地已安装的版本（包括第三方启动器/整合包的自定义版本 ID）直接复用，不访问官方清单。
 - 复用本地版本时保持版本 JSON 不变，只补齐缺失文件。
 - 本地版本以 `versions/<id>` 文件夹名作为版本 ID；`inheritsFrom` 也按文件夹名查找父版本。
@@ -82,6 +83,7 @@ CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
 - Forge/NeoForge 通过官方 installer 的 `--installClient` 在 staging 目录执行 processor，再合并 libraries 和版本目录。
 - OptiFine 按下载源选择官方下载页或 BMCLAPI 获取版本和 installer；先安装 Forge，再调用 OptiFine
   官方 installer 的 `doInstall` 生成补丁库，最后把 OptiFine 库和启动参数合并进 Forge 版本 JSON。
+- OptiFine I6 与 Forge 47.4.27+ 存在 `ResourceLocation.parse` 冲突；选择 OptiFine 时限制并自动切换到兼容的 Forge 版本。
 - OptiFine 只允许与 Forge 组合；选择 Fabric/NeoForge 时 OptiFine 选项会被清空并禁用。
 - `CAMLBackend.inspectGameDirectory` 扫描 `versions/<id>/<id>.json`，返回已安装版本和隔离版本列表。
 
@@ -181,10 +183,11 @@ CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
   立即刷新设置页。
 - 游戏位置、版本隔离、下载源、下载并发数、最大内存和最后启动实例保存在
   `~/.caml/settings.properties`，启动时加载；游戏位置只有点击保存才写入，其余选项立即写入。
+  设置写入由串行写锁保护，并通过临时文件原子替换设置文件。
 - `LaunchSettings` 在主页和设置页之间共享游戏位置、版本隔离和最大内存值；`ViewSupport` 提供通用字段与侧边栏布局。
 - 当前实例通过共享 `LaunchSettings.selectedVersion` 管理；启动器初始化时恢复 `lastInstanceId`，实例信息下方显示存档位置。
-- `ControllerContext` 使用独立 I/O 线程执行目录探测和下载；`HomeController` 负责启动派发，
-  不阻塞 JavaFX Application Thread。
+- `ControllerContext` 使用独立下载线程执行目录探测和下载，设置保存使用单独的串行设置线程；
+  `HomeController` 负责启动派发，不阻塞 JavaFX Application Thread。
 - 下载日志按文件切换和每 10% 进度节流，避免刷屏。
 - 主工作区使用 `SplitPane`：宽度 `< 900` 时上下堆叠，`>= 900` 时左右分栏。
 - 断点切换时放宽表单和日志的最小高度，表单和日志在堆叠时仍然都能看到。

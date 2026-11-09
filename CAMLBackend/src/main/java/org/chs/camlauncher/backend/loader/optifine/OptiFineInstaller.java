@@ -107,6 +107,10 @@ public final class OptiFineInstaller {
         Objects.requireNonNull(forgeVersion, "forgeVersion");
         Objects.requireNonNull(optiFineVersion, "optiFineVersion");
         Objects.requireNonNull(gameDirectory, "gameDirectory");
+        if (!OptiFineCompatibility.isForgeCompatible(forgeVersion, optiFineVersion)) {
+            throw new IllegalArgumentException(
+                    OptiFineCompatibility.incompatibleMessage(forgeVersion, optiFineVersion));
+        }
 
         InstalledVersion base = versionInstaller.install(
                 gameVersion,
@@ -128,7 +132,8 @@ public final class OptiFineInstaller {
         JavaRuntime java = javaLocator.findSuitable(JavaRequirement.from(base.manifest()))
                 .orElseThrow(() -> new IOException("找不到可用于运行 OptiFine 安装器的 Java"));
 
-        Path installer = Files.createTempFile("caml-optifine-", ".jar");
+        Path installerDirectory = Files.createTempDirectory("caml-optifine-");
+        Path installer = installerDirectory.resolve("installer.jar");
         Path staging = Files.createTempDirectory(gameDirectory, ".caml-optifine-install-");
         try {
             URI installerUri = optiFineService.resolveDownloadUri(optiFineVersion);
@@ -150,7 +155,7 @@ public final class OptiFineInstaller {
             mergeManifest(forgeJson, generated.json());
             writeJson(forge.versionJson(), forgeJson);
         } finally {
-            deleteRecursively(installer);
+            deleteRecursively(installerDirectory);
             deleteRecursively(staging);
         }
 

@@ -58,7 +58,7 @@ public final class SettingsController {
 
     /** 异步保存最大内存，避免在 JavaFX Application Thread 上写文件。 */
     public void saveMaxMemoryMbAsync(int maxMemoryMb) {
-        context.executeIo(() -> {
+        context.executeSettings(() -> {
             try {
                 context.backend().setMaxMemoryMb(maxMemoryMb);
             } catch (IOException | RuntimeException e) {
@@ -69,7 +69,7 @@ public final class SettingsController {
 
     /** 异步保存游戏位置，避免在 JavaFX Application Thread 上写文件。 */
     public void saveGameDirectoryAsync(Path gameDirectory) {
-        context.executeIo(() -> {
+        context.executeSettings(() -> {
             try {
                 context.backend().setGameDirectory(gameDirectory);
             } catch (IOException | RuntimeException e) {
@@ -80,7 +80,7 @@ public final class SettingsController {
 
     /** 异步保存版本隔离选择，避免在 JavaFX Application Thread 上写文件。 */
     public void saveVersionIsolationAsync(boolean fullVersionIsolation) {
-        context.executeIo(() -> {
+        context.executeSettings(() -> {
             try {
                 context.backend().setVersionIsolationMode(fullVersionIsolation
                         ? VersionIsolationMode.FULL
@@ -93,7 +93,7 @@ public final class SettingsController {
 
     /** 异步保存下载并发数，并立即更新后端下载器。 */
     public void saveDownloadConcurrencyAsync(int downloadConcurrency) {
-        context.executeIo(() -> {
+        context.executeSettings(() -> {
             try {
                 context.backend().setDownloadConcurrency(downloadConcurrency);
             } catch (IOException | RuntimeException e) {
@@ -103,7 +103,7 @@ public final class SettingsController {
     }
 
     public void saveDownloadSourceAsync(DownloadSourceMode mode, String customApi) {
-        context.executeIo(() -> {
+        context.executeSettings(() -> {
             try {
                 context.backend().setDownloadSource(mode, customApi);
                 Runnable listener = onDownloadSourceSaved;

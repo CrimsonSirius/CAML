@@ -19,11 +19,13 @@ import java.time.Duration;
 import java.util.Objects;
 
 public final class FileDownloader {
+    private static final int DEFAULT_MAX_ATTEMPTS = 6;
+
     private final HttpClient httpClient;
     private final int maxAttempts;
 
     public FileDownloader() {
-        this(defaultClient(), 3);
+        this(defaultClient(), DEFAULT_MAX_ATTEMPTS);
     }
 
     public FileDownloader(HttpClient httpClient, int maxAttempts) {
@@ -49,8 +51,14 @@ public final class FileDownloader {
 
         IOException lastFailure = null;
         URI lastUri = null;
-        for (int attempt = 0; attempt < maxAttempts; attempt++) {
+        int attempted = 0;
+        int round = 0;
+        while (attempted < maxAttempts) {
             for (URI uri : item.candidates()) {
+                if (attempted >= maxAttempts) {
+                    break;
+                }
+                attempted++;
                 lastUri = uri;
                 try {
                     downloadOnce(uri, item, progress);
@@ -59,14 +67,15 @@ public final class FileDownloader {
                     lastFailure = e;
                 }
             }
-            if (attempt + 1 < maxAttempts) {
-                Thread.sleep(200L * (attempt + 1));
+            round++;
+            if (attempted < maxAttempts) {
+                Thread.sleep(200L * round);
             }
         }
 
         String location = lastUri == null ? "" : "，最后地址: " + lastUri;
         throw new IOException(
-                "无法下载 " + item.label() + "（已尝试 " + maxAttempts + " 次" + location + "）",
+                "无法下载 " + item.label() + "（已尝试 " + attempted + " 次" + location + "）",
                 lastFailure
         );
     }

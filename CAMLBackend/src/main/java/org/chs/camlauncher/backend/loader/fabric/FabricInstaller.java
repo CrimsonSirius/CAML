@@ -7,6 +7,7 @@ import org.chs.camlauncher.backend.download.source.DownloadSource;
 import org.chs.camlauncher.backend.download.source.DownloadSources;
 import org.chs.camlauncher.backend.download.source.OfficialDownloadSource;
 import org.chs.camlauncher.backend.instance.InstalledVersion;
+import org.chs.camlauncher.backend.instance.InstanceNameRules;
 import org.chs.camlauncher.backend.instance.VersionInstaller;
 
 import java.io.IOException;
@@ -56,10 +57,11 @@ public final class FabricInstaller {
         Objects.requireNonNull(instanceId, "instanceId");
         Objects.requireNonNull(loaderVersion, "loaderVersion");
         Objects.requireNonNull(gameDirectory, "gameDirectory");
-        String normalizedInstanceId = instanceId.trim();
+        String normalizedInstanceId = InstanceNameRules.validate(instanceId);
         if (normalizedInstanceId.equals(gameVersion)) {
             throw new IllegalArgumentException("安装 Fabric 时实例名不能与游戏版本号相同");
         }
+        InstanceNameRules.ensureNewInstance(gameDirectory, normalizedInstanceId);
 
         versionInstaller.install(
                 gameVersion,

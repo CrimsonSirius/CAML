@@ -68,6 +68,10 @@ class LaunchArgumentsBuilderTest {
                         new StringArgument("${auth_player_name}"),
                         new StringArgument("--uuid"),
                         new StringArgument("${auth_uuid}"),
+                        new StringArgument("--clientId"),
+                        new StringArgument("${clientid}"),
+                        new StringArgument("--xuid"),
+                        new StringArgument("${auth_xuid}"),
                         new RuledArgument(
                                 List.of(new Rule(Rule.Action.ALLOW, null,
                                         Map.of("has_custom_resolution", true))),
@@ -92,6 +96,8 @@ class LaunchArgumentsBuilderTest {
                 plan.auth().uuid().toString().replace("-", ""),
                 result.get(result.indexOf("--uuid") + 1)
         );
+        assertEquals("", result.get(result.indexOf("--clientId") + 1));
+        assertEquals("", result.get(result.indexOf("--xuid") + 1));
         assertEquals("854", result.get(result.indexOf("--width") + 1));
         assertEquals("480", result.get(result.indexOf("--height") + 1));
         assertTrue(result.contains("--fullscreen"));

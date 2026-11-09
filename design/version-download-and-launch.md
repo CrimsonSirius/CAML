@@ -70,7 +70,8 @@ VersionInstaller.install(...)
 - 本地已安装时不会重写版本 JSON，保持与外部启动器一致。
 
 下载原版时还支持单独实例名：官方版本 ID 用于查询清单和拉取版本 JSON，
-实例 ID 用于 `versions/<id>` 目录、客户端 jar 和当前实例显示。实例名默认官方版本号。
+实例 ID 用于 `versions/<id>` 目录、客户端 jar 和当前实例显示。实例名默认官方版本号；
+原版、Fabric、Forge、NeoForge 都拒绝已存在的同名实例目录，前端会在下载前检查并提示。
 - 合并 `inheritsFrom` 时按**文件夹名**查找父版本，兼容 JSON 内部 `id` 与文件夹名不一致的情况。
 - 解析完成后把 manifest 的 `id` 统一为文件夹名，保证 `versions/<id>/<id>.jar` 等路径一致。
 - 本地版本缺库、缺资源或缺客户端 jar 时仍会自动补齐。
@@ -170,6 +171,8 @@ OptiFine 安装流程（仅 Forge）：
   `https://bmclapi2.bangbang93.com/optifine/<gameVersion>` 或自定义镜像根地址获取。
 - 先安装 Forge 实例，再把原版版本 JSON 和客户端 jar 放入 staging。
 - 通过独立 Java 进程调用 OptiFine 官方 installer 的 `optifine.Installer.doInstall(staging)`。
+- OptiFine I6 与 Forge 47.4.27+ 不兼容（Forge 新增方法会被 OptiFine 转换移除），
+  界面会选择 47.4.26 或更早的兼容版本，后端也会拒绝不兼容组合。
 - 合并生成的 OptiFine 库；传统 LaunchWrapper Forge 追加
   `--tweakClass optifine.OptiFineForgeTweaker`，现代 Forge 保留 Forge 主类并加入 OptiFine 库。
 - 删除 OptiFine 库中的 `META-INF/mods.toml`，避免 Forge 将其当作普通 mod 加载。
@@ -214,7 +217,7 @@ plan.missing()
 → 失败重试
 ```
 
-默认最多重试 3 轮。候选 URL 按下载源设置生成：
+默认总计最多尝试 6 次；候选 URL 按轮次轮流使用，两个候选源时通常每个源尝试 3 次。候选 URL 按下载源设置生成：
 
 - 镜像源：BMCLAPI 地址优先，原始官方地址兜底。
 - 官方源：原始官方地址优先。

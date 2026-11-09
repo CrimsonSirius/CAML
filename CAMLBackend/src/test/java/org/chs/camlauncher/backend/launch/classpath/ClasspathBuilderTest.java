@@ -203,6 +203,54 @@ class ClasspathBuilderTest {
         );
     }
 
+    @Test
+    void omitsVanillaClientJarForBootstrapLauncher() {
+        Library library = library(
+                "org.example:loader:1.0",
+                "org/example/loader/1.0/loader-1.0.jar",
+                List.of(),
+                Map.of()
+        );
+        VersionInfo manifest = new VersionInfo(
+                "forge-instance", "release", null,
+                "cpw.mods.bootstraplauncher.BootstrapLauncher",
+                null, null, null, null, null, null, List.of(library), null,
+                null, null, null, null, "1.20.1"
+        );
+        InstalledVersion instance = new InstalledVersion(
+                "forge-instance",
+                manifest,
+                gameDirectory,
+                gameDirectory.resolve("versions/forge-instance"),
+                gameDirectory.resolve("versions/forge-instance/forge-instance.json"),
+                gameDirectory.resolve("versions/1.20.1/1.20.1.jar"),
+                gameDirectory.resolve("libraries"),
+                gameDirectory.resolve("assets"),
+                null
+        );
+        LaunchPlan plan = new LaunchPlan(
+                instance,
+                manifest,
+                new AuthSession("Steve", UUID.randomUUID(), "token", "legacy", "{}"),
+                new JavaRuntime(Path.of("/tmp/java"), "21.0", 21, "test", "x86_64", 64, true),
+                LaunchOptions.defaults(),
+                gameDirectory,
+                gameDirectory.resolve("assets"),
+                gameDirectory.resolve("versions/forge-instance/natives")
+        );
+
+        List<Path> classpath = new ClasspathBuilder(
+                new RuleEvaluator("linux", "x86_64", "6.0", Map.of())
+        ).build(plan);
+
+        assertEquals(1, classpath.size());
+        assertEquals(
+                gameDirectory.resolve("libraries/org/example/loader/1.0/loader-1.0.jar")
+                        .toAbsolutePath().normalize(),
+                classpath.getFirst()
+        );
+    }
+
     private static Library library(
             String name,
             String path,
