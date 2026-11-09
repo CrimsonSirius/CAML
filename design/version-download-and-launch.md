@@ -70,7 +70,8 @@ VersionInstaller.install(...)
 - 本地已安装时不会重写版本 JSON，保持与外部启动器一致。
 
 下载原版时还支持单独实例名：官方版本 ID 用于查询清单和拉取版本 JSON，
-实例 ID 用于 `versions/<id>` 目录、客户端 jar 和当前实例显示。实例名默认官方版本号。
+实例 ID 用于 `versions/<id>` 目录、客户端 jar 和当前实例显示。实例名默认官方版本号；
+原版、Fabric、Forge、NeoForge 都拒绝已存在的同名实例目录，前端会在下载前检查并提示。
 - 合并 `inheritsFrom` 时按**文件夹名**查找父版本，兼容 JSON 内部 `id` 与文件夹名不一致的情况。
 - 解析完成后把 manifest 的 `id` 统一为文件夹名，保证 `versions/<id>/<id>.jar` 等路径一致。
 - 本地版本缺库、缺资源或缺客户端 jar 时仍会自动补齐。

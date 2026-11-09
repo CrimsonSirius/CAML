@@ -12,6 +12,7 @@ import org.chs.camlauncher.backend.loader.forge.ForgeVersion;
 import org.chs.camlauncher.backend.loader.neoforge.NeoForgeVersion;
 import org.chs.camlauncher.backend.loader.optifine.OptiFineVersion;
 import org.chs.camlauncher.backend.metadata.model.VersionManifest;
+import org.chs.camlauncher.backend.instance.InstanceNameCheck;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -38,6 +39,19 @@ public final class DownloadsController {
             case CUSTOM -> DownloadSourceFactory.isValidCustomApi(
                     context.backend().customDownloadApi()) ? "自定义源" : "官方源";
         };
+    }
+
+    public void checkInstanceName(Path gameDirectory, String instanceId,
+                                  Consumer<InstanceNameCheck> onChecked,
+                                  Consumer<String> onError) {
+        context.supplyAsync(() -> context.backend().checkInstanceName(gameDirectory, instanceId))
+                .thenAccept(check -> Platform.runLater(() -> onChecked.accept(check)))
+                .exceptionally(ex -> {
+                    Throwable cause = ex.getCause() != null ? ex.getCause() : ex;
+                    String message = ControllerContext.messageOf(cause);
+                    Platform.runLater(() -> onError.accept(message));
+                    return null;
+                });
     }
 
     /** 异步获取官方版本清单中的正式版。 */

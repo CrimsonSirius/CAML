@@ -15,6 +15,7 @@ import org.chs.camlauncher.backend.loader.forge.ForgeVersion;
 import org.chs.camlauncher.backend.loader.neoforge.NeoForgeVersion;
 import org.chs.camlauncher.backend.loader.optifine.OptiFineVersion;
 import org.chs.camlauncher.backend.loader.optifine.OptiFineCompatibility;
+import org.chs.camlauncher.backend.instance.InstanceNameCheck;
 import org.chs.camlauncher.backend.metadata.model.VersionManifest;
 import org.chs.camlauncher.front.controller.DownloadsController;
 import org.chs.camlauncher.ui.control.CamlButton;
@@ -423,6 +424,32 @@ final class DownloadVersionSetupView extends VBox {
             return;
         }
 
+        download.setDisable(true);
+        cancel.setDisable(true);
+        controller.checkInstanceName(gameDirectory, instanceId,
+                check -> {
+                    if (!check.available()) {
+                        download.setDisable(false);
+                        cancel.setDisable(false);
+                        showStatus(check.message(), true);
+                        return;
+                    }
+                    beginDownload(version, controller, launchSettings, cancel, download,
+                            instanceId, gameDirectory, forge, fabricLoader, fabricApi,
+                            optiFine, neoForge);
+                },
+                message -> {
+                    download.setDisable(false);
+                    cancel.setDisable(false);
+                    showStatus("检查实例名失败：" + message, true);
+                });
+    }
+
+    private void beginDownload(VersionManifest.Version version, DownloadsController controller,
+                               LaunchSettings launchSettings, CamlButton cancel, CamlButton download,
+                               String instanceId, Path gameDirectory, ForgeVersion forge,
+                               FabricLoaderVersion fabricLoader, FabricApiVersion fabricApi,
+                               OptiFineVersion optiFine, NeoForgeVersion neoForge) {
         cancel.setDisable(true);
         downloading = true;
         instanceNameField.setDisable(true);

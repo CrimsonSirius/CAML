@@ -131,6 +131,7 @@ public final class VersionInstaller {
             DownloadListener listener
     ) throws IOException, InterruptedException {
         instanceId = validateInstanceId(instanceId);
+        InstanceNameRules.ensureNewInstance(gameDirectory, instanceId);
         Objects.requireNonNull(versionJson, "versionJson");
         return complete(instanceId, gameDirectory, versionJson, listener, true);
     }
@@ -222,25 +223,7 @@ public final class VersionInstaller {
     }
 
     private static String validateInstanceId(String instanceId) {
-        String value = Objects.requireNonNull(instanceId, "instanceId").trim();
-        if (value.isEmpty()) {
-            throw new IllegalArgumentException("实例名字不能为空");
-        }
-        if (value.equals(".") || value.equals("..")) {
-            throw new IllegalArgumentException("实例名字不能是 . 或 ..");
-        }
-        if (value.endsWith(".") || value.endsWith(" ")) {
-            throw new IllegalArgumentException("实例名字不能以点或空格结尾");
-        }
-
-        String invalidChars = "<>:\"/\\|?*";
-        for (int index = 0; index < value.length(); index++) {
-            char character = value.charAt(index);
-            if (Character.isISOControl(character) || invalidChars.indexOf(character) >= 0) {
-                throw new IllegalArgumentException("实例名字包含非法字符: " + character);
-            }
-        }
-        return value;
+        return InstanceNameRules.validate(instanceId);
     }
 
     /**

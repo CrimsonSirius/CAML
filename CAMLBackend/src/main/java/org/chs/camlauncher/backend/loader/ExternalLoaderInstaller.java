@@ -9,6 +9,7 @@ import org.chs.camlauncher.backend.download.source.OfficialDownloadSource;
 import org.chs.camlauncher.backend.download.DownloadListener;
 import org.chs.camlauncher.backend.download.FileDownloader;
 import org.chs.camlauncher.backend.instance.InstalledVersion;
+import org.chs.camlauncher.backend.instance.InstanceNameRules;
 import org.chs.camlauncher.backend.instance.VersionInstaller;
 import org.chs.camlauncher.backend.metadata.MetadataService;
 import org.chs.camlauncher.backend.runtime.JavaLocator;
@@ -77,19 +78,17 @@ public final class ExternalLoaderInstaller {
         Objects.requireNonNull(gameVersion, "gameVersion");
         Objects.requireNonNull(installerUri, "installerUri");
         Objects.requireNonNull(gameDirectory, "gameDirectory");
-        String normalizedInstanceId = validateInstanceId(instanceId);
+        String normalizedInstanceId = InstanceNameRules.validate(instanceId);
         if (normalizedInstanceId.equals(gameVersion)) {
             throw new IllegalArgumentException(
                     "安装 " + loaderName + " 时实例名不能与游戏版本号相同");
         }
 
+        InstanceNameRules.ensureNewInstance(gameDirectory, normalizedInstanceId);
         Path targetVersionDirectory = gameDirectory
                 .resolve("versions")
                 .resolve(normalizedInstanceId)
                 .normalize();
-        if (Files.exists(targetVersionDirectory)) {
-            throw new IOException("实例目录已存在: " + targetVersionDirectory);
-        }
 
         InstalledVersion base = versionInstaller.install(
                 gameVersion,
@@ -326,24 +325,4 @@ public final class ExternalLoaderInstaller {
         }
     }
 
-    private static String validateInstanceId(String instanceId) {
-        String value = Objects.requireNonNull(instanceId, "instanceId").trim();
-        if (value.isEmpty()) {
-            throw new IllegalArgumentException("实例名字不能为空");
-        }
-        if (value.equals(".") || value.equals("..")) {
-            throw new IllegalArgumentException("实例名字不能是 . 或 ..");
-        }
-        if (value.endsWith(".") || value.endsWith(" ")) {
-            throw new IllegalArgumentException("实例名字不能以点或空格结尾");
-        }
-        String invalidChars = "<>:\"/\\|?*";
-        for (int index = 0; index < value.length(); index++) {
-            char character = value.charAt(index);
-            if (Character.isISOControl(character) || invalidChars.indexOf(character) >= 0) {
-                throw new IllegalArgumentException("实例名字包含非法字符: " + character);
-            }
-        }
-        return value;
-    }
 }

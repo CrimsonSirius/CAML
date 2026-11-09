@@ -16,6 +16,8 @@ import org.chs.camlauncher.backend.download.plan.DownloadPlanner;
 import org.chs.camlauncher.backend.download.FileDownloader;
 import org.chs.camlauncher.backend.instance.GameDataLayout;
 import org.chs.camlauncher.backend.instance.InstalledVersion;
+import org.chs.camlauncher.backend.instance.InstanceNameCheck;
+import org.chs.camlauncher.backend.instance.InstanceNameRules;
 import org.chs.camlauncher.backend.instance.VersionIsolationMode;
 import org.chs.camlauncher.backend.instance.VersionInstaller;
 import org.chs.camlauncher.backend.json.JsonService;
@@ -365,6 +367,7 @@ public final class CAMLBackend implements AutoCloseable {
             DownloadListener listener
     ) throws java.io.IOException, InterruptedException {
         Objects.requireNonNull(gameDirectory, "gameDirectory");
+        InstanceNameRules.ensureNewInstance(gameDirectory, instanceId);
         return versionInstaller.install(
                 versionId,
                 instanceId,
@@ -373,6 +376,10 @@ public final class CAMLBackend implements AutoCloseable {
                 config.dataDirectory().resolve("cache").resolve("version_manifest_v2.json"),
                 listener
         );
+    }
+
+    public InstanceNameCheck checkInstanceName(Path gameDirectory, String instanceId) {
+        return InstanceNameRules.check(gameDirectory, instanceId);
     }
 
     public List<FabricLoaderVersion> fetchFabricLoaderVersions(String gameVersion)
