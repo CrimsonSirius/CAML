@@ -35,6 +35,7 @@ import java.util.zip.ZipFile;
 public final class ExternalLoaderInstaller {
     private static final long INSTALL_TIMEOUT_MINUTES = 20;
     private static final int OUTPUT_LIMIT = 64 * 1024;
+    private static final int INSTALL_ATTEMPTS = 2;
 
     private final VersionInstaller versionInstaller;
     private final JavaLocator javaLocator;
@@ -118,12 +119,18 @@ public final class ExternalLoaderInstaller {
             ), listener);
 
             String installedVersionId = readInstallerVersionId(installerJar);
-            runInstaller(loaderName, java, installerJar, staging);
-
             Path installedVersionDirectory = staging.resolve("versions").resolve(installedVersionId);
+            String installerOutput = "";
+            for (int attempt = 0; attempt < INSTALL_ATTEMPTS; attempt++) {
+                installerOutput = runInstaller(loaderName, java, installerJar, staging);
+                if (Files.isDirectory(installedVersionDirectory)) {
+                    break;
+                }
+            }
             if (!Files.isDirectory(installedVersionDirectory)) {
                 throw new IOException(
-                        loaderName + " 安装器没有生成版本目录: " + installedVersionDirectory);
+                        loaderName + " 安装器没有生成版本目录: " + installedVersionDirectory
+                                + "\n安装器输出:\n" + installerOutput);
             }
 
             mergeLibraries(staging.resolve("libraries"), gameDirectory.resolve("libraries"));
@@ -165,7 +172,7 @@ public final class ExternalLoaderInstaller {
         );
     }
 
-    private static void runInstaller(
+    private static String runInstaller(
             String loaderName,
             JavaRuntime java,
             Path installerJar,
@@ -207,6 +214,7 @@ public final class ExternalLoaderInstaller {
             throw new IOException(loaderName + " 安装器失败，退出码 "
                     + process.exitValue() + "\n" + tail(output));
         }
+        return tail(output);
     }
 
     private static void captureOutput(Process process, StringBuilder output) {

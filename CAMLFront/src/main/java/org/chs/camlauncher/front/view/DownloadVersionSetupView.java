@@ -14,6 +14,7 @@ import org.chs.camlauncher.backend.loader.fabric.FabricLoaderVersion;
 import org.chs.camlauncher.backend.loader.forge.ForgeVersion;
 import org.chs.camlauncher.backend.loader.neoforge.NeoForgeVersion;
 import org.chs.camlauncher.backend.loader.optifine.OptiFineVersion;
+import org.chs.camlauncher.backend.loader.optifine.OptiFineCompatibility;
 import org.chs.camlauncher.backend.metadata.model.VersionManifest;
 import org.chs.camlauncher.front.controller.DownloadsController;
 import org.chs.camlauncher.ui.control.CamlButton;
@@ -161,6 +162,14 @@ final class DownloadVersionSetupView extends VBox {
             if (updatingLoaders || forge == null) {
                 return;
             }
+            OptiFineVersion optiFine = optiFineSelector.getValue();
+            if (optiFine != null && !OptiFineCompatibility.isForgeCompatible(forge, optiFine)) {
+                clearSelection(optiFineSelector, "当前 Forge 与 OptiFine 不兼容");
+                updateOptiFineState();
+                autoUpdateInstanceName(forge.versionId());
+                showStatus(OptiFineCompatibility.incompatibleMessage(forge, optiFine), true);
+                return;
+            }
             updatingLoaders = true;
             clearSelection(fabricLoaderSelector, "请选择 Fabric 版本");
             clearSelection(fabricApiSelector, "请先选择 Fabric 版本");
@@ -168,7 +177,8 @@ final class DownloadVersionSetupView extends VBox {
             updatingLoaders = false;
             updateFabricApiState();
             updateOptiFineState();
-            autoUpdateInstanceName(forge.versionId());
+            autoUpdateInstanceName(forge.versionId()
+                    + (optiFine == null ? "" : "-optifine-" + optiFine.version()));
         });
     }
 
@@ -196,6 +206,22 @@ final class DownloadVersionSetupView extends VBox {
             if (forge == null) {
                 clearSelection(optiFineSelector, "请先选择 Forge 版本");
                 return;
+            }
+            if (!OptiFineCompatibility.isForgeCompatible(forge, optiFine)) {
+                ForgeVersion compatible = forgeSelector.getItems().stream()
+                        .filter(candidate -> OptiFineCompatibility.isForgeCompatible(candidate, optiFine))
+                        .findFirst()
+                        .orElse(null);
+                if (compatible == null) {
+                    clearSelection(optiFineSelector, "没有兼容当前 Forge 的 OptiFine 版本");
+                    showStatus(OptiFineCompatibility.incompatibleMessage(forge, optiFine), true);
+                    return;
+                }
+                updatingLoaders = true;
+                forgeSelector.setValue(compatible);
+                updatingLoaders = false;
+                forge = compatible;
+                showStatus("Forge 与 OptiFine 不兼容，已自动切换 Forge " + compatible.version(), false);
             }
             autoUpdateInstanceName(forge.versionId() + "-optifine-" + optiFine.version());
         });
@@ -385,6 +411,10 @@ final class DownloadVersionSetupView extends VBox {
         NeoForgeVersion neoForge = neoForgeSelector.getValue();
         if (optiFine != null && forge == null) {
             showStatus("OptiFine 只能与 Forge 一起安装。", true);
+            return;
+        }
+        if (optiFine != null && !OptiFineCompatibility.isForgeCompatible(forge, optiFine)) {
+            showStatus(OptiFineCompatibility.incompatibleMessage(forge, optiFine), true);
             return;
         }
         boolean loaderSelected = forge != null || fabricLoader != null || neoForge != null;

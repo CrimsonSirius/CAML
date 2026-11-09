@@ -82,6 +82,7 @@ CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
 - Forge/NeoForge 通过官方 installer 的 `--installClient` 在 staging 目录执行 processor，再合并 libraries 和版本目录。
 - OptiFine 按下载源选择官方下载页或 BMCLAPI 获取版本和 installer；先安装 Forge，再调用 OptiFine
   官方 installer 的 `doInstall` 生成补丁库，最后把 OptiFine 库和启动参数合并进 Forge 版本 JSON。
+- OptiFine I6 与 Forge 47.4.27+ 存在 `ResourceLocation.parse` 冲突；选择 OptiFine 时限制并自动切换到兼容的 Forge 版本。
 - OptiFine 只允许与 Forge 组合；选择 Fabric/NeoForge 时 OptiFine 选项会被清空并禁用。
 - `CAMLBackend.inspectGameDirectory` 扫描 `versions/<id>/<id>.json`，返回已安装版本和隔离版本列表。
 

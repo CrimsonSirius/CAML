@@ -52,7 +52,9 @@ public final class ClasspathBuilder {
             }
         }
 
-        classpath.add(plan.instance().clientJar().toAbsolutePath().normalize());
+        if (!usesBootstrapLauncher(plan.manifest().mainClass())) {
+            classpath.add(plan.instance().clientJar().toAbsolutePath().normalize());
+        }
         return List.copyOf(classpath);
     }
 
@@ -69,5 +71,10 @@ public final class ClasspathBuilder {
         }
         String classifier = parts[3].toLowerCase(java.util.Locale.ROOT);
         return classifier.startsWith("natives-") || classifier.contains("-natives-");
+    }
+
+    private static boolean usesBootstrapLauncher(String mainClass) {
+        return mainClass != null
+                && mainClass.startsWith("cpw.mods.bootstraplauncher.BootstrapLauncher");
     }
 }

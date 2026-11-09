@@ -107,6 +107,10 @@ public final class OptiFineInstaller {
         Objects.requireNonNull(forgeVersion, "forgeVersion");
         Objects.requireNonNull(optiFineVersion, "optiFineVersion");
         Objects.requireNonNull(gameDirectory, "gameDirectory");
+        if (!OptiFineCompatibility.isForgeCompatible(forgeVersion, optiFineVersion)) {
+            throw new IllegalArgumentException(
+                    OptiFineCompatibility.incompatibleMessage(forgeVersion, optiFineVersion));
+        }
 
         InstalledVersion base = versionInstaller.install(
                 gameVersion,
