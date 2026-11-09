@@ -2,6 +2,9 @@ package org.chs.camlauncher.backend.metadata;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.chs.camlauncher.backend.download.source.DownloadSource;
+import org.chs.camlauncher.backend.download.source.DownloadSources;
+import org.chs.camlauncher.backend.download.source.OfficialDownloadSource;
 import org.chs.camlauncher.backend.metadata.model.VersionInfo;
 import org.chs.camlauncher.backend.metadata.model.VersionManifest;
 
@@ -16,6 +19,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.time.Duration;
+import java.util.List;
 import java.util.Objects;
 
 public final class VersionManifestService {
@@ -27,6 +31,7 @@ public final class VersionManifestService {
 
     private final HttpClient httpClient;
     private final MetadataService metadata;
+    private volatile List<DownloadSource> sources = List.of(OfficialDownloadSource.INSTANCE);
 
     public VersionManifestService() {
         this(defaultClient(), new MetadataService());
@@ -41,8 +46,12 @@ public final class VersionManifestService {
         return fetchManifest(DEFAULT_MANIFEST_URI);
     }
 
+    public void setSources(List<DownloadSource> sources) {
+        this.sources = List.copyOf(Objects.requireNonNull(sources, "sources"));
+    }
+
     public VersionManifest fetchManifest(URI uri) throws IOException, InterruptedException {
-        return metadata.parseVersionManifest(fetchText(uri));
+        return metadata.parseVersionManifest(fetchTextFromSources(uri));
     }
 
     public VersionInfo fetchVersionInfo(VersionManifest.Version version) throws IOException, InterruptedException {
@@ -50,29 +59,36 @@ public final class VersionManifestService {
     }
 
     public VersionInfo fetchVersionInfo(URI uri) throws IOException, InterruptedException {
-        return metadata.parseVersionInfo(fetchText(uri));
+        return metadata.parseVersionInfo(fetchTextFromSources(uri));
     }
 
     public String fetchVersionJson(VersionManifest.Version version) throws IOException, InterruptedException {
         if (version.url() == null || version.url().isBlank()) {
             throw new IOException("Version has no metadata URL: " + version.id());
         }
-        return fetchText(URI.create(version.url()));
+        return fetchTextFromSources(URI.create(version.url()));
     }
 
     public VersionManifest fetchManifestOrCache(URI uri, Path cacheFile)
             throws IOException, InterruptedException {
-        try {
-            String text = fetchText(uri);
-            writeCache(cacheFile, text);
-            return metadata.parseVersionManifest(text);
-        } catch (IOException e) {
-            if (Files.isRegularFile(cacheFile)) {
-                LOGGER.warn("Failed to fetch version manifest, using cache: {}", cacheFile, e);
-                return metadata.readVersionManifest(cacheFile);
+        IOException lastFailure = null;
+        for (URI candidate : DownloadSources.candidates(sources, uri.toString())) {
+            try {
+                String text = fetchText(candidate);
+                writeCache(cacheFile, text);
+                return metadata.parseVersionManifest(text);
+            } catch (IOException e) {
+                lastFailure = e;
+                LOGGER.warn("Failed to fetch version manifest from {}, trying next source", candidate, e);
             }
-            throw e;
         }
+        if (Files.isRegularFile(cacheFile)) {
+            LOGGER.warn("Failed to fetch version manifest, using cache: {}", cacheFile, lastFailure);
+            return metadata.readVersionManifest(cacheFile);
+        }
+        throw lastFailure == null
+                ? new IOException("No download source available for version manifest")
+                : lastFailure;
     }
 
     public VersionManifest loadCachedManifest(Path cacheFile) throws IOException {
@@ -93,6 +109,21 @@ public final class VersionManifestService {
             throw new IOException("HTTP " + response.statusCode() + " for " + uri);
         }
         return response.body();
+    }
+
+    private String fetchTextFromSources(URI uri) throws IOException, InterruptedException {
+        IOException lastFailure = null;
+        for (URI candidate : DownloadSources.candidates(sources, uri.toString())) {
+            try {
+                return fetchText(candidate);
+            } catch (IOException e) {
+                lastFailure = e;
+                LOGGER.warn("Failed to fetch metadata from {}, trying next source", candidate, e);
+            }
+        }
+        throw lastFailure == null
+                ? new IOException("No download source available for " + uri)
+                : lastFailure;
     }
 
     private static void writeCache(Path cacheFile, String text) throws IOException {

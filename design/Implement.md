@@ -86,7 +86,7 @@ CAML
 - `DownloadExecutor` 使用有界线程池并发下载，并发数为 1–256（默认 8）。
 - 下载并发数持久化到 `~/.caml/settings.properties`，并同时用于实例安装和启动前补文件。
 - 下载源支持镜像、官方和自定义镜像根地址；镜像源默认使用 BMCLAPI，失败时回退原始官方地址；
-  同时用于原版文件、资源、Forge/NeoForge installer 和 Fabric API 下载。
+  同时用于版本清单、版本 JSON、原版文件、资源、Forge/NeoForge installer 和 Fabric API 下载。
 - 已有有效文件时跳过。
 
 ### 3.4 版本安装
@@ -172,7 +172,7 @@ CAML
 - `MainView` 只负责应用壳层、导航和页面宿主；页面与表单拆分为独立视图类。
 - 主页由 `HomeView` 组合 `LaunchFormView` 与 `LogPaneView`；设置页由
   `SettingsView` 组合 `GameSettingsView` 与 `LauncherSettingsView`；
-  `DownloadsView` 负责下载页侧边栏和内部页面，`DownloadVersionsView` 负责正式版列表，
+  `DownloadsView` 负责下载页侧边栏和内部页面，`DownloadVersionsView` 负责分类版本列表，
   `DownloadVersionSetupView` 负责实例命名和加载器选择。
 - `LaunchSettings` 共享主页和设置页的游戏位置、版本隔离和最大内存值，`ViewSupport` 提供通用布局工具。
 - 游戏位置从主页移除；设置页新增“游戏位置”圆角分组，包含路径输入、浏览和保存。
@@ -209,9 +209,9 @@ CAML
 - 启动按钮固定在表单底部，字段区域独立滚动。
 - 表单标签位于控件上方。
 - 顶栏主导航提供“主页 / 下载 / 设置”，主页为当前启动界面。
-- 下载页侧边栏提供“添加游戏实例”胶囊；`DownloadVersionsView` 通过后端异步获取官方
-  版本清单，只保留 `type=release`，按 `releaseTime` 从新到旧排列。
-- 点击正式版后进入 `DownloadVersionSetupView`，页面由版本信息、Forge、OptiFine、Fabric、
+- 下载页侧边栏提供“正式版 / 快照版 / 远古版”胶囊；`DownloadVersionsView` 通过后端异步获取官方
+  版本清单，分别保留 `type=release`、`type=snapshot` 和 `old_alpha/old_beta`，按 `releaseTime` 从新到旧排列。
+- 点击任一版本后进入 `DownloadVersionSetupView`，页面由版本信息、Forge、OptiFine、Fabric、
   Fabric API、NeoForge 六条组成；顶部实例名输入框默认官方版本号。OptiFine
   只有选择 Forge 后才可用，选择 Fabric/NeoForge 会清空并禁用。Fabric Loader
   从 Fabric Meta 获取，Fabric API 从 Modrinth 获取，Forge/NeoForge 从各自 Maven
@@ -371,7 +371,7 @@ PATH=/usr/lib/jvm/zulu-25/bin:$PATH \
   - 远程原版安装使用自定义实例 ID。
   - 已安装版本/隔离版本目录探测。
   - PCL/HMCL 版本隔离自动判定、显式完全隔离/不隔离和设置持久化。
-  - 官方正式版过滤、发布时间排序和快照排除。
+  - 正式版、快照版和远古版过滤及发布时间排序。
   - 下载被截断后的重试。
   - Minecraft Log4j XML 事件转换为原版日志风格。
   - NeoForge 26.2 + Vulkan 的 `earlyWindowControl` 兼容修复。

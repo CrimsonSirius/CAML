@@ -62,7 +62,8 @@ final class DownloadVersionSetupView extends VBox {
         loadLoaderVersions(version.id(), controller);
 
         String date = ViewSupport.releaseDate(version.releaseTime());
-        String versionInfo = "Minecraft " + version.id() + " · 正式版"
+        String versionInfo = "Minecraft " + version.id() + " · "
+                + VersionCategory.labelOfType(version.type())
                 + (date.isBlank() ? "" : " · " + date);
 
         VBox options = new VBox(12,

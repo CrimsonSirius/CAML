@@ -16,13 +16,18 @@ import org.chs.camlauncher.ui.control.CamlButton;
 import java.util.List;
 import java.util.function.Consumer;
 
-/** 下载页中的正式版列表。 */
+/** 下载页中的版本列表。 */
 final class DownloadVersionsView extends VBox {
-    private final Label statusLabel = new Label("正在从官方源获取正式版列表...");
+    private final VersionCategory category;
+    private final Label statusLabel;
     private final ScrollPane scroll = new ScrollPane();
 
     DownloadVersionsView(DownloadsController controller,
+                         VersionCategory category,
                          Consumer<VersionManifest.Version> onVersionSelected) {
+        this.category = category;
+        statusLabel = new Label("正在从" + controller.downloadSourceLabel()
+                + "获取" + category.label() + "列表...");
         getStyleClass().add("app-download-content");
         setPadding(new Insets(32, 40, 32, 40));
         setSpacing(16);
@@ -38,16 +43,19 @@ final class DownloadVersionsView extends VBox {
         VBox.setVgrow(scroll, Priority.ALWAYS);
 
         getChildren().addAll(statusLabel, scroll);
-        controller.fetchReleaseVersions(
-                versions -> showVersions(versions, onVersionSelected),
-                this::showError
-        );
+        Consumer<List<VersionManifest.Version>> onLoaded =
+                versions -> showVersions(versions, onVersionSelected);
+        switch (category) {
+            case RELEASE -> controller.fetchReleaseVersions(onLoaded, this::showError);
+            case SNAPSHOT -> controller.fetchSnapshotVersions(onLoaded, this::showError);
+            case OLD -> controller.fetchOldVersions(onLoaded, this::showError);
+        }
     }
 
     private void showVersions(List<VersionManifest.Version> versions,
                               Consumer<VersionManifest.Version> onVersionSelected) {
         if (versions.isEmpty()) {
-            statusLabel.setText("官方源没有返回可下载的正式版");
+            statusLabel.setText("下载源没有返回可下载的" + category.label());
             return;
         }
 
@@ -77,11 +85,12 @@ final class DownloadVersionsView extends VBox {
             list.getChildren().add(item);
         }
         scroll.setContent(list);
-        statusLabel.setText("共 " + versions.size() + " 个正式版，按发布时间从新到旧排列");
+        statusLabel.setText("共 " + versions.size() + " 个" + category.label()
+                + "，按发布时间从新到旧排列");
     }
 
     private void showError(String message) {
-        statusLabel.setText("获取官方版本列表失败：" + message);
+        statusLabel.setText("获取" + category.label() + "列表失败：" + message);
         statusLabel.getStyleClass().remove("field-hint");
         statusLabel.getStyleClass().add("field-hint-error");
     }
