@@ -6,14 +6,19 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.zip.GZIPOutputStream;
 
-/** UI 日志的 latest.log：正常运行关闭时销毁，发生错误时保留。 */
+/** UI 日志的 latest.log：每次关闭保留，发生错误时额外保存压缩历史。 */
 public final class LatestLogService implements AutoCloseable {
+    private static final DateTimeFormatter ARCHIVE_TIME =
+            DateTimeFormatter.ofPattern("yyyy-MM-dd-HH-mm-ss");
     private final Path logFile;
     private final Object lock = new Object();
     private final ExecutorService writer = Executors.newSingleThreadExecutor(runnable -> {
@@ -83,6 +88,7 @@ public final class LatestLogService implements AutoCloseable {
     private static boolean containsFailure(String line) {
         String lower = line.toLowerCase(Locale.ROOT);
         return line.contains("[FATAL]")
+                || line.contains("[ERR]")
                 || line.contains("启动失败")
                 || line.contains("下载失败")
                 || line.contains("安装失败")
@@ -108,13 +114,9 @@ public final class LatestLogService implements AutoCloseable {
                     }
                     output = null;
                 }
-                if (!failed) {
-                    try {
-                        Files.deleteIfExists(logFile);
-                    } catch (IOException ignored) {
-                        // 删除失败时保留文件，不影响退出。
-                    }
-                }
+            }
+            if (failed) {
+                persistCompressedCopy();
             }
         });
         writer.shutdown();
@@ -130,5 +132,24 @@ public final class LatestLogService implements AutoCloseable {
 
     public Path logFile() {
         return logFile;
+    }
+
+    private void persistCompressedCopy() {
+        if (!Files.isRegularFile(logFile)) {
+            return;
+        }
+        Path parent = logFile.toAbsolutePath().getParent();
+        String base = "latest-" + LocalDateTime.now().format(ARCHIVE_TIME);
+        Path target = parent.resolve(base + ".log.gz");
+        int index = 1;
+        while (Files.exists(target)) {
+            target = parent.resolve(base + "-" + index++ + ".log.gz");
+        }
+        try (var input = Files.newInputStream(logFile);
+             var output = new GZIPOutputStream(Files.newOutputStream(target))) {
+            input.transferTo(output);
+        } catch (IOException ignored) {
+            // 归档失败不能影响退出。
+        }
     }
 }

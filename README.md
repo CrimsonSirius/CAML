@@ -220,7 +220,7 @@ CAMLBackend/src/main/resources/themes/mango.css
 |---|---|
 | 启动器数据 | `~/.caml` |
 | 版本清单缓存 | `~/.caml/cache/version_manifest_v2.json` |
-| 启动器 UI 日志 | `~/.caml/logs/latest.log`（正常关闭删除；启动器错误或游戏异常退出时保留） |
+| 启动器 UI 日志 | `~/.caml/logs/latest.log`（每次关闭刷新保留；启动器错误、游戏 `[ERR]` 或异常退出时额外生成 `.log.gz`） |
 | 外部主题 | `~/.caml/themes/*.css` |
 | 当前主题 | `~/.caml/theme.txt` |
 | 启动器设置 | `~/.caml/settings.properties` |
