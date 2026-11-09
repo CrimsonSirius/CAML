@@ -9,13 +9,16 @@ import org.chs.camlauncher.backend.download.source.OfficialDownloadSource;
 import org.chs.camlauncher.backend.instance.InstalledVersion;
 import org.chs.camlauncher.backend.instance.InstanceNameRules;
 import org.chs.camlauncher.backend.instance.VersionInstaller;
+import org.chs.camlauncher.backend.io.SafePaths;
 
 import java.io.IOException;
 import java.net.URI;
+import java.nio.file.Files;
 import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Objects;
+import java.util.stream.Stream;
 
 /** 原版 + Fabric Loader + 可选 Fabric API 的安装编排。 */
 public final class FabricInstaller {
@@ -50,7 +53,6 @@ public final class FabricInstaller {
             String loaderVersion,
             FabricApiVersion apiVersion,
             Path gameDirectory,
-            boolean fullVersionIsolation,
             DownloadListener listener
     ) throws IOException, InterruptedException {
         Objects.requireNonNull(gameVersion, "gameVersion");
@@ -63,33 +65,42 @@ public final class FabricInstaller {
         }
         InstanceNameRules.ensureNewInstance(gameDirectory, normalizedInstanceId);
 
-        versionInstaller.install(
-                gameVersion,
-                gameVersion,
-                gameDirectory,
-                manifestUri,
-                manifestCacheFile,
-                listener
-        );
+        Path targetVersionDirectory = SafePaths.resolveChild(
+                gameDirectory.resolve("versions"), normalizedInstanceId, "version id");
+        try {
+            versionInstaller.install(
+                    gameVersion,
+                    gameVersion,
+                    gameDirectory,
+                    manifestUri,
+                    manifestCacheFile,
+                    listener
+            );
 
-        String profileJson = fabricService.fetchLoaderProfile(gameVersion, loaderVersion);
-        InstalledVersion installed = versionInstaller.installProfile(
-                normalizedInstanceId,
-                gameDirectory,
-                profileJson,
-                listener
-        );
+            String profileJson = fabricService.fetchLoaderProfile(gameVersion, loaderVersion);
+            InstalledVersion installed = versionInstaller.installProfile(
+                    normalizedInstanceId,
+                    gameDirectory,
+                    profileJson,
+                    listener
+            );
 
-        if (apiVersion != null) {
-            Path modsDirectory = fullVersionIsolation
-                    ? gameDirectory.resolve("versions").resolve(normalizedInstanceId).resolve("mods")
-                    : gameDirectory.resolve("mods");
-            downloadApi(apiVersion, modsDirectory, listener);
+            if (apiVersion != null) {
+                Path versionMods = targetVersionDirectory.resolve("mods");
+                Path apiFile = downloadApi(apiVersion, versionMods, listener);
+                Path rootMods = gameDirectory.resolve("mods");
+                Path rootApiFile = SafePaths.resolveChild(
+                        rootMods, apiFile.getFileName().toString(), "Fabric API file");
+                copyIfDifferent(apiFile, rootApiFile);
+            }
+            return installed;
+        } catch (IOException | RuntimeException | InterruptedException e) {
+            deleteRecursively(targetVersionDirectory);
+            throw e;
         }
-        return installed;
     }
 
-    private void downloadApi(FabricApiVersion apiVersion, Path modsDirectory, DownloadListener listener)
+    private Path downloadApi(FabricApiVersion apiVersion, Path modsDirectory, DownloadListener listener)
             throws IOException, InterruptedException {
         String filename;
         try {
@@ -111,5 +122,33 @@ public final class FabricInstaller {
                 apiVersion.sha1(),
                 apiVersion.size()
         ), listener);
+        return destination;
+    }
+
+    private static void copyIfDifferent(Path source, Path target) throws IOException {
+        if (Files.isRegularFile(target)
+                && Files.size(source) == Files.size(target)
+                && Files.mismatch(source, target) == -1) {
+            return;
+        }
+        Files.createDirectories(target.getParent());
+        Files.copy(source, target, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+    }
+
+    private static void deleteRecursively(Path root) {
+        if (root == null || !Files.exists(root)) {
+            return;
+        }
+        try (Stream<Path> paths = Files.walk(root)) {
+            for (Path path : paths.sorted((left, right) -> right.compareTo(left)).toList()) {
+                try {
+                    Files.deleteIfExists(path);
+                } catch (IOException ignored) {
+                    // 保留原始安装异常。
+                }
+            }
+        } catch (IOException ignored) {
+            // 保留原始安装异常。
+        }
     }
 }

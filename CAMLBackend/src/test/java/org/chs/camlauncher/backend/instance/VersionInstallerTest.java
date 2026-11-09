@@ -19,6 +19,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.net.URI;
+import java.net.http.HttpClient;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -29,6 +30,8 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class VersionInstallerTest {
@@ -240,6 +243,34 @@ class VersionInstallerTest {
                 gameDirectory.resolve("versions/1.20.1/1.20.1.jar").toAbsolutePath().normalize(),
                 installed.clientJar().toAbsolutePath().normalize()
         );
+    }
+
+    @Test
+    void removesNewInstanceDirectoryWhenInstallationFails() throws Exception {
+        String versionJson = """
+                {
+                  "id": "failed-instance",
+                  "mainClass": "example.Main",
+                  "downloads": {
+                    "client": {
+                      "sha1": "bad-sha1",
+                      "size": 1,
+                      "url": "http://127.0.0.1:1/client.jar"
+                    }
+                  }
+                }
+                """;
+        VersionInstaller installer = new VersionInstaller(
+                new MetadataService(),
+                new VersionManifestService(),
+                new DownloadPlanner(),
+                new AssetDownloadPlanner(),
+                new FileDownloader(HttpClient.newHttpClient(), 1)
+        );
+
+        assertThrows(IOException.class, () -> installer.installProfile(
+                "failed-instance", gameDirectory, versionJson, DownloadListener.NONE));
+        assertFalse(Files.exists(gameDirectory.resolve("versions/failed-instance")));
     }
 
     private static void respond(HttpExchange exchange, byte[] content) throws IOException {

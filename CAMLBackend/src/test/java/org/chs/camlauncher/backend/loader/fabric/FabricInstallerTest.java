@@ -117,7 +117,6 @@ class FabricInstallerTest {
                     "test-loader",
                     api,
                     gameDirectory,
-                    true,
                     DownloadListener.NONE
             );
 
@@ -130,6 +129,8 @@ class FabricInstallerTest {
                             "libraries/org/example/fabric-lib/1.0/fabric-lib-1.0.jar")));
             assertArrayEquals(apiContent, Files.readAllBytes(
                     gameDirectory.resolve("versions/fabric-test/mods/fabric-api.jar")));
+            assertArrayEquals(apiContent, Files.readAllBytes(
+                    gameDirectory.resolve("mods/fabric-api.jar")));
 
             LaunchPlan plan = new LaunchPlanner().create(
                     installed,

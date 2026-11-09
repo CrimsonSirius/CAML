@@ -149,7 +149,6 @@ public final class DownloadsController {
             String loaderVersion,
             FabricApiVersion apiVersion,
             Path gameDirectory,
-            boolean fullVersionIsolation,
             Runnable onSuccess,
             Consumer<String> onError
     ) {
@@ -160,7 +159,6 @@ public final class DownloadsController {
                         loaderVersion,
                         apiVersion,
                         gameDirectory,
-                        fullVersionIsolation,
                         DownloadListener.NONE
                 ))
                 .thenAccept(installed -> {

@@ -4,6 +4,7 @@ import org.chs.camlauncher.backend.launch.LaunchPlan;
 import org.chs.camlauncher.backend.metadata.model.AssetIndexFile;
 import org.chs.camlauncher.backend.metadata.model.AssetObject;
 import org.chs.camlauncher.backend.metadata.MetadataService;
+import org.chs.camlauncher.backend.io.SafePaths;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -42,20 +43,21 @@ public final class VirtualAssetInstaller {
         }
 
         Path assetsRoot = plan.instance().assetsDirectory();
-        Path virtualRoot = assetsRoot.resolve("virtual").resolve(assetId);
+        Path virtualRoot = SafePaths.resolveChild(assetsRoot.resolve("virtual"), assetId, "asset id");
         for (Map.Entry<String, AssetObject> entry : index.objects().entrySet()) {
             AssetObject object = entry.getValue();
             if (object.hash() == null || object.hash().length() < 2) {
                 continue;
             }
 
-            Path source = assetsRoot
-                    .resolve("objects")
-                    .resolve(object.hash().substring(0, 2))
-                    .resolve(object.hash());
-            copy(source, virtualRoot.resolve(entry.getKey()));
+            Path source = SafePaths.resolveUnder(
+                    assetsRoot.resolve("objects"),
+                    object.hash().substring(0, 2) + "/" + object.hash(),
+                    "asset object");
+            copy(source, SafePaths.resolveUnder(virtualRoot, entry.getKey(), "virtual asset"));
             if (index.mapToResources()) {
-                copy(source, plan.gameDirectory().resolve("resources").resolve(entry.getKey()));
+                copy(source, SafePaths.resolveUnder(
+                        plan.gameDirectory().resolve("resources"), entry.getKey(), "legacy asset"));
             }
         }
         return plan.withAssetsDirectory(virtualRoot);

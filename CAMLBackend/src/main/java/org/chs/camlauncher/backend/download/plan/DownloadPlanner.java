@@ -13,6 +13,7 @@ import org.chs.camlauncher.backend.download.source.DownloadSource;
 import org.chs.camlauncher.backend.download.source.DownloadSources;
 import org.chs.camlauncher.backend.download.source.OfficialDownloadSource;
 import org.chs.camlauncher.backend.runtime.JavaRuntimeParser;
+import org.chs.camlauncher.backend.io.SafePaths;
 
 import java.nio.file.Path;
 import java.util.LinkedHashMap;
@@ -58,12 +59,13 @@ public final class DownloadPlanner {
 
     public DownloadPlan plan(VersionInfo version, Path gameDirectory, String clientJarId) {
         Map<Path, DownloadItem> items = new LinkedHashMap<>();
-        Path clientJarDirectory = gameDirectory.resolve("versions").resolve(clientJarId);
+        Path versionsDirectory = gameDirectory.resolve("versions");
+        Path clientJarDirectory = SafePaths.resolveChild(versionsDirectory, clientJarId, "client jar id");
 
         DownloadInfo client = version.downloads().get("client");
         if (client != null) {
             add(items, "client " + clientJarId, client,
-                    clientJarDirectory.resolve(clientJarId + ".jar"));
+                    SafePaths.resolveChild(clientJarDirectory, clientJarId + ".jar", "client jar"));
         }
 
         for (Library library : version.libraries()) {
@@ -97,7 +99,10 @@ public final class DownloadPlanner {
         if (assetIndex != null) {
             add(items, "asset-index " + assetIndex.id(),
                     new DownloadInfo(null, assetIndex.sha1(), assetIndex.size(), assetIndex.url()),
-                    gameDirectory.resolve("assets").resolve("indexes").resolve(assetIndex.id() + ".json"));
+                    SafePaths.resolveChild(
+                            gameDirectory.resolve("assets").resolve("indexes"),
+                            assetIndex.id() + ".json",
+                            "asset index"));
         }
 
         LoggingInfo logging = version.logging().get("client");
@@ -109,7 +114,10 @@ public final class DownloadPlanner {
             }
             if (fileName != null && !fileName.isBlank()) {
                 add(items, "log-config " + fileName, file,
-                        gameDirectory.resolve("assets").resolve("log_configs").resolve(fileName));
+                        SafePaths.resolveChild(
+                                gameDirectory.resolve("assets").resolve("log_configs"),
+                                fileName,
+                                "log config"));
             }
         }
 
@@ -127,7 +135,7 @@ public final class DownloadPlanner {
                 LibraryArtifact.sha1(library),
                 LibraryArtifact.size(library),
                 url
-        ), gameDirectory.resolve("libraries").resolve(path));
+        ), SafePaths.resolveUnder(gameDirectory.resolve("libraries"), path, "legacy library"));
     }
 
     private void add(Map<Path, DownloadItem> items, String label, DownloadInfo info, Path destination) {
@@ -147,7 +155,7 @@ public final class DownloadPlanner {
         if (info.path() == null || info.path().isBlank()) {
             return null;
         }
-        return gameDirectory.resolve("libraries").resolve(info.path());
+        return SafePaths.resolveUnder(gameDirectory.resolve("libraries"), info.path(), "library");
     }
 
     private static String fileNameFromUrl(String url) {

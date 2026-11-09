@@ -12,7 +12,9 @@ import org.chs.camlauncher.backend.download.source.DownloadSource;
 import org.chs.camlauncher.backend.download.source.DownloadSources;
 import org.chs.camlauncher.backend.download.source.OfficialDownloadSource;
 import org.chs.camlauncher.backend.instance.InstalledVersion;
+import org.chs.camlauncher.backend.instance.InstanceNameRules;
 import org.chs.camlauncher.backend.instance.VersionInstaller;
+import org.chs.camlauncher.backend.io.SafePaths;
 import org.chs.camlauncher.backend.loader.ExternalLoaderInstaller;
 import org.chs.camlauncher.backend.loader.forge.ForgeVersion;
 import org.chs.camlauncher.backend.runtime.JavaLocator;
@@ -40,6 +42,7 @@ import java.util.stream.Stream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 import java.util.zip.ZipOutputStream;
+import java.util.zip.ZipFile;
 
 /**
  * 在 Forge 实例上安装 OptiFine。
@@ -104,6 +107,27 @@ public final class OptiFineInstaller {
             Path gameDirectory,
             DownloadListener listener
     ) throws IOException, InterruptedException {
+        Objects.requireNonNull(gameDirectory, "gameDirectory");
+        InstanceNameRules.ensureNewInstance(gameDirectory, instanceId);
+        Path targetVersionDirectory = SafePaths.resolveChild(
+                gameDirectory.resolve("versions"), instanceId, "version id");
+        try {
+            return installInternal(
+                    gameVersion, instanceId, forgeVersion, optiFineVersion, gameDirectory, listener);
+        } catch (IOException | RuntimeException | InterruptedException e) {
+            deleteRecursively(targetVersionDirectory);
+            throw e;
+        }
+    }
+
+    private InstalledVersion installInternal(
+            String gameVersion,
+            String instanceId,
+            ForgeVersion forgeVersion,
+            OptiFineVersion optiFineVersion,
+            Path gameDirectory,
+            DownloadListener listener
+    ) throws IOException, InterruptedException {
         Objects.requireNonNull(forgeVersion, "forgeVersion");
         Objects.requireNonNull(optiFineVersion, "optiFineVersion");
         Objects.requireNonNull(gameDirectory, "gameDirectory");
@@ -143,7 +167,7 @@ public final class OptiFineInstaller {
                     installer,
                     null,
                     -1
-            ), listener);
+            ), listener, OptiFineInstaller::validateInstallerArchive);
 
             prepareStaging(staging, gameVersion, base);
             runInstaller(java, installer, staging);
@@ -180,6 +204,14 @@ public final class OptiFineInstaller {
         }
         Files.writeString(staging.resolve("launcher_profiles.json"),
                 "{\"profiles\":{},\"settings\":{}}\n", StandardCharsets.UTF_8);
+    }
+
+    private static void validateInstallerArchive(Path installer) throws IOException {
+        try (ZipFile zip = new ZipFile(installer.toFile())) {
+            if (zip.getEntry("optifine/Installer.class") == null) {
+                throw new IOException("OptiFine installer 缺少 optifine/Installer.class: " + installer);
+            }
+        }
     }
 
     private static void runInstaller(JavaRuntime java, Path installer, Path staging)

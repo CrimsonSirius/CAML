@@ -24,7 +24,10 @@ final class DownloadSettingsView extends VBox {
     private final CamlRadioButton officialSource;
     private final CamlRadioButton customSource;
     private final CamlTextField customApiField;
+    private final IntConsumer onConcurrencyChanged;
     private final BiConsumer<DownloadSourceMode, String> onSourceChanged;
+    private boolean concurrencySavePending;
+    private boolean apiSavePending;
     private final PauseTransition saveDebounce = new PauseTransition(Duration.millis(300));
     private final PauseTransition apiDebounce = new PauseTransition(Duration.millis(500));
 
@@ -35,6 +38,7 @@ final class DownloadSettingsView extends VBox {
             String initialCustomApi,
             BiConsumer<DownloadSourceMode, String> onSourceChanged
     ) {
+        this.onConcurrencyChanged = onConcurrencyChanged;
         this.onSourceChanged = onSourceChanged;
         int initial = Math.max(
                 SettingsService.MIN_DOWNLOAD_CONCURRENCY,
@@ -55,11 +59,14 @@ final class DownloadSettingsView extends VBox {
         concurrencyValue.setMaxWidth(Double.MAX_VALUE);
         updateValue(initial);
 
-        saveDebounce.setOnFinished(event ->
-                onConcurrencyChanged.accept(concurrencySlider.getValue()));
+        saveDebounce.setOnFinished(event -> {
+            concurrencySavePending = false;
+            onConcurrencyChanged.accept(concurrencySlider.getValue());
+        });
         concurrencySlider.valueProperty().addListener((observable, oldValue, newValue) -> {
             int value = newValue.intValue();
             updateValue(value);
+            concurrencySavePending = true;
             saveDebounce.playFromStart();
         });
 
@@ -94,12 +101,15 @@ final class DownloadSettingsView extends VBox {
             saveSource(mode);
         });
         apiDebounce.setOnFinished(event -> {
+            apiSavePending = false;
             if (customSource.isSelected()) {
                 saveSource(DownloadSourceMode.CUSTOM);
             }
         });
-        customApiField.textProperty().addListener((observable, oldValue, newValue) ->
-                apiDebounce.playFromStart());
+        customApiField.textProperty().addListener((observable, oldValue, newValue) -> {
+            apiSavePending = true;
+            apiDebounce.playFromStart();
+        });
         customApiField.focusedProperty().addListener((observable, oldValue, focused) -> {
             if (!focused && customSource.isSelected()) {
                 saveSource(DownloadSourceMode.CUSTOM);
@@ -110,8 +120,25 @@ final class DownloadSettingsView extends VBox {
     }
 
     private void saveSource(DownloadSourceMode mode) {
+        apiSavePending = false;
         apiDebounce.stop();
         onSourceChanged.accept(mode, customApiField.getText().trim());
+    }
+
+    /** 关闭前立即提交仍在防抖窗口内的并发数和自定义 API 修改。 */
+    void flushPendingSaves() {
+        if (concurrencySavePending) {
+            concurrencySavePending = false;
+            saveDebounce.stop();
+            onConcurrencyChanged.accept(concurrencySlider.getValue());
+        }
+        if (apiSavePending) {
+            apiSavePending = false;
+            apiDebounce.stop();
+            if (customSource.isSelected()) {
+                saveSource(DownloadSourceMode.CUSTOM);
+            }
+        }
     }
 
     private void buildLayout() {

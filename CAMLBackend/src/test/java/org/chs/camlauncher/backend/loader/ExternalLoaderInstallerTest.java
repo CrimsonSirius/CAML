@@ -9,12 +9,14 @@ import org.chs.camlauncher.backend.instance.InstalledVersion;
 import org.chs.camlauncher.backend.instance.VersionInstaller;
 import org.chs.camlauncher.backend.metadata.MetadataService;
 import org.chs.camlauncher.backend.metadata.VersionManifestService;
+import org.chs.camlauncher.backend.metadata.model.VersionInfo;
 import org.chs.camlauncher.backend.runtime.JavaLocator;
 import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import java.io.InputStream;
+import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
@@ -27,6 +29,7 @@ import java.util.jar.Manifest;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ExternalLoaderInstallerTest {
@@ -100,6 +103,38 @@ class ExternalLoaderInstallerTest {
         } finally {
             server.stop(0);
         }
+    }
+
+    @org.junit.jupiter.api.Test
+    void rejectsInstalledResultWithMissingRequiredLibrary() throws Exception {
+        VersionInfo manifest = new MetadataService().parseVersionInfo("""
+                {
+                  "id": "forge-instance",
+                  "mainClass": "example.Main",
+                  "libraries": [{
+                    "name": "org.example:missing:1.0",
+                    "downloads": {
+                      "artifact": {
+                        "path": "org/example/missing/1.0/missing-1.0.jar"
+                      }
+                    }
+                  }]
+                }
+                """);
+        InstalledVersion installed = new InstalledVersion(
+                "forge-instance",
+                manifest,
+                gameDirectory,
+                gameDirectory.resolve("versions/forge-instance"),
+                gameDirectory.resolve("versions/forge-instance/forge-instance.json"),
+                gameDirectory.resolve("versions/1.20.1/1.20.1.jar"),
+                gameDirectory.resolve("libraries"),
+                gameDirectory.resolve("assets"),
+                null
+        );
+
+        assertThrows(IOException.class,
+                () -> ExternalLoaderInstaller.verifyInstalledLibraries("Forge", installed));
     }
 
     private static void createFakeInstallerJar(Path jar) throws Exception {

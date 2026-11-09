@@ -160,6 +160,55 @@ class FileDownloaderTest {
         }
     }
 
+    @Test
+    void fallsBackToNextCandidateWhenContentValidatorRejectsFirst() throws Exception {
+        byte[] bad = "not an installer".getBytes(StandardCharsets.UTF_8);
+        byte[] good = "valid installer".getBytes(StandardCharsets.UTF_8);
+        AtomicInteger firstRequests = new AtomicInteger();
+        AtomicInteger secondRequests = new AtomicInteger();
+        HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        server.createContext("/first.jar", exchange -> {
+            firstRequests.incrementAndGet();
+            exchange.sendResponseHeaders(200, bad.length);
+            try (OutputStream output = exchange.getResponseBody()) {
+                output.write(bad);
+            }
+        });
+        server.createContext("/second.jar", exchange -> {
+            secondRequests.incrementAndGet();
+            exchange.sendResponseHeaders(200, good.length);
+            try (OutputStream output = exchange.getResponseBody()) {
+                output.write(good);
+            }
+        });
+        server.start();
+
+        try {
+            String base = "http://127.0.0.1:" + server.getAddress().getPort();
+            Path destination = tempDirectory.resolve("installer.jar");
+            DownloadItem item = new DownloadItem(
+                    "installer",
+                    List.of(URI.create(base + "/first.jar"), URI.create(base + "/second.jar")),
+                    destination,
+                    null,
+                    -1
+            );
+
+            new FileDownloader().download(item, DownloadListener.NONE,
+                    file -> {
+                        if (!Files.readString(file).equals("valid installer")) {
+                            throw new IOException("invalid installer content");
+                        }
+                    });
+
+            assertArrayEquals(good, Files.readAllBytes(destination));
+            assertEquals(1, firstRequests.get());
+            assertEquals(1, secondRequests.get());
+        } finally {
+            server.stop(0);
+        }
+    }
+
     private static String sha1(byte[] content) {
         try {
             Path temporary = Files.createTempFile("caml-test-", ".bin");

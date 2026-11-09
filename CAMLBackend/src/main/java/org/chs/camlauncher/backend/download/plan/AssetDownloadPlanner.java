@@ -7,6 +7,7 @@ import org.chs.camlauncher.backend.download.model.DownloadPlan;
 import org.chs.camlauncher.backend.download.source.DownloadSource;
 import org.chs.camlauncher.backend.download.source.DownloadSources;
 import org.chs.camlauncher.backend.download.source.OfficialDownloadSource;
+import org.chs.camlauncher.backend.io.SafePaths;
 
 import java.nio.file.Path;
 import java.util.LinkedHashMap;
@@ -39,14 +40,14 @@ public final class AssetDownloadPlanner {
         Map<Path, DownloadItem> items = new LinkedHashMap<>();
         for (AssetObject object : index.objects().values()) {
             String hash = object.hash();
-            if (hash.length() < 2) {
-                continue;
+            if (hash == null || !hash.matches("[0-9a-fA-F]{40}")) {
+                throw new IllegalArgumentException("非法 asset hash: " + hash);
             }
 
-            Path destination = assetsDirectory
-                    .resolve("objects")
-                    .resolve(hash.substring(0, 2))
-                    .resolve(hash);
+            Path destination = SafePaths.resolveUnder(
+                    assetsDirectory.resolve("objects"),
+                    hash.substring(0, 2) + "/" + hash,
+                    "asset object");
             String url = baseUrl + hash.substring(0, 2) + "/" + hash;
             items.putIfAbsent(destination.toAbsolutePath().normalize(), new DownloadItem(
                     "asset " + hash,

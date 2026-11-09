@@ -12,6 +12,7 @@ import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
 /**
@@ -48,10 +49,15 @@ final class ControllerContext {
     }
 
     void sendLog(String log) {
+        backend.appendUiLog(log);
         Consumer<String> current = logSink;
         if (current != null) {
             Platform.runLater(() -> current.accept(log));
         }
+    }
+
+    void markFailure() {
+        backend.markUiFailure();
     }
 
     <T> CompletableFuture<T> supplyAsync(IoSupplier<T> supplier) {
@@ -101,7 +107,15 @@ final class ControllerContext {
 
     void shutdown() {
         downloadExecutor.shutdownNow();
-        settingsExecutor.shutdownNow();
+        settingsExecutor.shutdown();
+        try {
+            if (!settingsExecutor.awaitTermination(5, TimeUnit.SECONDS)) {
+                settingsExecutor.shutdownNow();
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            settingsExecutor.shutdownNow();
+        }
     }
 
     @FunctionalInterface

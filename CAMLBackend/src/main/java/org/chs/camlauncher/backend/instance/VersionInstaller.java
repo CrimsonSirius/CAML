@@ -14,6 +14,7 @@ import org.chs.camlauncher.backend.metadata.MetadataService;
 import org.chs.camlauncher.backend.metadata.model.VersionInfo;
 import org.chs.camlauncher.backend.metadata.model.VersionManifest;
 import org.chs.camlauncher.backend.metadata.VersionManifestService;
+import org.chs.camlauncher.backend.io.SafePaths;
 
 import java.io.IOException;
 import java.net.URI;
@@ -25,6 +26,7 @@ import java.nio.file.StandardCopyOption;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.stream.Stream;
 
 public final class VersionInstaller {
     private final MetadataService metadata;
@@ -118,7 +120,7 @@ public final class VersionInstaller {
                                 + " (本地未安装，官方版本清单中也不存在该版本 ID)"));
 
         String versionJson = manifestService.fetchVersionJson(remoteVersion);
-        return complete(instanceId, gameDirectory, versionJson, listener, true);
+        return completeNewInstance(instanceId, gameDirectory, versionJson, listener);
     }
 
     /**
@@ -133,7 +135,26 @@ public final class VersionInstaller {
         instanceId = validateInstanceId(instanceId);
         InstanceNameRules.ensureNewInstance(gameDirectory, instanceId);
         Objects.requireNonNull(versionJson, "versionJson");
-        return complete(instanceId, gameDirectory, versionJson, listener, true);
+        return completeNewInstance(instanceId, gameDirectory, versionJson, listener);
+    }
+
+    private InstalledVersion completeNewInstance(
+            String instanceId,
+            Path gameDirectory,
+            String versionJson,
+            DownloadListener listener
+    ) throws IOException, InterruptedException {
+        Path versionDirectory = SafePaths.resolveChild(
+                gameDirectory.resolve("versions"), instanceId, "version id");
+        boolean existed = Files.exists(versionDirectory);
+        try {
+            return complete(instanceId, gameDirectory, versionJson, listener, true);
+        } catch (IOException | RuntimeException | InterruptedException e) {
+            if (!existed) {
+                deleteRecursively(versionDirectory);
+            }
+            throw e;
+        }
     }
 
     /**
@@ -151,13 +172,15 @@ public final class VersionInstaller {
         VersionInfo parsed = metadata.parseVersionInfo(versionJson);
         VersionInfo resolved = resolve(parsed, gameDirectory, versionId);
 
-        Path versionDirectory = gameDirectory.resolve("versions").resolve(versionId);
-        Path versionFile = versionDirectory.resolve(versionId + ".json");
+        Path versionsDirectory = gameDirectory.resolve("versions");
+        Path versionDirectory = SafePaths.resolveChild(versionsDirectory, versionId, "version id");
+        Path versionFile = SafePaths.resolveChild(
+                versionDirectory, versionId + ".json", "version json");
         String clientJarId = resolveClientJarId(parsed, resolved, versionDirectory, versionId);
-        Path clientJar = gameDirectory
-                .resolve("versions")
-                .resolve(clientJarId)
-                .resolve(clientJarId + ".jar");
+        Path clientJarDirectory = SafePaths.resolveChild(
+                versionsDirectory, clientJarId, "client jar id");
+        Path clientJar = SafePaths.resolveChild(
+                clientJarDirectory, clientJarId + ".jar", "client jar");
         Path librariesDirectory = gameDirectory.resolve("libraries");
         Path assetsDirectory = gameDirectory.resolve("assets");
 
@@ -165,7 +188,10 @@ public final class VersionInstaller {
 
         Path assetIndexFile = null;
         if (resolved.assetIndex() != null) {
-            assetIndexFile = assetsDirectory.resolve("indexes").resolve(resolved.assetIndex().id() + ".json");
+            assetIndexFile = SafePaths.resolveChild(
+                    assetsDirectory.resolve("indexes"),
+                    resolved.assetIndex().id() + ".json",
+                    "asset index");
             AssetIndexFile index = metadata.readAssetIndex(assetIndexFile);
             downloadPlan(assetDownloadPlanner.plan(index, assetsDirectory), listener);
         }
@@ -189,7 +215,9 @@ public final class VersionInstaller {
 
     /** @return {@code versions/<id>/<id>.json} 的标准路径 */
     private static Path versionFile(String versionId, Path gameDirectory) {
-        return gameDirectory.resolve("versions").resolve(versionId).resolve(versionId + ".json");
+        Path versionsDirectory = gameDirectory.resolve("versions");
+        Path versionDirectory = SafePaths.resolveChild(versionsDirectory, versionId, "version id");
+        return SafePaths.resolveChild(versionDirectory, versionId + ".json", "version json");
     }
 
     private void downloadPlan(DownloadPlan plan, DownloadListener listener)
@@ -215,7 +243,7 @@ public final class VersionInstaller {
         if (parsed.jar() != null && !parsed.jar().isBlank()) {
             return parsed.jar();
         }
-        Path ownJar = versionDirectory.resolve(versionId + ".jar");
+        Path ownJar = SafePaths.resolveChild(versionDirectory, versionId + ".jar", "client jar");
         if (Files.isRegularFile(ownJar)) {
             return versionId;
         }
@@ -281,6 +309,23 @@ public final class VersionInstaller {
             }
         } finally {
             Files.deleteIfExists(temporary);
+        }
+    }
+
+    private static void deleteRecursively(Path root) {
+        if (root == null || !Files.exists(root)) {
+            return;
+        }
+        try (Stream<Path> paths = Files.walk(root)) {
+            for (Path path : paths.sorted((left, right) -> right.compareTo(left)).toList()) {
+                try {
+                    Files.deleteIfExists(path);
+                } catch (IOException ignored) {
+                    // 失败清理不能覆盖原始安装异常。
+                }
+            }
+        } catch (IOException ignored) {
+            // 失败清理不能覆盖原始安装异常。
         }
     }
 }

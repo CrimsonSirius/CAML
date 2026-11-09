@@ -262,8 +262,9 @@ CAML
 
 ### 3.13 日志
 
-- Log4j 控制台输出。
-- 文件日志：`~/.caml/logs/caml.log`。
+- Log4j 只输出到控制台，不再持久化 `caml.log`。
+- UI 日志写入 `~/.caml/logs/latest.log`，每次关闭刷新保留；启动器报错、游戏 `[ERR]` 或非零退出时
+  额外生成带时间戳的 `.log.gz` 历史日志。
 - 游戏进程的 Log4j `LegacyXMLLayout` 输出会转换为
   `[HH:mm:ss] [线程/级别]: 消息`，异常堆栈保留后续行；界面不再显示 `[OUT]` 前缀。
 

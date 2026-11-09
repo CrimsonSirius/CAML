@@ -12,6 +12,7 @@ import java.nio.file.Path;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class AssetDownloadPlannerTest {
@@ -44,5 +45,26 @@ class AssetDownloadPlannerTest {
                 "https://resources.download.minecraft.net/01/0123456789abcdef0123456789abcdef01234567",
                 item.candidates().getFirst().toString()
         );
+    }
+
+    @Test
+    void rejectsInvalidAssetHash() {
+        AssetIndexFile index = new MetadataService().parseAssetIndex("""
+                {
+                  "objects": {
+                    "minecraft/sounds/click.ogg": {
+                      "hash": "../../outside",
+                      "size": 42
+                    }
+                  }
+                }
+                """);
+
+        AssetDownloadPlanner planner = new AssetDownloadPlanner(
+                List.of(OfficialDownloadSource.INSTANCE),
+                "https://resources.download.minecraft.net/"
+        );
+
+        assertThrows(IllegalArgumentException.class, () -> planner.plan(index, assetsDirectory));
     }
 }

@@ -18,6 +18,7 @@ import org.chs.camlauncher.backend.instance.GameDataLayout;
 import org.chs.camlauncher.backend.instance.InstalledVersion;
 import org.chs.camlauncher.backend.instance.InstanceNameCheck;
 import org.chs.camlauncher.backend.instance.InstanceNameRules;
+import org.chs.camlauncher.backend.log.LatestLogService;
 import org.chs.camlauncher.backend.instance.VersionIsolationMode;
 import org.chs.camlauncher.backend.instance.VersionInstaller;
 import org.chs.camlauncher.backend.json.JsonService;
@@ -98,6 +99,7 @@ public final class CAMLBackend implements AutoCloseable {
     private final ThemeService themeService;
     private final SettingsService settingsService;
     private final SystemMemoryService systemMemoryService;
+    private final LatestLogService latestLogService;
     private volatile int downloadConcurrency = DownloadConcurrency.DEFAULT;
     private volatile DownloadSourceMode downloadSourceMode = SettingsService.DEFAULT_DOWNLOAD_SOURCE;
     private volatile String customDownloadApi = "";
@@ -158,6 +160,8 @@ public final class CAMLBackend implements AutoCloseable {
         this.themeService = new ThemeService(config.dataDirectory());
         this.settingsService = new SettingsService(config.dataDirectory());
         this.systemMemoryService = new SystemMemoryService();
+        this.latestLogService = new LatestLogService(
+                config.dataDirectory().resolve("logs").resolve("latest.log"));
         this.gameLaunchService = new GameLaunchService(
                 config.gameDirectory(),
                 VersionManifestService.DEFAULT_MANIFEST_URI,
@@ -180,6 +184,7 @@ public final class CAMLBackend implements AutoCloseable {
         try {
             BackendPaths.ensure(config);
             themeService.ensureDefaultTheme();
+            latestLogService.start();
         } catch (IOException e) {
             throw new UncheckedIOException("Failed to prepare CAML directories", e);
         }
@@ -209,6 +214,14 @@ public final class CAMLBackend implements AutoCloseable {
 
     public BackendStatus status() {
         return new BackendStatus(started, VERSION, config.dataDirectory(), config.gameDirectory());
+    }
+
+    public void appendUiLog(String line) {
+        latestLogService.append(line);
+    }
+
+    public void markUiFailure() {
+        latestLogService.markFailure();
     }
 
     public JsonService json() {
@@ -398,7 +411,6 @@ public final class CAMLBackend implements AutoCloseable {
             String loaderVersion,
             FabricApiVersion apiVersion,
             Path gameDirectory,
-            boolean fullVersionIsolation,
             DownloadListener listener
     ) throws IOException, InterruptedException {
         return fabricInstaller.install(
@@ -407,7 +419,6 @@ public final class CAMLBackend implements AutoCloseable {
                 loaderVersion,
                 apiVersion,
                 gameDirectory,
-                fullVersionIsolation,
                 listener
         );
     }
@@ -652,5 +663,6 @@ public final class CAMLBackend implements AutoCloseable {
             started = false;
             LOGGER.info("CAML backend stopped");
         }
+        latestLogService.close();
     }
 }
