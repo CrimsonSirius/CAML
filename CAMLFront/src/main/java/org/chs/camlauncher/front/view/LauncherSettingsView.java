@@ -9,7 +9,7 @@ import org.chs.camlauncher.ui.control.CamlComboBox;
 import java.util.List;
 import java.util.function.Consumer;
 
-/** 设置页中的“启动器设置”。 */
+/** 设置页中的“外观”。 */
 final class LauncherSettingsView extends VBox {
     private final CamlComboBox<ThemeInfo> themeBox;
 
@@ -18,8 +18,8 @@ final class LauncherSettingsView extends VBox {
         themeBox.setMaxWidth(Double.MAX_VALUE);
         themeBox.setAccessibleText("主题");
 
-        Label heading = new Label("启动器设置");
-        heading.getStyleClass().add("caml-title-large");
+        Label heading = new Label("外观");
+        heading.getStyleClass().add("app-settings-group-title");
 
         Label description = new Label("调整启动器自身的外观。");
         description.getStyleClass().addAll("caml-body-medium", "caml-on-surface-muted");
@@ -29,15 +29,17 @@ final class LauncherSettingsView extends VBox {
         themeHint.getStyleClass().addAll("caml-body-small", "field-hint");
         themeHint.setWrapText(true);
 
+        VBox group = new VBox(16, heading, description,
+                ViewSupport.buildField("主题", themeBox, themeHint));
+        group.getStyleClass().add("app-settings-group");
+        group.setMaxWidth(Double.MAX_VALUE);
+
         setSpacing(20);
         setMinWidth(0);
         setPrefWidth(560);
         setMaxWidth(560);
         getStyleClass().add("app-settings-content");
-        getChildren().addAll(
-                new VBox(6, heading, description),
-                ViewSupport.buildField("主题", themeBox, themeHint)
-        );
+        getChildren().add(group);
     }
 
     void configureThemes(List<ThemeInfo> themes, ThemeInfo active, Consumer<ThemeInfo> onSelected) {

@@ -21,7 +21,7 @@ class ThemeServiceTest {
 
         service.ensureDefaultTheme();
 
-        Path theme = dataDirectory.resolve("themes").resolve("default.css");
+        Path theme = dataDirectory.resolve("themes").resolve("mango.css");
         assertTrue(Files.isRegularFile(theme));
         assertTrue(Files.readString(theme).contains("-caml-background: #ffffff"));
     }
@@ -37,7 +37,7 @@ class ThemeServiceTest {
 
         List<String> ids = service.listThemes().stream().map(ThemeInfo::id).toList();
 
-        assertEquals(List.of("a", "default", "z"), ids);
+        assertEquals(List.of("a", "mango", "z"), ids);
     }
 
     @Test
@@ -62,7 +62,7 @@ class ThemeServiceTest {
     void existingDefaultThemeIsNotOverwritten() throws Exception {
         ThemeService service = new ThemeService(dataDirectory);
         service.ensureDefaultTheme();
-        Path theme = dataDirectory.resolve("themes").resolve("default.css");
+        Path theme = dataDirectory.resolve("themes").resolve("mango.css");
         Files.writeString(theme, "my custom default");
 
         service.ensureDefaultTheme();

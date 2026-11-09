@@ -216,7 +216,7 @@ CAML
   只有选择 Forge 后才可用，选择 Fabric/NeoForge 会清空并禁用。Fabric Loader
   从 Fabric Meta 获取，Fabric API 从 Modrinth 获取，Forge/NeoForge 从各自 Maven
   获取；三种加载器互斥，选择后自动更新实例默认名。底部“下载实例”安装原版或所选加载器。
-- 设置页侧边栏提供“游戏设置 / 下载设置 / 启动器设置”。
+- 设置页侧边栏提供“游戏设置 / 下载设置 / 外观”。
 - 下载设置包含“下载源”和“设定下载并发数”两个圆角组。下载源提供镜像/官方/自定义
   三个单选项；自定义输入框只在自定义模式可用，切换源后禁用但保留已输入地址。
   下载并发数使用 1–256 整数滑块，文字大小与游戏设置一致。
@@ -225,7 +225,7 @@ CAML
 - 游戏位置、版本隔离和内存三个分组按设置内容区宽度拉齐，组内灰色辅助文字统一放大，
   内存摘要保持单行显示。版本隔离组使用 `CamlRadioButton` 提供“完全版本隔离”和
   “不进行版本隔离”两个单选项；选择立即同步到共享状态并异步持久化。
-- 启动器设置提供主题选择；主题切换立即生效。
+- 外观设置使用圆角组承载主题选择；主题切换立即生效。
 - 设置页不显示页面标题或说明，侧边栏从顶栏底部铺到页脚，只用右侧分隔线。
 - 设置子项选中时为不透明橙黄底、白字；未选中时为橙黄边框、橙黄字、透明填充。
 - 内存分配滑块使用 `CamlMemorySlider`，同一条轨道分两层渲染：
@@ -244,17 +244,17 @@ CAML
   `CamlPageHost`、`CamlSideNav` 和 `CamlSideNavItem`。
 - 主题入口：`CamlTheme.install(scene)` 和 `CamlTheme.applyTheme(scene, path)`。
 - 结构样式：`CAMLUI/src/main/resources/org/chs/camlauncher/ui/caml.css`，不含固定配色。
-- 默认主题：`CAMLBackend/src/main/resources/themes/default.css`，白底黄灰白配色。
-- 启动器设置中的主题下拉框列出 `~/.caml/themes` 中的 CSS 文件并保存选择。
+- 默认主题 mango：`CAMLBackend/src/main/resources/themes/mango.css`，白底黄灰白配色。
+- 外观设置中的主题下拉框列出 `~/.caml/themes` 中的 CSS 文件并保存选择。
 - 布局样式：`CAMLFront/src/main/resources/styles/app.css`。
 
 ### 3.12 外部主题
 
 - 启动器本体不定义固定主题。
-- 首次启动由 `ThemeService` 把默认主题复制到 `~/.caml/themes/default.css`。
+- 首次启动由 `ThemeService` 把默认主题 mango 复制到 `~/.caml/themes/mango.css`。
 - 主题文件是普通 JavaFX CSS，覆盖 `.caml-root` 下的 `-caml-*` 颜色令牌。
 - 主题选择写入 `~/.caml/theme.txt`，无效选择回退到默认主题。
-- 用户修改或新增主题文件后，重启即可在启动器设置的主题下拉框中看到。
+- 用户修改或新增主题文件后，重启即可在外观设置的主题下拉框中看到。
 
 ### 3.13 日志
 

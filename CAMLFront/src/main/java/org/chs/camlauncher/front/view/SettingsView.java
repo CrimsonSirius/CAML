@@ -20,7 +20,7 @@ import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.IntConsumer;
 
-/** 设置页：左侧子导航，右侧游戏/下载/启动器设置内容。 */
+/** 设置页：左侧子导航，右侧游戏/下载/外观设置内容。 */
 final class SettingsView extends VBox implements SidebarPage {
     private static final boolean REDUCE_MOTION = Boolean.getBoolean("caml.reduceMotion");
 
@@ -49,7 +49,7 @@ final class SettingsView extends VBox implements SidebarPage {
         sideNav.setMaxHeight(Double.MAX_VALUE);
         CamlSideNavItem gameItem = new CamlSideNavItem("游戏设置");
         CamlSideNavItem downloadItem = new CamlSideNavItem("下载设置");
-        CamlSideNavItem launcherItem = new CamlSideNavItem("启动器设置");
+        CamlSideNavItem launcherItem = new CamlSideNavItem("外观");
         sideNav.addItem(gameItem);
         sideNav.addItem(downloadItem);
         sideNav.addItem(launcherItem);

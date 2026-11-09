@@ -173,7 +173,7 @@ CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
   OptiFine 只有在选择 Forge 后才可用，底部按钮通过后端安装原版或加载器游戏。
 - `GameSettingsView` 负责叠层内存滑块，`DownloadSettingsView` 负责下载源三选一、
   自定义 API 输入和 1–256 下载并发滑块，
-  `LauncherSettingsView` 负责主题选择。
+  `LauncherSettingsView` 负责外观设置中的主题选择。
 - `SystemMemoryService` 在 Linux 读取 `/proc/meminfo` 的 `MemAvailable`，避免把
   `MemFree` 误当成任务管理器显示的可用内存。
 - `SettingsController` 每 500ms 在后台线程读取一次系统内存，并通过 `Platform.runLater`
@@ -193,9 +193,9 @@ CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
 - 启动按钮固定在表单底部，字段过多时只滚动字段区域，主操作始终可见。
 - 顶栏只保留应用身份和“主页 / 下载 / 设置”主导航。
 - 主页承载启动设置和日志；下载页带“添加游戏实例”胶囊、正式版列表和原版下载设置页。
-- 设置页带“游戏设置 / 下载设置 / 启动器设置”子侧边栏，不显示页面标题或说明。
+- 设置页带“游戏设置 / 下载设置 / 外观”子侧边栏，不显示页面标题或说明。
 - 游戏设置使用内存滑块，线上方显示“游戏内存 / 可用内存 / 总内存”。
-- 启动器设置承载主题选择，切换后立即生效，不额外放保存按钮。
+- 外观设置使用圆角组承载主题选择，切换后立即生效，不额外放保存按钮。
 - 侧边栏不使用灰色背景，只用右侧分隔线；设置项选中时为橙黄实心胶囊，未选中时为橙黄描边胶囊。
 
 ### 3.12 CAMLUI 组件库与主题
@@ -204,11 +204,11 @@ CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
 - 不引入 JFoenix、AtlantaFX 等第三方主题库。
 - `caml.css` 只定义结构、字体层级、圆角、阴影和控件状态，不包含固定颜色。
 - `CamlTheme.install(scene)` 安装结构样式；`CamlTheme.applyTheme(scene, path)` 加载外部 CSS。
-- 主题文件位于 `~/.caml/themes/*.css`，设置 → 启动器设置提供主题选择器。
+- 主题文件位于 `~/.caml/themes/*.css`，设置 → 外观提供主题选择器。
 - 当前主题记录在 `~/.caml/theme.txt`，下次启动自动恢复。
 - 后端 `ThemeService` 负责扫描主题、首次复制默认主题和保存选择。
-- 默认主题作为 `CAMLBackend/src/main/resources/themes/default.css` 打包，
-  首次启动复制到 `~/.caml/themes/default.css`。
+- 默认主题 mango 作为 `CAMLBackend/src/main/resources/themes/mango.css` 打包，
+  首次启动复制到 `~/.caml/themes/mango.css`。
 - 默认主题使用白底、灰色表面、黄色强调色和深色文字。
 - 组件 API 包括 `CamlButton`、`CamlCard`、`CamlTextField`、`CamlTextArea`、
   `CamlComboBox`、`CamlSpinner`、`CamlSwitch`、`CamlCheckBox`、`CamlSlider`、

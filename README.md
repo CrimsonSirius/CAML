@@ -24,7 +24,7 @@ CAML 是一个基于 **Java 25 + JavaFX** 的 Minecraft 启动器，采用前后
 | Java | 扫描 `java.home`、`JAVA_HOME`、`PATH` 及常见 JDK 目录；读取版本、供应商、架构、位数；按版本要求选择运行时；Windows 优先 `javaw.exe` |
 | 启动 | 不可变 `LaunchPlan`、classpath 构建、JVM/游戏参数与 `${...}` 占位符、natives 子目录解压、Log4j 配置、旧版本 virtual assets 重建；NeoForge 26.2 + Vulkan 自动关闭 early window；根据设置选择，`--gameDir` 指向 `versions/<id>` 或 `.minecraft` 根目录 |
 | 进程 | `ProcessBuilder` 启动、工作目录与环境变量、stdout/stderr 转发、Minecraft Log4j XML 转原版日志风格、退出码回调、停止能力；命令行过长时自动回退 `@argfile` / manifest classpath jar；`LaunchException` 分类错误并提供中文提示 |
-| 界面 | CAML 组件库；外部 CSS 主题（`~/.caml/themes`）；顶部“主页 / 下载 / 设置”导航；窗口尺寸按主屏可用区域自适应并居中（小屏收缩、大屏限幅）；下载页“添加游戏实例”胶囊、官方正式版列表和下载设置页（实例名输入、版本信息、Forge/OptiFine/Fabric/Fabric API/NeoForge 选择条、底部原版或加载器下载按钮）；设置页“游戏设置 / 下载设置 / 启动器设置”侧边栏；“游戏位置”设置组（输入、浏览、显式保存）；“版本隔离”单选组；“下载源”三选一和自定义 API 输入；“设定下载并发数”滑块组；主页“浏览游戏实例”二级列表和“管理实例”空页；启动成功后记住最后启动实例并在下次启动恢复；叠层内存滑块（灰色=系统已使用+游戏分配，淡灰=未使用），每 0.5 秒刷新；游戏位置、版本隔离、下载源、下载并发数和内存设置持久化；宽屏左右分栏、窄屏上下堆叠 |
+| 界面 | CAML 组件库；外部 CSS 主题（`~/.caml/themes`）；顶部“主页 / 下载 / 设置”导航；窗口尺寸按主屏可用区域自适应并居中（小屏收缩、大屏限幅）；下载页“添加游戏实例”胶囊、官方正式版列表和下载设置页（实例名输入、版本信息、Forge/OptiFine/Fabric/Fabric API/NeoForge 选择条、底部原版或加载器下载按钮）；设置页“游戏设置 / 下载设置 / 外观”侧边栏；“游戏位置”设置组（输入、浏览、显式保存）；“版本隔离”单选组；“下载源”三选一和自定义 API 输入；“设定下载并发数”滑块组；“外观”设置组的主题选择；主页“浏览游戏实例”二级列表和“管理实例”空页；启动成功后记住最后启动实例并在下次启动恢复；叠层内存滑块（灰色=系统已使用+游戏分配，淡灰=未使用），每 0.5 秒刷新；游戏位置、版本隔离、下载源、下载并发数和内存设置持久化；宽屏左右分栏、窄屏上下堆叠 |
 
 ### 尚未实现
 
@@ -88,7 +88,7 @@ CAML/
 │  │     ├─ VersionIsolationSettingsView.java 版本隔离单选组
 │  │     ├─ InstancePickerView.java   游戏实例二级列表
 │  │     ├─ ManageInstancesView.java  管理实例空二级页
-│  │     ├─ LauncherSettingsView.java 启动器设置与主题
+│  │     ├─ LauncherSettingsView.java 外观设置与主题
 │  │     ├─ LaunchSettings.java       主页/设置页共享参数
 │  │     ├─ ViewSupport.java          通用布局工具
 │  │     └─ WorkspaceLayout.java      900px 断点布局规则
@@ -160,7 +160,7 @@ CAML/
 
 ```java
 CamlTheme.install(scene);
-CamlTheme.applyTheme(scene, Path.of(System.getProperty("user.home"), ".caml/themes/default.css"));
+CamlTheme.applyTheme(scene, Path.of(System.getProperty("user.home"), ".caml/themes/mango.css"));
 
 CamlCard card = new CamlCard(
         new Label("启动游戏"),
@@ -183,11 +183,11 @@ CamlCard card = new CamlCard(
 任何固定主题；打包时只携带一个白底默认主题：
 
 ```text
-CAMLBackend/src/main/resources/themes/default.css
+CAMLBackend/src/main/resources/themes/mango.css
 ```
 
-首次启动时，后端把默认主题复制到 `~/.caml/themes/default.css`。之后用户可以直接
-修改它，或新增其他 `.css` 文件。设置 → 启动器设置中的“主题”下拉框会列出主题目录中的文件，
+首次启动时，后端把默认主题 mango 复制到 `~/.caml/themes/mango.css`。之后用户可以直接
+修改它，或新增其他 `.css` 文件。设置 → 外观中的“主题”下拉框会列出主题目录中的文件，
 当前选择记录在 `~/.caml/theme.txt`。
 
 主题文件只需要覆盖 `.caml-root` 下的颜色令牌，例如：
