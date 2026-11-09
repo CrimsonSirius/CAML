@@ -21,7 +21,6 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Objects;
-import java.util.concurrent.CompletableFuture;
 
 /**
  * JavaFX 应用入口。
@@ -32,6 +31,7 @@ import java.util.concurrent.CompletableFuture;
 public final class CAMLApplication extends Application {
     private CAMLBackend backend;
     private MainController controller;
+    private MainView view;
     private Logger logger;
     private List<ThemeInfo> themes = List.of();
     private ThemeInfo activeTheme;
@@ -91,7 +91,7 @@ public final class CAMLApplication extends Application {
     public void start(Stage stage) {
         // 2. 组装 Controller 和 View
         controller = new MainController(backend);
-        MainView view = new MainView(
+        view = new MainView(
                 controller, savedMaxMemoryMb, systemMemory, gameDirectory,
                 fullVersionIsolation, lastLaunchedInstanceId);
 
@@ -146,18 +146,15 @@ public final class CAMLApplication extends Application {
             return;
         }
 
-        CompletableFuture.runAsync(() -> {
-            try {
-                backend.selectTheme(theme.id());
-            } catch (IOException e) {
-                logger.warn("保存主题选择失败: {}", theme.id(), e);
-            }
-        });
+        controller.settingsController().saveThemeAsync(theme.id());
     }
 
     @Override
     public void stop() {
-        // 5. 清理资源：先停前端后台线程，再关闭后端
+        // 5. 清理资源：先提交最后一次设置，再排空设置线程并关闭后端
+        if (view != null) {
+            view.flushPendingSettings();
+        }
         if (controller != null) {
             controller.shutdown();
         }

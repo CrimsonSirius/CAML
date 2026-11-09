@@ -116,6 +116,18 @@ public final class SettingsController {
         });
     }
 
+    /** 异步保存主题选择，确保关闭启动器时也能等待写入完成。 */
+    public void saveThemeAsync(String themeId) {
+        Objects.requireNonNull(themeId, "themeId");
+        context.executeSettings(() -> {
+            try {
+                context.backend().selectTheme(themeId);
+            } catch (IOException | RuntimeException e) {
+                LOGGER.warn("保存主题选择失败: {}", themeId, e);
+            }
+        });
+    }
+
     public void setOnDownloadSourceSaved(Runnable listener) {
         onDownloadSourceSaved = listener;
     }

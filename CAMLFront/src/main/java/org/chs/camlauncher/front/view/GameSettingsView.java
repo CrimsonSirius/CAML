@@ -16,12 +16,14 @@ import java.util.function.Consumer;
 final class GameSettingsView extends VBox {
     private final LaunchSettings launchSettings;
     private final SettingsController controller;
+    private final IntConsumer onMemoryChanged;
     private final Consumer<Boolean> onVersionIsolationChanged;
     private final CamlMemorySlider memorySlider;
     private final Label memorySummary;
     private long totalMemoryMb;
     private long availableMemoryMb;
     private int usedMemoryMb;
+    private boolean savePending;
     private final PauseTransition saveDebounce = new PauseTransition(Duration.millis(300));
 
     GameSettingsView(LaunchSettings launchSettings, IntConsumer onMemoryChanged,
@@ -29,6 +31,7 @@ final class GameSettingsView extends VBox {
                      SystemMemoryInfo systemMemory, SettingsController controller) {
         this.launchSettings = launchSettings;
         this.controller = controller;
+        this.onMemoryChanged = onMemoryChanged;
         this.onVersionIsolationChanged = onVersionIsolationChanged;
 
         totalMemoryMb = systemMemory.totalMb();
@@ -48,11 +51,15 @@ final class GameSettingsView extends VBox {
 
         launchSettings.setMaxMemoryMb(memorySlider.getValue());
         updateMemorySummary(memorySlider.getValue());
-        saveDebounce.setOnFinished(event -> onMemoryChanged.accept(launchSettings.maxMemoryMb()));
+        saveDebounce.setOnFinished(event -> {
+            savePending = false;
+            onMemoryChanged.accept(launchSettings.maxMemoryMb());
+        });
         memorySlider.valueProperty().addListener((observable, oldValue, newValue) -> {
             int memoryMb = newValue.intValue();
             launchSettings.setMaxMemoryMb(memoryMb);
             updateMemorySummary(memoryMb);
+            savePending = true;
             saveDebounce.playFromStart();
         });
 
@@ -67,6 +74,15 @@ final class GameSettingsView extends VBox {
                 Math.max(0, totalMemoryMb - availableMemoryMb));
         memorySlider.setUsedMemoryMb(usedMemoryMb);
         updateMemorySummary(memorySlider.getValue());
+    }
+
+    /** 关闭前立即提交仍在防抖窗口内的内存修改。 */
+    void flushPendingSave() {
+        if (savePending) {
+            savePending = false;
+            saveDebounce.stop();
+            onMemoryChanged.accept(launchSettings.maxMemoryMb());
+        }
     }
 
     private void buildLayout() {

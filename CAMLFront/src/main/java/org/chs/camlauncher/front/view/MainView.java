@@ -108,4 +108,9 @@ public final class MainView extends BorderPane {
     public void configureThemes(List<ThemeInfo> themes, ThemeInfo active, Consumer<ThemeInfo> onSelected) {
         settingsView.configureThemes(themes, active, onSelected);
     }
+
+    /** 提交所有仍处于防抖窗口内的设置修改。 */
+    public void flushPendingSettings() {
+        settingsView.flushPendingSettings();
+    }
 }

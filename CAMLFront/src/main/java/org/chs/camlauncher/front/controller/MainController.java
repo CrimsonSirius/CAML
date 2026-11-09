@@ -50,7 +50,7 @@ public final class MainController {
     }
 
     public void shutdown() {
-        context.shutdown();
         settingsController.shutdown();
+        context.shutdown();
     }
 }

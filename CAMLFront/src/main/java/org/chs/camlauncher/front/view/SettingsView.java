@@ -24,6 +24,8 @@ import java.util.function.IntConsumer;
 final class SettingsView extends VBox implements SidebarPage {
     private static final boolean REDUCE_MOTION = Boolean.getBoolean("caml.reduceMotion");
 
+    private final GameSettingsView gameSettings;
+    private final DownloadSettingsView downloadSettings;
     private final LauncherSettingsView launcherSettings;
     private final CamlSideNav sideNav;
     private final StackPane contentHost;
@@ -32,10 +34,10 @@ final class SettingsView extends VBox implements SidebarPage {
     SettingsView(LaunchSettings launchSettings, IntConsumer onMemoryChanged,
                  Consumer<Boolean> onVersionIsolationChanged,
                  SystemMemoryInfo systemMemory, SettingsController controller) {
-        GameSettingsView gameSettings = new GameSettingsView(
+        gameSettings = new GameSettingsView(
                 launchSettings, onMemoryChanged, onVersionIsolationChanged, systemMemory, controller);
         controller.setOnSystemMemoryUpdated(gameSettings::updateSystemMemory);
-        DownloadSettingsView downloadSettings = new DownloadSettingsView(
+        downloadSettings = new DownloadSettingsView(
                 controller.downloadConcurrency(),
                 controller::saveDownloadConcurrencyAsync,
                 controller.downloadSourceMode(),
@@ -92,6 +94,11 @@ final class SettingsView extends VBox implements SidebarPage {
 
     void configureThemes(List<ThemeInfo> themes, ThemeInfo active, Consumer<ThemeInfo> onSelected) {
         launcherSettings.configureThemes(themes, active, onSelected);
+    }
+
+    void flushPendingSettings() {
+        gameSettings.flushPendingSave();
+        downloadSettings.flushPendingSaves();
     }
 
     @Override
