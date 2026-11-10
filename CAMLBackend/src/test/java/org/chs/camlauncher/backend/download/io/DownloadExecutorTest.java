@@ -1,6 +1,7 @@
 package org.chs.camlauncher.backend.download.io;
 
 import org.chs.camlauncher.backend.download.DownloadListener;
+import org.chs.camlauncher.backend.download.DownloadCancellationToken;
 import org.chs.camlauncher.backend.download.model.DownloadItem;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -18,6 +19,7 @@ import java.util.stream.IntStream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class DownloadExecutorTest {
     @TempDir
@@ -104,5 +106,79 @@ class DownloadExecutorTest {
         assertEquals(300, summary.total());
         assertEquals(2, summary.completedItems());
         assertEquals(2, summary.totalItems());
+    }
+
+    @Test
+    void failureWaitsForSiblingWorkerToStop() throws Exception {
+        List<DownloadItem> items = List.of(
+                new DownloadItem("fail",
+                        List.of(URI.create("https://example.invalid/fail")),
+                        tempDirectory.resolve("fail"), null, -1),
+                new DownloadItem("slow",
+                        List.of(URI.create("https://example.invalid/slow")),
+                        tempDirectory.resolve("slow"), null, -1)
+        );
+        CyclicBarrier started = new CyclicBarrier(2);
+        CountDownLatch slowStopped = new CountDownLatch(1);
+
+        assertThrows(IOException.class, () -> DownloadExecutor.download(
+                items, 2, DownloadListener.NONE, (item, listener) -> {
+                    try {
+                        started.await(2, TimeUnit.SECONDS);
+                    } catch (Exception e) {
+                        throw new IOException("并发任务同步失败", e);
+                    }
+                    if ("fail".equals(item.label())) {
+                        throw new IOException("boom");
+                    }
+                    try {
+                        new CountDownLatch(1).await();
+                    } finally {
+                        slowStopped.countDown();
+                    }
+                }));
+
+        assertEquals(0, slowStopped.getCount(), "失败返回前必须等待其他 worker 结束");
+    }
+
+    @Test
+    void cancellationStopsWorkersBeforeReturning() throws Exception {
+        List<DownloadItem> items = List.of(
+                new DownloadItem("first",
+                        List.of(URI.create("https://example.invalid/first")),
+                        tempDirectory.resolve("first"), null, -1),
+                new DownloadItem("second",
+                        List.of(URI.create("https://example.invalid/second")),
+                        tempDirectory.resolve("second"), null, -1)
+        );
+        DownloadCancellationToken token = new DownloadCancellationToken();
+        CountDownLatch started = new CountDownLatch(2);
+        CountDownLatch stopped = new CountDownLatch(2);
+        Thread canceller = new Thread(() -> {
+            try {
+                started.await(2, TimeUnit.SECONDS);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            } finally {
+                token.cancel();
+            }
+        }, "caml-test-canceller");
+        canceller.start();
+
+        try {
+            assertThrows(InterruptedException.class, () -> DownloadExecutor.download(
+                    items, 2, DownloadListener.NONE, (item, listener) -> {
+                        started.countDown();
+                        try {
+                            new CountDownLatch(1).await();
+                        } finally {
+                            stopped.countDown();
+                        }
+                    }, token));
+        } finally {
+            canceller.join(2000);
+        }
+
+        assertEquals(0, stopped.getCount(), "取消返回前必须等待 worker 结束");
     }
 }

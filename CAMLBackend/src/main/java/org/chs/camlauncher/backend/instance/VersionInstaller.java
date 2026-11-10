@@ -1,6 +1,7 @@
 package org.chs.camlauncher.backend.instance;
 
 import org.chs.camlauncher.backend.download.plan.AssetDownloadPlanner;
+import org.chs.camlauncher.backend.download.DownloadCancellationToken;
 import org.chs.camlauncher.backend.download.DownloadConcurrency;
 import org.chs.camlauncher.backend.download.io.DownloadExecutor;
 import org.chs.camlauncher.backend.download.model.DownloadItem;
@@ -86,6 +87,18 @@ public final class VersionInstaller {
         return install(versionId, versionId, gameDirectory, manifestUri, manifestCacheFile, listener);
     }
 
+    public InstalledVersion install(
+            String versionId,
+            Path gameDirectory,
+            URI manifestUri,
+            Path manifestCacheFile,
+            DownloadListener listener,
+            DownloadCancellationToken token
+    ) throws IOException, InterruptedException {
+        return install(versionId, versionId, gameDirectory, manifestUri, manifestCacheFile,
+                listener, token);
+    }
+
     /**
      * 使用单独的原版版本 ID 和实例 ID 安装。
      *
@@ -100,6 +113,21 @@ public final class VersionInstaller {
             Path manifestCacheFile,
             DownloadListener listener
     ) throws IOException, InterruptedException {
+        return install(versionId, instanceId, gameDirectory, manifestUri, manifestCacheFile,
+                listener, new DownloadCancellationToken());
+    }
+
+    public InstalledVersion install(
+            String versionId,
+            String instanceId,
+            Path gameDirectory,
+            URI manifestUri,
+            Path manifestCacheFile,
+            DownloadListener listener,
+            DownloadCancellationToken token
+    ) throws IOException, InterruptedException {
+        Objects.requireNonNull(token, "token");
+        token.throwIfCancelled();
         Objects.requireNonNull(versionId, "versionId");
         instanceId = validateInstanceId(instanceId);
         DownloadListener.notifyStage(listener, "获取版本信息");
@@ -109,7 +137,7 @@ public final class VersionInstaller {
         if (Files.isRegularFile(localVersionFile)) {
             DownloadListener.notifyStage(listener, "检查本地版本");
             String localJson = Files.readString(localVersionFile, StandardCharsets.UTF_8);
-            return complete(instanceId, gameDirectory, localJson, listener, false);
+            return complete(instanceId, gameDirectory, localJson, listener, token, false);
         }
 
         // 2. 本地没有该版本，才需要访问官方版本清单。
@@ -122,7 +150,7 @@ public final class VersionInstaller {
                                 + " (本地未安装，官方版本清单中也不存在该版本 ID)"));
 
         String versionJson = manifestService.fetchVersionJson(remoteVersion);
-        return completeNewInstance(instanceId, gameDirectory, versionJson, listener);
+        return completeNewInstance(instanceId, gameDirectory, versionJson, listener, token);
     }
 
     /**
@@ -134,23 +162,37 @@ public final class VersionInstaller {
             String versionJson,
             DownloadListener listener
     ) throws IOException, InterruptedException {
+        return installProfile(instanceId, gameDirectory, versionJson, listener,
+                new DownloadCancellationToken());
+    }
+
+    public InstalledVersion installProfile(
+            String instanceId,
+            Path gameDirectory,
+            String versionJson,
+            DownloadListener listener,
+            DownloadCancellationToken token
+    ) throws IOException, InterruptedException {
+        Objects.requireNonNull(token, "token");
+        token.throwIfCancelled();
         instanceId = validateInstanceId(instanceId);
         InstanceNameRules.ensureNewInstance(gameDirectory, instanceId);
         Objects.requireNonNull(versionJson, "versionJson");
-        return completeNewInstance(instanceId, gameDirectory, versionJson, listener);
+        return completeNewInstance(instanceId, gameDirectory, versionJson, listener, token);
     }
 
     private InstalledVersion completeNewInstance(
             String instanceId,
             Path gameDirectory,
             String versionJson,
-            DownloadListener listener
+            DownloadListener listener,
+            DownloadCancellationToken token
     ) throws IOException, InterruptedException {
         Path versionDirectory = SafePaths.resolveChild(
                 gameDirectory.resolve("versions"), instanceId, "version id");
         boolean existed = Files.exists(versionDirectory);
         try {
-            return complete(instanceId, gameDirectory, versionJson, listener, true);
+            return complete(instanceId, gameDirectory, versionJson, listener, token, true);
         } catch (IOException | RuntimeException | InterruptedException e) {
             if (!existed) {
                 deleteRecursively(versionDirectory);
@@ -169,8 +211,10 @@ public final class VersionInstaller {
             Path gameDirectory,
             String versionJson,
             DownloadListener listener,
+            DownloadCancellationToken token,
             boolean writeVersionJson
     ) throws IOException, InterruptedException {
+        token.throwIfCancelled();
         VersionInfo parsed = metadata.parseVersionInfo(versionJson);
         VersionInfo resolved = resolve(parsed, gameDirectory, versionId);
 
@@ -186,21 +230,24 @@ public final class VersionInstaller {
         Path librariesDirectory = gameDirectory.resolve("libraries");
         Path assetsDirectory = gameDirectory.resolve("assets");
 
+        token.throwIfCancelled();
         DownloadListener.notifyStage(listener, "下载游戏文件与依赖库");
-        downloadPlan(downloadPlanner.plan(resolved, gameDirectory, clientJarId), listener);
+        downloadPlan(downloadPlanner.plan(resolved, gameDirectory, clientJarId), listener, token);
 
         Path assetIndexFile = null;
         if (resolved.assetIndex() != null) {
+            token.throwIfCancelled();
             DownloadListener.notifyStage(listener, "下载资源文件");
             assetIndexFile = SafePaths.resolveChild(
                     assetsDirectory.resolve("indexes"),
                     resolved.assetIndex().id() + ".json",
                     "asset index");
             AssetIndexFile index = metadata.readAssetIndex(assetIndexFile);
-            downloadPlan(assetDownloadPlanner.plan(index, assetsDirectory), listener);
+            downloadPlan(assetDownloadPlanner.plan(index, assetsDirectory), listener, token);
         }
 
         if (writeVersionJson) {
+            token.throwIfCancelled();
             DownloadListener.notifyStage(listener, "写入版本信息");
             writeAtomically(versionFile, versionJson);
         }
@@ -225,13 +272,15 @@ public final class VersionInstaller {
         return SafePaths.resolveChild(versionDirectory, versionId + ".json", "version json");
     }
 
-    private void downloadPlan(DownloadPlan plan, DownloadListener listener)
+    private void downloadPlan(DownloadPlan plan, DownloadListener listener,
+                              DownloadCancellationToken token)
             throws IOException, InterruptedException {
         DownloadExecutor.download(
                 plan.missing(),
                 downloadConcurrency,
                 listener,
-                fileDownloader::download
+                (item, itemListener) -> fileDownloader.download(item, itemListener, null, token),
+                token
         );
     }
 

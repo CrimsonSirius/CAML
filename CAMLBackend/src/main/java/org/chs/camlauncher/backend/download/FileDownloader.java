@@ -29,6 +29,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.Semaphore;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -79,6 +80,14 @@ public final class FileDownloader {
     public void download(DownloadItem item, DownloadListener listener,
                          DownloadValidator validator)
             throws IOException, InterruptedException {
+        download(item, listener, validator, new DownloadCancellationToken());
+    }
+
+    public void download(DownloadItem item, DownloadListener listener,
+                         DownloadValidator validator, DownloadCancellationToken token)
+            throws IOException, InterruptedException {
+        Objects.requireNonNull(token, "token");
+        token.throwIfCancelled();
         DownloadListener progress = listener == null ? DownloadListener.NONE : listener;
         if (item.existsAndValid()) {
             progress.onProgress(new DownloadListener.DownloadProgress(
@@ -96,14 +105,16 @@ public final class FileDownloader {
         int attempted = 0;
         int round = 0;
         while (attempted < maxAttempts) {
+            token.throwIfCancelled();
             for (URI uri : item.candidates()) {
                 if (attempted >= maxAttempts) {
                     break;
                 }
+                token.throwIfCancelled();
                 attempted++;
                 lastUri = uri;
                 try {
-                    downloadOnce(uri, item, progress, validator);
+                    downloadOnce(uri, item, progress, validator, token);
                     return;
                 } catch (IOException e) {
                     lastFailure = e;
@@ -112,6 +123,7 @@ public final class FileDownloader {
             round++;
             if (attempted < maxAttempts) {
                 Thread.sleep(200L * round);
+                token.throwIfCancelled();
             }
         }
 
@@ -123,11 +135,12 @@ public final class FileDownloader {
     }
 
     private void downloadOnce(URI uri, DownloadItem item, DownloadListener listener,
-                              DownloadValidator validator)
+                              DownloadValidator validator, DownloadCancellationToken token)
             throws IOException, InterruptedException {
+        token.throwIfCancelled();
         long expectedSize = item.size();
         if (expectedSize >= MIN_SEGMENT_SIZE) {
-            RangeProbe probe = probeRange(uri);
+            RangeProbe probe = probeRange(uri, token);
             if (probe.ranged()) {
                 if (probe.totalSize() <= 0
                         || (expectedSize > 0 && expectedSize != probe.totalSize())) {
@@ -135,20 +148,25 @@ public final class FileDownloader {
                 }
                 if (probe.totalSize() >= MIN_SEGMENT_SIZE) {
                     try {
-                        downloadSegmented(uri, item, probe, listener, validator);
+                        downloadSegmented(uri, item, probe, listener, validator, token);
                         return;
+                    } catch (InterruptedException e) {
+                        clearPartialQuietly(item, e);
+                        throw e;
                     } catch (RangeUnsupportedException e) {
                         clearPartial(item);
                     }
                 }
             }
         }
-        downloadSingleStream(uri, item, listener, validator);
+        downloadSingleStream(uri, item, listener, validator, token);
     }
 
     private void downloadSingleStream(URI uri, DownloadItem item,
-                                      DownloadListener listener, DownloadValidator validator)
+                                      DownloadListener listener, DownloadValidator validator,
+                                      DownloadCancellationToken token)
             throws IOException, InterruptedException {
+        token.throwIfCancelled();
         clearPartial(item);
         Path destination = item.destination();
         Path part = partialPath(destination);
@@ -182,6 +200,7 @@ public final class FileDownloader {
                         StandardOpenOption.CREATE
                 )) {
                     while ((read = input.read(buffer)) != -1) {
+                        token.throwIfCancelled();
                         output.write(buffer, 0, read);
                         downloaded += read;
                         listener.onProgress(new DownloadListener.DownloadProgress(
@@ -189,20 +208,27 @@ public final class FileDownloader {
                     }
                 }
 
+                token.throwIfCancelled();
                 verify(part, item, validator);
                 move(part, destination);
                 moved = true;
             }
         } finally {
             if (!moved) {
-                Files.deleteIfExists(part);
+                try {
+                    Files.deleteIfExists(part);
+                } catch (IOException ignored) {
+                    // 保留原始下载异常；取消时尤其不能因为清理失败而掩盖 InterruptedException。
+                }
             }
         }
     }
 
     private void downloadSegmented(URI uri, DownloadItem item, RangeProbe probe,
-                                   DownloadListener listener, DownloadValidator validator)
+                                   DownloadListener listener, DownloadValidator validator,
+                                   DownloadCancellationToken token)
             throws IOException, InterruptedException {
+        token.throwIfCancelled();
         Path destination = item.destination();
         Path part = partialPath(destination);
         Path metaPath = metaPath(part);
@@ -233,13 +259,17 @@ public final class FileDownloader {
         );
         try {
             for (SegmentState segment : activeMeta.segments) {
+                token.throwIfCancelled();
                 if (segment.downloaded() >= segment.length()) {
                     continue;
                 }
                 futures.add(executor.submit((Callable<Void>) () -> {
-                    SEGMENT_SLOTS.acquire();
+                    token.throwIfCancelled();
+                    while (!SEGMENT_SLOTS.tryAcquire(250, TimeUnit.MILLISECONDS)) {
+                        token.throwIfCancelled();
+                    }
                     try {
-                        downloadSegment(uri, part, metaPath, activeMeta, segment, reporter);
+                        downloadSegment(uri, part, metaPath, activeMeta, segment, reporter, token);
                     } finally {
                         SEGMENT_SLOTS.release();
                     }
@@ -270,19 +300,22 @@ public final class FileDownloader {
         persistMeta(metaPath, activeMeta);
         reporter.report(probe.totalSize());
         try {
+            token.throwIfCancelled();
             verify(part, item, validator);
             move(part, destination);
             Files.deleteIfExists(metaPath);
-        } catch (IOException | RuntimeException e) {
-            clearPartial(item);
+        } catch (IOException | RuntimeException | InterruptedException e) {
+            clearPartialQuietly(item, e);
             throw e;
         }
     }
 
     private void downloadSegment(URI uri, Path part, Path metaPath,
                                  ResumeMeta meta, SegmentState segment,
-                                 ProgressReporter reporter)
+                                 ProgressReporter reporter,
+                                 DownloadCancellationToken token)
             throws IOException, InterruptedException {
+        token.throwIfCancelled();
         long start = segment.start() + segment.downloaded();
         long end = segment.end();
         if (start > end) {
@@ -319,6 +352,7 @@ public final class FileDownloader {
                 byte[] buffer = new byte[8192];
                 long position = start;
                 while (position <= end) {
+                    token.throwIfCancelled();
                     int want = (int) Math.min(buffer.length, end - position + 1);
                     int read = input.read(buffer, 0, want);
                     if (read < 0) {
@@ -360,7 +394,9 @@ public final class FileDownloader {
         }
     }
 
-    private RangeProbe probeRange(URI uri) throws IOException, InterruptedException {
+    private RangeProbe probeRange(URI uri, DownloadCancellationToken token)
+            throws IOException, InterruptedException {
+        token.throwIfCancelled();
         HttpRequest request = HttpRequest.newBuilder(uri)
                 .timeout(Duration.ofMinutes(2))
                 .header("Range", "bytes=0-0")
@@ -371,6 +407,7 @@ public final class FileDownloader {
                 HttpResponse.BodyHandlers.ofInputStream()
         );
         try (InputStream ignored = response.body()) {
+            token.throwIfCancelled();
             int status = response.statusCode();
             if (status == 206) {
                 String contentRange = response.headers().firstValue("Content-Range").orElse("");
@@ -459,6 +496,14 @@ public final class FileDownloader {
         Files.deleteIfExists(metaPath(part));
     }
 
+    private static void clearPartialQuietly(DownloadItem item, Throwable original) {
+        try {
+            clearPartial(item);
+        } catch (IOException cleanupFailure) {
+            original.addSuppressed(cleanupFailure);
+        }
+    }
+
     private static Path partialPath(Path destination) {
         return destination.resolveSibling(destination.getFileName() + ".part");
     }
@@ -484,9 +529,19 @@ public final class FileDownloader {
     }
 
     private static void awaitExecutor(ExecutorService executor) {
-        try {
-            executor.awaitTermination(5, java.util.concurrent.TimeUnit.SECONDS);
-        } catch (InterruptedException e) {
+        boolean interrupted = false;
+        long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5);
+        while (true) {
+            try {
+                long remaining = deadline - System.nanoTime();
+                if (remaining <= 0 || executor.awaitTermination(remaining, TimeUnit.NANOSECONDS)) {
+                    break;
+                }
+            } catch (InterruptedException e) {
+                interrupted = true;
+            }
+        }
+        if (interrupted) {
             Thread.currentThread().interrupt();
         }
     }

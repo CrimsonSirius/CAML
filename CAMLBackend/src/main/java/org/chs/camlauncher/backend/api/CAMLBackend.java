@@ -7,6 +7,7 @@ import org.chs.camlauncher.backend.auth.OfflineAccount;
 import org.chs.camlauncher.backend.config.BackendConfig;
 import org.chs.camlauncher.backend.config.BackendPaths;
 import org.chs.camlauncher.backend.download.plan.AssetDownloadPlanner;
+import org.chs.camlauncher.backend.download.DownloadCancellationToken;
 import org.chs.camlauncher.backend.download.DownloadListener;
 import org.chs.camlauncher.backend.download.DownloadConcurrency;
 import org.chs.camlauncher.backend.download.source.DownloadSource;
@@ -454,6 +455,17 @@ public final class CAMLBackend implements AutoCloseable {
             Path gameDirectory,
             DownloadListener listener
     ) throws java.io.IOException, InterruptedException {
+        return installVersion(versionId, instanceId, gameDirectory, listener,
+                new DownloadCancellationToken());
+    }
+
+    public InstalledVersion installVersion(
+            String versionId,
+            String instanceId,
+            Path gameDirectory,
+            DownloadListener listener,
+            DownloadCancellationToken token
+    ) throws java.io.IOException, InterruptedException {
         Objects.requireNonNull(gameDirectory, "gameDirectory");
         InstanceNameRules.ensureNewInstance(gameDirectory, instanceId);
         return versionInstaller.install(
@@ -462,7 +474,8 @@ public final class CAMLBackend implements AutoCloseable {
                 gameDirectory,
                 VersionManifestService.DEFAULT_MANIFEST_URI,
                 config.dataDirectory().resolve("cache").resolve("version_manifest_v2.json"),
-                listener
+                listener,
+                token
         );
     }
 
@@ -490,13 +503,27 @@ public final class CAMLBackend implements AutoCloseable {
             Path gameDirectory,
             DownloadListener listener
     ) throws IOException, InterruptedException {
+        return installFabricVersion(gameVersion, instanceId, loaderVersion, apiVersion,
+                gameDirectory, listener, new DownloadCancellationToken());
+    }
+
+    public InstalledVersion installFabricVersion(
+            String gameVersion,
+            String instanceId,
+            String loaderVersion,
+            FabricApiVersion apiVersion,
+            Path gameDirectory,
+            DownloadListener listener,
+            DownloadCancellationToken token
+    ) throws IOException, InterruptedException {
         return fabricInstaller.install(
                 gameVersion,
                 instanceId,
                 loaderVersion,
                 apiVersion,
                 gameDirectory,
-                listener
+                listener,
+                token
         );
     }
 
@@ -519,6 +546,18 @@ public final class CAMLBackend implements AutoCloseable {
             Path gameDirectory,
             DownloadListener listener
     ) throws IOException, InterruptedException {
+        return installForgeVersion(gameVersion, instanceId, version, gameDirectory, listener,
+                new DownloadCancellationToken());
+    }
+
+    public InstalledVersion installForgeVersion(
+            String gameVersion,
+            String instanceId,
+            ForgeVersion version,
+            Path gameDirectory,
+            DownloadListener listener,
+            DownloadCancellationToken token
+    ) throws IOException, InterruptedException {
         Objects.requireNonNull(version, "version");
         return externalLoaderInstaller.install(
                 "Forge",
@@ -526,7 +565,8 @@ public final class CAMLBackend implements AutoCloseable {
                 instanceId,
                 version.installerUri(),
                 gameDirectory,
-                listener
+                listener,
+                token
         );
     }
 
@@ -537,6 +577,18 @@ public final class CAMLBackend implements AutoCloseable {
             Path gameDirectory,
             DownloadListener listener
     ) throws IOException, InterruptedException {
+        return installNeoForgeVersion(gameVersion, instanceId, version, gameDirectory, listener,
+                new DownloadCancellationToken());
+    }
+
+    public InstalledVersion installNeoForgeVersion(
+            String gameVersion,
+            String instanceId,
+            NeoForgeVersion version,
+            Path gameDirectory,
+            DownloadListener listener,
+            DownloadCancellationToken token
+    ) throws IOException, InterruptedException {
         Objects.requireNonNull(version, "version");
         return externalLoaderInstaller.install(
                 "NeoForge",
@@ -544,7 +596,8 @@ public final class CAMLBackend implements AutoCloseable {
                 instanceId,
                 version.installerUri(),
                 gameDirectory,
-                listener
+                listener,
+                token
         );
     }
 
@@ -565,6 +618,19 @@ public final class CAMLBackend implements AutoCloseable {
             Path gameDirectory,
             DownloadListener listener
     ) throws IOException, InterruptedException {
+        return installForgeOptiFineVersion(gameVersion, instanceId, forgeVersion,
+                optiFineVersion, gameDirectory, listener, new DownloadCancellationToken());
+    }
+
+    public InstalledVersion installForgeOptiFineVersion(
+            String gameVersion,
+            String instanceId,
+            ForgeVersion forgeVersion,
+            OptiFineVersion optiFineVersion,
+            Path gameDirectory,
+            DownloadListener listener,
+            DownloadCancellationToken token
+    ) throws IOException, InterruptedException {
         Objects.requireNonNull(forgeVersion, "forgeVersion");
         Objects.requireNonNull(optiFineVersion, "optiFineVersion");
         return optiFineInstaller.install(
@@ -573,7 +639,8 @@ public final class CAMLBackend implements AutoCloseable {
                 forgeVersion,
                 optiFineVersion,
                 gameDirectory,
-                listener
+                listener,
+                token
         );
     }
 

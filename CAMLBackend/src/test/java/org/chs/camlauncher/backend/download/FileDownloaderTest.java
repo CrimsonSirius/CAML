@@ -23,6 +23,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -56,6 +57,58 @@ class FileDownloaderTest {
 
             assertArrayEquals(content, Files.readAllBytes(destination));
             assertTrue(item.existsAndValid());
+        } finally {
+            server.stop(0);
+        }
+    }
+
+    @Test
+    void rejectsCancelledTokenBeforeNetwork() {
+        DownloadCancellationToken token = new DownloadCancellationToken();
+        token.cancel();
+        Path destination = tempDirectory.resolve("cancelled.bin");
+        DownloadItem item = new DownloadItem(
+                "cancelled",
+                List.of(URI.create("http://127.0.0.1:1/unused")),
+                destination,
+                null,
+                -1
+        );
+
+        assertThrows(InterruptedException.class,
+                () -> new FileDownloader().download(item, DownloadListener.NONE, null, token));
+        assertFalse(Files.exists(destination));
+    }
+
+    @Test
+    void cancellationDuringDownloadRemovesPartialFile() throws Exception {
+        byte[] content = new byte[32 * 1024];
+        HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        server.createContext("/cancel.bin", exchange -> {
+            exchange.sendResponseHeaders(200, content.length);
+            try (OutputStream output = exchange.getResponseBody()) {
+                output.write(content);
+            }
+        });
+        server.start();
+
+        try {
+            Path destination = tempDirectory.resolve("cancel.bin");
+            DownloadItem item = new DownloadItem(
+                    "cancel",
+                    List.of(URI.create("http://127.0.0.1:"
+                            + server.getAddress().getPort() + "/cancel.bin")),
+                    destination,
+                    null,
+                    content.length
+            );
+            DownloadCancellationToken token = new DownloadCancellationToken();
+
+            assertThrows(InterruptedException.class, () -> new FileDownloader().download(
+                    item, progress -> token.cancel(), null, token));
+
+            assertFalse(Files.exists(destination));
+            assertFalse(Files.exists(destination.resolveSibling(destination.getFileName() + ".part")));
         } finally {
             server.stop(0);
         }
