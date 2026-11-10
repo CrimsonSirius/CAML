@@ -177,6 +177,136 @@ class ForgeAndNeoForgeServiceTest {
         }
     }
 
+    @Test
+    void fallsBackToNextSourceWhenForgeMetadataIsEmpty() throws Exception {
+        String emptyXml = """
+                <metadata><versioning><versions></versions></versioning></metadata>
+                """;
+        String forgeXml = """
+                <metadata><versioning><versions>
+                  <version>1.20.1-47.4.0</version>
+                </versions></versioning></metadata>
+                """;
+
+        HttpServer emptyServer = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        emptyServer.createContext("/maven/net/minecraftforge/forge/maven-metadata.xml",
+                exchange -> respond(exchange, emptyXml));
+        emptyServer.start();
+        HttpServer dataServer = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        dataServer.createContext("/maven/net/minecraftforge/forge/maven-metadata.xml",
+                exchange -> respond(exchange, forgeXml));
+        dataServer.start();
+
+        try {
+            ForgeService service = new ForgeService();
+            service.setSources(List.of(
+                    new MirrorDownloadSource(serverRoot(emptyServer)),
+                    new MirrorDownloadSource(serverRoot(dataServer))
+            ));
+
+            List<ForgeVersion> versions = service.fetchVersions("1.20.1");
+
+            assertEquals(1, versions.size());
+            assertEquals("47.4.0", versions.getFirst().version());
+        } finally {
+            emptyServer.stop(0);
+            dataServer.stop(0);
+        }
+    }
+
+    @Test
+    void fallsBackToNextSourceWhenNeoForgeMetadataHasNoMatchingVersion() throws Exception {
+        String otherVersionXml = """
+                <metadata><versioning><versions>
+                  <version>20.2.86</version>
+                </versions></versioning></metadata>
+                """;
+        String matchingVersionXml = """
+                <metadata><versioning><versions>
+                  <version>20.1.0</version>
+                </versions></versioning></metadata>
+                """;
+
+        HttpServer staleServer = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        staleServer.createContext("/maven/net/neoforged/neoforge/maven-metadata.xml",
+                exchange -> respond(exchange, otherVersionXml));
+        staleServer.start();
+        HttpServer dataServer = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        dataServer.createContext("/maven/net/neoforged/neoforge/maven-metadata.xml",
+                exchange -> respond(exchange, matchingVersionXml));
+        dataServer.start();
+
+        try {
+            NeoForgeService service = new NeoForgeService();
+            service.setSources(List.of(
+                    new MirrorDownloadSource(serverRoot(staleServer)),
+                    new MirrorDownloadSource(serverRoot(dataServer))
+            ));
+
+            List<NeoForgeVersion> versions = service.fetchVersions("1.20.1");
+
+            assertEquals(1, versions.size());
+            assertEquals("20.1.0", versions.getFirst().version());
+        } finally {
+            staleServer.stop(0);
+            dataServer.stop(0);
+        }
+    }
+
+    @Test
+    void fallsBackToMavenWhenBmclApiReturnsEmptyList() throws Exception {
+        String forgeXml = """
+                <metadata><versioning><versions>
+                  <version>1.21.1-52.0.0</version>
+                </versions></versioning></metadata>
+                """;
+        String neoForgeXml = """
+                <metadata><versioning><versions>
+                  <version>21.1.265</version>
+                </versions></versioning></metadata>
+                """;
+
+        HttpServer apiServer = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        apiServer.createContext("/forge/minecraft/1.21.1", exchange -> respond(exchange, "[]"));
+        apiServer.createContext("/neoforge/list/1.21.1", exchange -> respond(exchange, "[]"));
+        apiServer.start();
+        HttpServer metadataServer = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        metadataServer.createContext("/forge.xml", exchange -> respond(exchange, forgeXml));
+        metadataServer.createContext("/neoforge.xml", exchange -> respond(exchange, neoForgeXml));
+        metadataServer.start();
+
+        try {
+            String metadataBase = serverRoot(metadataServer);
+            ForgeService forgeService = new ForgeService(
+                    new MavenMetadataClient(),
+                    URI.create(metadataBase + "forge.xml"),
+                    metadataBase + "forge/"
+            );
+            forgeService.setSourceMode(DownloadSourceMode.CUSTOM, serverRoot(apiServer));
+            NeoForgeService neoForgeService = new NeoForgeService(
+                    new MavenMetadataClient(),
+                    URI.create(metadataBase + "neoforge.xml"),
+                    metadataBase + "neoforge/"
+            );
+            neoForgeService.setSourceMode(DownloadSourceMode.CUSTOM, serverRoot(apiServer));
+
+            List<ForgeVersion> forge = forgeService.fetchVersions("1.21.1");
+            assertEquals(1, forge.size());
+            assertEquals("52.0.0", forge.getFirst().version());
+
+            List<NeoForgeVersion> neoForge = neoForgeService.fetchVersions("1.21.1");
+            assertEquals(1, neoForge.size());
+            assertEquals("21.1.265", neoForge.getFirst().version());
+        } finally {
+            apiServer.stop(0);
+            metadataServer.stop(0);
+        }
+    }
+
+    private static String serverRoot(HttpServer server) {
+        return "http://127.0.0.1:" + server.getAddress().getPort() + "/";
+    }
+
     private static void respond(com.sun.net.httpserver.HttpExchange exchange, String content)
             throws java.io.IOException {
         respondRange(exchange, content.getBytes(StandardCharsets.UTF_8));

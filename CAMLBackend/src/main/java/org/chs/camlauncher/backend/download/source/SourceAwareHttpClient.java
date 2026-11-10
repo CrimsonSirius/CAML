@@ -8,6 +8,7 @@ import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -37,6 +38,20 @@ public final class SourceAwareHttpClient {
         return get(uri, timeout, accept, HttpResponse.BodyHandlers.ofByteArray());
     }
 
+    /** 解析文本响应；解析结果为空时继续尝试下一个候选源。 */
+    public <T> Optional<T> getParsedText(URI uri, Duration timeout, String accept,
+                                         ResponseParser<String, T> parser)
+            throws IOException, InterruptedException {
+        return getParsed(uri, timeout, accept, HttpResponse.BodyHandlers.ofString(), parser);
+    }
+
+    /** 解析二进制响应；解析结果为空时继续尝试下一个候选源。 */
+    public <T> Optional<T> getParsedBytes(URI uri, Duration timeout, String accept,
+                                          ResponseParser<byte[], T> parser)
+            throws IOException, InterruptedException {
+        return getParsed(uri, timeout, accept, HttpResponse.BodyHandlers.ofByteArray(), parser);
+    }
+
     private <T> T get(URI original, Duration timeout, String accept,
                       HttpResponse.BodyHandler<T> bodyHandler)
             throws IOException, InterruptedException {
@@ -49,6 +64,37 @@ public final class SourceAwareHttpClient {
             } catch (IOException e) {
                 lastFailure = e;
             }
+        }
+        throw new IOException("无法请求 " + original + "（最后地址: " + lastUri + "）", lastFailure);
+    }
+
+    private <T, R> Optional<R> getParsed(URI original, Duration timeout, String accept,
+                                         HttpResponse.BodyHandler<T> bodyHandler,
+                                         ResponseParser<T, R> parser)
+            throws IOException, InterruptedException {
+        Objects.requireNonNull(parser, "parser");
+        IOException lastFailure = null;
+        URI lastUri = null;
+        boolean lastWasEmpty = false;
+        for (URI candidate : DownloadSources.candidates(sources, original.toString())) {
+            lastUri = candidate;
+            try {
+                Optional<R> parsed = parser.parse(send(candidate, timeout, accept, bodyHandler));
+                if (parsed.isPresent()) {
+                    return parsed;
+                }
+                lastFailure = null;
+                lastWasEmpty = true;
+            } catch (IOException e) {
+                lastFailure = e;
+                lastWasEmpty = false;
+            } catch (RuntimeException e) {
+                lastFailure = new IOException("无法解析响应：" + candidate, e);
+                lastWasEmpty = false;
+            }
+        }
+        if (lastWasEmpty) {
+            return Optional.empty();
         }
         throw new IOException("无法请求 " + original + "（最后地址: " + lastUri + "）", lastFailure);
     }
@@ -89,5 +135,10 @@ public final class SourceAwareHttpClient {
             throw new IOException("HTTP " + response.statusCode() + " for " + uri);
         }
         return response.body();
+    }
+
+    @FunctionalInterface
+    public interface ResponseParser<T, R> {
+        Optional<R> parse(T body) throws IOException;
     }
 }

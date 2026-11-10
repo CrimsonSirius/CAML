@@ -15,6 +15,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 
 /** Fabric Meta 与 Modrinth Fabric API 元数据客户端。 */
 public final class FabricService {
@@ -44,12 +45,18 @@ public final class FabricService {
     public List<FabricLoaderVersion> fetchLoaderVersions(String gameVersion)
             throws IOException, InterruptedException {
         String game = encodePath(gameVersion);
-        LoaderEntry[] entries = gson.fromJson(
-                fetchText(metaBase.resolve("v2/versions/loader/" + game)),
-                LoaderEntry[].class
-        );
+        return httpClient.getParsedText(
+                metaBase.resolve("v2/versions/loader/" + game),
+                Duration.ofSeconds(30),
+                "application/json",
+                this::parseLoaderVersions
+        ).orElse(List.of());
+    }
+
+    private Optional<List<FabricLoaderVersion>> parseLoaderVersions(String text) {
+        LoaderEntry[] entries = gson.fromJson(text, LoaderEntry[].class);
         if (entries == null) {
-            return List.of();
+            return Optional.empty();
         }
 
         List<FabricLoaderVersion> result = new ArrayList<>();
@@ -63,7 +70,7 @@ public final class FabricService {
                 ));
             }
         }
-        return List.copyOf(result);
+        return result.isEmpty() ? Optional.empty() : Optional.of(List.copyOf(result));
     }
 
     public String fetchLoaderProfile(String gameVersion, String loaderVersion)
