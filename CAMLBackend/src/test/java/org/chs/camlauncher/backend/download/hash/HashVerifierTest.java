@@ -22,5 +22,8 @@ class HashVerifierTest {
         assertEquals("aaf4c61ddcc5e8a2dabede0f3b482cd9aea9434d", HashVerifier.sha1(file));
         assertTrue(HashVerifier.matches(file, "aaf4c61ddcc5e8a2dabede0f3b482cd9aea9434d"));
         assertFalse(HashVerifier.matches(file, "0000000000000000000000000000000000000000"));
+        assertFalse(HashVerifier.matches(file, null));
+        assertFalse(HashVerifier.matches(file, ""));
+        assertFalse(HashVerifier.matches(file, "   "));
     }
 }
