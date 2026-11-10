@@ -2,7 +2,7 @@ package org.chs.camlauncher.front.view;
 
 import org.chs.camlauncher.backend.download.DownloadListener;
 import org.chs.camlauncher.backend.download.DownloadStage;
-import org.chs.camlauncher.front.translation.Language;
+import org.chs.camlauncher.language.Language;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 

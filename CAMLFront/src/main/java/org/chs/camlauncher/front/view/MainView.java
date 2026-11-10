@@ -12,7 +12,7 @@ import org.chs.camlauncher.front.controller.DownloadsController;
 import org.chs.camlauncher.front.controller.HomeController;
 import org.chs.camlauncher.front.controller.MainController;
 import org.chs.camlauncher.front.controller.SettingsController;
-import org.chs.camlauncher.front.translation.Language;
+import org.chs.camlauncher.language.Language;
 import org.chs.camlauncher.ui.control.CamlPageHost;
 import org.chs.camlauncher.ui.control.CamlTopBar;
 import org.chs.camlauncher.ui.control.CamlTopNav;

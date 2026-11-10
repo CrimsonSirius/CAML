@@ -15,7 +15,7 @@ import org.chs.camlauncher.backend.theme.ThemeInfo;
 import org.chs.camlauncher.backend.system.SystemMemoryInfo;
 import org.chs.camlauncher.backend.settings.LanguageSelectionMode;
 import org.chs.camlauncher.front.controller.SettingsController;
-import org.chs.camlauncher.front.translation.Language;
+import org.chs.camlauncher.language.Language;
 import org.chs.camlauncher.ui.control.CamlSideNav;
 import org.chs.camlauncher.ui.control.CamlSideNavItem;
 

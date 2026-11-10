@@ -1,12 +1,14 @@
-package org.chs.camlauncher.front.translation;
+package org.chs.camlauncher.language;
 
-import org.chs.camlauncher.front.translation.generator.ENUSGenerator;
-import org.chs.camlauncher.front.translation.generator.ZHCNGenerator;
+import org.chs.camlauncher.language.generator.ENUSGenerator;
+import org.chs.camlauncher.language.generator.ZHCNGenerator;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
@@ -15,11 +17,18 @@ import java.util.TreeMap;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /** 校验翻译文件与生成器保持一致。 */
 class LanguageTest {
+    @TempDir
+    Path dataDirectory;
+
+    @BeforeEach
+    void initializeLanguageDirectory() throws IOException {
+        Language.initialize(dataDirectory);
+    }
+
     @AfterEach
     void resetLocale() {
         Language.setLocale("zh_cn");
@@ -62,9 +71,18 @@ class LanguageTest {
         assertEquals(List.of("zh_cn", "en_us"), Language.supportedLocales());
         assertTrue(Language.isSupportedLocale("EN-US"));
         assertEquals("en_us", Language.normalizeLocale("EN-US"));
-        for (String locale : Language.supportedLocales()) {
-            assertNotNull(Language.class.getResource("/lang/" + locale + ".json"));
-        }
+        assertTrue(Files.isRegularFile(dataDirectory.resolve("lang").resolve("zh_cn.json")));
+        assertTrue(Files.isRegularFile(dataDirectory.resolve("lang").resolve("en_us.json")));
+    }
+
+    @Test
+    void readsEditedLanguageFileFromDataDirectory() throws IOException {
+        Path file = dataDirectory.resolve("lang").resolve("en_us.json");
+        Files.writeString(file, "{\"home.launch\":\"Edited launch\"}");
+
+        Language.setLocale("en_us");
+
+        assertEquals("Edited launch", Language.tr("home.launch"));
     }
 
     @Test

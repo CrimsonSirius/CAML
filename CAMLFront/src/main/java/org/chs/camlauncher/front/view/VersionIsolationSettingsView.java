@@ -3,7 +3,7 @@ package org.chs.camlauncher.front.view;
 import javafx.scene.control.Label;
 import javafx.scene.control.ToggleGroup;
 import javafx.scene.layout.VBox;
-import org.chs.camlauncher.front.translation.Language;
+import org.chs.camlauncher.language.Language;
 import org.chs.camlauncher.ui.control.CamlRadioButton;
 
 import java.util.function.Consumer;

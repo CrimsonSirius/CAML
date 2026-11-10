@@ -13,7 +13,7 @@ import org.chs.camlauncher.backend.loader.forge.ForgeVersion;
 import org.chs.camlauncher.backend.loader.neoforge.NeoForgeVersion;
 import org.chs.camlauncher.backend.loader.optifine.OptiFineVersion;
 import org.chs.camlauncher.backend.metadata.model.VersionManifest;
-import org.chs.camlauncher.front.translation.Language;
+import org.chs.camlauncher.language.Language;
 
 import java.io.IOException;
 import java.nio.file.Path;

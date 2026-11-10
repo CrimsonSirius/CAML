@@ -4,7 +4,7 @@ import javafx.scene.Node;
 import javafx.scene.control.Label;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
-import org.chs.camlauncher.front.translation.Language;
+import org.chs.camlauncher.language.Language;
 import org.chs.camlauncher.ui.control.CamlButton;
 
 import java.time.OffsetDateTime;

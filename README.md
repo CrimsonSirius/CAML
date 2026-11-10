@@ -24,7 +24,7 @@ CAML 是一个基于 **Java 25 + JavaFX** 的 Minecraft 启动器，采用前后
 | Java | 扫描 `java.home`、`JAVA_HOME`、`PATH` 及常见 JDK 目录；读取版本、供应商、架构、位数；按版本要求选择运行时；Windows 优先 `javaw.exe` |
 | 启动 | 不可变 `LaunchPlan`、classpath 构建、JVM/游戏参数与 `${...}` 占位符、natives 子目录解压、Log4j 配置、旧版本 virtual assets 重建；NeoForge 26.2 + Vulkan 自动关闭 early window；根据设置选择，`--gameDir` 指向 `versions/<id>` 或 `.minecraft` 根目录 |
 | 进程 | `ProcessBuilder` 启动、工作目录与环境变量、stdout/stderr 转发、Minecraft Log4j XML 转原版日志风格、退出码回调、停止能力；命令行过长时自动回退 `@argfile` / manifest classpath jar；`LaunchException` 分类错误并提供中文提示 |
-| 多语言 | 界面文案全部来自 `lang/*.json`（`zh_cn`、`en_us`），视图与控制器只引用翻译键；`Language.tr` 支持占位符和缺失键回退；翻译文件由 `LanguageTranslationGenerator` 子类生成，`:CAMLFront:generateTranslation` 刷新 |
+| 多语言 | 独立 `CAMLLanguage` 模块；内置 `zh_cn`、`en_us`，首次启动复制到 `~/.caml/lang`，之后从该目录读取；视图与控制器只引用翻译键，`Language.tr` 支持占位符和缺失键回退；翻译文件由 `LanguageTranslationGenerator` 子类生成，`:CAMLLanguage:generateTranslation` 刷新 |
 
 ### 尚未实现
 
@@ -63,18 +63,20 @@ CAML/
 │  │  ├─ theme/       CamlTheme（安装结构样式、加载外部主题）
 │  │  └─ control/     CamlButton、CamlCard、CamlTextField、CamlSwitch 等
 │  └─ src/main/resources/org/chs/camlauncher/ui/caml.css（只含结构，不含配色）
+├─ CAMLLanguage/                      纯 Java 多语言运行时、生成器与语言资源
+│  ├─ src/main/java/org/chs/camlauncher/language/
+│  │  ├─ Language.java                从 ~/.caml/lang 读取翻译
+│  │  ├─ LanguageResources.java       首次复制内置 lang/*.json
+│  │  ├─ LanguageTranslationGenerator.java 翻译生成器抽象类
+│  │  ├─ TranslationTable.java        翻译键值表（实例 put，拒绝重复键）
+│  │  ├─ TranslationGeneratorRunner.java 生成任务入口
+│  │  └─ generator/                   ZHCNGenerator、ENUSGenerator
+│  ├─ src/main/resources/lang/        zh_cn.json、en_us.json
+│  └─ src/test/java/                  LanguageTest
 ├─ CAMLFront/                         JavaFX 界面（不直接读写文件/发 HTTP/启动进程）
 │  ├─ src/main/java/org/chs/camlauncher/front/
 │  │  ├─ CAMLApplication.java         应用入口
 │  │  ├─ WindowSizePlanner.java       窗口尺寸与居中计算
-│  │  ├─ translation/
-│  │  │  ├─ Language.java             读取 lang/*.json 的运行时翻译入口
-│  │  │  ├─ LanguageTranslationGenerator.java 翻译生成器抽象类
-│  │  │  ├─ TranslationTable.java     翻译键值表（实例 put，拒绝重复键）
-│  │  │  ├─ TranslationGeneratorRunner.java 生成任务入口
-│  │  │  └─ generator/                只存放生成 lang JSON 的语言类
-│  │  │     ├─ ZHCNGenerator.java     简体中文翻译
-│  │  │     └─ ENUSGenerator.java     英文翻译
 │  │  ├─ controller/
 │  │  │  ├─ MainController.java       页面控制器组合入口
 │  │  │  ├─ HomeController.java       启动、日志回调和实例扫描
@@ -116,8 +118,9 @@ CAML/
 - `CAMLBackend` 是纯 Java，不 import JavaFX，也不依赖 `CAMLFront`。
 - `CAMLUI` 只依赖 JavaFX 和自身 CSS，不依赖 `CAMLBackend` 或 `CAMLFront`。
 - `CAMLUI` 不内置任何固定配色；所有颜色令牌来自外部主题文件。
-- `CAMLFront` 只通过 CAMLUI 组件搭建界面，不直接读写文件、不直接发 HTTP、不直接启动进程。
-- `CAMLFront` 不在视图里硬编码界面文案，统一通过 `Language.tr(key)` 读取 `lang/*.json`。
+- `CAMLLanguage` 是纯 Java 模块，不依赖 JavaFX、`CAMLBackend` 或 `CAMLFront`。
+- `CAMLFront` 只通过 `CAMLUI` 搭建界面、通过 `CAMLLanguage` 读取文案，不直接读写文件、不直接发 HTTP、不直接启动进程。
+- `CAMLFront` 不在视图里硬编码界面文案，统一通过 `Language.tr(key)` 读取 `~/.caml/lang/*.json`。
 - `MainView` 只负责壳层和页面切换；各页面、表单、日志和设置内容独立成类。
 - `MainController` 只组合 `HomeController`、`DownloadsController` 和 `SettingsController`，具体交互按页面拆分。
 - 前后端通过 facade、DTO、事件和 `CompletableFuture` 交互。
@@ -191,17 +194,22 @@ CamlCard card = new CamlCard(
 
 ### 多语言
 
-前端不在代码里硬编码界面文案，而是像 Minecraft 一样从 `lang/*.json` 读取翻译：
+前端不在代码里硬编码界面文案，而是通过独立 `CAMLLanguage` 模块读取翻译：
 
 ```text
-CAMLFront/src/main/resources/lang/zh_cn.json
-CAMLFront/src/main/resources/lang/en_us.json
+CAMLLanguage/src/main/resources/lang/zh_cn.json
+CAMLLanguage/src/main/resources/lang/en_us.json
+~/.caml/lang/zh_cn.json
+~/.caml/lang/en_us.json
 ```
+
+首次启动时，`CAMLLanguage` 把内置语言文件复制到 `~/.caml/lang`；之后只从该目录读取，
+已存在的文件不会被覆盖，用户可以直接修改或新增语言文件。
 
 视图和控制器只引用翻译键：
 
 ```java
-import org.chs.camlauncher.front.translation.Language;
+import org.chs.camlauncher.language.Language;
 
 CamlButton launch = CamlButton.filled(Language.tr("home.launch"));
 statusLabel.setText(Language.tr("home.instance.current", version));
@@ -209,11 +217,13 @@ statusLabel.setText(Language.tr("home.instance.current", version));
 
 - `Language.tr(key)` 找不到键时直接返回键名，方便发现遗漏；支持 `%s` / `%d` 等占位符。
 - 当前语言按顺序取 `-Dcaml.language`、系统语言（`en*` → `en_us`，其余 → `zh_cn`）。
+- 首次启动时 `CAMLLanguage` 把内置 `lang/*.json` 复制到 `~/.caml/lang`；之后从该目录读取。
+  已存在的文件不覆盖，缺失的内置文件会在下次启动补齐。
 - 设置 → 外观 → 语言提供“自动 / 手动”两种模式；手动模式可从语言下拉框选择
   `zh_cn` 或 `en_us`。模式与手动语言分别保存在 `settings.properties` 的
   `languageMode` 和 `language`，切换后立即重建主视图刷新界面文案。
 - 语言文件**由代码生成**，不要手工编辑：每种语言实现一个继承
-  `LanguageTranslationGenerator` 的生成器（`translation/generator/ZHCNGenerator`、
+  `LanguageTranslationGenerator` 的生成器（`CAMLLanguage` 下的 `ZHCNGenerator`、
   `ENUSGenerator`），在 `populate(TranslationTable)` 中用实例方法登记键和文案：
 
   ```java
@@ -224,22 +234,22 @@ statusLabel.setText(Language.tr("home.instance.current", version));
   }
   ```
 
-- `translation/generator` 只存放真正写出 `lang/*.json` 的语言类；运行时入口
+- `CAMLLanguage` 模块只存放语言运行时、生成器和语言资源；运行时入口
   `Language`、抽象基类 `LanguageTranslationGenerator`、翻译表 `TranslationTable`
-  和生成入口 `TranslationGeneratorRunner` 都放在 `translation` 根目录。
+  和生成入口 `TranslationGeneratorRunner` 都放在 `org.chs.camlauncher.language` 根目录。
 - 新增语言只需在 `generator` 下添加一个生成器，并在 `TranslationGeneratorRunner` 中登记。
 
 生成翻译文件：
 
 ```bash
 # Windows
-.\gradlew.bat :CAMLFront:generateTranslation
+.\gradlew.bat :CAMLLanguage:generateTranslation
 
 # Linux / macOS
-./gradlew :CAMLFront:generateTranslation
+./gradlew :CAMLLanguage:generateTranslation
 ```
 
-任务会先编译 `CAMLFront`，再把结果写入 `CAMLFront/src/main/resources/lang`；
+任务会先编译 `CAMLLanguage`，再把结果写入 `CAMLLanguage/src/main/resources/lang`；
 `LanguageTest` 会校验生成器与已提交的 JSON 保持一致，并检查各语言键集合相同。
 
 ### 主题系统
@@ -274,7 +284,7 @@ CAMLBackend/src/main/resources/themes/mango.css
 |---|---|
 | `runLauncher` | 执行 `:CAMLFront:run`，可直接使用 IDEA 调试 JavaFX 前端 |
 | `build` | 执行 Gradle `build`，构建后端、前端和测试 |
-| `generateTranslation` | 执行 `:CAMLFront:generateTranslation`，重新生成 `lang/*.json` |
+| `generateTranslation` | 执行 `:CAMLLanguage:generateTranslation`，重新生成 `lang/*.json` |
 
 `build` 当前只生成 Gradle 构建产物，还不是单文件启动器。单文件打包需要先确定 Windows/Linux 目标，再接入 `jpackage`。
 
@@ -289,6 +299,7 @@ CAMLBackend/src/main/resources/themes/mango.css
 | 启动器 UI 日志 | `~/.caml/logs/latest.log`（每次关闭刷新保留；启动器错误、游戏 `[ERR]` 或异常退出时额外生成 `.log.gz`） |
 | 外部主题 | `~/.caml/themes/*.css` |
 | 当前主题 | `~/.caml/theme.txt` |
+| 外部语言文件 | `~/.caml/lang/*.json` |
 | 启动器设置 | `~/.caml/settings.properties` |
 | 游戏数据（Linux / macOS） | `~/.minecraft` |
 | 游戏数据（Windows） | 启动器所在目录下的 `.minecraft` |

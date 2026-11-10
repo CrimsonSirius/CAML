@@ -8,7 +8,7 @@ import org.chs.camlauncher.backend.runtime.JavaCandidate;
 import org.chs.camlauncher.backend.runtime.JavaSelectionMode;
 import org.chs.camlauncher.backend.settings.LanguageSelectionMode;
 import org.chs.camlauncher.backend.system.SystemMemoryInfo;
-import org.chs.camlauncher.front.translation.Language;
+import org.chs.camlauncher.language.Language;
 
 import java.io.IOException;
 import java.nio.file.Path;

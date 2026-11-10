@@ -8,7 +8,7 @@ import javafx.scene.layout.VBox;
 import javafx.util.StringConverter;
 import org.chs.camlauncher.backend.settings.LanguageSelectionMode;
 import org.chs.camlauncher.backend.theme.ThemeInfo;
-import org.chs.camlauncher.front.translation.Language;
+import org.chs.camlauncher.language.Language;
 import org.chs.camlauncher.ui.control.CamlComboBox;
 import org.chs.camlauncher.ui.control.CamlRadioButton;
 
@@ -71,9 +71,7 @@ final class LauncherSettingsView extends VBox {
         languageBox.setConverter(new StringConverter<>() {
             @Override
             public String toString(String locale) {
-                return locale == null
-                        ? ""
-                        : Language.tr("settings.appearance.language." + locale);
+                return locale == null ? "" : Language.localeDisplayName(locale);
             }
 
             @Override

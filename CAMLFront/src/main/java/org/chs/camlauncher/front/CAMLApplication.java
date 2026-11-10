@@ -16,7 +16,7 @@ import org.chs.camlauncher.backend.settings.SettingsService;
 import org.chs.camlauncher.backend.system.SystemMemoryInfo;
 import org.chs.camlauncher.backend.theme.ThemeInfo;
 import org.chs.camlauncher.front.controller.MainController;
-import org.chs.camlauncher.front.translation.Language;
+import org.chs.camlauncher.language.Language;
 import org.chs.camlauncher.front.view.MainView;
 import org.chs.camlauncher.ui.theme.CamlTheme;
 
@@ -60,6 +60,12 @@ public final class CAMLApplication extends Application {
         BackendConfig config = BackendConfig.defaults();
         backend = new CAMLBackend(config);
         backend.start();
+
+        try {
+            Language.initialize(config.dataDirectory());
+        } catch (IOException e) {
+            logger.warn("无法初始化语言目录，使用内置语言资源", e);
+        }
 
         try {
             themes = backend.listThemes();
