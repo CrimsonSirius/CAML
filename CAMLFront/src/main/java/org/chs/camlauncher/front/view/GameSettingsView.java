@@ -7,6 +7,7 @@ import javafx.scene.layout.VBox;
 import javafx.util.Duration;
 import org.chs.camlauncher.backend.system.SystemMemoryInfo;
 import org.chs.camlauncher.front.controller.SettingsController;
+import org.chs.camlauncher.front.translation.Language;
 import org.chs.camlauncher.ui.control.CamlMemorySlider;
 
 import java.util.function.IntConsumer;
@@ -88,21 +89,21 @@ final class GameSettingsView extends VBox {
     }
 
     private void buildLayout() {
-        Label heading = new Label("内存");
+        Label heading = new Label(Language.tr("settings.game.memory.title"));
         heading.getStyleClass().add("app-settings-group-title");
 
-        Label description = new Label("调整游戏启动时使用的内存。");
+        Label description = new Label(Language.tr("settings.game.memory.description"));
         description.getStyleClass().addAll("caml-body-medium", "caml-on-surface-muted");
         description.setWrapText(true);
 
-        Label memoryLabel = new Label("内存分配");
+        Label memoryLabel = new Label(Language.tr("settings.game.memory.label"));
         memoryLabel.getStyleClass().add("caml-label-medium");
         memoryLabel.setLabelFor(memorySlider);
 
         VBox memoryBlock = new VBox(10, memoryLabel, memorySummary, memorySlider);
         memoryBlock.getStyleClass().add("app-memory-block");
 
-        Label hint = new Label("拖动小球调整游戏分配；灰色条为已使用 + 游戏分配，右侧淡灰为未使用内存。");
+        Label hint = new Label(Language.tr("settings.game.memory.hint"));
         hint.getStyleClass().addAll("caml-body-small", "field-hint");
         hint.setWrapText(true);
 
@@ -124,8 +125,7 @@ final class GameSettingsView extends VBox {
     }
 
     private void updateMemorySummary(int value) {
-        memorySummary.setText(String.format(
-                "已使用 %d MB / 游戏 %d MB / 可用 %d MB / 总内存 %d MB",
+        memorySummary.setText(Language.tr("settings.game.memory.summary",
                 usedMemoryMb, value, availableMemoryMb, totalMemoryMb));
     }
 

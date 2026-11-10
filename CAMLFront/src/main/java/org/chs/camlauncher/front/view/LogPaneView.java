@@ -4,6 +4,7 @@ import javafx.geometry.Insets;
 import javafx.scene.control.Label;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
+import org.chs.camlauncher.front.translation.Language;
 import org.chs.camlauncher.ui.control.CamlTextArea;
 
 /** 主页右侧的运行日志支持面板。 */
@@ -11,17 +12,17 @@ final class LogPaneView extends VBox {
     private final CamlTextArea logArea;
 
     LogPaneView() {
-        Label heading = new Label("运行日志");
+        Label heading = new Label(Language.tr("log.title"));
         heading.getStyleClass().add("caml-title-large");
 
-        Label subheading = new Label("下载进度与游戏进程输出");
+        Label subheading = new Label(Language.tr("log.subtitle"));
         subheading.getStyleClass().addAll("caml-body-small", "caml-on-surface-muted");
 
         logArea = new CamlTextArea();
         logArea.setEditable(false);
         logArea.setWrapText(false);
         logArea.setMaxHeight(Double.MAX_VALUE);
-        logArea.setAccessibleText("运行日志");
+        logArea.setAccessibleText(Language.tr("log.accessible"));
         logArea.getStyleClass().add("app-log-area");
         VBox.setVgrow(logArea, Priority.ALWAYS);
 

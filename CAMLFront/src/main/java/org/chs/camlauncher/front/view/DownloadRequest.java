@@ -6,6 +6,7 @@ import org.chs.camlauncher.backend.loader.forge.ForgeVersion;
 import org.chs.camlauncher.backend.loader.neoforge.NeoForgeVersion;
 import org.chs.camlauncher.backend.loader.optifine.OptiFineVersion;
 import org.chs.camlauncher.backend.metadata.model.VersionManifest;
+import org.chs.camlauncher.front.translation.Language;
 
 import java.nio.file.Path;
 
@@ -22,18 +23,20 @@ record DownloadRequest(
 ) {
     String description() {
         if (optiFine != null) {
-            return "Forge " + forge.version() + " + OptiFine " + optiFine.version();
+            return Language.tr("download.description.optifine", forge.version(), optiFine.version());
         }
         if (forge != null) {
-            return "Forge " + forge.version();
+            return Language.tr("download.description.forge", forge.version());
         }
         if (fabricLoader != null) {
-            String api = fabricApi == null ? "" : " + Fabric API " + fabricApi.versionNumber();
-            return "Fabric Loader " + fabricLoader.version() + api;
+            return fabricApi == null
+                    ? Language.tr("download.description.fabric", fabricLoader.version())
+                    : Language.tr("download.description.fabricWithApi",
+                            fabricLoader.version(), fabricApi.versionNumber());
         }
         if (neoForge != null) {
-            return "NeoForge " + neoForge.version();
+            return Language.tr("download.description.neoforge", neoForge.version());
         }
-        return "Minecraft " + version.id();
+        return Language.tr("download.description.vanilla", version.id());
     }
 }

@@ -12,6 +12,7 @@ import javafx.scene.layout.VBox;
 import org.chs.camlauncher.backend.api.GameDirectoryInfo;
 import org.chs.camlauncher.front.controller.FrontTask;
 import org.chs.camlauncher.front.controller.HomeController;
+import org.chs.camlauncher.front.translation.Language;
 import org.chs.camlauncher.ui.control.CamlButton;
 import org.chs.camlauncher.ui.control.CamlTextField;
 
@@ -65,7 +66,7 @@ final class LaunchFormView extends BorderPane {
         statusLabel.setVisible(false);
         statusLabel.setManaged(false);
 
-        launchBtn = CamlButton.filled("启动游戏");
+        launchBtn = CamlButton.filled(Language.tr("home.launch"));
         launchBtn.setMaxWidth(Double.MAX_VALUE);
         launchBtn.setDefaultButton(true);
 
@@ -79,16 +80,16 @@ final class LaunchFormView extends BorderPane {
         instanceInfo.getStyleClass().add("app-instance-info-group");
         VBox fields = new VBox(16,
                 instanceInfo,
-                ViewSupport.buildField("离线用户名", usernameField, null)
+                ViewSupport.buildField(Language.tr("home.username"), usernameField, null)
         );
         fields.getStyleClass().add("app-fields");
 
-        CamlButton chooseInstanceButton = CamlButton.outlined("浏览游戏实例");
+        CamlButton chooseInstanceButton = CamlButton.outlined(Language.tr("home.browseInstances"));
         chooseInstanceButton.setMinWidth(0);
         chooseInstanceButton.setMaxWidth(Double.MAX_VALUE);
         chooseInstanceButton.setOnAction(event -> onChooseInstance.run());
 
-        CamlButton manageInstancesButton = CamlButton.outlined("管理实例");
+        CamlButton manageInstancesButton = CamlButton.outlined(Language.tr("home.manageInstances"));
         manageInstancesButton.setMinWidth(0);
         manageInstancesButton.setMaxWidth(Double.MAX_VALUE);
         manageInstancesButton.setOnAction(event -> onManageInstances.run());
@@ -122,13 +123,12 @@ final class LaunchFormView extends BorderPane {
     }
 
     private void wireController() {
-        controller.setOnStatusChanged(status ->
-                showStatus(status, status.contains("失败") || status.contains("错误")));
+        controller.setOnStatusChanged(this::showStatus);
 
         controller.setOnLaunchFinished(() -> {
             launchTask = null;
             launchBtn.setDisable(false);
-            launchBtn.setText("启动游戏");
+            launchBtn.setText(Language.tr("home.launch"));
         });
 
         controller.setOnGameDirectoryInspected(this::applyGameDirectoryInfo);
@@ -152,7 +152,7 @@ final class LaunchFormView extends BorderPane {
             return;
         }
         controller.inspectGameDirectory(gameDirectory, this::applyGameDirectoryInfo,
-                message -> showStatus("检查游戏目录失败：" + message, true));
+                message -> showStatus(Language.tr("home.error.inspectDirectory", message), true));
     }
 
     private void launchGame() {
@@ -164,24 +164,24 @@ final class LaunchFormView extends BorderPane {
         String username = usernameField.getText().trim();
 
         if (gameDirectory == null) {
-            showStatus("请先在设置中保存游戏位置", true);
+            showStatus(Language.tr("home.error.noGameDirectory"), true);
             return;
         }
         if (lastGameDirectoryInfo != null && !lastGameDirectoryInfo.directoryExists()) {
-            showStatus("游戏位置不存在，请到设置中保存有效目录", true);
+            showStatus(Language.tr("home.error.missingGameDirectory"), true);
             return;
         }
         if (version == null || version.isBlank()) {
-            showStatus("请先浏览并选择游戏实例", true);
+            showStatus(Language.tr("home.error.noInstance"), true);
             return;
         }
         if (username.isEmpty()) {
-            showStatus("请填写离线用户名", true);
+            showStatus(Language.tr("home.error.noUsername"), true);
             return;
         }
 
         launchBtn.setDisable(true);
-        launchBtn.setText("启动中...");
+        launchBtn.setText(Language.tr("home.launching"));
         onLaunchStarted.run();
 
         launchTask = controller.startGame(version, username, launchSettings.maxMemoryMb(),
@@ -212,30 +212,30 @@ final class LaunchFormView extends BorderPane {
     private void updateInstanceInfo() {
         String version = launchSettings.selectedVersion();
         instanceLabel.setText(version == null || version.isBlank()
-                ? "当前实例：未选择"
-                : "当前实例：" + version);
+                ? Language.tr("home.instance.current.none")
+                : Language.tr("home.instance.current", version));
         Path gameDirectory = launchSettings.gameDirectory();
         if (gameDirectory == null) {
-            gameLocationLabel.setText("游戏位置：未设置");
+            gameLocationLabel.setText(Language.tr("home.gameDirectory.none"));
             styleDetail(gameLocationLabel, true);
-            saveLocationLabel.setText("存档位置：未设置");
+            saveLocationLabel.setText(Language.tr("home.saveLocation.none"));
             styleDetail(saveLocationLabel, true);
             return;
         }
 
         boolean missing = lastGameDirectoryInfo != null && !lastGameDirectoryInfo.directoryExists();
         gameLocationLabel.setText(missing
-                ? "游戏位置：目录不存在 · " + gameDirectory
-                : "游戏位置：" + gameDirectory);
+                ? Language.tr("home.gameDirectory.missing", gameDirectory)
+                : Language.tr("home.gameDirectory.value", gameDirectory));
         styleDetail(gameLocationLabel, missing);
 
         if (missing) {
-            saveLocationLabel.setText("存档位置：请先修复游戏位置");
+            saveLocationLabel.setText(Language.tr("home.saveLocation.fixDirectory"));
             styleDetail(saveLocationLabel, true);
             return;
         }
         if (version == null || version.isBlank()) {
-            saveLocationLabel.setText("存档位置：请先选择游戏实例");
+            saveLocationLabel.setText(Language.tr("home.saveLocation.selectInstance"));
             styleDetail(saveLocationLabel, false);
             return;
         }
@@ -244,7 +244,8 @@ final class LaunchFormView extends BorderPane {
         Path savePath = isolated
                 ? gameDirectory.resolve("versions").resolve(version).resolve("saves")
                 : gameDirectory.resolve("saves");
-        saveLocationLabel.setText("存档位置：" + savePath + (isolated ? "（完全版本隔离）" : ""));
+        String suffix = isolated ? Language.tr("home.saveLocation.isolated") : "";
+        saveLocationLabel.setText(Language.tr("home.saveLocation.value", savePath) + suffix);
         styleDetail(saveLocationLabel, false);
     }
 

@@ -125,6 +125,10 @@
 - 设置子项选中：不透明橙黄胶囊，白色文字。
 - 设置子项未选中：透明填充，橙黄实线边框，橙黄文字。
 - 空日志：保留空白日志表面，不额外制造空状态插画。
+- 所有界面文案来自 `lang/*.json`：视图和控制器只调用 `Language.tr(key)`，
+  不写死按钮、标签、提示和状态文字；键缺失时界面显示键名，便于发现遗漏。
+- 语言文件由 `translation/generator` 下的语言生成器类（`LanguageTranslationGenerator` 子类）
+  以 `t.put(key, value)` 登记生成，执行 `:CAMLFront:generateTranslation` 刷新，不手工编辑 JSON。
 
 ## 6. 无障碍
 

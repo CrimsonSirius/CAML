@@ -10,6 +10,7 @@ import javafx.util.StringConverter;
 import org.chs.camlauncher.backend.runtime.JavaCandidate;
 import org.chs.camlauncher.backend.runtime.JavaSelectionMode;
 import org.chs.camlauncher.front.controller.SettingsController;
+import org.chs.camlauncher.front.translation.Language;
 import org.chs.camlauncher.ui.control.CamlButton;
 import org.chs.camlauncher.ui.control.CamlComboBox;
 import org.chs.camlauncher.ui.control.CamlRadioButton;
@@ -24,11 +25,11 @@ import java.util.List;
 final class JavaSettingsView extends VBox {
     private final LaunchSettings launchSettings;
     private final SettingsController controller;
-    private final CamlRadioButton automatic = new CamlRadioButton("自动选择");
-    private final CamlRadioButton manual = new CamlRadioButton("手动选择");
+    private final CamlRadioButton automatic = new CamlRadioButton(Language.tr("settings.game.java.auto"));
+    private final CamlRadioButton manual = new CamlRadioButton(Language.tr("settings.game.java.manual"));
     private final CamlComboBox<JavaCandidate> javaBox = new CamlComboBox<>();
-    private final CamlButton rescanButton = CamlButton.outlined("重新扫描");
-    private final CamlButton addButton = CamlButton.outlined("添加 Java");
+    private final CamlButton rescanButton = CamlButton.outlined(Language.tr("settings.game.java.rescan"));
+    private final CamlButton addButton = CamlButton.outlined(Language.tr("settings.game.java.add"));
     private final Label detailLabel = new Label();
     private boolean scanning;
     private boolean updatingMode;
@@ -37,10 +38,10 @@ final class JavaSettingsView extends VBox {
         this.launchSettings = launchSettings;
         this.controller = controller;
 
-        Label heading = new Label("Java");
+        Label heading = new Label(Language.tr("settings.game.java.title"));
         heading.getStyleClass().add("app-settings-group-title");
 
-        Label description = new Label("选择游戏启动时使用的 Java 运行时。自动选择会按游戏版本要求挑选可用 Java。");
+        Label description = new Label(Language.tr("settings.game.java.description"));
         description.getStyleClass().addAll("caml-body-medium", "caml-on-surface-muted");
         description.setWrapText(true);
 
@@ -60,7 +61,7 @@ final class JavaSettingsView extends VBox {
         tools.setAlignment(Pos.CENTER_LEFT);
 
         javaBox.setMaxWidth(Double.MAX_VALUE);
-        javaBox.setPromptText("正在扫描 Java...");
+        javaBox.setPromptText(Language.tr("settings.game.java.scanning"));
         javaBox.setConverter(new StringConverter<>() {
             @Override
             public String toString(JavaCandidate candidate) {
@@ -119,14 +120,14 @@ final class JavaSettingsView extends VBox {
         }
         scanning = true;
         rescanButton.setDisable(true);
-        javaBox.setPromptText("正在扫描 Java...");
-        detailLabel.setText("正在扫描整机 Java...");
+        javaBox.setPromptText(Language.tr("settings.game.java.scanning"));
+        detailLabel.setText(Language.tr("settings.game.java.scanningAll"));
         detailLabel.getStyleClass().remove("field-hint-error");
         controller.scanJavaCandidates(this::applyCandidates, message -> {
             scanning = false;
             rescanButton.setDisable(false);
-            javaBox.setPromptText("扫描 Java 失败");
-            detailLabel.setText("扫描 Java 失败：" + message);
+            javaBox.setPromptText(Language.tr("settings.game.java.scanFailedPrompt"));
+            detailLabel.setText(Language.tr("settings.game.java.scanFailed", message));
             detailLabel.getStyleClass().remove("field-hint");
             detailLabel.getStyleClass().add("field-hint-error");
         });
@@ -156,12 +157,14 @@ final class JavaSettingsView extends VBox {
                 saveSelection();
             } else {
                 javaBox.setValue(null);
-                javaBox.setPromptText(sorted.isEmpty() ? "没有发现 Java" : "请选择 Java");
+                javaBox.setPromptText(sorted.isEmpty()
+                        ? Language.tr("settings.game.java.noneFound")
+                        : Language.tr("settings.game.java.select"));
                 javaBox.refreshDisplay();
             }
         } else {
             javaBox.setValue(null);
-            javaBox.setPromptText("自动选择");
+            javaBox.setPromptText(Language.tr("settings.game.java.autoSelected"));
             javaBox.refreshDisplay();
         }
         javaBox.setDisable(!manual.isSelected());
@@ -173,7 +176,7 @@ final class JavaSettingsView extends VBox {
             return;
         }
         javafx.stage.FileChooser chooser = new javafx.stage.FileChooser();
-        chooser.setTitle("选择 Java 可执行文件");
+        chooser.setTitle(Language.tr("settings.game.java.chooserTitle"));
         Path current = launchSettings.selectedJavaPath();
         if (current != null && current.getParent() != null && current.getParent().toFile().isDirectory()) {
             chooser.setInitialDirectory(current.getParent().toFile());
@@ -184,7 +187,7 @@ final class JavaSettingsView extends VBox {
         }
 
         addButton.setDisable(true);
-        detailLabel.setText("正在检查 Java...");
+        detailLabel.setText(Language.tr("settings.game.java.checking"));
         detailLabel.getStyleClass().remove("field-hint-error");
         controller.addManualJava(selected.toPath(), candidate -> {
             addButton.setDisable(false);
@@ -206,7 +209,7 @@ final class JavaSettingsView extends VBox {
             updateDetail();
         }, message -> {
             addButton.setDisable(false);
-            detailLabel.setText("添加 Java 失败：" + message);
+            detailLabel.setText(Language.tr("settings.game.java.addFailed", message));
             detailLabel.getStyleClass().remove("field-hint");
             detailLabel.getStyleClass().add("field-hint-error");
         });
@@ -232,7 +235,7 @@ final class JavaSettingsView extends VBox {
             }
         } else {
             javaBox.setValue(null);
-            javaBox.setPromptText("自动选择");
+            javaBox.setPromptText(Language.tr("settings.game.java.autoSelected"));
             javaBox.refreshDisplay();
         }
         updateDetail();
@@ -253,25 +256,24 @@ final class JavaSettingsView extends VBox {
         detailLabel.getStyleClass().removeAll("field-hint", "field-hint-error", "app-java-detail");
         detailLabel.getStyleClass().add("app-java-detail");
         if (!manual.isSelected()) {
-            detailLabel.setText("自动选择会从扫描结果中挑选满足当前游戏版本要求的 Java。");
+            detailLabel.setText(Language.tr("settings.game.java.autoHint"));
             return;
         }
         if (selected == null) {
-            detailLabel.setText("请选择一个 Java，或点击“添加 Java”。");
+            detailLabel.setText(Language.tr("settings.game.java.selectOrAdd"));
             return;
         }
         if (!selected.available()) {
-            detailLabel.setText("该 Java 当前不可用：" + selected.executable());
+            detailLabel.setText(Language.tr("settings.game.java.unavailable", selected.executable()));
             detailLabel.getStyleClass().add("field-hint-error");
             return;
         }
-        detailLabel.setText(String.format(
-                "版本 %s · %s · %s · %d 位%s",
+        detailLabel.setText(Language.tr("settings.game.java.detail",
                 selected.version(),
                 selected.vendor(),
                 selected.architecture(),
                 selected.bits(),
-                selected.jdk() ? " · JDK" : " · JRE"
+                Language.tr(selected.jdk() ? "settings.game.java.jdk" : "settings.game.java.jre")
         ));
         detailLabel.getStyleClass().add("field-hint");
     }

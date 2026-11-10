@@ -4,6 +4,7 @@ import javafx.scene.Node;
 import javafx.scene.control.Label;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
+import org.chs.camlauncher.front.translation.Language;
 import org.chs.camlauncher.ui.control.CamlButton;
 
 import java.time.OffsetDateTime;
@@ -52,7 +53,7 @@ final class ViewSupport {
     }
 
     static CamlButton backButton(Runnable onBack) {
-        CamlButton button = CamlButton.outlined("返回");
+        CamlButton button = CamlButton.outlined(Language.tr("common.back"));
         button.getStyleClass().addAll("app-pill-button", "app-instance-item");
         button.setMinWidth(80);
         button.setOnAction(event -> onBack.run());

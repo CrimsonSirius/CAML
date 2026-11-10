@@ -24,7 +24,7 @@ CAML 是一个基于 **Java 25 + JavaFX** 的 Minecraft 启动器，采用前后
 | Java | 扫描 `java.home`、`JAVA_HOME`、`PATH` 及常见 JDK 目录；读取版本、供应商、架构、位数；按版本要求选择运行时；Windows 优先 `javaw.exe` |
 | 启动 | 不可变 `LaunchPlan`、classpath 构建、JVM/游戏参数与 `${...}` 占位符、natives 子目录解压、Log4j 配置、旧版本 virtual assets 重建；NeoForge 26.2 + Vulkan 自动关闭 early window；根据设置选择，`--gameDir` 指向 `versions/<id>` 或 `.minecraft` 根目录 |
 | 进程 | `ProcessBuilder` 启动、工作目录与环境变量、stdout/stderr 转发、Minecraft Log4j XML 转原版日志风格、退出码回调、停止能力；命令行过长时自动回退 `@argfile` / manifest classpath jar；`LaunchException` 分类错误并提供中文提示 |
-| 界面 | CAML 组件库；外部 CSS 主题（`~/.caml/themes`）；顶部“主页 / 下载 / 设置”导航；窗口尺寸按主屏可用区域自适应并居中（小屏收缩、大屏限幅）；下载页“正式版 / 快照版 / 远古版”侧边栏、按发布时间排序的版本列表和下载设置页（实例名输入、版本信息、Forge/OptiFine/Fabric/Fabric API/NeoForge 选择条、底部原版或加载器下载按钮）；实例名输入停止 0.5 秒后自动检查重复并在输入框下方提示；点击下载后进入独立下载进度页（左侧实时网速，右侧总进度、当前文件和阶段列表）；设置页“游戏设置 / 下载设置 / 外观”侧边栏，右侧内容支持纵向滚动；“游戏位置”设置组（输入、浏览、显式保存）；“版本隔离”单选组；“Java”设置组（自动/手动选择、整机扫描、手动添加、扫描与手动列表去重）；“下载源”三选一和自定义 API 输入；“设定下载并发数”滑块组；“外观”设置组的主题选择；主页“浏览游戏实例”二级列表和“管理实例”空页；启动成功后记住最后启动实例并在下次启动恢复；叠层内存滑块（灰色=系统已使用+游戏分配，淡灰=未使用），每 0.5 秒刷新；游戏位置、版本隔离、Java 选择、下载源、下载并发数和内存设置持久化；宽屏左右分栏、窄屏上下堆叠 |
+| 多语言 | 界面文案全部来自 `lang/*.json`（`zh_cn`、`en_us`），视图与控制器只引用翻译键；`Language.tr` 支持占位符和缺失键回退；翻译文件由 `LanguageTranslationGenerator` 子类生成，`:CAMLFront:generateTranslation` 刷新 |
 
 ### 尚未实现
 
@@ -67,6 +67,14 @@ CAML/
 │  ├─ src/main/java/org/chs/camlauncher/front/
 │  │  ├─ CAMLApplication.java         应用入口
 │  │  ├─ WindowSizePlanner.java       窗口尺寸与居中计算
+│  │  ├─ translation/
+│  │  │  ├─ Language.java             读取 lang/*.json 的运行时翻译入口
+│  │  │  ├─ LanguageTranslationGenerator.java 翻译生成器抽象类
+│  │  │  ├─ TranslationTable.java     翻译键值表（实例 put，拒绝重复键）
+│  │  │  ├─ TranslationGeneratorRunner.java 生成任务入口
+│  │  │  └─ generator/                只存放生成 lang JSON 的语言类
+│  │  │     ├─ ZHCNGenerator.java     简体中文翻译
+│  │  │     └─ ENUSGenerator.java     英文翻译
 │  │  ├─ controller/
 │  │  │  ├─ MainController.java       页面控制器组合入口
 │  │  │  ├─ HomeController.java       启动、日志回调和实例扫描
@@ -109,6 +117,7 @@ CAML/
 - `CAMLUI` 只依赖 JavaFX 和自身 CSS，不依赖 `CAMLBackend` 或 `CAMLFront`。
 - `CAMLUI` 不内置任何固定配色；所有颜色令牌来自外部主题文件。
 - `CAMLFront` 只通过 CAMLUI 组件搭建界面，不直接读写文件、不直接发 HTTP、不直接启动进程。
+- `CAMLFront` 不在视图里硬编码界面文案，统一通过 `Language.tr(key)` 读取 `lang/*.json`。
 - `MainView` 只负责壳层和页面切换；各页面、表单、日志和设置内容独立成类。
 - `MainController` 只组合 `HomeController`、`DownloadsController` 和 `SettingsController`，具体交互按页面拆分。
 - 前后端通过 facade、DTO、事件和 `CompletableFuture` 交互。
@@ -180,6 +189,56 @@ CamlCard card = new CamlCard(
 
 需要关闭页面切换和按钮缩放动画时，启动参数加 `-Dcaml.reduceMotion=true`。
 
+### 多语言
+
+前端不在代码里硬编码界面文案，而是像 Minecraft 一样从 `lang/*.json` 读取翻译：
+
+```text
+CAMLFront/src/main/resources/lang/zh_cn.json
+CAMLFront/src/main/resources/lang/en_us.json
+```
+
+视图和控制器只引用翻译键：
+
+```java
+import org.chs.camlauncher.front.translation.Language;
+
+CamlButton launch = CamlButton.filled(Language.tr("home.launch"));
+statusLabel.setText(Language.tr("home.instance.current", version));
+```
+
+- `Language.tr(key)` 找不到键时直接返回键名，方便发现遗漏；支持 `%s` / `%d` 等占位符。
+- 当前语言按顺序取 `-Dcaml.language`、系统语言（`en*` → `en_us`，其余 → `zh_cn`）。
+- 语言文件**由代码生成**，不要手工编辑：每种语言实现一个继承
+  `LanguageTranslationGenerator` 的生成器（`translation/generator/ZHCNGenerator`、
+  `ENUSGenerator`），在 `populate(TranslationTable)` 中用实例方法登记键和文案：
+
+  ```java
+  @Override
+  protected void populate(TranslationTable t) {
+      t.put("home.launch", "启动游戏");
+      t.put("home.instance.current", "当前实例：%s");
+  }
+  ```
+
+- `translation/generator` 只存放真正写出 `lang/*.json` 的语言类；运行时入口
+  `Language`、抽象基类 `LanguageTranslationGenerator`、翻译表 `TranslationTable`
+  和生成入口 `TranslationGeneratorRunner` 都放在 `translation` 根目录。
+- 新增语言只需在 `generator` 下添加一个生成器，并在 `TranslationGeneratorRunner` 中登记。
+
+生成翻译文件：
+
+```bash
+# Windows
+.\gradlew.bat :CAMLFront:generateTranslation
+
+# Linux / macOS
+./gradlew :CAMLFront:generateTranslation
+```
+
+任务会先编译 `CAMLFront`，再把结果写入 `CAMLFront/src/main/resources/lang`；
+`LanguageTest` 会校验生成器与已提交的 JSON 保持一致，并检查各语言键集合相同。
+
 ### 主题系统
 
 主题是普通的 JavaFX CSS 文件，放在 `~/.caml/themes/*.css`。启动器本体不定义
@@ -206,12 +265,13 @@ CAMLBackend/src/main/resources/themes/mango.css
 
 ### IDEA 运行配置
 
-项目根目录的 `.run/` 提供两个共享运行配置：
+项目根目录的 `.run/` 提供三个共享运行配置：
 
 | 配置 | 作用 |
 |---|---|
 | `runLauncher` | 执行 `:CAMLFront:run`，可直接使用 IDEA 调试 JavaFX 前端 |
 | `build` | 执行 Gradle `build`，构建后端、前端和测试 |
+| `generateTranslation` | 执行 `:CAMLFront:generateTranslation`，重新生成 `lang/*.json` |
 
 `build` 当前只生成 Gradle 构建产物，还不是单文件启动器。单文件打包需要先确定 Windows/Linux 目标，再接入 `jpackage`。
 
@@ -334,11 +394,20 @@ info.isolatedVersions();
 
 ## 已知问题
 
-- 部分测试用例使用 POSIX 路径（如 `/tmp/a.jar`）作为断言，在 Windows 上会因路径分隔符不同而失败：
+以下后端测试在当前 Windows 开发环境下会失败，均与前端和翻译无关：
+
+- 使用 POSIX 路径作为断言，Windows 路径分隔符不同：
   - `LaunchCommandBuilderTest#placesMainClassBetweenJvmAndGameArguments`
   - `LaunchArgumentsBuilderTest#buildsJvmArgumentsWithMemoryDefaultsAndClasspath`
+- 端到端/加载器测试依赖子进程，当前 JDK 25 下子进程启动 `FakeForgeInstallerMain` 失败
+  （`LinkageError`），并导致 `GameLaunchServiceTest#installsAndLaunchesFakeClientEndToEnd`
+  的退出码断言不符：
+  - `ExternalLoaderInstallerTest`（3 个用例）
+  - `GameLaunchServiceTest#installsAndLaunchesFakeClientEndToEnd`
+- 文本比较未归一化换行符：
+  - `NeoForge262VulkanFixTest#createsFmlConfigWhenMissing`
 
-  这与功能实现无关，属于测试本身的跨平台问题。
+前端测试（含 `LanguageTest` 与 `DownloadTelemetryTest`）在本环境全部通过。
 
 ---
 

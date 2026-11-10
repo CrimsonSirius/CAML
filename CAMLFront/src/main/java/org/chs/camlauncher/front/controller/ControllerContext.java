@@ -5,6 +5,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.chs.camlauncher.backend.api.CAMLBackend;
 import org.chs.camlauncher.backend.api.GameDirectoryInfo;
+import org.chs.camlauncher.front.translation.Language;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -180,8 +181,8 @@ final class ControllerContext {
             return null;
         }
 
-        return runDownload("检查游戏目录", () -> backend.inspectGameDirectory(directory),
-                callback, onError);
+        return runDownload(Language.tr("operation.inspectGameDirectory"),
+                () -> backend.inspectGameDirectory(directory), callback, onError);
     }
 
     /** 统一错误动作：记录日志、写入 UI 日志，并把可读消息切回 JavaFX 线程。 */
@@ -199,7 +200,7 @@ final class ControllerContext {
         if (fatal) {
             markFailure();
         }
-        sendLog("[" + operation + "] 失败: " + message);
+        sendLog(Language.tr("log.error.operationFailed", operation, message));
         if (onError != null) {
             Platform.runLater(() -> onError.accept(message));
         }

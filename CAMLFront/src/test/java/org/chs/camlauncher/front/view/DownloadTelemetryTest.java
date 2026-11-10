@@ -1,6 +1,8 @@
 package org.chs.camlauncher.front.view;
 
 import org.chs.camlauncher.backend.download.DownloadListener;
+import org.chs.camlauncher.front.translation.Language;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -10,6 +12,11 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class DownloadTelemetryTest {
+    @BeforeEach
+    void useChineseLocale() {
+        Language.setLocale("zh_cn");
+    }
+
     @Test
     void keepsStageOrderAndIgnoresRegressions() {
         DownloadTelemetry telemetry = new DownloadTelemetry();
@@ -20,7 +27,7 @@ class DownloadTelemetryTest {
 
         DownloadTelemetry.Snapshot snapshot = telemetry.snapshot();
         assertEquals(
-                List.of("准备下载", "获取版本信息", "下载游戏文件与依赖库"),
+                List.of(Language.tr("download.stage.preparing"), "获取版本信息", "下载游戏文件与依赖库"),
                 snapshot.stages()
         );
         assertEquals("下载游戏文件与依赖库", snapshot.currentStage());
@@ -44,8 +51,8 @@ class DownloadTelemetryTest {
         assertTrue(completed.finished());
         assertEquals(100, completed.downloadedBytes());
         assertEquals(2, completed.completedItems());
-        assertEquals("完成", completed.currentStage());
-        assertTrue(completed.stages().contains("完成"));
+        assertEquals(Language.tr("download.stage.completed"), completed.currentStage());
+        assertTrue(completed.stages().contains(Language.tr("download.stage.completed")));
     }
 
     @Test
@@ -55,7 +62,7 @@ class DownloadTelemetryTest {
 
         DownloadTelemetry.Snapshot snapshot = telemetry.snapshot();
         assertTrue(snapshot.failed());
-        assertEquals("下载失败", snapshot.currentStage());
+        assertEquals(Language.tr("download.stage.failed"), snapshot.currentStage());
         assertEquals("网络中断", snapshot.failureMessage());
     }
 

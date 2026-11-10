@@ -1,6 +1,7 @@
 package org.chs.camlauncher.front.view;
 
 import org.chs.camlauncher.backend.download.DownloadListener;
+import org.chs.camlauncher.front.translation.Language;
 
 import java.util.ArrayDeque;
 import java.util.Deque;
@@ -19,7 +20,7 @@ final class DownloadTelemetry implements DownloadListener {
     private final Deque<SpeedSample> speedSamples = new ArrayDeque<>();
     private final LinkedHashSet<String> stages = new LinkedHashSet<>();
 
-    private String currentStage = "准备下载";
+    private String currentStage = Language.tr("download.stage.preparing");
     private String currentFile = "";
     private long currentFileDownloaded;
     private long currentFileTotal;
@@ -119,7 +120,7 @@ final class DownloadTelemetry implements DownloadListener {
             currentFile = "";
             currentFileDownloaded = 0;
             currentFileTotal = 0;
-            currentStage = "完成";
+            currentStage = Language.tr("download.stage.completed");
             stages.add(currentStage);
             if (totalBytes > 0) {
                 downloadedBytes = totalBytes;
@@ -135,11 +136,11 @@ final class DownloadTelemetry implements DownloadListener {
                 return;
             }
             failed = true;
-            failureMessage = message == null ? "未知错误" : message;
+            failureMessage = message == null ? Language.tr("download.stage.unknownError") : message;
             currentFile = "";
             currentFileDownloaded = 0;
             currentFileTotal = 0;
-            currentStage = "下载失败";
+            currentStage = Language.tr("download.stage.failed");
             stages.add(currentStage);
             speedSamples.clear();
         }
