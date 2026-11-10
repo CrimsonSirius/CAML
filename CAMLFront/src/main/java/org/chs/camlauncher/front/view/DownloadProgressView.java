@@ -20,7 +20,7 @@ import java.util.List;
 import java.util.Locale;
 
 /** 独立下载进度页：左侧网速，右侧阶段、总进度和当前文件。 */
-final class DownloadProgressView extends VBox {
+final class DownloadProgressView extends VBox implements PageLifecycle {
     private static final Duration REFRESH_INTERVAL = Duration.millis(200);
     private static final String[] STAGE_STATE_CLASSES = {
             "app-download-stage-done",
@@ -126,8 +126,22 @@ final class DownloadProgressView extends VBox {
         updateStages(snapshot);
     }
 
-    void dispose() {
+    @Override
+    public void dispose() {
         disposed = true;
+        refreshTimeline.stop();
+    }
+
+    @Override
+    public void onShow() {
+        if (!disposed && refreshTimeline.getStatus() != Animation.Status.RUNNING) {
+            refreshNow();
+            refreshTimeline.play();
+        }
+    }
+
+    @Override
+    public void onHide() {
         refreshTimeline.stop();
     }
 

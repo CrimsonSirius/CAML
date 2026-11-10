@@ -1,11 +1,10 @@
 package org.chs.camlauncher.front.controller;
 
 import javafx.application.Platform;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.chs.camlauncher.backend.api.GameDirectoryInfo;
 import org.chs.camlauncher.backend.download.DownloadListener;
 import org.chs.camlauncher.backend.instance.VersionIsolationMode;
+import org.chs.camlauncher.backend.launch.GameLaunch;
 import org.chs.camlauncher.backend.launch.LaunchOptions;
 import org.chs.camlauncher.backend.launch.process.ProcessListener;
 
@@ -18,8 +17,6 @@ import java.util.function.Consumer;
 
 /** 主页控制器：启动游戏、日志/状态回调和实例目录扫描。 */
 public final class HomeController {
-    private static final Logger LOGGER = LogManager.getLogger(HomeController.class);
-
     private final ControllerContext context;
 
     private Consumer<String> onStatusChanged;
@@ -52,8 +49,8 @@ public final class HomeController {
      * <p>这里只负责组装参数和派发后台任务；真正的安装、登录、Java 选择和进程启动
      * 都由 {@code CAMLBackend#launchGame} 在后端完成。</p>
      */
-    public void startGame(String version, String username, int memoryMb, Path gameDirectory,
-                          boolean fullVersionIsolation) {
+    public FrontTask<GameLaunch> startGame(String version, String username, int memoryMb,
+                                           Path gameDirectory, boolean fullVersionIsolation) {
         Objects.requireNonNull(gameDirectory, "gameDirectory");
 
         LaunchOptions options = new LaunchOptions(
@@ -81,41 +78,43 @@ public final class HomeController {
             }
         };
 
-        Thread worker = new Thread(() -> {
-            try {
-                sendStatus("正在启动 " + version + "...");
-                context.backend().launchGame(version, gameDirectory, username, options,
+        sendStatus("正在启动 " + version + "...");
+        return context.runLaunch("启动游戏 " + version,
+                () -> context.backend().launchGame(version, gameDirectory, username, options,
                         fullVersionIsolation
                                 ? VersionIsolationMode.FULL
                                 : VersionIsolationMode.NONE,
-                        downloadListener, processListener);
-                saveLastLaunchedInstance(version);
-                sendStatus("启动指令已发送");
-            } catch (Exception ex) {
-                context.markFailure();
-                context.sendLog("[FATAL] " + ex.getMessage());
-                sendStatus("启动失败！");
-                notifyLaunchFinished();
-            }
-        }, "caml-launch-worker");
-        worker.setDaemon(true);
-        worker.start();
+                        downloadListener, processListener),
+                launch -> {
+                    saveLastLaunchedInstance(version);
+                    sendStatus("启动指令已发送");
+                },
+                message -> {
+                    sendStatus("启动失败！");
+                    notifyLaunchFinished();
+                });
     }
 
     private void saveLastLaunchedInstance(String version) {
         try {
             context.backend().setLastLaunchedInstanceId(version);
         } catch (IOException | RuntimeException e) {
-            LOGGER.warn("保存最后启动实例失败: {}", version, e);
+            context.reportError("保存最后启动实例", e, null);
         }
     }
 
-    public void inspectGameDirectory(Path directory) {
-        inspectGameDirectory(directory, onGameDirectoryInspected);
+    public FrontTask<GameDirectoryInfo> inspectGameDirectory(Path directory) {
+        return inspectGameDirectory(directory, onGameDirectoryInspected);
     }
 
-    public void inspectGameDirectory(Path directory, Consumer<GameDirectoryInfo> callback) {
-        context.inspectGameDirectory(directory, callback);
+    public FrontTask<GameDirectoryInfo> inspectGameDirectory(
+            Path directory, Consumer<GameDirectoryInfo> callback) {
+        return context.inspectGameDirectory(directory, callback);
+    }
+
+    public FrontTask<GameDirectoryInfo> inspectGameDirectory(
+            Path directory, Consumer<GameDirectoryInfo> callback, Consumer<String> onError) {
+        return context.inspectGameDirectory(directory, callback, onError);
     }
 
     private void notifyLaunchFinished() {

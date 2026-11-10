@@ -1,16 +1,20 @@
 package org.chs.camlauncher.front.controller;
 
 import javafx.application.Platform;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.chs.camlauncher.backend.api.CAMLBackend;
 import org.chs.camlauncher.backend.api.GameDirectoryInfo;
 
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Objects;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
@@ -22,6 +26,8 @@ import java.util.function.Consumer;
  * 并把结果统一切回 UI 线程。</p>
  */
 final class ControllerContext {
+    private static final Logger LOGGER = LogManager.getLogger(ControllerContext.class);
+
     private final CAMLBackend backend;
     private final ExecutorService downloadExecutor = Executors.newSingleThreadExecutor(runnable -> {
         Thread thread = new Thread(runnable, "caml-download-worker");
@@ -45,6 +51,11 @@ final class ControllerContext {
     });
     private final ExecutorService javaExecutor = Executors.newSingleThreadExecutor(runnable -> {
         Thread thread = new Thread(runnable, "caml-java-worker");
+        thread.setDaemon(true);
+        return thread;
+    });
+    private final ExecutorService launchExecutor = Executors.newSingleThreadExecutor(runnable -> {
+        Thread thread = new Thread(runnable, "caml-launch-worker");
         thread.setDaemon(true);
         return thread;
     });
@@ -75,64 +86,136 @@ final class ControllerContext {
         backend.markUiFailure();
     }
 
-    <T> CompletableFuture<T> supplyAsync(IoSupplier<T> supplier) {
-        return supplyAsync(supplier, downloadExecutor);
+    <T> FrontTask<T> runDownload(String operation, IoSupplier<T> supplier,
+                                 Consumer<T> onSuccess, Consumer<String> onError) {
+        return submit(operation, downloadExecutor, supplier, onSuccess, onError, false);
     }
 
-    <T> CompletableFuture<T> supplyCheckAsync(IoSupplier<T> supplier) {
-        return supplyAsync(supplier, checkExecutor);
+    <T> FrontTask<T> runCheck(String operation, IoSupplier<T> supplier,
+                              Consumer<T> onSuccess, Consumer<String> onError) {
+        return submit(operation, checkExecutor, supplier, onSuccess, onError, false);
     }
 
-    <T> CompletableFuture<T> supplyMetadataAsync(IoSupplier<T> supplier) {
-        return supplyAsync(supplier, metadataExecutor);
+    <T> FrontTask<T> runMetadata(String operation, IoSupplier<T> supplier,
+                                 Consumer<T> onSuccess, Consumer<String> onError) {
+        return submit(operation, metadataExecutor, supplier, onSuccess, onError, false);
     }
 
-    <T> CompletableFuture<T> supplyJavaAsync(IoSupplier<T> supplier) {
-        return supplyAsync(supplier, javaExecutor);
+    <T> FrontTask<T> runJava(String operation, IoSupplier<T> supplier,
+                             Consumer<T> onSuccess, Consumer<String> onError) {
+        return submit(operation, javaExecutor, supplier, onSuccess, onError, false);
     }
 
-    private <T> CompletableFuture<T> supplyAsync(IoSupplier<T> supplier, ExecutorService executor) {
+    <T> FrontTask<T> runLaunch(String operation, IoSupplier<T> supplier,
+                               Consumer<T> onSuccess, Consumer<String> onError) {
+        return submit(operation, launchExecutor, supplier, onSuccess, onError, true);
+    }
+
+    private <T> FrontTask<T> submit(String operation, ExecutorService executor,
+                                    IoSupplier<T> supplier, Consumer<T> onSuccess,
+                                    Consumer<String> onError, boolean fatal) {
         Objects.requireNonNull(supplier, "supplier");
-        return CompletableFuture.supplyAsync(() -> {
+        CompletableFuture<T> completion = new CompletableFuture<>();
+        Future<?> running = executor.submit(() -> {
             try {
-                return supplier.get();
+                completion.complete(supplier.get());
             } catch (IOException | InterruptedException e) {
                 if (e instanceof InterruptedException) {
                     Thread.currentThread().interrupt();
                 }
-                throw new CompletionException(e);
+                completion.completeExceptionally(e);
+            } catch (RuntimeException | Error e) {
+                completion.completeExceptionally(e);
             }
-        }, executor);
+        });
+        FrontTask<T> task = new FrontTask<>(completion, running);
+        completion.whenComplete((value, failure) -> {
+            if (task.isCancelled()) {
+                return;
+            }
+            if (failure != null) {
+                Consumer<String> guardedError = onError == null
+                        ? null
+                        : message -> {
+                            if (!task.isCancelled()) {
+                                onError.accept(message);
+                            }
+                        };
+                reportError(operation, failure, fatal, guardedError);
+            } else if (onSuccess != null) {
+                Platform.runLater(() -> {
+                    if (!task.isCancelled()) {
+                        onSuccess.accept(value);
+                    }
+                });
+            }
+        });
+        return task;
     }
 
-    void executeSettings(Runnable task) {
+    void executeSettings(String operation, IoAction task) {
         try {
-            settingsExecutor.execute(task);
+            settingsExecutor.execute(() -> {
+                try {
+                    task.run();
+                } catch (IOException | RuntimeException e) {
+                    reportError(operation, e, false, null);
+                }
+            });
         } catch (RejectedExecutionException ignored) {
             // 应用正在退出，不再接受新的持久化任务。
         }
     }
 
     /** 目录扫描统一走后端，结果始终在 JavaFX 线程回调。 */
-    void inspectGameDirectory(Path directory, Consumer<GameDirectoryInfo> callback) {
-        if (directory == null) {
-            return;
-        }
-
-        supplyAsync(() -> backend.inspectGameDirectory(directory))
-                .thenAccept(info -> Platform.runLater(() -> {
-                    if (callback != null) {
-                        callback.accept(info);
-                    }
-                }))
-                .exceptionally(ex -> {
-                    Throwable cause = ex.getCause() != null ? ex.getCause() : ex;
-                    sendLog("[目录] 检查失败: " + cause.getMessage());
-                    return null;
-                });
+    FrontTask<GameDirectoryInfo> inspectGameDirectory(Path directory,
+                                                      Consumer<GameDirectoryInfo> callback) {
+        return inspectGameDirectory(directory, callback, null);
     }
 
-    static String messageOf(Throwable cause) {
+    FrontTask<GameDirectoryInfo> inspectGameDirectory(Path directory,
+                                                      Consumer<GameDirectoryInfo> callback,
+                                                      Consumer<String> onError) {
+        if (directory == null) {
+            return null;
+        }
+
+        return runDownload("检查游戏目录", () -> backend.inspectGameDirectory(directory),
+                callback, onError);
+    }
+
+    /** 统一错误动作：记录日志、写入 UI 日志，并把可读消息切回 JavaFX 线程。 */
+    void reportError(String operation, Throwable cause, Consumer<String> onError) {
+        reportError(operation, cause, false, onError);
+    }
+
+    void reportError(String operation, Throwable cause, boolean fatal, Consumer<String> onError) {
+        Throwable root = unwrap(cause);
+        if (root instanceof CancellationException) {
+            return;
+        }
+        String message = messageOf(root);
+        LOGGER.warn("{}失败", operation, root);
+        if (fatal) {
+            markFailure();
+        }
+        sendLog("[" + operation + "] 失败: " + message);
+        if (onError != null) {
+            Platform.runLater(() -> onError.accept(message));
+        }
+    }
+
+    private static Throwable unwrap(Throwable cause) {
+        Throwable current = cause;
+        while ((current instanceof CompletionException
+                || current instanceof java.util.concurrent.ExecutionException)
+                && current.getCause() != null) {
+            current = current.getCause();
+        }
+        return current;
+    }
+
+    private static String messageOf(Throwable cause) {
         return cause.getMessage() == null ? cause.getClass().getSimpleName() : cause.getMessage();
     }
 
@@ -141,6 +224,7 @@ final class ControllerContext {
         checkExecutor.shutdownNow();
         metadataExecutor.shutdownNow();
         javaExecutor.shutdownNow();
+        launchExecutor.shutdownNow();
         settingsExecutor.shutdown();
         try {
             if (!settingsExecutor.awaitTermination(5, TimeUnit.SECONDS)) {
@@ -155,5 +239,10 @@ final class ControllerContext {
     @FunctionalInterface
     interface IoSupplier<T> {
         T get() throws IOException, InterruptedException;
+    }
+
+    @FunctionalInterface
+    interface IoAction {
+        void run() throws IOException;
     }
 }

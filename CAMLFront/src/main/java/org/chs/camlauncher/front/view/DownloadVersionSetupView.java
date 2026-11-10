@@ -19,16 +19,18 @@ import org.chs.camlauncher.backend.loader.optifine.OptiFineVersion;
 import org.chs.camlauncher.backend.loader.optifine.OptiFineCompatibility;
 import org.chs.camlauncher.backend.metadata.model.VersionManifest;
 import org.chs.camlauncher.front.controller.DownloadsController;
+import org.chs.camlauncher.front.controller.FrontTask;
 import org.chs.camlauncher.ui.control.CamlButton;
 import org.chs.camlauncher.ui.control.CamlComboBox;
 import org.chs.camlauncher.ui.control.CamlTextField;
 
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
 
 /** 选择版本后的下载设置页：实例名、版本信息和加载器选择。 */
-final class DownloadVersionSetupView extends VBox {
+final class DownloadVersionSetupView extends VBox implements PageLifecycle {
     private final Label statusLabel = new Label("未选择加载器时下载原版游戏。");
     private final CamlTextField instanceNameField;
     private final Label instanceNameHint = new Label();
@@ -48,6 +50,9 @@ final class DownloadVersionSetupView extends VBox {
     private String lastAutoName;
     private String availableInstanceName = "";
     private int instanceNameCheckGeneration;
+    private final List<FrontTask<?>> loaderTasks = new ArrayList<>();
+    private FrontTask<?> instanceNameTask;
+    private boolean disposed;
 
     DownloadVersionSetupView(VersionManifest.Version version, DownloadsController controller,
                              LaunchSettings launchSettings, Runnable onCancel,
@@ -325,7 +330,13 @@ final class DownloadVersionSetupView extends VBox {
         }
 
         showInstanceNameHint("正在检查实例名...", false);
-        controller.checkInstanceName(gameDirectory, name, check -> {
+        if (instanceNameTask != null) {
+            instanceNameTask.cancel();
+        }
+        instanceNameTask = controller.checkInstanceName(gameDirectory, name, check -> {
+            if (disposed) {
+                return;
+            }
             if (generation != instanceNameCheckGeneration
                     || !name.equals(instanceNameField.getText().trim())) {
                 return;
@@ -408,22 +419,25 @@ final class DownloadVersionSetupView extends VBox {
     }
 
     private void loadLoaderVersions(String gameVersion, DownloadsController controller) {
-        controller.fetchFabricLoaderVersions(gameVersion, this::showFabricLoaders,
-                message -> fabricLoaderSelector.setPromptText("获取 Fabric 版本失败"));
-        controller.fetchFabricApiVersions(gameVersion, this::showFabricApiVersions,
-                message -> fabricApiSelector.setPromptText("获取 Fabric API 版本失败"));
-        controller.fetchForgeVersions(gameVersion, this::showForgeVersions,
-                message -> forgeSelector.setPromptText("获取 Forge 版本失败"));
-        controller.fetchNeoForgeVersions(gameVersion, this::showNeoForgeVersions,
-                message -> neoForgeSelector.setPromptText("获取 NeoForge 版本失败"));
-        controller.fetchOptiFineVersions(gameVersion, this::showOptiFineVersions,
+        loaderTasks.add(controller.fetchFabricLoaderVersions(gameVersion, this::showFabricLoaders,
+                message -> fabricLoaderSelector.setPromptText("获取 Fabric 版本失败")));
+        loaderTasks.add(controller.fetchFabricApiVersions(gameVersion, this::showFabricApiVersions,
+                message -> fabricApiSelector.setPromptText("获取 Fabric API 版本失败")));
+        loaderTasks.add(controller.fetchForgeVersions(gameVersion, this::showForgeVersions,
+                message -> forgeSelector.setPromptText("获取 Forge 版本失败")));
+        loaderTasks.add(controller.fetchNeoForgeVersions(gameVersion, this::showNeoForgeVersions,
+                message -> neoForgeSelector.setPromptText("获取 NeoForge 版本失败")));
+        loaderTasks.add(controller.fetchOptiFineVersions(gameVersion, this::showOptiFineVersions,
                 message -> {
                     optiFineSelector.setPromptText("获取 OptiFine 版本失败");
                     optiFineSelector.setDisable(true);
-                });
+                }));
     }
 
     private void showFabricLoaders(List<FabricLoaderVersion> loaders) {
+        if (disposed) {
+            return;
+        }
         fabricLoaderSelector.getItems().setAll(loaders);
         fabricLoaderSelector.setPromptText(loaders.isEmpty()
                 ? "没有可用的 Fabric 版本"
@@ -432,6 +446,9 @@ final class DownloadVersionSetupView extends VBox {
     }
 
     private void showFabricApiVersions(List<FabricApiVersion> versions) {
+        if (disposed) {
+            return;
+        }
         fabricApiSelector.getItems().setAll(versions);
         fabricApiSelector.setPromptText(versions.isEmpty()
                 ? "没有可用的 Fabric API 版本"
@@ -440,6 +457,9 @@ final class DownloadVersionSetupView extends VBox {
     }
 
     private void showForgeVersions(List<ForgeVersion> versions) {
+        if (disposed) {
+            return;
+        }
         forgeSelector.getItems().setAll(versions);
         forgeSelector.setPromptText(versions.isEmpty()
                 ? "没有可用的 Forge 版本"
@@ -447,6 +467,9 @@ final class DownloadVersionSetupView extends VBox {
     }
 
     private void showNeoForgeVersions(List<NeoForgeVersion> versions) {
+        if (disposed) {
+            return;
+        }
         neoForgeSelector.getItems().setAll(versions);
         neoForgeSelector.setPromptText(versions.isEmpty()
                 ? "没有可用的 NeoForge 版本"
@@ -454,11 +477,28 @@ final class DownloadVersionSetupView extends VBox {
     }
 
     private void showOptiFineVersions(List<OptiFineVersion> versions) {
+        if (disposed) {
+            return;
+        }
         optiFineSelector.getItems().setAll(versions);
         optiFineSelector.setPromptText(versions.isEmpty()
                 ? "没有可用的 OptiFine 版本"
                 : "请先选择 Forge 版本");
         updateOptiFineState();
+    }
+
+    @Override
+    public void dispose() {
+        disposed = true;
+        instanceNameDebounce.stop();
+        if (instanceNameTask != null) {
+            instanceNameTask.cancel();
+            instanceNameTask = null;
+        }
+        for (FrontTask<?> task : loaderTasks) {
+            task.cancel();
+        }
+        loaderTasks.clear();
     }
 
     private void updateOptiFineState() {

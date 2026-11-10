@@ -22,12 +22,13 @@ import java.util.function.Consumer;
 import java.util.function.IntConsumer;
 
 /** 设置页：左侧子导航，右侧游戏/下载/外观设置内容。 */
-final class SettingsView extends VBox implements SidebarPage {
+final class SettingsView extends VBox implements SidebarPage, PageLifecycle {
     private static final boolean REDUCE_MOTION = Boolean.getBoolean("caml.reduceMotion");
 
     private final GameSettingsView gameSettings;
     private final DownloadSettingsView downloadSettings;
     private final LauncherSettingsView launcherSettings;
+    private final SettingsController controller;
     private final CamlSideNav sideNav;
     private final ScrollPane contentScroll = new ScrollPane();
     private final StackPane contentHost;
@@ -37,6 +38,7 @@ final class SettingsView extends VBox implements SidebarPage {
     SettingsView(LaunchSettings launchSettings, IntConsumer onMemoryChanged,
                  Consumer<Boolean> onVersionIsolationChanged,
                  SystemMemoryInfo systemMemory, SettingsController controller) {
+        this.controller = controller;
         gameSettings = new GameSettingsView(
                 launchSettings, onMemoryChanged, onVersionIsolationChanged, systemMemory, controller);
         controller.setOnSystemMemoryUpdated(gameSettings::updateSystemMemory);
@@ -116,6 +118,25 @@ final class SettingsView extends VBox implements SidebarPage {
     @Override
     public CamlSideNav sidebar() {
         return sideNav;
+    }
+
+    @Override
+    public void onShow() {
+        controller.startMemoryMonitor();
+    }
+
+    @Override
+    public void onHide() {
+        controller.stopMemoryMonitor();
+    }
+
+    @Override
+    public void dispose() {
+        controller.stopMemoryMonitor();
+        if (contentTransition != null) {
+            contentTransition.stop();
+            contentTransition = null;
+        }
     }
 
     private void showContent(Node next) {

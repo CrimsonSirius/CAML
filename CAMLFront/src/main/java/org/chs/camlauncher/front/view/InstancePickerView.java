@@ -8,15 +8,18 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import org.chs.camlauncher.front.controller.HomeController;
+import org.chs.camlauncher.front.controller.FrontTask;
 import org.chs.camlauncher.ui.control.CamlButton;
 
 import java.nio.file.Path;
 import java.util.function.Consumer;
 
 /** 主页的二级菜单：列出当前游戏位置扫描出的所有实例。 */
-final class InstancePickerView extends VBox {
+final class InstancePickerView extends VBox implements PageLifecycle {
     private final Label statusLabel = new Label("正在扫描游戏实例...");
     private final ScrollPane scroll = new ScrollPane();
+    private FrontTask<?> scanTask;
+    private boolean disposed;
 
     InstancePickerView(HomeController controller, Path gameDirectory,
                        Consumer<String> onSelected, Runnable onBack) {
@@ -56,7 +59,10 @@ final class InstancePickerView extends VBox {
             return;
         }
 
-        controller.inspectGameDirectory(gameDirectory, info -> {
+        scanTask = controller.inspectGameDirectory(gameDirectory, info -> {
+            if (disposed) {
+                return;
+            }
             if (!info.directoryExists()) {
                 statusLabel.setText("游戏位置不存在：" + info.directory());
                 return;
@@ -78,6 +84,19 @@ final class InstancePickerView extends VBox {
             }
             scroll.setContent(list);
             statusLabel.setText("共 " + info.installedVersions().size() + " 个游戏实例");
+        }, message -> {
+            if (!disposed) {
+                statusLabel.setText("扫描游戏实例失败：" + message);
+            }
         });
+    }
+
+    @Override
+    public void dispose() {
+        disposed = true;
+        if (scanTask != null) {
+            scanTask.cancel();
+            scanTask = null;
+        }
     }
 }

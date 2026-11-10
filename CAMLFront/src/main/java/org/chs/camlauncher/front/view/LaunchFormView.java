@@ -10,6 +10,7 @@ import javafx.scene.layout.GridPane;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import org.chs.camlauncher.backend.api.GameDirectoryInfo;
+import org.chs.camlauncher.front.controller.FrontTask;
 import org.chs.camlauncher.front.controller.HomeController;
 import org.chs.camlauncher.ui.control.CamlButton;
 import org.chs.camlauncher.ui.control.CamlTextField;
@@ -31,6 +32,7 @@ final class LaunchFormView extends BorderPane {
     private final Label statusLabel;
 
     private GameDirectoryInfo lastGameDirectoryInfo;
+    private FrontTask<?> launchTask;
 
     LaunchFormView(HomeController controller, LaunchSettings launchSettings,
                    Runnable onLaunchStarted, Runnable onChooseInstance, Runnable onManageInstances) {
@@ -124,6 +126,7 @@ final class LaunchFormView extends BorderPane {
                 showStatus(status, status.contains("失败") || status.contains("错误")));
 
         controller.setOnLaunchFinished(() -> {
+            launchTask = null;
             launchBtn.setDisable(false);
             launchBtn.setText("启动游戏");
         });
@@ -148,10 +151,14 @@ final class LaunchFormView extends BorderPane {
             updateInstanceInfo();
             return;
         }
-        controller.inspectGameDirectory(gameDirectory);
+        controller.inspectGameDirectory(gameDirectory, this::applyGameDirectoryInfo,
+                message -> showStatus("检查游戏目录失败：" + message, true));
     }
 
     private void launchGame() {
+        if (launchTask != null && !launchTask.isDone()) {
+            return;
+        }
         Path gameDirectory = launchSettings.gameDirectory();
         String version = launchSettings.selectedVersion();
         String username = usernameField.getText().trim();
@@ -177,8 +184,8 @@ final class LaunchFormView extends BorderPane {
         launchBtn.setText("启动中...");
         onLaunchStarted.run();
 
-        controller.startGame(version, username, launchSettings.maxMemoryMb(), gameDirectory,
-                launchSettings.fullVersionIsolation());
+        launchTask = controller.startGame(version, username, launchSettings.maxMemoryMb(),
+                gameDirectory, launchSettings.fullVersionIsolation());
     }
 
     private void applyGameDirectoryInfo(GameDirectoryInfo info) {

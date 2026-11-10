@@ -32,6 +32,7 @@ public final class MainView extends BorderPane {
     private final DownloadsView downloadsView;
     private final SettingsView settingsView;
     private final CamlPageHost pageHost;
+    private PageLifecycle activePage;
 
     public MainView(MainController controller, int initialMaxMemoryMb,
                     SystemMemoryInfo systemMemory, Path initialGameDirectory,
@@ -63,6 +64,8 @@ public final class MainView extends BorderPane {
         downloadsView = new DownloadsView(downloadsController, launchSettings);
         settingsController.setOnDownloadSourceSaved(downloadsView::refreshVersions);
         pageHost = new CamlPageHost(homeView);
+        activePage = homeView;
+        homeView.onShow();
 
         setTop(buildTopBar());
         setCenter(pageHost);
@@ -91,8 +94,15 @@ public final class MainView extends BorderPane {
     }
 
     private void showPage(Node page) {
+        if (activePage != null) {
+            activePage.onHide();
+        }
         Node sidebar = page instanceof SidebarPage sidebarPage ? sidebarPage.sidebar() : null;
         pageHost.setPage(page, sidebar);
+        activePage = page instanceof PageLifecycle lifecycle ? lifecycle : null;
+        if (activePage != null) {
+            activePage.onShow();
+        }
     }
 
     private Label buildFooter() {
@@ -116,5 +126,15 @@ public final class MainView extends BorderPane {
     /** 提交所有仍处于防抖窗口内的设置修改。 */
     public void flushPendingSettings() {
         settingsView.flushPendingSettings();
+    }
+
+    public void dispose() {
+        if (activePage != null) {
+            activePage.onHide();
+            activePage = null;
+        }
+        homeView.dispose();
+        downloadsView.dispose();
+        settingsView.dispose();
     }
 }
