@@ -73,7 +73,7 @@ public final class ForgeService {
         if (apiRoot != null) {
             try {
                 return fetchApiVersions(gameVersion);
-            } catch (IOException e) {
+            } catch (IOException | RuntimeException e) {
                 LOGGER.warn("从 {} 获取 Forge 版本失败，回退 Maven 元数据", apiRoot, e);
             }
         }
@@ -82,19 +82,19 @@ public final class ForgeService {
 
     private List<ForgeVersion> fetchMetadataVersions(String gameVersion)
             throws IOException, InterruptedException {
-        List<String> metadataVersions = new ArrayList<>(metadataClient.fetchVersions(metadataUri));
+        String prefix = gameVersion + "-";
+        List<String> metadataVersions = new ArrayList<>(metadataClient.fetchVersions(
+                metadataUri,
+                versions -> versions.stream().anyMatch(version -> isForgeVersion(prefix, version))
+        ));
         Collections.reverse(metadataVersions);
 
-        String prefix = gameVersion + "-";
         List<ForgeVersion> result = new ArrayList<>();
         for (String fullVersion : metadataVersions) {
-            if (!fullVersion.startsWith(prefix) || fullVersion.length() == prefix.length()) {
+            if (!isForgeVersion(prefix, fullVersion)) {
                 continue;
             }
             String version = fullVersion.substring(prefix.length());
-            if (version.contains("-installer")) {
-                continue;
-            }
             result.add(new ForgeVersion(
                     gameVersion,
                     version,
@@ -137,7 +137,16 @@ public final class ForgeService {
             ));
         }
         Collections.reverse(result);
+        if (result.isEmpty()) {
+            throw new IOException("Forge 版本列表为空: " + uri);
+        }
         return List.copyOf(result);
+    }
+
+    private static boolean isForgeVersion(String prefix, String fullVersion) {
+        return fullVersion.startsWith(prefix)
+                && fullVersion.length() > prefix.length()
+                && !fullVersion.contains("-installer");
     }
 
     private static boolean hasInstaller(JsonElement files) {

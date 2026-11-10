@@ -117,20 +117,22 @@ public final class NeoForgeService {
             ));
         }
         Collections.reverse(result);
+        if (result.isEmpty()) {
+            throw new IOException("NeoForge 版本列表为空: " + uri);
+        }
         return List.copyOf(result);
     }
 
     private List<NeoForgeVersion> fetchMetadataVersions(String gameVersion)
             throws IOException, InterruptedException {
-        List<String> metadataVersions = new ArrayList<>(metadataClient.fetchVersions(metadataUri));
+        List<String> metadataVersions = new ArrayList<>(metadataClient.fetchVersions(
+                metadataUri,
+                versions -> versions.stream().anyMatch(version -> isNeoForgeVersion(gameVersion, version))
+        ));
         Collections.reverse(metadataVersions);
         List<NeoForgeVersion> result = new ArrayList<>();
         for (String version : metadataVersions) {
-            if (version.contains("-installer")) {
-                continue;
-            }
-            String minecraft = minecraftVersionOf(version);
-            if (!gameVersion.equals(minecraft)) {
+            if (!isNeoForgeVersion(gameVersion, version)) {
                 continue;
             }
             result.add(new NeoForgeVersion(
@@ -140,6 +142,11 @@ public final class NeoForgeService {
             ));
         }
         return List.copyOf(result);
+    }
+
+    private static boolean isNeoForgeVersion(String gameVersion, String version) {
+        return !version.contains("-installer")
+                && gameVersion.equals(minecraftVersionOf(version));
     }
 
     private static String minecraftVersionOf(String version) {

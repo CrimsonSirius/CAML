@@ -112,6 +112,49 @@ class FabricServiceTest {
         }
     }
 
+    @Test
+    void fallsBackToNextSourceWhenMirrorReturnsEmptyLoaderList() throws Exception {
+        String loaderJson = """
+                [
+                  {"loader":{"version":"0.20.1","stable":true}}
+                ]
+                """;
+
+        HttpServer emptyServer = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        emptyServer.createContext("/fabric-meta/v2/versions/loader/1.21.4",
+                exchange -> respond(exchange, "[]"));
+        emptyServer.start();
+        HttpServer dataServer = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        dataServer.createContext("/fabric-meta/v2/versions/loader/1.21.4",
+                exchange -> respond(exchange, loaderJson));
+        dataServer.start();
+
+        try {
+            FabricService service = new FabricService(
+                    HttpClient.newBuilder().version(HttpClient.Version.HTTP_1_1).build(),
+                    new Gson(),
+                    URI.create("https://meta.fabricmc.net/"),
+                    URI.create("https://api.modrinth.com/")
+            );
+            service.setSources(List.of(
+                    new MirrorDownloadSource(serverRoot(emptyServer)),
+                    new MirrorDownloadSource(serverRoot(dataServer))
+            ));
+
+            List<FabricLoaderVersion> loaders = service.fetchLoaderVersions("1.21.4");
+
+            assertEquals(1, loaders.size());
+            assertEquals("0.20.1", loaders.getFirst().version());
+        } finally {
+            emptyServer.stop(0);
+            dataServer.stop(0);
+        }
+    }
+
+    private static String serverRoot(HttpServer server) {
+        return "http://127.0.0.1:" + server.getAddress().getPort() + "/";
+    }
+
     private static void respond(com.sun.net.httpserver.HttpExchange exchange, String content)
             throws java.io.IOException {
         byte[] bytes = content.getBytes(StandardCharsets.UTF_8);

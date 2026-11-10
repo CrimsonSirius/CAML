@@ -8,6 +8,11 @@ import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 /** 按下载源候选顺序执行 HTTP 请求。 */
 public final class SourceAwareHttpClient {
@@ -33,6 +38,20 @@ public final class SourceAwareHttpClient {
         return get(uri, timeout, accept, HttpResponse.BodyHandlers.ofByteArray());
     }
 
+    /** 解析文本响应；解析结果为空时继续尝试下一个候选源。 */
+    public <T> Optional<T> getParsedText(URI uri, Duration timeout, String accept,
+                                         ResponseParser<String, T> parser)
+            throws IOException, InterruptedException {
+        return getParsed(uri, timeout, accept, HttpResponse.BodyHandlers.ofString(), parser);
+    }
+
+    /** 解析二进制响应；解析结果为空时继续尝试下一个候选源。 */
+    public <T> Optional<T> getParsedBytes(URI uri, Duration timeout, String accept,
+                                          ResponseParser<byte[], T> parser)
+            throws IOException, InterruptedException {
+        return getParsed(uri, timeout, accept, HttpResponse.BodyHandlers.ofByteArray(), parser);
+    }
+
     private <T> T get(URI original, Duration timeout, String accept,
                       HttpResponse.BodyHandler<T> bodyHandler)
             throws IOException, InterruptedException {
@@ -49,6 +68,37 @@ public final class SourceAwareHttpClient {
         throw new IOException("无法请求 " + original + "（最后地址: " + lastUri + "）", lastFailure);
     }
 
+    private <T, R> Optional<R> getParsed(URI original, Duration timeout, String accept,
+                                         HttpResponse.BodyHandler<T> bodyHandler,
+                                         ResponseParser<T, R> parser)
+            throws IOException, InterruptedException {
+        Objects.requireNonNull(parser, "parser");
+        IOException lastFailure = null;
+        URI lastUri = null;
+        boolean lastWasEmpty = false;
+        for (URI candidate : DownloadSources.candidates(sources, original.toString())) {
+            lastUri = candidate;
+            try {
+                Optional<R> parsed = parser.parse(send(candidate, timeout, accept, bodyHandler));
+                if (parsed.isPresent()) {
+                    return parsed;
+                }
+                lastFailure = null;
+                lastWasEmpty = true;
+            } catch (IOException e) {
+                lastFailure = e;
+                lastWasEmpty = false;
+            } catch (RuntimeException e) {
+                lastFailure = new IOException("无法解析响应：" + candidate, e);
+                lastWasEmpty = false;
+            }
+        }
+        if (lastWasEmpty) {
+            return Optional.empty();
+        }
+        throw new IOException("无法请求 " + original + "（最后地址: " + lastUri + "）", lastFailure);
+    }
+
     private <T> T send(URI uri, Duration timeout, String accept,
                        HttpResponse.BodyHandler<T> bodyHandler)
             throws IOException, InterruptedException {
@@ -59,10 +109,36 @@ public final class SourceAwareHttpClient {
         if (accept != null && !accept.isBlank()) {
             builder.header("Accept", accept);
         }
-        HttpResponse<T> response = httpClient.send(builder.build(), bodyHandler);
+        CompletableFuture<HttpResponse<T>> future = httpClient.sendAsync(
+                builder.build(), bodyHandler);
+        HttpResponse<T> response;
+        try {
+            response = future.get(Math.max(1, timeout.toMillis()), TimeUnit.MILLISECONDS);
+        } catch (TimeoutException e) {
+            future.cancel(true);
+            throw new IOException("请求超时（" + timeout.toMillis() + "ms）：" + uri, e);
+        } catch (ExecutionException e) {
+            Throwable cause = e.getCause() == null ? e : e.getCause();
+            if (cause instanceof IOException ioException) {
+                throw ioException;
+            }
+            if (cause instanceof RuntimeException runtimeException) {
+                throw runtimeException;
+            }
+            throw new IOException("请求失败：" + uri, cause);
+        } catch (InterruptedException e) {
+            future.cancel(true);
+            Thread.currentThread().interrupt();
+            throw e;
+        }
         if (response.statusCode() < 200 || response.statusCode() >= 300) {
             throw new IOException("HTTP " + response.statusCode() + " for " + uri);
         }
         return response.body();
+    }
+
+    @FunctionalInterface
+    public interface ResponseParser<T, R> {
+        Optional<R> parse(T body) throws IOException;
     }
 }

@@ -35,6 +35,7 @@ import java.util.regex.Pattern;
 
 public final class FileDownloader {
     private static final int DEFAULT_MAX_ATTEMPTS = 6;
+    private static final Duration DEFAULT_READ_TIMEOUT = Duration.ofSeconds(30);
     private static final long MIN_SEGMENT_SIZE = 4L * 1024 * 1024;
     private static final int MAX_SEGMENTS = 4;
     private static final int SEGMENT_CONCURRENCY = 8;
@@ -48,17 +49,26 @@ public final class FileDownloader {
 
     private final HttpClient httpClient;
     private final int maxAttempts;
+    private final Duration readTimeout;
 
     public FileDownloader() {
-        this(defaultClient(), DEFAULT_MAX_ATTEMPTS);
+        this(defaultClient(), DEFAULT_MAX_ATTEMPTS, DEFAULT_READ_TIMEOUT);
     }
 
     public FileDownloader(HttpClient httpClient, int maxAttempts) {
+        this(httpClient, maxAttempts, DEFAULT_READ_TIMEOUT);
+    }
+
+    public FileDownloader(HttpClient httpClient, int maxAttempts, Duration readTimeout) {
         this.httpClient = Objects.requireNonNull(httpClient, "httpClient");
         if (maxAttempts < 1) {
             throw new IllegalArgumentException("maxAttempts must be positive");
         }
         this.maxAttempts = maxAttempts;
+        this.readTimeout = Objects.requireNonNull(readTimeout, "readTimeout");
+        if (readTimeout.isZero() || readTimeout.isNegative()) {
+            throw new IllegalArgumentException("readTimeout must be positive");
+        }
     }
 
     public void download(DownloadItem item, DownloadListener listener)
@@ -153,7 +163,7 @@ public final class FileDownloader {
                     HttpResponse.BodyHandlers.ofInputStream()
             );
 
-            try (InputStream input = response.body()) {
+            try (InputStream input = new ReadTimeoutInputStream(response.body(), readTimeout)) {
                 if (response.statusCode() < 200 || response.statusCode() >= 300) {
                     throw new IOException("HTTP " + response.statusCode() + " for " + uri);
                 }
@@ -304,7 +314,7 @@ public final class FileDownloader {
                 throw new RangeUnsupportedException("无效的 Content-Range: " + contentRange);
             }
 
-            try (InputStream input = response.body();
+            try (InputStream input = new ReadTimeoutInputStream(response.body(), readTimeout);
                  FileChannel channel = FileChannel.open(part, StandardOpenOption.WRITE)) {
                 byte[] buffer = new byte[8192];
                 long position = start;

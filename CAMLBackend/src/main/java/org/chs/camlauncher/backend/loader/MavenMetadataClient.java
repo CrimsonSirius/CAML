@@ -15,6 +15,8 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
+import java.util.function.Predicate;
 
 /** 读取 Maven maven-metadata.xml 中的版本列表。 */
 public final class MavenMetadataClient {
@@ -33,8 +35,25 @@ public final class MavenMetadataClient {
     }
 
     public List<String> fetchVersions(URI uri) throws IOException, InterruptedException {
-        byte[] body = httpClient.getBytes(uri, Duration.ofSeconds(30), "application/xml,text/xml,*/*");
+        return fetchVersions(uri, versions -> !versions.isEmpty());
+    }
 
+    /** 只有满足 usable 的版本列表才会被采用，否则继续尝试下一个候选源。 */
+    public List<String> fetchVersions(URI uri, Predicate<List<String>> usable)
+            throws IOException, InterruptedException {
+        Objects.requireNonNull(usable, "usable");
+        return httpClient.getParsedBytes(
+                uri,
+                Duration.ofSeconds(30),
+                "application/xml,text/xml,*/*",
+                body -> {
+                    List<String> versions = parseVersions(uri, body);
+                    return usable.test(versions) ? Optional.of(versions) : Optional.empty();
+                }
+        ).orElse(List.of());
+    }
+
+    private static List<String> parseVersions(URI uri, byte[] body) throws IOException {
         try {
             DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
             factory.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);

@@ -10,10 +10,14 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.net.URI;
+import java.net.http.HttpClient;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -272,6 +276,51 @@ class FileDownloaderTest {
             assertArrayEquals(content, Files.readAllBytes(destination));
             assertTrue(resumedMidFirstSegment.get(), "应至少出现一次从分片中间位置继续的 Range 请求");
         } finally {
+            server.stop(0);
+        }
+    }
+
+    @Test
+    void abortsWhenResponseBodyReadStalls() throws Exception {
+        byte[] content = new byte[1024];
+        CountDownLatch release = new CountDownLatch(1);
+        HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        server.createContext("/stalled.bin", exchange -> {
+            exchange.sendResponseHeaders(200, content.length);
+            try (OutputStream output = exchange.getResponseBody()) {
+                output.write(content, 0, 1);
+                output.flush();
+                try {
+                    release.await(5, TimeUnit.SECONDS);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
+            }
+        });
+        server.start();
+
+        try {
+            DownloadItem item = new DownloadItem(
+                    "stalled",
+                    List.of(URI.create("http://127.0.0.1:"
+                            + server.getAddress().getPort() + "/stalled.bin")),
+                    tempDirectory.resolve("stalled.bin"),
+                    null,
+                    content.length
+            );
+            FileDownloader downloader = new FileDownloader(
+                    HttpClient.newBuilder().version(HttpClient.Version.HTTP_1_1).build(),
+                    1,
+                    Duration.ofMillis(200)
+            );
+
+            long started = System.nanoTime();
+            assertThrows(IOException.class,
+                    () -> downloader.download(item, DownloadListener.NONE));
+            long elapsedMillis = (System.nanoTime() - started) / 1_000_000;
+            assertTrue(elapsedMillis < 3000, "读超时应快速中止，而不是永久阻塞");
+        } finally {
+            release.countDown();
             server.stop(0);
         }
     }
