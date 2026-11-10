@@ -30,9 +30,10 @@ public final class HashVerifier {
         return HexFormat.of().formatHex(digest.digest());
     }
 
+    /** 校验文件 SHA-1；没有期望哈希时返回 {@code false}，调用方必须显式处理无哈希下载项。 */
     public static boolean matches(Path file, String expectedSha1) throws IOException {
-        return expectedSha1 == null
-                || expectedSha1.isBlank()
-                || sha1(file).equalsIgnoreCase(expectedSha1);
+        return expectedSha1 != null
+                && !expectedSha1.isBlank()
+                && sha1(file).equalsIgnoreCase(expectedSha1);
     }
 }

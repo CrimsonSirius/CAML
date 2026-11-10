@@ -27,8 +27,14 @@ public record DownloadItem(
     }
 
     public boolean existsAndValid() throws IOException {
-        return Files.isRegularFile(destination)
-                && Files.size(destination) > 0
-                && HashVerifier.matches(destination, sha1);
+        if (!Files.isRegularFile(destination) || Files.size(destination) <= 0) {
+            return false;
+        }
+        return !hasSha1() || HashVerifier.matches(destination, sha1);
+    }
+
+    /** 是否提供了非空 SHA-1。 */
+    public boolean hasSha1() {
+        return sha1 != null && !sha1.isBlank();
     }
 }

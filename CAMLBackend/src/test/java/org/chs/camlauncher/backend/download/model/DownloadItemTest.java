@@ -46,4 +46,21 @@ class DownloadItemTest {
 
         assertFalse(item.existsAndValid());
     }
+
+    @Test
+    void reusesNonEmptyFileWithoutChecksum() throws Exception {
+        Path file = tempDirectory.resolve("downloaded.jar");
+        Files.writeString(file, "content");
+
+        DownloadItem item = new DownloadItem(
+                "downloaded",
+                List.of(URI.create("https://example.com/downloaded.jar")),
+                file,
+                null,
+                -1
+        );
+
+        assertFalse(item.hasSha1());
+        assertTrue(item.existsAndValid());
+    }
 }

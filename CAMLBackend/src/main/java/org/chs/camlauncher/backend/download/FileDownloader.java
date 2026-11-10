@@ -445,7 +445,7 @@ public final class FileDownloader {
 
     private static void verify(Path file, DownloadItem item, DownloadValidator validator)
             throws IOException {
-        if (!HashVerifier.matches(file, item.sha1())) {
+        if (item.hasSha1() && !HashVerifier.matches(file, item.sha1())) {
             throw new IOException("SHA-1 mismatch for " + item.label());
         }
         if (validator != null) {
