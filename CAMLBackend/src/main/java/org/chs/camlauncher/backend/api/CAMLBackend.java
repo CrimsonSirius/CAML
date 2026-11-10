@@ -27,6 +27,7 @@ import org.chs.camlauncher.backend.loader.fabric.FabricInstaller;
 import org.chs.camlauncher.backend.loader.fabric.FabricLoaderVersion;
 import org.chs.camlauncher.backend.loader.fabric.FabricService;
 import org.chs.camlauncher.backend.loader.ExternalLoaderInstaller;
+import org.chs.camlauncher.backend.loader.LoaderVersionCache;
 import org.chs.camlauncher.backend.loader.forge.ForgeService;
 import org.chs.camlauncher.backend.loader.forge.ForgeVersion;
 import org.chs.camlauncher.backend.loader.neoforge.NeoForgeService;
@@ -84,6 +85,7 @@ public final class CAMLBackend implements AutoCloseable {
     private final JavaLocator javaLocator;
     private final VersionManifestService versionManifestService;
     private final AtomicLong versionManifestGeneration = new AtomicLong();
+    private final LoaderVersionCache loaderVersionCache = new LoaderVersionCache();
     private final DownloadPlanner downloadPlanner;
     private final AssetDownloadPlanner assetDownloadPlanner;
     private final FileDownloader fileDownloader;
@@ -315,6 +317,7 @@ public final class CAMLBackend implements AutoCloseable {
         applyDownloadSources();
         versionManifestGeneration.incrementAndGet();
         cachedVersionManifest = null;
+        loaderVersionCache.invalidateAll();
     }
 
     private void applyDownloadSources() {
@@ -469,12 +472,14 @@ public final class CAMLBackend implements AutoCloseable {
 
     public List<FabricLoaderVersion> fetchFabricLoaderVersions(String gameVersion)
             throws IOException, InterruptedException {
-        return fabricService.fetchLoaderVersions(gameVersion);
+        return loaderVersionCache.get(LoaderVersionCache.Kind.FABRIC_LOADER, gameVersion,
+                () -> fabricService.fetchLoaderVersions(gameVersion));
     }
 
     public List<FabricApiVersion> fetchFabricApiVersions(String gameVersion)
             throws IOException, InterruptedException {
-        return fabricService.fetchApiVersions(gameVersion);
+        return loaderVersionCache.get(LoaderVersionCache.Kind.FABRIC_API, gameVersion,
+                () -> fabricService.fetchApiVersions(gameVersion));
     }
 
     public InstalledVersion installFabricVersion(
@@ -497,12 +502,14 @@ public final class CAMLBackend implements AutoCloseable {
 
     public List<ForgeVersion> fetchForgeVersions(String gameVersion)
             throws IOException, InterruptedException {
-        return forgeService.fetchVersions(gameVersion);
+        return loaderVersionCache.get(LoaderVersionCache.Kind.FORGE, gameVersion,
+                () -> forgeService.fetchVersions(gameVersion));
     }
 
     public List<NeoForgeVersion> fetchNeoForgeVersions(String gameVersion)
             throws IOException, InterruptedException {
-        return neoForgeService.fetchVersions(gameVersion);
+        return loaderVersionCache.get(LoaderVersionCache.Kind.NEOFORGE, gameVersion,
+                () -> neoForgeService.fetchVersions(gameVersion));
     }
 
     public InstalledVersion installForgeVersion(
@@ -543,7 +550,8 @@ public final class CAMLBackend implements AutoCloseable {
 
     public List<OptiFineVersion> fetchOptiFineVersions(String gameVersion)
             throws IOException, InterruptedException {
-        return optiFineService.fetchVersions(gameVersion);
+        return loaderVersionCache.get(LoaderVersionCache.Kind.OPTIFINE, gameVersion,
+                () -> optiFineService.fetchVersions(gameVersion));
     }
 
     /**

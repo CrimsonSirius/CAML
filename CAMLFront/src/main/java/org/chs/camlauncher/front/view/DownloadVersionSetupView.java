@@ -434,6 +434,38 @@ final class DownloadVersionSetupView extends VBox implements PageLifecycle {
                 }));
     }
 
+    void refreshLoaderVersions() {
+        if (disposed) {
+            return;
+        }
+        cancelLoaderTasks();
+        updatingLoaders = true;
+        resetSelector(fabricLoaderSelector, "正在获取 Fabric 版本...");
+        resetSelector(fabricApiSelector, "请先选择 Fabric 版本");
+        resetSelector(forgeSelector, "正在获取 Forge 版本...");
+        resetSelector(optiFineSelector, "请先选择 Forge 版本");
+        resetSelector(neoForgeSelector, "正在获取 NeoForge 版本...");
+        updatingLoaders = false;
+        updateFabricApiState();
+        updateOptiFineState();
+        loadLoaderVersions(gameVersion, controller);
+    }
+
+    private void cancelLoaderTasks() {
+        for (FrontTask<?> task : loaderTasks) {
+            task.cancel();
+        }
+        loaderTasks.clear();
+    }
+
+    private static void resetSelector(CamlComboBox<?> selector, String prompt) {
+        selector.getSelectionModel().clearSelection();
+        selector.setValue(null);
+        selector.getItems().clear();
+        selector.setPromptText(prompt);
+        selector.refreshDisplay();
+    }
+
     private void showFabricLoaders(List<FabricLoaderVersion> loaders) {
         if (disposed) {
             return;
@@ -495,10 +527,7 @@ final class DownloadVersionSetupView extends VBox implements PageLifecycle {
             instanceNameTask.cancel();
             instanceNameTask = null;
         }
-        for (FrontTask<?> task : loaderTasks) {
-            task.cancel();
-        }
-        loaderTasks.clear();
+        cancelLoaderTasks();
     }
 
     private void updateOptiFineState() {

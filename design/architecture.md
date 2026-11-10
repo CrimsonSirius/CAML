@@ -73,6 +73,8 @@ CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
 - 下载源支持“尽可能使用镜像源”“尽可能使用官方源”和“自定义镜像根地址”三种模式；
   默认镜像源，镜像失败时回退原始官方地址；覆盖版本清单、版本 JSON、版本文件、库、资源、
   Fabric/Forge/NeoForge/OptiFine 元数据、Fabric Maven 依赖和加载器 installer/API。
+- Fabric Loader/API、Forge、NeoForge、OptiFine 的版本列表按“加载器类型 + 游戏版本”
+  在内存中缓存 5 分钟；下载源变化时缓存整体失效，避免切换源后继续显示旧列表。
 - 已有有效文件时跳过。
 
 ### 3.3 实例安装

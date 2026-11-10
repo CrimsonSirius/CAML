@@ -76,6 +76,8 @@ final class DownloadsView extends HBox implements SidebarPage, PageLifecycle {
         versionsViews.clear();
         if (showingVersionList) {
             setContentPage(versionsView(currentCategory));
+        } else if (activeContentPage instanceof DownloadVersionSetupView setupPage) {
+            setupPage.refreshLoaderVersions();
         }
     }
 
