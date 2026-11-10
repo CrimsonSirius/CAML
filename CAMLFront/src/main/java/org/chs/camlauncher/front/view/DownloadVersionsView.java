@@ -11,16 +11,19 @@ import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import org.chs.camlauncher.backend.metadata.model.VersionManifest;
 import org.chs.camlauncher.front.controller.DownloadsController;
+import org.chs.camlauncher.front.controller.FrontTask;
 import org.chs.camlauncher.ui.control.CamlButton;
 
 import java.util.List;
 import java.util.function.Consumer;
 
 /** 下载页中的版本列表。 */
-final class DownloadVersionsView extends VBox {
+final class DownloadVersionsView extends VBox implements PageLifecycle {
     private final VersionCategory category;
     private final Label statusLabel;
     private final ScrollPane scroll = new ScrollPane();
+    private FrontTask<List<VersionManifest.Version>> loadTask;
+    private boolean disposed;
 
     DownloadVersionsView(DownloadsController controller,
                          VersionCategory category,
@@ -45,15 +48,18 @@ final class DownloadVersionsView extends VBox {
         getChildren().addAll(statusLabel, scroll);
         Consumer<List<VersionManifest.Version>> onLoaded =
                 versions -> showVersions(versions, onVersionSelected);
-        switch (category) {
+        loadTask = switch (category) {
             case RELEASE -> controller.fetchReleaseVersions(onLoaded, this::showError);
             case SNAPSHOT -> controller.fetchSnapshotVersions(onLoaded, this::showError);
             case OLD -> controller.fetchOldVersions(onLoaded, this::showError);
-        }
+        };
     }
 
     private void showVersions(List<VersionManifest.Version> versions,
                               Consumer<VersionManifest.Version> onVersionSelected) {
+        if (disposed) {
+            return;
+        }
         if (versions.isEmpty()) {
             statusLabel.setText("下载源没有返回可下载的" + category.label());
             return;
@@ -90,9 +96,21 @@ final class DownloadVersionsView extends VBox {
     }
 
     private void showError(String message) {
+        if (disposed) {
+            return;
+        }
         statusLabel.setText("获取" + category.label() + "列表失败：" + message);
         statusLabel.getStyleClass().remove("field-hint");
         statusLabel.getStyleClass().add("field-hint-error");
+    }
+
+    @Override
+    public void dispose() {
+        disposed = true;
+        if (loadTask != null) {
+            loadTask.cancel();
+            loadTask = null;
+        }
     }
 
 }

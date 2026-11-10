@@ -1,18 +1,18 @@
 package org.chs.camlauncher.front.controller;
 
-import javafx.application.Platform;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.chs.camlauncher.backend.download.DownloadListener;
 import org.chs.camlauncher.backend.download.source.DownloadSourceFactory;
 import org.chs.camlauncher.backend.download.source.DownloadSourceMode;
+import org.chs.camlauncher.backend.instance.InstalledVersion;
+import org.chs.camlauncher.backend.instance.InstanceNameCheck;
 import org.chs.camlauncher.backend.loader.fabric.FabricApiVersion;
 import org.chs.camlauncher.backend.loader.fabric.FabricLoaderVersion;
 import org.chs.camlauncher.backend.loader.forge.ForgeVersion;
 import org.chs.camlauncher.backend.loader.neoforge.NeoForgeVersion;
 import org.chs.camlauncher.backend.loader.optifine.OptiFineVersion;
 import org.chs.camlauncher.backend.metadata.model.VersionManifest;
-import org.chs.camlauncher.backend.instance.InstanceNameCheck;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -41,110 +41,86 @@ public final class DownloadsController {
         };
     }
 
-    public void checkInstanceName(Path gameDirectory, String instanceId,
-                                  Consumer<InstanceNameCheck> onChecked,
-                                  Consumer<String> onError) {
-        context.supplyCheckAsync(() -> context.backend().checkInstanceName(gameDirectory, instanceId))
-                .thenAccept(check -> Platform.runLater(() -> onChecked.accept(check)))
-                .exceptionally(ex -> {
-                    Throwable cause = ex.getCause() != null ? ex.getCause() : ex;
-                    String message = ControllerContext.messageOf(cause);
-                    Platform.runLater(() -> onError.accept(message));
-                    return null;
-                });
+    public FrontTask<InstanceNameCheck> checkInstanceName(Path gameDirectory, String instanceId,
+                                                          Consumer<InstanceNameCheck> onChecked,
+                                                          Consumer<String> onError) {
+        return context.runCheck("检查实例名",
+                () -> context.backend().checkInstanceName(gameDirectory, instanceId),
+                onChecked, onError);
     }
 
     /** 异步获取官方版本清单中的正式版。 */
-    public void fetchReleaseVersions(Consumer<List<VersionManifest.Version>> onLoaded,
-                                     Consumer<String> onError) {
-        fetchVersions("正式版", VersionManifest::releasesNewestFirst, onLoaded, onError);
+    public FrontTask<List<VersionManifest.Version>> fetchReleaseVersions(
+            Consumer<List<VersionManifest.Version>> onLoaded,
+            Consumer<String> onError) {
+        return fetchVersions("正式版", VersionManifest::releasesNewestFirst, onLoaded, onError);
     }
 
     /** 异步获取官方版本清单中的快照版。 */
-    public void fetchSnapshotVersions(Consumer<List<VersionManifest.Version>> onLoaded,
-                                      Consumer<String> onError) {
-        fetchVersions("快照版", VersionManifest::snapshotsNewestFirst, onLoaded, onError);
+    public FrontTask<List<VersionManifest.Version>> fetchSnapshotVersions(
+            Consumer<List<VersionManifest.Version>> onLoaded,
+            Consumer<String> onError) {
+        return fetchVersions("快照版", VersionManifest::snapshotsNewestFirst, onLoaded, onError);
     }
 
     /** 异步获取官方版本清单中的远古版（Alpha/Beta）。 */
-    public void fetchOldVersions(Consumer<List<VersionManifest.Version>> onLoaded,
-                                 Consumer<String> onError) {
-        fetchVersions("远古版", VersionManifest::oldVersionsNewestFirst, onLoaded, onError);
+    public FrontTask<List<VersionManifest.Version>> fetchOldVersions(
+            Consumer<List<VersionManifest.Version>> onLoaded,
+            Consumer<String> onError) {
+        return fetchVersions("远古版", VersionManifest::oldVersionsNewestFirst, onLoaded, onError);
     }
 
-    private void fetchVersions(String category,
-                               Function<VersionManifest, List<VersionManifest.Version>> selector,
-                               Consumer<List<VersionManifest.Version>> onLoaded,
-                               Consumer<String> onError) {
-        context.supplyMetadataAsync(() -> context.backend().fetchVersionManifest())
-                .thenAccept(manifest -> {
-                    List<VersionManifest.Version> versions = selector.apply(manifest);
-                    Platform.runLater(() -> onLoaded.accept(versions));
-                })
-                .exceptionally(ex -> {
-                    Throwable cause = ex.getCause() != null ? ex.getCause() : ex;
-                    String message = ControllerContext.messageOf(cause);
-                    LOGGER.warn("获取官方{}列表失败", category, cause);
-                    context.sendLog("[版本列表] 获取" + category + "失败: " + message);
-                    Platform.runLater(() -> onError.accept(message));
-                    return null;
-                });
+    private FrontTask<List<VersionManifest.Version>> fetchVersions(
+            String category,
+            Function<VersionManifest, List<VersionManifest.Version>> selector,
+            Consumer<List<VersionManifest.Version>> onLoaded,
+            Consumer<String> onError) {
+        return context.runMetadata("获取官方" + category + "列表",
+                () -> selector.apply(context.backend().fetchVersionManifest()),
+                onLoaded,
+                onError);
     }
 
     /** 异步下载官方原版实例。 */
-    public void downloadVersion(String versionId, String instanceId, Path gameDirectory,
-                                DownloadListener listener,
-                                Runnable onSuccess, Consumer<String> onError) {
+    public FrontTask<InstalledVersion> downloadVersion(
+            String versionId,
+            String instanceId,
+            Path gameDirectory,
+            DownloadListener listener,
+            Runnable onSuccess,
+            Consumer<String> onError) {
         Objects.requireNonNull(gameDirectory, "gameDirectory");
-        context.supplyAsync(() -> context.backend().installVersion(
-                        versionId, instanceId, gameDirectory, listener))
-                .thenAccept(installed -> {
+        return context.runDownload("安装原版实例 " + instanceId,
+                () -> context.backend().installVersion(versionId, instanceId, gameDirectory, listener),
+                installed -> {
                     LOGGER.info("官方原版实例安装完成: {} / {} -> {}",
                             instanceId, versionId, installed.gameDirectory());
                     context.sendLog("[下载] 已安装实例 " + instanceId
                             + "（原版 " + versionId + "）");
-                    Platform.runLater(onSuccess);
-                })
-                .exceptionally(ex -> {
-                    Throwable cause = ex.getCause() != null ? ex.getCause() : ex;
-                    String message = ControllerContext.messageOf(cause);
-                    LOGGER.warn("下载官方原版实例失败: {} / {}", instanceId, versionId, cause);
-                    context.sendLog("[下载] 实例 " + instanceId
-                            + "（原版 " + versionId + "）失败: " + message);
-                    Platform.runLater(() -> onError.accept(message));
-                    return null;
-                });
+                    onSuccess.run();
+                },
+                onError);
     }
 
-    public void fetchFabricLoaderVersions(String gameVersion,
-                                          Consumer<List<FabricLoaderVersion>> onLoaded,
-                                          Consumer<String> onError) {
-        context.supplyMetadataAsync(() -> context.backend().fetchFabricLoaderVersions(gameVersion))
-                .thenAccept(versions -> Platform.runLater(() -> onLoaded.accept(versions)))
-                .exceptionally(ex -> {
-                    Throwable cause = ex.getCause() != null ? ex.getCause() : ex;
-                    String message = ControllerContext.messageOf(cause);
-                    LOGGER.warn("获取 Fabric Loader 版本失败: {}", gameVersion, cause);
-                    Platform.runLater(() -> onError.accept(message));
-                    return null;
-                });
+    public FrontTask<List<FabricLoaderVersion>> fetchFabricLoaderVersions(
+            String gameVersion,
+            Consumer<List<FabricLoaderVersion>> onLoaded,
+            Consumer<String> onError) {
+        return context.runMetadata("获取 Fabric Loader 版本",
+                () -> context.backend().fetchFabricLoaderVersions(gameVersion),
+                onLoaded, onError);
     }
 
-    public void fetchFabricApiVersions(String gameVersion,
-                                       Consumer<List<FabricApiVersion>> onLoaded,
-                                       Consumer<String> onError) {
-        context.supplyMetadataAsync(() -> context.backend().fetchFabricApiVersions(gameVersion))
-                .thenAccept(versions -> Platform.runLater(() -> onLoaded.accept(versions)))
-                .exceptionally(ex -> {
-                    Throwable cause = ex.getCause() != null ? ex.getCause() : ex;
-                    String message = ControllerContext.messageOf(cause);
-                    LOGGER.warn("获取 Fabric API 版本失败: {}", gameVersion, cause);
-                    Platform.runLater(() -> onError.accept(message));
-                    return null;
-                });
+    public FrontTask<List<FabricApiVersion>> fetchFabricApiVersions(
+            String gameVersion,
+            Consumer<List<FabricApiVersion>> onLoaded,
+            Consumer<String> onError) {
+        return context.runMetadata("获取 Fabric API 版本",
+                () -> context.backend().fetchFabricApiVersions(gameVersion),
+                onLoaded, onError);
     }
 
-    public void downloadFabricVersion(
+    public FrontTask<InstalledVersion> downloadFabricVersion(
             String gameVersion,
             String instanceId,
             String loaderVersion,
@@ -152,89 +128,83 @@ public final class DownloadsController {
             Path gameDirectory,
             DownloadListener listener,
             Runnable onSuccess,
-            Consumer<String> onError
-    ) {
+            Consumer<String> onError) {
         Objects.requireNonNull(gameDirectory, "gameDirectory");
-        context.supplyAsync(() -> context.backend().installFabricVersion(
+        return context.runDownload("安装 Fabric 实例 " + instanceId,
+                () -> context.backend().installFabricVersion(
                         gameVersion,
                         instanceId,
                         loaderVersion,
                         apiVersion,
                         gameDirectory,
                         listener
-                ))
-                .thenAccept(installed -> {
+                ),
+                installed -> {
                     LOGGER.info("Fabric 实例安装完成: {} / {} -> {}",
                             instanceId, loaderVersion, installed.gameDirectory());
                     context.sendLog("[下载] 已安装 Fabric 实例 " + instanceId
                             + "（Loader " + loaderVersion + "）");
-                    Platform.runLater(onSuccess);
-                })
-                .exceptionally(ex -> {
-                    Throwable cause = ex.getCause() != null ? ex.getCause() : ex;
-                    String message = ControllerContext.messageOf(cause);
-                    LOGGER.warn("Fabric 实例安装失败: {} / {}", instanceId, loaderVersion, cause);
-                    context.sendLog("[下载] Fabric 实例 " + instanceId + " 安装失败: " + message);
-                    Platform.runLater(() -> onError.accept(message));
-                    return null;
-                });
+                    onSuccess.run();
+                },
+                onError);
     }
 
-    public void fetchForgeVersions(String gameVersion,
-                                   Consumer<List<ForgeVersion>> onLoaded,
-                                   Consumer<String> onError) {
-        fetchLoaderVersions("Forge",
-                () -> context.backend().fetchForgeVersions(gameVersion), onLoaded, onError);
+    public FrontTask<List<ForgeVersion>> fetchForgeVersions(
+            String gameVersion,
+            Consumer<List<ForgeVersion>> onLoaded,
+            Consumer<String> onError) {
+        return context.runMetadata("获取 Forge 版本",
+                () -> context.backend().fetchForgeVersions(gameVersion),
+                onLoaded, onError);
     }
 
-    public void fetchNeoForgeVersions(String gameVersion,
-                                      Consumer<List<NeoForgeVersion>> onLoaded,
-                                      Consumer<String> onError) {
-        fetchLoaderVersions("NeoForge",
-                () -> context.backend().fetchNeoForgeVersions(gameVersion), onLoaded, onError);
+    public FrontTask<List<NeoForgeVersion>> fetchNeoForgeVersions(
+            String gameVersion,
+            Consumer<List<NeoForgeVersion>> onLoaded,
+            Consumer<String> onError) {
+        return context.runMetadata("获取 NeoForge 版本",
+                () -> context.backend().fetchNeoForgeVersions(gameVersion),
+                onLoaded, onError);
     }
 
-    public void fetchOptiFineVersions(String gameVersion,
-                                      Consumer<List<OptiFineVersion>> onLoaded,
-                                      Consumer<String> onError) {
-        fetchLoaderVersions("OptiFine",
-                () -> context.backend().fetchOptiFineVersions(gameVersion), onLoaded, onError);
+    public FrontTask<List<OptiFineVersion>> fetchOptiFineVersions(
+            String gameVersion,
+            Consumer<List<OptiFineVersion>> onLoaded,
+            Consumer<String> onError) {
+        return context.runMetadata("获取 OptiFine 版本",
+                () -> context.backend().fetchOptiFineVersions(gameVersion),
+                onLoaded, onError);
     }
 
-    private <T> void fetchLoaderVersions(String name, LoaderSupplier<T> supplier,
-                                         Consumer<List<T>> onLoaded, Consumer<String> onError) {
-        context.supplyMetadataAsync(supplier::get)
-                .thenAccept(versions -> Platform.runLater(() -> onLoaded.accept(versions)))
-                .exceptionally(ex -> {
-                    Throwable cause = ex.getCause() != null ? ex.getCause() : ex;
-                    String message = ControllerContext.messageOf(cause);
-                    LOGGER.warn("获取 {} 版本失败", name, cause);
-                    Platform.runLater(() -> onError.accept(message));
-                    return null;
-                });
-    }
-
-    public void downloadForgeVersion(String gameVersion, String instanceId, ForgeVersion version,
-                                     Path gameDirectory, DownloadListener listener,
-                                     Runnable onSuccess,
-                                     Consumer<String> onError) {
-        downloadExternalLoaderVersion("Forge", gameVersion, instanceId, gameDirectory,
+    public FrontTask<InstalledVersion> downloadForgeVersion(
+            String gameVersion,
+            String instanceId,
+            ForgeVersion version,
+            Path gameDirectory,
+            DownloadListener listener,
+            Runnable onSuccess,
+            Consumer<String> onError) {
+        return downloadExternalLoaderVersion("Forge", instanceId, gameDirectory,
                 () -> context.backend().installForgeVersion(gameVersion, instanceId, version,
                         gameDirectory, listener),
                 onSuccess, onError);
     }
 
-    public void downloadNeoForgeVersion(String gameVersion, String instanceId, NeoForgeVersion version,
-                                        Path gameDirectory, DownloadListener listener,
-                                        Runnable onSuccess,
-                                        Consumer<String> onError) {
-        downloadExternalLoaderVersion("NeoForge", gameVersion, instanceId, gameDirectory,
+    public FrontTask<InstalledVersion> downloadNeoForgeVersion(
+            String gameVersion,
+            String instanceId,
+            NeoForgeVersion version,
+            Path gameDirectory,
+            DownloadListener listener,
+            Runnable onSuccess,
+            Consumer<String> onError) {
+        return downloadExternalLoaderVersion("NeoForge", instanceId, gameDirectory,
                 () -> context.backend().installNeoForgeVersion(gameVersion, instanceId, version,
                         gameDirectory, listener),
                 onSuccess, onError);
     }
 
-    public void downloadForgeOptiFineVersion(
+    public FrontTask<InstalledVersion> downloadForgeOptiFineVersion(
             String gameVersion,
             String instanceId,
             ForgeVersion forgeVersion,
@@ -242,49 +212,34 @@ public final class DownloadsController {
             Path gameDirectory,
             DownloadListener listener,
             Runnable onSuccess,
-            Consumer<String> onError
-    ) {
-        downloadExternalLoaderVersion("Forge + OptiFine", gameVersion, instanceId, gameDirectory,
+            Consumer<String> onError) {
+        return downloadExternalLoaderVersion("Forge + OptiFine", instanceId, gameDirectory,
                 () -> context.backend().installForgeOptiFineVersion(
                         gameVersion, instanceId, forgeVersion, optiFineVersion,
                         gameDirectory, listener),
                 onSuccess, onError);
     }
 
-    private void downloadExternalLoaderVersion(
+    private FrontTask<InstalledVersion> downloadExternalLoaderVersion(
             String loaderName,
-            String gameVersion,
             String instanceId,
             Path gameDirectory,
             LoaderInstallSupplier supplier,
             Runnable onSuccess,
-            Consumer<String> onError
-    ) {
+            Consumer<String> onError) {
         Objects.requireNonNull(gameDirectory, "gameDirectory");
-        context.supplyAsync(supplier::install)
-                .thenAccept(installed -> {
-                    LOGGER.info("{} 实例安装完成: {} -> {}", loaderName, instanceId, gameVersion);
+        return context.runDownload("安装 " + loaderName + " 实例 " + instanceId,
+                supplier::install,
+                installed -> {
+                    LOGGER.info("{} 实例安装完成: {}", loaderName, instanceId);
                     context.sendLog("[下载] 已安装 " + loaderName + " 实例 " + instanceId);
-                    Platform.runLater(onSuccess);
-                })
-                .exceptionally(ex -> {
-                    Throwable cause = ex.getCause() != null ? ex.getCause() : ex;
-                    String message = ControllerContext.messageOf(cause);
-                    LOGGER.warn("{} 实例安装失败: {}", loaderName, instanceId, cause);
-                    context.sendLog("[下载] " + loaderName + " 实例 " + instanceId
-                            + " 安装失败: " + message);
-                    Platform.runLater(() -> onError.accept(message));
-                    return null;
-                });
-    }
-
-    @FunctionalInterface
-    private interface LoaderSupplier<T> {
-        List<T> get() throws IOException, InterruptedException;
+                    onSuccess.run();
+                },
+                onError);
     }
 
     @FunctionalInterface
     private interface LoaderInstallSupplier {
-        Object install() throws IOException, InterruptedException;
+        InstalledVersion install() throws IOException, InterruptedException;
     }
 }

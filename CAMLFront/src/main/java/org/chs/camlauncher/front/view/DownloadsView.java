@@ -15,7 +15,7 @@ import java.util.Map;
 import java.util.function.Consumer;
 
 /** 下载页：左侧版本类别导航和右侧版本列表/下载设置页。 */
-final class DownloadsView extends HBox implements SidebarPage {
+final class DownloadsView extends HBox implements SidebarPage, PageLifecycle {
     private final DownloadsController controller;
     private final LaunchSettings launchSettings;
     private final CamlSideNav sidebar;
@@ -24,7 +24,8 @@ final class DownloadsView extends HBox implements SidebarPage {
             new EnumMap<>(VersionCategory.class);
     private VersionCategory currentCategory = VersionCategory.RELEASE;
     private boolean showingVersionList = true;
-    private DownloadProgressView progressView;
+    private PageLifecycle activeContentPage;
+    private boolean disposed;
 
     DownloadsView(DownloadsController controller, LaunchSettings launchSettings) {
         this.controller = controller;
@@ -40,7 +41,10 @@ final class DownloadsView extends HBox implements SidebarPage {
         sidebar.addItem(oldItem);
         sidebar.select(releaseItem);
 
-        contentHost = new CamlPageHost(versionsView(VersionCategory.RELEASE));
+        DownloadVersionsView initialView = versionsView(VersionCategory.RELEASE);
+        contentHost = new CamlPageHost(initialView);
+        activeContentPage = initialView;
+        initialView.onShow();
         contentHost.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
         HBox.setHgrow(contentHost, Priority.ALWAYS);
 
@@ -62,17 +66,23 @@ final class DownloadsView extends HBox implements SidebarPage {
     }
 
     void refreshVersions() {
+        if (disposed) {
+            return;
+        }
+        for (DownloadVersionsView view : versionsViews.values()) {
+            view.onHide();
+            view.dispose();
+        }
         versionsViews.clear();
         if (showingVersionList) {
-            contentHost.setPage(versionsView(currentCategory));
+            setContentPage(versionsView(currentCategory));
         }
     }
 
     private void showVersionSetupPage(VersionManifest.Version version) {
-        disposeProgressView();
         setDownloadNavigationVisible(true);
         showingVersionList = false;
-        contentHost.setPage(new DownloadVersionSetupView(
+        setContentPage(new DownloadVersionSetupView(
                 version,
                 controller,
                 launchSettings,
@@ -82,15 +92,13 @@ final class DownloadsView extends HBox implements SidebarPage {
     }
 
     private void showVersions(VersionCategory category) {
-        disposeProgressView();
         setDownloadNavigationVisible(true);
         showingVersionList = true;
         currentCategory = category;
-        contentHost.setPage(versionsView(category));
+        setContentPage(versionsView(category));
     }
 
     private void startDownload(DownloadRequest request) {
-        disposeProgressView();
         setDownloadNavigationVisible(false);
         DownloadTelemetry telemetry = new DownloadTelemetry();
         DownloadProgressView page = new DownloadProgressView(
@@ -98,9 +106,8 @@ final class DownloadsView extends HBox implements SidebarPage {
                 telemetry,
                 () -> showVersions(currentCategory)
         );
-        progressView = page;
         showingVersionList = false;
-        contentHost.setPage(page);
+        setContentPage(page);
 
         Runnable onSuccess = () -> {
             telemetry.markCompleted();
@@ -132,11 +139,50 @@ final class DownloadsView extends HBox implements SidebarPage {
         }
     }
 
-    private void disposeProgressView() {
-        if (progressView != null) {
-            progressView.dispose();
-            progressView = null;
+    private void setContentPage(Node next) {
+        if (disposed) {
+            return;
         }
+        PageLifecycle previous = activeContentPage;
+        if (previous != null) {
+            previous.onHide();
+        }
+        contentHost.setPage(next);
+        if (previous != null && !(previous instanceof DownloadVersionsView)) {
+            previous.dispose();
+        }
+        activeContentPage = next instanceof PageLifecycle lifecycle ? lifecycle : null;
+        if (activeContentPage != null) {
+            activeContentPage.onShow();
+        }
+    }
+
+    @Override
+    public void onShow() {
+        if (activeContentPage != null) {
+            activeContentPage.onShow();
+        }
+    }
+
+    @Override
+    public void onHide() {
+        if (activeContentPage != null) {
+            activeContentPage.onHide();
+        }
+    }
+
+    @Override
+    public void dispose() {
+        disposed = true;
+        if (activeContentPage != null) {
+            activeContentPage.onHide();
+            activeContentPage.dispose();
+            activeContentPage = null;
+        }
+        for (DownloadVersionsView view : versionsViews.values()) {
+            view.dispose();
+        }
+        versionsViews.clear();
     }
 
     private void setDownloadNavigationVisible(boolean visible) {

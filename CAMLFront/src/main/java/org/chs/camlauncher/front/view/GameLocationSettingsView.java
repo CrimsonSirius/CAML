@@ -111,6 +111,9 @@ final class GameLocationSettingsView extends VBox {
             controller.saveGameDirectoryAsync(path);
             pathField.setText(path.toString());
             showStatus("游戏位置已保存", false);
+        }, message -> {
+            saveButton.setDisable(false);
+            showStatus("检查目录失败：" + message, true);
         });
     }
 

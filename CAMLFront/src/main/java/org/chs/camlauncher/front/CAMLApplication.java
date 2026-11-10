@@ -163,6 +163,7 @@ public final class CAMLApplication extends Application {
         // 5. 清理资源：先提交最后一次设置，再排空设置线程并关闭后端
         if (view != null) {
             view.flushPendingSettings();
+            view.dispose();
         }
         if (controller != null) {
             controller.shutdown();

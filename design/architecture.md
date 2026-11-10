@@ -178,6 +178,13 @@ CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
 - `MainView` 只负责壳层：顶栏、主导航、`CamlPageHost` 和底栏。
 - `MainController` 只组合 `HomeController`、`DownloadsController` 和 `SettingsController`；
   共享的 `ControllerContext` 负责后端访问、I/O 线程和日志回调。
+- 控制器的异步方法统一返回 `FrontTask<T>` 任务句柄。页面持有句柄，在离开或销毁时取消；
+  取消会停止 UI 回调并尽力中断后台线程，但后端已开始且不响应中断的操作仍可能继续。
+- 页面实现 `PageLifecycle` 的 `onShow` / `onHide` / `dispose`。`MainView`、
+  `DownloadsView`、`HomeView` 和 `SettingsView` 在页面切换时统一分发这些回调，
+  页面据此启动、暂停或释放任务、订阅和定时器。
+- 异步失败统一走 `ControllerContext.reportError`：记录日志、写入 UI 日志，并把错误消息
+  切回 JavaFX 线程交给页面展示；启动失败等致命路径额外标记错误日志。
 - `HomeView` 组合 `LaunchFormView` 与 `LogPaneView`，负责主页分栏和 900px 断点。
 - `LaunchFormView` 负责当前实例、用户名、状态提示和启动交互；
   “浏览游戏实例”打开二级列表，“管理实例”打开空管理页。
@@ -193,8 +200,8 @@ CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
   `LauncherSettingsView` 负责外观设置中的主题选择。
 - `SystemMemoryService` 在 Linux 读取 `/proc/meminfo` 的 `MemAvailable`，避免把
   `MemFree` 误当成任务管理器显示的可用内存。
-- `SettingsController` 每 500ms 在后台线程读取一次系统内存，并通过 `Platform.runLater`
-  立即刷新设置页。
+- `SettingsController` 只在设置页可见时每 500ms 在后台线程读取一次系统内存，
+  并通过 `Platform.runLater` 立即刷新设置页。
 - 游戏位置、版本隔离、下载源、下载并发数、最大内存和最后启动实例保存在
   `~/.caml/settings.properties`，启动时加载；游戏位置只有点击保存才写入，其余选项立即写入。
   设置写入由串行写锁保护，并通过临时文件原子替换设置文件。
@@ -205,7 +212,7 @@ CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
 - `LaunchSettings` 在主页和设置页之间共享游戏位置、版本隔离和最大内存值；`ViewSupport` 提供通用字段与侧边栏布局。
 - 当前实例通过共享 `LaunchSettings.selectedVersion` 管理；启动器初始化时恢复 `lastInstanceId`，实例信息下方显示存档位置。
 - `ControllerContext` 使用独立下载线程执行目录探测和下载，实例名检查使用独立短任务线程，
-  设置保存使用单独的串行设置线程；
+  元数据、Java 扫描、启动和设置保存分别使用独立线程；
   `HomeController` 负责启动派发，不阻塞 JavaFX Application Thread。
 - 下载日志按文件切换和每 10% 进度节流，避免刷屏。
 - 主工作区使用 `SplitPane`：宽度 `< 900` 时上下堆叠，`>= 900` 时左右分栏。

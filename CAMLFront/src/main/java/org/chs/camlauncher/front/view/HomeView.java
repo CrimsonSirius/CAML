@@ -1,6 +1,7 @@
 package org.chs.camlauncher.front.view;
 
 import javafx.geometry.Orientation;
+import javafx.scene.Node;
 import javafx.scene.control.SplitPane;
 import javafx.scene.layout.StackPane;
 import org.chs.camlauncher.front.controller.HomeController;
@@ -9,7 +10,7 @@ import org.chs.camlauncher.ui.control.CamlPageHost;
 /**
  * 主页：启动表单 + 运行日志，以及二级游戏实例选择页。
  */
-final class HomeView extends StackPane {
+final class HomeView extends StackPane implements PageLifecycle {
     private final HomeController controller;
     private final LaunchSettings launchSettings;
     private final LaunchFormView formPane;
@@ -17,6 +18,8 @@ final class HomeView extends StackPane {
     private final SplitPane workspace;
     private final CamlPageHost pageHost;
     private WorkspaceLayout.Plan appliedLayout;
+    private PageLifecycle activeSubPage;
+    private boolean disposed;
 
     HomeView(HomeController controller, LaunchSettings launchSettings) {
         this.controller = controller;
@@ -62,15 +65,63 @@ final class HomeView extends StackPane {
                 },
                 this::showWorkspace
         );
-        pageHost.setPage(picker);
+        setSubPage(picker);
     }
 
     private void showManageInstances() {
-        pageHost.setPage(new ManageInstancesView(this::showWorkspace));
+        setSubPage(new ManageInstancesView(this::showWorkspace));
     }
 
     private void showWorkspace() {
-        pageHost.setPage(workspace);
+        setSubPage(workspace);
+    }
+
+    private void setSubPage(Node next) {
+        if (disposed) {
+            return;
+        }
+        PageLifecycle previous = activeSubPage;
+        if (previous != null) {
+            previous.onHide();
+        }
+        pageHost.setPage(next);
+        if (previous != null) {
+            previous.dispose();
+        }
+        activeSubPage = next instanceof PageLifecycle lifecycle ? lifecycle : null;
+        if (activeSubPage != null) {
+            activeSubPage.onShow();
+        }
+    }
+
+    @Override
+    public void onShow() {
+        if (disposed) {
+            return;
+        }
+        if (activeSubPage != null) {
+            activeSubPage.onShow();
+        }
+    }
+
+    @Override
+    public void onHide() {
+        if (disposed) {
+            return;
+        }
+        if (activeSubPage != null) {
+            activeSubPage.onHide();
+        }
+    }
+
+    @Override
+    public void dispose() {
+        disposed = true;
+        if (activeSubPage != null) {
+            activeSubPage.onHide();
+            activeSubPage.dispose();
+            activeSubPage = null;
+        }
     }
 
     private void updateWorkspaceLayout(double width) {
