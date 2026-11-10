@@ -209,6 +209,9 @@ statusLabel.setText(Language.tr("home.instance.current", version));
 
 - `Language.tr(key)` 找不到键时直接返回键名，方便发现遗漏；支持 `%s` / `%d` 等占位符。
 - 当前语言按顺序取 `-Dcaml.language`、系统语言（`en*` → `en_us`，其余 → `zh_cn`）。
+- 设置 → 外观 → 语言提供“自动 / 手动”两种模式；手动模式可从语言下拉框选择
+  `zh_cn` 或 `en_us`。模式与手动语言分别保存在 `settings.properties` 的
+  `languageMode` 和 `language`，切换后立即重建主视图刷新界面文案。
 - 语言文件**由代码生成**，不要手工编辑：每种语言实现一个继承
   `LanguageTranslationGenerator` 的生成器（`translation/generator/ZHCNGenerator`、
   `ENUSGenerator`），在 `populate(TranslationTable)` 中用实例方法登记键和文案：

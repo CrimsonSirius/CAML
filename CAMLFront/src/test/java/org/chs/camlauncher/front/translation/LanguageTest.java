@@ -8,12 +8,14 @@ import org.junit.jupiter.api.io.TempDir;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /** 校验翻译文件与生成器保持一致。 */
@@ -53,6 +55,16 @@ class LanguageTest {
     void keepsTemplateWhenFormattingFails() {
         Language.setLocale("zh_cn");
         assertEquals("启动游戏", Language.tr("home.launch", "unexpected"));
+    }
+
+    @Test
+    void exposesSupportedLocalesAndNormalization() {
+        assertEquals(List.of("zh_cn", "en_us"), Language.supportedLocales());
+        assertTrue(Language.isSupportedLocale("EN-US"));
+        assertEquals("en_us", Language.normalizeLocale("EN-US"));
+        for (String locale : Language.supportedLocales()) {
+            assertNotNull(Language.class.getResource("/lang/" + locale + ".json"));
+        }
     }
 
     @Test

@@ -1,6 +1,7 @@
 package org.chs.camlauncher.front.view;
 
 import org.chs.camlauncher.backend.download.DownloadListener;
+import org.chs.camlauncher.backend.download.DownloadStage;
 import org.chs.camlauncher.front.translation.Language;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -21,18 +22,32 @@ class DownloadTelemetryTest {
     void keepsStageOrderAndIgnoresRegressions() {
         DownloadTelemetry telemetry = new DownloadTelemetry();
 
-        telemetry.onStage("获取版本信息");
-        telemetry.onStage("下载游戏文件与依赖库");
-        telemetry.onStage("获取版本信息");
+        telemetry.onStage(DownloadStage.of("version.fetch"));
+        telemetry.onStage(DownloadStage.of("version.downloadFiles"));
+        telemetry.onStage(DownloadStage.of("version.fetch"));
 
         DownloadTelemetry.Snapshot snapshot = telemetry.snapshot();
         assertEquals(
-                List.of(Language.tr("download.stage.preparing"), "获取版本信息", "下载游戏文件与依赖库"),
+                List.of(
+                        Language.tr("download.stage.preparing"),
+                        Language.tr("download.stage.version.fetch"),
+                        Language.tr("download.stage.version.downloadFiles")
+                ),
                 snapshot.stages()
         );
-        assertEquals("下载游戏文件与依赖库", snapshot.currentStage());
+        assertEquals(Language.tr("download.stage.version.downloadFiles"), snapshot.currentStage());
         assertFalse(snapshot.finished());
         assertFalse(snapshot.failed());
+    }
+
+    @Test
+    void translatesStageCodesWithCurrentLocale() {
+        Language.setLocale("en_us");
+        DownloadTelemetry telemetry = new DownloadTelemetry();
+
+        telemetry.onStage(DownloadStage.of("loader.installer.download", "Forge"));
+
+        assertEquals("Downloading Forge installer", telemetry.snapshot().currentStage());
     }
 
     @Test

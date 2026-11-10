@@ -165,6 +165,24 @@ public final class ENUSGenerator extends LanguageTranslationGenerator {
         t.put("download.stage.completed", "Complete");
         t.put("download.stage.failed", "Download failed");
         t.put("download.stage.unknownError", "Unknown error");
+        t.put("download.stage.version.fetch", "Fetching version metadata");
+        t.put("download.stage.version.checkLocal", "Checking local version");
+        t.put("download.stage.version.downloadFiles", "Downloading game files and libraries");
+        t.put("download.stage.version.downloadAssets", "Downloading assets");
+        t.put("download.stage.version.writeJson", "Writing version metadata");
+        t.put("download.stage.loader.installer.prepare", "Preparing %s installer");
+        t.put("download.stage.loader.installer.download", "Downloading %s installer");
+        t.put("download.stage.loader.installer.run", "Running %s installer");
+        t.put("download.stage.loader.libraries.download", "Downloading %s libraries");
+        t.put("download.stage.loader.files.merge", "Merging %s files");
+        t.put("download.stage.loader.verify", "Verifying %s installation");
+        t.put("download.stage.fabric.config.fetch", "Fetching Fabric configuration");
+        t.put("download.stage.fabric.loader.install", "Installing Fabric Loader");
+        t.put("download.stage.fabric.api.download", "Downloading Fabric API");
+        t.put("download.stage.fabric.verify", "Verifying Fabric installation");
+        t.put("download.stage.optifine.installer.download", "Downloading OptiFine installer");
+        t.put("download.stage.optifine.installer.run", "Running OptiFine installer");
+        t.put("download.stage.optifine.files.merge", "Merging OptiFine files");
 
         // Download settings
         t.put("download.settings.source", "Download source");
@@ -240,6 +258,15 @@ public final class ENUSGenerator extends LanguageTranslationGenerator {
         t.put("settings.appearance.themeHint", "Themes come from ~/.caml/themes; changes apply immediately");
         t.put("settings.appearance.theme", "Theme");
         t.put("settings.appearance.theme.accessible", "Theme");
+        t.put("settings.appearance.language.title", "Language");
+        t.put("settings.appearance.language.description", "Choose how the launcher interface language is selected.");
+        t.put("settings.appearance.language.auto", "Automatic");
+        t.put("settings.appearance.language.manual", "Manual");
+        t.put("settings.appearance.language.label", "Interface language");
+        t.put("settings.appearance.language.hint", "Automatic follows the system language; manual uses the language selected below.");
+        t.put("settings.appearance.language.accessible", "Interface language");
+        t.put("settings.appearance.language.zh_cn", "Simplified Chinese");
+        t.put("settings.appearance.language.en_us", "English");
 
         // Instance picker
         t.put("instances.picker.scanning", "Scanning game instances...");
@@ -274,6 +301,7 @@ public final class ENUSGenerator extends LanguageTranslationGenerator {
         t.put("operation.saveDownloadConcurrency", "Save download concurrency");
         t.put("operation.saveDownloadSource", "Save download source setting");
         t.put("operation.saveTheme", "Save theme selection");
+        t.put("operation.saveLanguage", "Save language setting");
         t.put("operation.saveLastInstance", "Save last launched instance");
         t.put("operation.launchGame", "Launch game %s");
     }

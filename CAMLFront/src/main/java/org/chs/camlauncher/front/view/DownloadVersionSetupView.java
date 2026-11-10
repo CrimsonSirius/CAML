@@ -443,11 +443,11 @@ final class DownloadVersionSetupView extends VBox implements PageLifecycle {
         }
         cancelLoaderTasks();
         updatingLoaders = true;
-        resetSelector(fabricLoaderSelector, "正在获取 Fabric 版本...");
-        resetSelector(fabricApiSelector, "请先选择 Fabric 版本");
-        resetSelector(forgeSelector, "正在获取 Forge 版本...");
-        resetSelector(optiFineSelector, "请先选择 Forge 版本");
-        resetSelector(neoForgeSelector, "正在获取 NeoForge 版本...");
+        resetSelector(fabricLoaderSelector, Language.tr("download.prompt.loading.fabric"));
+        resetSelector(fabricApiSelector, Language.tr("download.prompt.fabricFirst"));
+        resetSelector(forgeSelector, Language.tr("download.prompt.loading.forge"));
+        resetSelector(optiFineSelector, Language.tr("download.prompt.forgeFirst"));
+        resetSelector(neoForgeSelector, Language.tr("download.prompt.loading.neoforge"));
         updatingLoaders = false;
         updateFabricApiState();
         updateOptiFineState();

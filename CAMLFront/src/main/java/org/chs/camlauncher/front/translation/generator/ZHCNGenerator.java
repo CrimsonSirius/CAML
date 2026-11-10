@@ -165,6 +165,24 @@ public final class ZHCNGenerator extends LanguageTranslationGenerator {
         t.put("download.stage.completed", "完成");
         t.put("download.stage.failed", "下载失败");
         t.put("download.stage.unknownError", "未知错误");
+        t.put("download.stage.version.fetch", "获取版本信息");
+        t.put("download.stage.version.checkLocal", "检查本地版本");
+        t.put("download.stage.version.downloadFiles", "下载游戏文件与依赖库");
+        t.put("download.stage.version.downloadAssets", "下载资源文件");
+        t.put("download.stage.version.writeJson", "写入版本信息");
+        t.put("download.stage.loader.installer.prepare", "准备 %s 安装器");
+        t.put("download.stage.loader.installer.download", "下载 %s 安装器");
+        t.put("download.stage.loader.installer.run", "运行 %s 安装器");
+        t.put("download.stage.loader.libraries.download", "下载 %s 依赖库");
+        t.put("download.stage.loader.files.merge", "合并 %s 文件");
+        t.put("download.stage.loader.verify", "校验 %s 安装结果");
+        t.put("download.stage.fabric.config.fetch", "获取 Fabric 配置");
+        t.put("download.stage.fabric.loader.install", "安装 Fabric Loader");
+        t.put("download.stage.fabric.api.download", "下载 Fabric API");
+        t.put("download.stage.fabric.verify", "校验 Fabric 安装结果");
+        t.put("download.stage.optifine.installer.download", "下载 OptiFine 安装器");
+        t.put("download.stage.optifine.installer.run", "运行 OptiFine 安装器");
+        t.put("download.stage.optifine.files.merge", "合并 OptiFine 文件");
 
         // 下载设置
         t.put("download.settings.source", "下载源");
@@ -240,6 +258,15 @@ public final class ZHCNGenerator extends LanguageTranslationGenerator {
         t.put("settings.appearance.themeHint", "主题来自 ~/.caml/themes，切换后立即生效");
         t.put("settings.appearance.theme", "主题");
         t.put("settings.appearance.theme.accessible", "主题");
+        t.put("settings.appearance.language.title", "语言");
+        t.put("settings.appearance.language.description", "选择启动器界面语言的显示方式。");
+        t.put("settings.appearance.language.auto", "自动");
+        t.put("settings.appearance.language.manual", "手动");
+        t.put("settings.appearance.language.label", "界面语言");
+        t.put("settings.appearance.language.hint", "自动模式跟随系统语言；手动模式使用下方选择的语言。");
+        t.put("settings.appearance.language.accessible", "界面语言");
+        t.put("settings.appearance.language.zh_cn", "简体中文");
+        t.put("settings.appearance.language.en_us", "English");
 
         // 实例选择
         t.put("instances.picker.scanning", "正在扫描游戏实例...");
@@ -274,6 +301,7 @@ public final class ZHCNGenerator extends LanguageTranslationGenerator {
         t.put("operation.saveDownloadConcurrency", "保存下载并发数");
         t.put("operation.saveDownloadSource", "保存下载源设置");
         t.put("operation.saveTheme", "保存主题选择");
+        t.put("operation.saveLanguage", "保存语言设置");
         t.put("operation.saveLastInstance", "保存最后启动实例");
         t.put("operation.launchGame", "启动游戏 %s");
     }

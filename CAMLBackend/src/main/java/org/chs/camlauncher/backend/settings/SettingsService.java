@@ -15,12 +15,13 @@ import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Properties;
 import java.util.function.Consumer;
 
-/** 启动器设置持久化：游戏位置、最大内存、版本隔离和下载并发数。 */
+/** 启动器设置持久化：游戏位置、内存、隔离、下载、Java 和语言选择。 */
 public final class SettingsService {
     public static final int DEFAULT_MAX_MEMORY_MB = 4096;
     public static final int MIN_MAX_MEMORY_MB = 512;
@@ -40,6 +41,8 @@ public final class SettingsService {
     private static final String JAVA_SELECTION_MODE_KEY = "javaSelectionMode";
     private static final String SELECTED_JAVA_PATH_KEY = "selectedJavaPath";
     private static final String MANUAL_JAVA_PATHS_KEY = "manualJavaPaths";
+    private static final String LANGUAGE_MODE_KEY = "languageMode";
+    private static final String LANGUAGE_KEY = "language";
 
     private final Path settingsFile;
     private final Object writeLock = new Object();
@@ -217,6 +220,30 @@ public final class SettingsService {
             } else {
                 properties.setProperty(SELECTED_JAVA_PATH_KEY,
                         selectedJavaPath.toAbsolutePath().normalize().toString());
+            }
+        });
+    }
+
+    public LanguageSelectionMode languageSelectionMode() throws IOException {
+        return LanguageSelectionMode.fromStored(load().getProperty(LANGUAGE_MODE_KEY));
+    }
+
+    public Optional<String> language() throws IOException {
+        String raw = load().getProperty(LANGUAGE_KEY);
+        return raw == null || raw.isBlank() ? Optional.empty() : Optional.of(raw.trim());
+    }
+
+    public void setLanguage(LanguageSelectionMode mode, String locale) throws IOException {
+        Objects.requireNonNull(mode, "mode");
+        String value = locale == null
+                ? ""
+                : locale.trim().toLowerCase(Locale.ROOT).replace('-', '_');
+        update(properties -> {
+            properties.setProperty(LANGUAGE_MODE_KEY, mode.storedName());
+            if (value.isEmpty()) {
+                properties.remove(LANGUAGE_KEY);
+            } else {
+                properties.setProperty(LANGUAGE_KEY, value);
             }
         });
     }

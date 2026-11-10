@@ -11,10 +11,12 @@ import org.chs.camlauncher.backend.api.CAMLBackend;
 import org.chs.camlauncher.backend.config.BackendConfig;
 import org.chs.camlauncher.backend.instance.VersionIsolationMode;
 import org.chs.camlauncher.backend.runtime.JavaSelectionMode;
+import org.chs.camlauncher.backend.settings.LanguageSelectionMode;
 import org.chs.camlauncher.backend.settings.SettingsService;
 import org.chs.camlauncher.backend.system.SystemMemoryInfo;
 import org.chs.camlauncher.backend.theme.ThemeInfo;
 import org.chs.camlauncher.front.controller.MainController;
+import org.chs.camlauncher.front.translation.Language;
 import org.chs.camlauncher.front.view.MainView;
 import org.chs.camlauncher.ui.theme.CamlTheme;
 
@@ -33,6 +35,7 @@ public final class CAMLApplication extends Application {
     private CAMLBackend backend;
     private MainController controller;
     private MainView view;
+    private Scene scene;
     private Logger logger;
     private List<ThemeInfo> themes = List.of();
     private ThemeInfo activeTheme;
@@ -44,6 +47,8 @@ public final class CAMLApplication extends Application {
     private JavaSelectionMode javaSelectionMode = JavaSelectionMode.AUTO;
     private Path selectedJavaPath;
     private String lastLaunchedInstanceId = "1.21.4";
+    private LanguageSelectionMode languageSelectionMode = LanguageSelectionMode.AUTO;
+    private String language = Language.DEFAULT_LOCALE;
 
     @Override
     public void init() throws Exception {
@@ -91,6 +96,13 @@ public final class CAMLApplication extends Application {
         } catch (IOException e) {
             logger.warn("无法读取 Java 选择设置，使用自动选择", e);
         }
+        try {
+            languageSelectionMode = backend.languageSelectionMode();
+            language = backend.language().orElse(Language.DEFAULT_LOCALE);
+        } catch (IOException e) {
+            logger.warn("无法读取语言设置，使用自动语言", e);
+        }
+        applyLanguage(languageSelectionMode, language);
         systemMemory = backend.systemMemory();
 
         logger.info("CAML frontend initialized");
@@ -102,7 +114,8 @@ public final class CAMLApplication extends Application {
         controller = new MainController(backend);
         view = new MainView(
                 controller, savedMaxMemoryMb, systemMemory, gameDirectory,
-                fullVersionIsolation, lastLaunchedInstanceId, javaSelectionMode, selectedJavaPath);
+                fullVersionIsolation, lastLaunchedInstanceId, javaSelectionMode, selectedJavaPath,
+                languageSelectionMode, language, this::changeLanguage);
 
         // 3. 按主屏幕可用区域决定窗口尺寸：小屏不溢出，大屏不过小，默认居中
         Rectangle2D screen = Screen.getPrimary().getVisualBounds();
@@ -112,6 +125,7 @@ public final class CAMLApplication extends Application {
 
         // 4. 设置场景：结构样式内置，配色来自 <data>/themes/*.css
         Scene scene = new Scene(view, window.width(), window.height());
+        this.scene = scene;
         CamlTheme.install(scene);
         if (activeTheme != null) {
             try {
@@ -156,6 +170,41 @@ public final class CAMLApplication extends Application {
         }
 
         controller.settingsController().saveThemeAsync(theme.id());
+    }
+
+    private void changeLanguage(LanguageSelectionMode mode, String locale) {
+        String nextLanguage = locale == null || locale.isBlank() ? language : locale;
+        if (mode == languageSelectionMode && nextLanguage.equals(language)) {
+            return;
+        }
+        languageSelectionMode = mode;
+        language = nextLanguage;
+        applyLanguage(mode, language);
+        controller.settingsController().saveLanguageAsync(mode, language);
+        rebuildView();
+    }
+
+    private static void applyLanguage(LanguageSelectionMode mode, String locale) {
+        if (mode == LanguageSelectionMode.MANUAL) {
+            Language.setLocale(locale);
+        } else {
+            Language.useAutomaticLocale();
+        }
+    }
+
+    private void rebuildView() {
+        if (view == null || scene == null) {
+            return;
+        }
+        MainView previous = view;
+        view = previous.recreate();
+        view.configureThemes(themes, activeTheme, theme -> switchTheme(scene, theme));
+        previous.flushPendingSettings();
+        previous.dispose();
+        CamlTheme.markRoot(view);
+        scene.setRoot(view);
+        CamlTheme.install(scene);
+        view.showSettingsPage();
     }
 
     @Override

@@ -13,12 +13,14 @@ import javafx.scene.layout.VBox;
 import javafx.util.Duration;
 import org.chs.camlauncher.backend.theme.ThemeInfo;
 import org.chs.camlauncher.backend.system.SystemMemoryInfo;
+import org.chs.camlauncher.backend.settings.LanguageSelectionMode;
 import org.chs.camlauncher.front.controller.SettingsController;
 import org.chs.camlauncher.front.translation.Language;
 import org.chs.camlauncher.ui.control.CamlSideNav;
 import org.chs.camlauncher.ui.control.CamlSideNavItem;
 
 import java.util.List;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.IntConsumer;
 
@@ -31,6 +33,7 @@ final class SettingsView extends VBox implements SidebarPage, PageLifecycle {
     private final LauncherSettingsView launcherSettings;
     private final SettingsController controller;
     private final CamlSideNav sideNav;
+    private final CamlSideNavItem launcherItem;
     private final ScrollPane contentScroll = new ScrollPane();
     private final StackPane contentHost;
     private Node currentContent;
@@ -38,7 +41,9 @@ final class SettingsView extends VBox implements SidebarPage, PageLifecycle {
 
     SettingsView(LaunchSettings launchSettings, IntConsumer onMemoryChanged,
                  Consumer<Boolean> onVersionIsolationChanged,
-                 SystemMemoryInfo systemMemory, SettingsController controller) {
+                 SystemMemoryInfo systemMemory, SettingsController controller,
+                 LanguageSelectionMode initialLanguageMode, String initialLanguage,
+                 BiConsumer<LanguageSelectionMode, String> onLanguageChanged) {
         this.controller = controller;
         gameSettings = new GameSettingsView(
                 launchSettings, onMemoryChanged, onVersionIsolationChanged, systemMemory, controller);
@@ -50,14 +55,15 @@ final class SettingsView extends VBox implements SidebarPage, PageLifecycle {
                 controller.customDownloadApi(),
                 controller::saveDownloadSourceAsync
         );
-        launcherSettings = new LauncherSettingsView();
+        launcherSettings = new LauncherSettingsView(
+                initialLanguageMode, initialLanguage, onLanguageChanged);
 
         sideNav = new CamlSideNav();
         sideNav.getStyleClass().add("app-settings-sidebar");
         sideNav.setMaxHeight(Double.MAX_VALUE);
         CamlSideNavItem gameItem = new CamlSideNavItem(Language.tr("settings.section.game"));
         CamlSideNavItem downloadItem = new CamlSideNavItem(Language.tr("settings.section.download"));
-        CamlSideNavItem launcherItem = new CamlSideNavItem(Language.tr("settings.section.appearance"));
+        launcherItem = new CamlSideNavItem(Language.tr("settings.section.appearance"));
         sideNav.addItem(gameItem);
         sideNav.addItem(downloadItem);
         sideNav.addItem(launcherItem);
@@ -114,6 +120,10 @@ final class SettingsView extends VBox implements SidebarPage, PageLifecycle {
     void flushPendingSettings() {
         gameSettings.flushPendingSave();
         downloadSettings.flushPendingSaves();
+    }
+
+    void showAppearanceSection() {
+        sideNav.select(launcherItem);
     }
 
     @Override

@@ -8,6 +8,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.chs.camlauncher.backend.download.DownloadConcurrency;
 import org.chs.camlauncher.backend.download.DownloadCancellationToken;
+import org.chs.camlauncher.backend.download.DownloadStage;
 import org.chs.camlauncher.backend.download.io.DownloadExecutor;
 import org.chs.camlauncher.backend.download.model.DownloadItem;
 import org.chs.camlauncher.backend.download.source.DownloadSource;
@@ -147,7 +148,7 @@ public final class ExternalLoaderInstaller {
                 listener,
                 token
         );
-        DownloadListener.notifyStage(listener, "准备 " + loaderName + " 安装器");
+        DownloadListener.notifyStage(listener, DownloadStage.of("loader.installer.prepare", loaderName));
         JavaRuntime java = javaLocator.findSuitable(JavaRequirement.from(base.manifest()))
                 .orElseThrow(() -> new IOException(
                         "找不到可用于运行 " + loaderName + " 安装器的 Java"));
@@ -160,7 +161,8 @@ public final class ExternalLoaderInstaller {
             prepareStaging(staging, gameVersion, base);
             Path installerJar = staging.resolve("installer.jar");
             String installerSha1 = resolveSha1(installerUri);
-            DownloadListener.notifyStage(listener, "下载 " + loaderName + " 安装器");
+            DownloadListener.notifyStage(listener,
+                    DownloadStage.of("loader.installer.download", loaderName));
             token.throwIfCancelled();
             fileDownloader.download(new DownloadItem(
                     loaderName + " installer",
@@ -175,7 +177,8 @@ public final class ExternalLoaderInstaller {
             Path installedVersionDirectory = staging.resolve("versions").resolve(installedVersionId);
             String installerOutput = "";
             predownloadInstallerLibraries(loaderName, installerJar, staging, listener, token);
-            DownloadListener.notifyStage(listener, "运行 " + loaderName + " 安装器");
+            DownloadListener.notifyStage(listener,
+                    DownloadStage.of("loader.installer.run", loaderName));
             for (int attempt = 0; attempt < INSTALL_ATTEMPTS; attempt++) {
                 token.throwIfCancelled();
                 installerOutput = runInstaller(loaderName, java, installerJar, staging, token);
@@ -190,7 +193,7 @@ public final class ExternalLoaderInstaller {
             }
             validateGeneratedVersion(loaderName, installedVersionDirectory, installedVersionId);
 
-            DownloadListener.notifyStage(listener, "合并 " + loaderName + " 文件");
+            DownloadListener.notifyStage(listener, DownloadStage.of("loader.files.merge", loaderName));
             token.throwIfCancelled();
             mergeLibraries(staging.resolve("libraries"), gameDirectory.resolve("libraries"));
             moveVersionDirectory(
@@ -199,7 +202,7 @@ public final class ExternalLoaderInstaller {
                     installedVersionId,
                     normalizedInstanceId
             );
-            DownloadListener.notifyStage(listener, "校验 " + loaderName + " 安装结果");
+            DownloadListener.notifyStage(listener, DownloadStage.of("loader.verify", loaderName));
             InstalledVersion installed = versionInstaller.install(
                     normalizedInstanceId,
                     gameDirectory,
@@ -406,7 +409,8 @@ public final class ExternalLoaderInstaller {
             return;
         }
 
-        DownloadListener.notifyStage(listener, "下载 " + loaderName + " 依赖库");
+        DownloadListener.notifyStage(listener,
+                DownloadStage.of("loader.libraries.download", loaderName));
         DownloadExecutor.download(
                 items.values().stream().toList(),
                 downloadConcurrency,

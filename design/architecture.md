@@ -262,6 +262,9 @@ CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
   键缺失时返回键名本身。
 - 语言选择顺序：系统属性 `caml.language` → 系统语言（`en*` 用 `en_us`，其余用 `zh_cn`）。
   找不到对应文件时回退 `zh_cn`。
+- 设置 → 外观 → 语言提供自动/手动两种模式；模式与手动语言写入
+  `~/.caml/settings.properties` 的 `languageMode`、`language`。手动切换后
+  `CAMLApplication` 复用当前 `LaunchSettings` 快照重建 `MainView`，立即应用新语言。
 - `LanguageTranslationGenerator` 是抽象生成器，负责写 JSON；`TranslationTable` 按键排序保存文案，
   `put(key, value)` 为实例方法并拒绝重复键。每种语言一个生成器子类，只放在 `translation/generator`
   （`ZHCNGenerator`、`ENUSGenerator`）；运行时入口 `Language`、抽象基类、`TranslationTable`
@@ -269,7 +272,8 @@ CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
 - `TranslationGeneratorRunner` 遍历生成器；Gradle 任务 `:CAMLFront:generateTranslation`
   先编译再生成，`.run/generateTranslation` 提供 IDEA 入口。
 - `LanguageTest` 校验生成器输出与已提交 JSON 一致，并检查各语言键集合相同。
-- 后端返回的阶段名和错误文本仍由后端生成，前端按原样展示。
+- 下载阶段使用 `DownloadStage` 稳定键和可选参数，由前端按当前语言翻译；
+  后端异常文本仍由后端生成，前端按原样展示。
 
 ## 4. 尚未实现的能力
 

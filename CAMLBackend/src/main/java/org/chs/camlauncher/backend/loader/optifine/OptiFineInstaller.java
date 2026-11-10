@@ -7,6 +7,7 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import org.chs.camlauncher.backend.download.DownloadCancellationToken;
 import org.chs.camlauncher.backend.download.DownloadListener;
+import org.chs.camlauncher.backend.download.DownloadStage;
 import org.chs.camlauncher.backend.download.FileDownloader;
 import org.chs.camlauncher.backend.download.model.DownloadItem;
 import org.chs.camlauncher.backend.download.source.DownloadSource;
@@ -182,7 +183,7 @@ public final class OptiFineInstaller {
         Path staging = Files.createTempDirectory(gameDirectory, ".caml-optifine-install-");
         try {
             URI installerUri = optiFineService.resolveDownloadUri(optiFineVersion);
-            DownloadListener.notifyStage(listener, "下载 OptiFine 安装器");
+            DownloadListener.notifyStage(listener, DownloadStage.of("optifine.installer.download"));
             token.throwIfCancelled();
             fileDownloader.download(new DownloadItem(
                     "OptiFine installer",
@@ -194,10 +195,10 @@ public final class OptiFineInstaller {
 
             token.throwIfCancelled();
             prepareStaging(staging, gameVersion, base);
-            DownloadListener.notifyStage(listener, "运行 OptiFine 安装器");
+            DownloadListener.notifyStage(listener, DownloadStage.of("optifine.installer.run"));
             runInstaller(java, installer, staging, token);
             OptiFineVersionFiles generated = findGeneratedVersion(staging, gameVersion);
-            DownloadListener.notifyStage(listener, "合并 OptiFine 文件");
+            DownloadListener.notifyStage(listener, DownloadStage.of("optifine.files.merge"));
             token.throwIfCancelled();
             mergeLibraries(staging.resolve("libraries"), gameDirectory.resolve("libraries"));
             removeModsToml(gameDirectory.resolve("libraries").resolve("optifine"));

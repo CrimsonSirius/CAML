@@ -11,6 +11,7 @@ import java.io.Reader;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.IllegalFormatException;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
@@ -24,7 +25,8 @@ import java.util.Map;
  * en → {@code en_us}），其余回退到 {@code zh_cn}。</p>
  */
 public final class Language {
-    private static final String DEFAULT_LOCALE = "zh_cn";
+    public static final String DEFAULT_LOCALE = "zh_cn";
+    private static final List<String> SUPPORTED_LOCALES = List.of("zh_cn", "en_us");
 
     private static volatile String activeLocale;
     private static volatile Map<String, String> translations = Map.of();
@@ -42,6 +44,24 @@ public final class Language {
     public static synchronized void setLocale(String locale) {
         activeLocale = normalize(locale);
         translations = load(activeLocale);
+    }
+
+    /** 按系统属性和系统语言重新自动选择语言。 */
+    public static void useAutomaticLocale() {
+        setLocale(detectLocale());
+    }
+
+    /** 当前可用的界面语言。 */
+    public static List<String> supportedLocales() {
+        return SUPPORTED_LOCALES;
+    }
+
+    public static boolean isSupportedLocale(String locale) {
+        return SUPPORTED_LOCALES.contains(normalize(locale));
+    }
+
+    public static String normalizeLocale(String locale) {
+        return normalize(locale);
     }
 
     /** 按翻译键取文案，可选 {@link String#format(Locale, String, Object...)} 占位符。 */
