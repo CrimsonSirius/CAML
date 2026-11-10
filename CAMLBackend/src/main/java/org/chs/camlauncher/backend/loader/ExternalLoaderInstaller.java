@@ -45,6 +45,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
@@ -219,14 +220,19 @@ public final class ExternalLoaderInstaller {
 
     private String resolveSha1(URI installerUri) throws InterruptedException {
         try {
-            String text = shaClient.getText(
+            Optional<String> sha1 = shaClient.getParsedText(
                     URI.create(installerUri + ".sha1"),
                     Duration.ofSeconds(15),
-                    "text/plain"
+                    "text/plain",
+                    text -> {
+                        Matcher matcher = SHA1_PATTERN.matcher(text);
+                        return matcher.find()
+                                ? Optional.of(matcher.group().toLowerCase(Locale.ROOT))
+                                : Optional.empty();
+                    }
             );
-            Matcher matcher = SHA1_PATTERN.matcher(text);
-            if (matcher.find()) {
-                return matcher.group().toLowerCase(Locale.ROOT);
+            if (sha1.isPresent()) {
+                return sha1.get();
             }
             LOGGER.warn("{} 的 .sha1 内容无效，改由 ZIP 结构校验", installerUri);
         } catch (IOException | RuntimeException e) {

@@ -1,6 +1,8 @@
 package org.chs.camlauncher.backend.loader.fabric;
 
 import com.google.gson.Gson;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import com.google.gson.annotations.SerializedName;
 import org.chs.camlauncher.backend.download.source.DownloadSource;
 import org.chs.camlauncher.backend.download.source.SourceAwareHttpClient;
@@ -77,9 +79,24 @@ public final class FabricService {
             throws IOException, InterruptedException {
         String game = encodePath(gameVersion);
         String loader = encodePath(loaderVersion);
-        return fetchText(metaBase.resolve(
-                "v2/versions/loader/" + game + "/" + loader + "/profile/json"
-        ));
+        URI uri = metaBase.resolve(
+                "v2/versions/loader/" + game + "/" + loader + "/profile/json");
+        return httpClient.getParsedText(uri, Duration.ofSeconds(30), "application/json",
+                        this::parseLoaderProfile)
+                .orElseThrow(() -> new IOException("Fabric Meta 没有返回有效的 Loader profile: " + uri));
+    }
+
+    private Optional<String> parseLoaderProfile(String text) {
+        try {
+            JsonObject profile = JsonParser.parseString(text).getAsJsonObject();
+            if (profile.has("id") && !profile.get("id").isJsonNull()
+                    && !profile.get("id").getAsString().isBlank()) {
+                return Optional.of(text);
+            }
+        } catch (RuntimeException ignored) {
+            // 无效 JSON 由 SourceAwareHttpClient 视为当前候选源不可用。
+        }
+        return Optional.empty();
     }
 
     public List<FabricApiVersion> fetchApiVersions(String gameVersion)
@@ -90,9 +107,15 @@ public final class FabricService {
                 "v2/project/fabric-api/version?game_versions=" + gameFilter + "&loaders=" + loaderFilter
         );
 
-        ModrinthVersion[] versions = gson.fromJson(fetchText(uri), ModrinthVersion[].class);
+        return httpClient.getParsedText(uri, Duration.ofSeconds(30), "application/json",
+                        this::parseApiVersions)
+                .orElse(List.of());
+    }
+
+    private Optional<List<FabricApiVersion>> parseApiVersions(String text) {
+        ModrinthVersion[] versions = gson.fromJson(text, ModrinthVersion[].class);
         if (versions == null) {
-            return List.of();
+            return Optional.empty();
         }
 
         List<FabricApiVersion> result = new ArrayList<>();
@@ -130,11 +153,7 @@ public final class FabricService {
                 FabricApiVersion::releaseTime,
                 Comparator.nullsLast(Comparator.reverseOrder())
         ));
-        return List.copyOf(result);
-    }
-
-    private String fetchText(URI uri) throws IOException, InterruptedException {
-        return httpClient.getText(uri, Duration.ofSeconds(30), "application/json");
+        return result.isEmpty() ? Optional.empty() : Optional.of(List.copyOf(result));
     }
 
     private static URI ensureTrailingSlash(URI uri) {

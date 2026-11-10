@@ -20,6 +20,7 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -99,14 +100,14 @@ public final class OptiFineService {
         URI downloadUri = OFFICIAL_BASE.resolve(
                 "adloadx?f=" + encodeQuery(version.filename()));
 
-        String page = httpClient.getText(downloadUri, Duration.ofSeconds(30), "text/html");
-        Matcher matcher = Pattern.compile(
-                "downloadx\\?f=[^\"'&]+(?:&amp;|&)x=[0-9a-fA-F]+"
-        ).matcher(page);
-        if (!matcher.find()) {
-            throw new IOException("无法从 OptiFine 下载页解析安装器地址: " + downloadUri);
-        }
-        return OFFICIAL_BASE.resolve(matcher.group().replace("&amp;", "&"));
+        return httpClient.getParsedText(downloadUri, Duration.ofSeconds(30), "text/html", page -> {
+            Matcher matcher = Pattern.compile(
+                    "downloadx\\?f=[^\"'&]+(?:&amp;|&)x=[0-9a-fA-F]+"
+            ).matcher(page);
+            return matcher.find()
+                    ? Optional.of(OFFICIAL_BASE.resolve(matcher.group().replace("&amp;", "&")))
+                    : Optional.empty();
+        }).orElseThrow(() -> new IOException("无法从 OptiFine 下载页解析安装器地址: " + downloadUri));
     }
 
     private List<OptiFineVersion> fetchMirrorVersionsWithFallback(String gameVersion)
@@ -126,12 +127,18 @@ public final class OptiFineService {
             throws IOException, InterruptedException {
         String lookupVersion = toLookupVersion(gameVersion);
         String game = encodePath(lookupVersion);
-        Entry[] entries = gson.fromJson(
-                httpClient.getText(mirrorBase.resolve(game), Duration.ofSeconds(30), "application/json"),
-                Entry[].class
-        );
+        URI uri = mirrorBase.resolve(game);
+        return httpClient.getParsedText(uri, Duration.ofSeconds(30), "application/json",
+                        text -> parseMirrorVersions(gameVersion, lookupVersion, text))
+                .orElse(List.of());
+    }
+
+    private Optional<List<OptiFineVersion>> parseMirrorVersions(
+            String gameVersion, String lookupVersion, String text) {
+        String game = encodePath(lookupVersion);
+        Entry[] entries = gson.fromJson(text, Entry[].class);
         if (entries == null) {
-            return List.of();
+            return Optional.empty();
         }
 
         List<OptiFineVersion> result = new ArrayList<>();
@@ -160,13 +167,19 @@ public final class OptiFineService {
         result.sort(Comparator
                 .comparing(OptiFineVersion::preview)
                 .thenComparing(OptiFineVersion::version, Comparator.reverseOrder()));
-        return List.copyOf(result);
+        return result.isEmpty() ? Optional.empty() : Optional.of(List.copyOf(result));
     }
 
     private List<OptiFineVersion> fetchOfficialVersions(String gameVersion)
             throws IOException, InterruptedException {
-        String html = httpClient.getText(officialDownloadsUri, Duration.ofSeconds(30), "text/html");
         String lookupVersion = toLookupVersion(gameVersion);
+        return httpClient.getParsedText(officialDownloadsUri, Duration.ofSeconds(30), "text/html",
+                        html -> parseOfficialVersions(gameVersion, lookupVersion, html))
+                .orElse(List.of());
+    }
+
+    private Optional<List<OptiFineVersion>> parseOfficialVersions(
+            String gameVersion, String lookupVersion, String html) {
         Matcher matcher = Pattern.compile(
                 "(?is)<h2>\\s*Minecraft\\s+([^<]+?)\\s*</h2>|"
                         + "(<tr\\s+class=['\"]downloadLine[^'\"]*['\"][^>]*>.*?</tr>)"
@@ -197,7 +210,7 @@ public final class OptiFineService {
         result.sort(Comparator
                 .comparing(OptiFineVersion::preview)
                 .thenComparing(OptiFineVersion::version, Comparator.reverseOrder()));
-        return List.copyOf(result);
+        return result.isEmpty() ? Optional.empty() : Optional.of(List.copyOf(result));
     }
 
     private static OptiFineVersion parseOfficialVersion(
