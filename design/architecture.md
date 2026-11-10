@@ -19,6 +19,7 @@ CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
 - `CAMLUI` 只依赖 JavaFX 和自身 CSS，不依赖 `CAMLBackend` 或 `CAMLFront`。
 - `CAMLUI` 不定义固定配色；组件颜色全部来自外部主题文件。
 - `CAMLFront` 不直接读写文件、不直接发 HTTP、不直接启动进程。
+- `CAMLFront` 不在视图和控制器中硬编码界面文案，统一通过 `Language.tr(key)` 读取 `lang/*.json`。
 - 前后端通过 facade、DTO、事件和 `CompletableFuture` 交互。
 
 ## 2. 后端模块职责
@@ -245,6 +246,23 @@ CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
   `CamlMemorySlider`、`CamlRadioButton`、`CamlProgressBar`、`CamlSideNav`、`CamlSideNavItem`、`CamlTopNav`、
   `CamlTopNavItem`、`CamlPageHost` 和 `CamlTopBar`。
 - `CAMLFront` 依赖 `CAMLUI`，不再把控件外观写死在业务界面里。
+
+### 3.13 前端多语言
+
+- 界面文案与 Minecraft 一致，放在 `CAMLFront/src/main/resources/lang/<locale>.json`。
+- `translation.Language` 是唯一运行时入口：
+  `Language.tr(key)` 取文案，`Language.tr(key, args...)` 支持占位符；
+  键缺失时返回键名本身。
+- 语言选择顺序：系统属性 `caml.language` → 系统语言（`en*` 用 `en_us`，其余用 `zh_cn`）。
+  找不到对应文件时回退 `zh_cn`。
+- `LanguageTranslationGenerator` 是抽象生成器，负责写 JSON；`TranslationTable` 按键排序保存文案，
+  `put(key, value)` 为实例方法并拒绝重复键。每种语言一个生成器子类，只放在 `translation/generator`
+  （`ZHCNGenerator`、`ENUSGenerator`）；运行时入口 `Language`、抽象基类、`TranslationTable`
+  和 `TranslationGeneratorRunner` 都在 `translation` 根目录。
+- `TranslationGeneratorRunner` 遍历生成器；Gradle 任务 `:CAMLFront:generateTranslation`
+  先编译再生成，`.run/generateTranslation` 提供 IDEA 入口。
+- `LanguageTest` 校验生成器输出与已提交 JSON 一致，并检查各语言键集合相同。
+- 后端返回的阶段名和错误文本仍由后端生成，前端按原样展示。
 
 ## 4. 尚未实现的能力
 

@@ -11,6 +11,7 @@ import org.chs.camlauncher.front.controller.DownloadsController;
 import org.chs.camlauncher.front.controller.HomeController;
 import org.chs.camlauncher.front.controller.MainController;
 import org.chs.camlauncher.front.controller.SettingsController;
+import org.chs.camlauncher.front.translation.Language;
 import org.chs.camlauncher.ui.control.CamlPageHost;
 import org.chs.camlauncher.ui.control.CamlTopBar;
 import org.chs.camlauncher.ui.control.CamlTopNav;
@@ -76,9 +77,9 @@ public final class MainView extends BorderPane {
         CamlTopBar bar = new CamlTopBar("CAML", "Minecraft Launcher");
 
         CamlTopNav navigation = new CamlTopNav();
-        CamlTopNavItem home = navigation.addItem("主页");
-        CamlTopNavItem downloads = navigation.addItem("下载");
-        CamlTopNavItem settings = navigation.addItem("设置");
+        CamlTopNavItem home = navigation.addItem(Language.tr("nav.home"));
+        CamlTopNavItem downloads = navigation.addItem(Language.tr("nav.downloads"));
+        CamlTopNavItem settings = navigation.addItem(Language.tr("nav.settings"));
         navigation.select(home);
         navigation.selectedItemProperty().addListener((observable, oldValue, selected) -> {
             if (selected == home) {
@@ -107,10 +108,12 @@ public final class MainView extends BorderPane {
 
     private Label buildFooter() {
         BackendStatus backendStatus = controller.status();
-        Label footer = new Label(String.format(
-                "CAML %s · 后端%s · 数据目录: %s",
+        Label footer = new Label(Language.tr(
+                "footer.status",
                 backendStatus.version(),
-                backendStatus.ready() ? "已就绪" : "未就绪",
+                Language.tr(backendStatus.ready()
+                        ? "footer.backend.ready"
+                        : "footer.backend.notReady"),
                 backendStatus.dataDirectory()));
         footer.getStyleClass().addAll("caml-body-small", "app-footer-bar");
         footer.setWrapText(true);

@@ -13,6 +13,7 @@ import org.chs.camlauncher.backend.loader.forge.ForgeVersion;
 import org.chs.camlauncher.backend.loader.neoforge.NeoForgeVersion;
 import org.chs.camlauncher.backend.loader.optifine.OptiFineVersion;
 import org.chs.camlauncher.backend.metadata.model.VersionManifest;
+import org.chs.camlauncher.front.translation.Language;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -34,17 +35,19 @@ public final class DownloadsController {
     public String downloadSourceLabel() {
         DownloadSourceMode mode = context.backend().downloadSourceMode();
         return switch (mode) {
-            case MIRROR -> "镜像源";
-            case OFFICIAL -> "官方源";
+            case MIRROR -> Language.tr("download.source.mirror");
+            case OFFICIAL -> Language.tr("download.source.official");
             case CUSTOM -> DownloadSourceFactory.isValidCustomApi(
-                    context.backend().customDownloadApi()) ? "自定义源" : "官方源";
+                    context.backend().customDownloadApi())
+                    ? Language.tr("download.source.custom")
+                    : Language.tr("download.source.official");
         };
     }
 
     public FrontTask<InstanceNameCheck> checkInstanceName(Path gameDirectory, String instanceId,
                                                           Consumer<InstanceNameCheck> onChecked,
                                                           Consumer<String> onError) {
-        return context.runCheck("检查实例名",
+        return context.runCheck(Language.tr("operation.checkInstanceName"),
                 () -> context.backend().checkInstanceName(gameDirectory, instanceId),
                 onChecked, onError);
     }
@@ -53,21 +56,24 @@ public final class DownloadsController {
     public FrontTask<List<VersionManifest.Version>> fetchReleaseVersions(
             Consumer<List<VersionManifest.Version>> onLoaded,
             Consumer<String> onError) {
-        return fetchVersions("正式版", VersionManifest::releasesNewestFirst, onLoaded, onError);
+        return fetchVersions(Language.tr("download.category.release"),
+                VersionManifest::releasesNewestFirst, onLoaded, onError);
     }
 
     /** 异步获取官方版本清单中的快照版。 */
     public FrontTask<List<VersionManifest.Version>> fetchSnapshotVersions(
             Consumer<List<VersionManifest.Version>> onLoaded,
             Consumer<String> onError) {
-        return fetchVersions("快照版", VersionManifest::snapshotsNewestFirst, onLoaded, onError);
+        return fetchVersions(Language.tr("download.category.snapshot"),
+                VersionManifest::snapshotsNewestFirst, onLoaded, onError);
     }
 
     /** 异步获取官方版本清单中的远古版（Alpha/Beta）。 */
     public FrontTask<List<VersionManifest.Version>> fetchOldVersions(
             Consumer<List<VersionManifest.Version>> onLoaded,
             Consumer<String> onError) {
-        return fetchVersions("远古版", VersionManifest::oldVersionsNewestFirst, onLoaded, onError);
+        return fetchVersions(Language.tr("download.category.old"),
+                VersionManifest::oldVersionsNewestFirst, onLoaded, onError);
     }
 
     private FrontTask<List<VersionManifest.Version>> fetchVersions(
@@ -75,7 +81,7 @@ public final class DownloadsController {
             Function<VersionManifest, List<VersionManifest.Version>> selector,
             Consumer<List<VersionManifest.Version>> onLoaded,
             Consumer<String> onError) {
-        return context.runMetadata("获取官方" + category + "列表",
+        return context.runMetadata(Language.tr("operation.fetchVersionList", category),
                 () -> selector.apply(context.backend().fetchVersionManifest()),
                 onLoaded,
                 onError);
@@ -90,13 +96,12 @@ public final class DownloadsController {
             Runnable onSuccess,
             Consumer<String> onError) {
         Objects.requireNonNull(gameDirectory, "gameDirectory");
-        return context.runDownload("安装原版实例 " + instanceId,
+        return context.runDownload(Language.tr("operation.installVanilla", instanceId),
                 () -> context.backend().installVersion(versionId, instanceId, gameDirectory, listener),
                 installed -> {
                     LOGGER.info("官方原版实例安装完成: {} / {} -> {}",
                             instanceId, versionId, installed.gameDirectory());
-                    context.sendLog("[下载] 已安装实例 " + instanceId
-                            + "（原版 " + versionId + "）");
+                    context.sendLog(Language.tr("log.download.installed.vanilla", instanceId, versionId));
                     onSuccess.run();
                 },
                 onError);
@@ -106,7 +111,7 @@ public final class DownloadsController {
             String gameVersion,
             Consumer<List<FabricLoaderVersion>> onLoaded,
             Consumer<String> onError) {
-        return context.runMetadata("获取 Fabric Loader 版本",
+        return context.runMetadata(Language.tr("operation.fetchFabricLoader"),
                 () -> context.backend().fetchFabricLoaderVersions(gameVersion),
                 onLoaded, onError);
     }
@@ -115,7 +120,7 @@ public final class DownloadsController {
             String gameVersion,
             Consumer<List<FabricApiVersion>> onLoaded,
             Consumer<String> onError) {
-        return context.runMetadata("获取 Fabric API 版本",
+        return context.runMetadata(Language.tr("operation.fetchFabricApi"),
                 () -> context.backend().fetchFabricApiVersions(gameVersion),
                 onLoaded, onError);
     }
@@ -130,7 +135,7 @@ public final class DownloadsController {
             Runnable onSuccess,
             Consumer<String> onError) {
         Objects.requireNonNull(gameDirectory, "gameDirectory");
-        return context.runDownload("安装 Fabric 实例 " + instanceId,
+        return context.runDownload(Language.tr("operation.installFabric", instanceId),
                 () -> context.backend().installFabricVersion(
                         gameVersion,
                         instanceId,
@@ -142,8 +147,8 @@ public final class DownloadsController {
                 installed -> {
                     LOGGER.info("Fabric 实例安装完成: {} / {} -> {}",
                             instanceId, loaderVersion, installed.gameDirectory());
-                    context.sendLog("[下载] 已安装 Fabric 实例 " + instanceId
-                            + "（Loader " + loaderVersion + "）");
+                    context.sendLog(Language.tr("log.download.installed.fabric",
+                            instanceId, loaderVersion));
                     onSuccess.run();
                 },
                 onError);
@@ -153,7 +158,7 @@ public final class DownloadsController {
             String gameVersion,
             Consumer<List<ForgeVersion>> onLoaded,
             Consumer<String> onError) {
-        return context.runMetadata("获取 Forge 版本",
+        return context.runMetadata(Language.tr("operation.fetchForge"),
                 () -> context.backend().fetchForgeVersions(gameVersion),
                 onLoaded, onError);
     }
@@ -162,7 +167,7 @@ public final class DownloadsController {
             String gameVersion,
             Consumer<List<NeoForgeVersion>> onLoaded,
             Consumer<String> onError) {
-        return context.runMetadata("获取 NeoForge 版本",
+        return context.runMetadata(Language.tr("operation.fetchNeoForge"),
                 () -> context.backend().fetchNeoForgeVersions(gameVersion),
                 onLoaded, onError);
     }
@@ -171,7 +176,7 @@ public final class DownloadsController {
             String gameVersion,
             Consumer<List<OptiFineVersion>> onLoaded,
             Consumer<String> onError) {
-        return context.runMetadata("获取 OptiFine 版本",
+        return context.runMetadata(Language.tr("operation.fetchOptiFine"),
                 () -> context.backend().fetchOptiFineVersions(gameVersion),
                 onLoaded, onError);
     }
@@ -228,11 +233,11 @@ public final class DownloadsController {
             Runnable onSuccess,
             Consumer<String> onError) {
         Objects.requireNonNull(gameDirectory, "gameDirectory");
-        return context.runDownload("安装 " + loaderName + " 实例 " + instanceId,
+        return context.runDownload(Language.tr("operation.installLoader", loaderName, instanceId),
                 supplier::install,
                 installed -> {
                     LOGGER.info("{} 实例安装完成: {}", loaderName, instanceId);
-                    context.sendLog("[下载] 已安装 " + loaderName + " 实例 " + instanceId);
+                    context.sendLog(Language.tr("log.download.installed.loader", loaderName, instanceId));
                     onSuccess.run();
                 },
                 onError);

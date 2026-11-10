@@ -12,6 +12,7 @@ import javafx.scene.layout.VBox;
 import org.chs.camlauncher.backend.metadata.model.VersionManifest;
 import org.chs.camlauncher.front.controller.DownloadsController;
 import org.chs.camlauncher.front.controller.FrontTask;
+import org.chs.camlauncher.front.translation.Language;
 import org.chs.camlauncher.ui.control.CamlButton;
 
 import java.util.List;
@@ -29,8 +30,8 @@ final class DownloadVersionsView extends VBox implements PageLifecycle {
                          VersionCategory category,
                          Consumer<VersionManifest.Version> onVersionSelected) {
         this.category = category;
-        statusLabel = new Label("正在从" + controller.downloadSourceLabel()
-                + "获取" + category.label() + "列表...");
+        statusLabel = new Label(Language.tr("download.versions.loading",
+                controller.downloadSourceLabel(), category.label()));
         getStyleClass().add("app-download-content");
         setPadding(new Insets(32, 40, 32, 40));
         setSpacing(16);
@@ -61,7 +62,7 @@ final class DownloadVersionsView extends VBox implements PageLifecycle {
             return;
         }
         if (versions.isEmpty()) {
-            statusLabel.setText("下载源没有返回可下载的" + category.label());
+            statusLabel.setText(Language.tr("download.versions.empty", category.label()));
             return;
         }
 
@@ -86,20 +87,22 @@ final class DownloadVersionsView extends VBox implements PageLifecycle {
             row.prefWidthProperty().bind(Bindings.max(0, item.widthProperty().subtract(48)));
             item.setGraphic(row);
             item.setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
-            item.setAccessibleText(version.id() + (date.isBlank() ? "" : "，" + date));
+            item.setAccessibleText(date.isBlank()
+                    ? version.id()
+                    : Language.tr("download.versions.accessible", version.id(), date));
             item.setOnAction(event -> onVersionSelected.accept(version));
             list.getChildren().add(item);
         }
         scroll.setContent(list);
-        statusLabel.setText("共 " + versions.size() + " 个" + category.label()
-                + "，按发布时间从新到旧排列");
+        statusLabel.setText(Language.tr("download.versions.count",
+                versions.size(), category.label()));
     }
 
     private void showError(String message) {
         if (disposed) {
             return;
         }
-        statusLabel.setText("获取" + category.label() + "列表失败：" + message);
+        statusLabel.setText(Language.tr("download.versions.error", category.label(), message));
         statusLabel.getStyleClass().remove("field-hint");
         statusLabel.getStyleClass().add("field-hint-error");
     }

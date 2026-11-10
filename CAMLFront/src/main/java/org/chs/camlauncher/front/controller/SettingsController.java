@@ -7,6 +7,7 @@ import org.chs.camlauncher.backend.instance.VersionIsolationMode;
 import org.chs.camlauncher.backend.runtime.JavaCandidate;
 import org.chs.camlauncher.backend.runtime.JavaSelectionMode;
 import org.chs.camlauncher.backend.system.SystemMemoryInfo;
+import org.chs.camlauncher.front.translation.Language;
 
 import java.nio.file.Path;
 import java.util.List;
@@ -53,18 +54,18 @@ public final class SettingsController {
 
     public FrontTask<List<JavaCandidate>> scanJavaCandidates(
             Consumer<List<JavaCandidate>> onLoaded, Consumer<String> onError) {
-        return context.runJava("扫描 Java",
+        return context.runJava(Language.tr("operation.scanJava"),
                 () -> context.backend().listJavaCandidates(), onLoaded, onError);
     }
 
     public FrontTask<JavaCandidate> addManualJava(
             Path executable, Consumer<JavaCandidate> onAdded, Consumer<String> onError) {
-        return context.runJava("添加手动 Java",
+        return context.runJava(Language.tr("operation.addManualJava"),
                 () -> context.backend().addManualJavaPath(executable), onAdded, onError);
     }
 
     public void saveJavaSelectionAsync(JavaSelectionMode mode, Path selectedJavaPath) {
-        context.executeSettings("保存 Java 选择",
+        context.executeSettings(Language.tr("operation.saveJavaSelection"),
                 () -> context.backend().setJavaSelection(mode, selectedJavaPath));
     }
 
@@ -80,19 +81,19 @@ public final class SettingsController {
 
     /** 异步保存最大内存，避免在 JavaFX Application Thread 上写文件。 */
     public void saveMaxMemoryMbAsync(int maxMemoryMb) {
-        context.executeSettings("保存最大内存设置",
+        context.executeSettings(Language.tr("operation.saveMaxMemory"),
                 () -> context.backend().setMaxMemoryMb(maxMemoryMb));
     }
 
     /** 异步保存游戏位置，避免在 JavaFX Application Thread 上写文件。 */
     public void saveGameDirectoryAsync(Path gameDirectory) {
-        context.executeSettings("保存游戏位置",
+        context.executeSettings(Language.tr("operation.saveGameDirectory"),
                 () -> context.backend().setGameDirectory(gameDirectory));
     }
 
     /** 异步保存版本隔离选择，避免在 JavaFX Application Thread 上写文件。 */
     public void saveVersionIsolationAsync(boolean fullVersionIsolation) {
-        context.executeSettings("保存版本隔离设置",
+        context.executeSettings(Language.tr("operation.saveVersionIsolation"),
                 () -> context.backend().setVersionIsolationMode(fullVersionIsolation
                         ? VersionIsolationMode.FULL
                         : VersionIsolationMode.NONE));
@@ -100,12 +101,12 @@ public final class SettingsController {
 
     /** 异步保存下载并发数，并立即更新后端下载器。 */
     public void saveDownloadConcurrencyAsync(int downloadConcurrency) {
-        context.executeSettings("保存下载并发数",
+        context.executeSettings(Language.tr("operation.saveDownloadConcurrency"),
                 () -> context.backend().setDownloadConcurrency(downloadConcurrency));
     }
 
     public void saveDownloadSourceAsync(DownloadSourceMode mode, String customApi) {
-        context.executeSettings("保存下载源设置", () -> {
+        context.executeSettings(Language.tr("operation.saveDownloadSource"), () -> {
             context.backend().setDownloadSource(mode, customApi);
             Runnable listener = onDownloadSourceSaved;
             if (listener != null) {
@@ -117,7 +118,7 @@ public final class SettingsController {
     /** 异步保存主题选择，确保关闭启动器时也能等待写入完成。 */
     public void saveThemeAsync(String themeId) {
         Objects.requireNonNull(themeId, "themeId");
-        context.executeSettings("保存主题选择",
+        context.executeSettings(Language.tr("operation.saveTheme"),
                 () -> context.backend().selectTheme(themeId));
     }
 

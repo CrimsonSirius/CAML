@@ -5,6 +5,7 @@ import javafx.geometry.Pos;
 import javafx.scene.control.Label;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
+import org.chs.camlauncher.front.translation.Language;
 import org.chs.camlauncher.ui.control.CamlButton;
 
 /** 管理实例二级页；当前只保留页面壳，内容待后续实现。 */
@@ -17,7 +18,7 @@ final class ManageInstancesView extends VBox {
 
         CamlButton backButton = ViewSupport.backButton(onBack);
 
-        Label title = new Label("管理实例");
+        Label title = new Label(Language.tr("instances.manage.title"));
         title.getStyleClass().add("caml-headline-small");
 
         HBox header = new HBox(12, backButton, title);

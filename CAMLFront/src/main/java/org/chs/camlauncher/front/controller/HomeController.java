@@ -7,19 +7,21 @@ import org.chs.camlauncher.backend.instance.VersionIsolationMode;
 import org.chs.camlauncher.backend.launch.GameLaunch;
 import org.chs.camlauncher.backend.launch.LaunchOptions;
 import org.chs.camlauncher.backend.launch.process.ProcessListener;
+import org.chs.camlauncher.front.translation.Language;
 
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 /** 主页控制器：启动游戏、日志/状态回调和实例目录扫描。 */
 public final class HomeController {
     private final ControllerContext context;
 
-    private Consumer<String> onStatusChanged;
+    private BiConsumer<String, Boolean> onStatusChanged;
     private Runnable onLaunchFinished;
     private Consumer<GameDirectoryInfo> onGameDirectoryInspected;
 
@@ -31,7 +33,7 @@ public final class HomeController {
         context.setLogSink(onLogReceived);
     }
 
-    public void setOnStatusChanged(Consumer<String> onStatusChanged) {
+    public void setOnStatusChanged(BiConsumer<String, Boolean> onStatusChanged) {
         this.onStatusChanged = onStatusChanged;
     }
 
@@ -70,16 +72,16 @@ public final class HomeController {
             public void onExit(int exitCode) {
                 if (exitCode != 0) {
                     context.markFailure();
-                    context.sendLog("游戏进程异常退出，代码: " + exitCode);
+                    context.sendLog(Language.tr("log.gameProcess.exitError", exitCode));
                 } else {
-                    context.sendLog("游戏进程已退出，代码: 0");
+                    context.sendLog(Language.tr("log.gameProcess.exit", exitCode));
                 }
                 notifyLaunchFinished();
             }
         };
 
-        sendStatus("正在启动 " + version + "...");
-        return context.runLaunch("启动游戏 " + version,
+        sendStatus(Language.tr("status.starting", version), false);
+        return context.runLaunch(Language.tr("operation.launchGame", version),
                 () -> context.backend().launchGame(version, gameDirectory, username, options,
                         fullVersionIsolation
                                 ? VersionIsolationMode.FULL
@@ -87,10 +89,10 @@ public final class HomeController {
                         downloadListener, processListener),
                 launch -> {
                     saveLastLaunchedInstance(version);
-                    sendStatus("启动指令已发送");
+                    sendStatus(Language.tr("status.started"), false);
                 },
                 message -> {
-                    sendStatus("启动失败！");
+                    sendStatus(Language.tr("status.launchFailed"), true);
                     notifyLaunchFinished();
                 });
     }
@@ -99,7 +101,7 @@ public final class HomeController {
         try {
             context.backend().setLastLaunchedInstanceId(version);
         } catch (IOException | RuntimeException e) {
-            context.reportError("保存最后启动实例", e, null);
+            context.reportError(Language.tr("operation.saveLastInstance"), e, null);
         }
     }
 
@@ -123,9 +125,9 @@ public final class HomeController {
         }
     }
 
-    private void sendStatus(String status) {
+    private void sendStatus(String status, boolean error) {
         if (onStatusChanged != null) {
-            Platform.runLater(() -> onStatusChanged.accept(status));
+            Platform.runLater(() -> onStatusChanged.accept(status, error));
         }
     }
 
@@ -153,10 +155,10 @@ public final class HomeController {
             }
 
             if (progress.total() > 0) {
-                context.sendLog(String.format("[下载] %s (%d/%d)",
+                context.sendLog(Language.tr("log.download.progress",
                         progress.label(), progress.downloaded(), progress.total()));
             } else {
-                context.sendLog(String.format("[下载] %s (%d)",
+                context.sendLog(Language.tr("log.download.progressNoTotal",
                         progress.label(), progress.downloaded()));
             }
         }

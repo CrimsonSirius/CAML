@@ -20,6 +20,7 @@ import org.chs.camlauncher.backend.loader.optifine.OptiFineCompatibility;
 import org.chs.camlauncher.backend.metadata.model.VersionManifest;
 import org.chs.camlauncher.front.controller.DownloadsController;
 import org.chs.camlauncher.front.controller.FrontTask;
+import org.chs.camlauncher.front.translation.Language;
 import org.chs.camlauncher.ui.control.CamlButton;
 import org.chs.camlauncher.ui.control.CamlComboBox;
 import org.chs.camlauncher.ui.control.CamlTextField;
@@ -31,7 +32,7 @@ import java.util.function.Consumer;
 
 /** 选择版本后的下载设置页：实例名、版本信息和加载器选择。 */
 final class DownloadVersionSetupView extends VBox implements PageLifecycle {
-    private final Label statusLabel = new Label("未选择加载器时下载原版游戏。");
+    private final Label statusLabel = new Label(Language.tr("download.setup.status.idle"));
     private final CamlTextField instanceNameField;
     private final Label instanceNameHint = new Label();
     private final CamlButton downloadButton;
@@ -66,11 +67,11 @@ final class DownloadVersionSetupView extends VBox implements PageLifecycle {
         setSpacing(12);
         setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
 
-        CamlButton cancel = CamlButton.outlined("取消");
+        CamlButton cancel = CamlButton.outlined(Language.tr("common.cancel"));
         cancel.getStyleClass().add("app-pill-button");
         cancel.setOnAction(event -> onCancel.run());
 
-        Label nameLabel = new Label("实例名字");
+        Label nameLabel = new Label(Language.tr("download.setup.instanceName"));
         nameLabel.getStyleClass().add("app-download-option-title");
         instanceNameField = new CamlTextField(version.id());
         instanceNameField.setMaxWidth(Double.MAX_VALUE);
@@ -89,17 +90,19 @@ final class DownloadVersionSetupView extends VBox implements PageLifecycle {
         loadLoaderVersions(version.id(), controller);
 
         String date = ViewSupport.releaseDate(version.releaseTime());
-        String versionInfo = "Minecraft " + version.id() + " · "
-                + VersionCategory.labelOfType(version.type())
-                + (date.isBlank() ? "" : " · " + date);
+        String versionInfo = date.isBlank()
+                ? Language.tr("download.setup.versionInfo",
+                        version.id(), VersionCategory.labelOfType(version.type()))
+                : Language.tr("download.setup.versionInfoWithDate",
+                        version.id(), VersionCategory.labelOfType(version.type()), date);
 
         VBox options = new VBox(12,
-                optionBar("版本信息", valueLabel(versionInfo)),
-                optionBar("选择 Forge 版本", forgeSelector),
-                optionBar("选择 OptiFine 版本", optiFineSelector),
-                optionBar("选择 Fabric 版本", fabricLoaderSelector),
-                optionBar("选择 Fabric API 版本", fabricApiSelector),
-                optionBar("选择 NeoForge 版本", neoForgeSelector)
+                optionBar(Language.tr("download.setup.option.versionInfo"), valueLabel(versionInfo)),
+                optionBar(Language.tr("download.setup.option.forge"), forgeSelector),
+                optionBar(Language.tr("download.setup.option.optifine"), optiFineSelector),
+                optionBar(Language.tr("download.setup.option.fabric"), fabricLoaderSelector),
+                optionBar(Language.tr("download.setup.option.fabricApi"), fabricApiSelector),
+                optionBar(Language.tr("download.setup.option.neoforge"), neoForgeSelector)
         );
 
         Region spacer = new Region();
@@ -108,7 +111,7 @@ final class DownloadVersionSetupView extends VBox implements PageLifecycle {
         statusLabel.getStyleClass().addAll("caml-body-small", "field-hint");
         statusLabel.setWrapText(true);
 
-        downloadButton = CamlButton.filled("下载实例");
+        downloadButton = CamlButton.filled(Language.tr("download.setup.download"));
         downloadButton.getStyleClass().add("app-download-primary-button");
         downloadButton.setMaxWidth(Double.MAX_VALUE);
         downloadButton.setDisable(true);
@@ -134,7 +137,7 @@ final class DownloadVersionSetupView extends VBox implements PageLifecycle {
     private void configureFabricSelectors() {
         fabricLoaderSelector.setPrefWidth(280);
         fabricLoaderSelector.setMaxWidth(280);
-        fabricLoaderSelector.setPromptText("正在获取 Fabric 版本...");
+        fabricLoaderSelector.setPromptText(Language.tr("download.prompt.loading.fabric"));
         fabricLoaderSelector.setConverter(new StringConverter<>() {
             @Override
             public String toString(FabricLoaderVersion loader) {
@@ -162,7 +165,7 @@ final class DownloadVersionSetupView extends VBox implements PageLifecycle {
 
         fabricApiSelector.setPrefWidth(280);
         fabricApiSelector.setMaxWidth(280);
-        fabricApiSelector.setPromptText("请先选择 Fabric 版本");
+        fabricApiSelector.setPromptText(Language.tr("download.prompt.fabricFirst"));
         fabricApiSelector.setDisable(true);
         fabricApiSelector.setConverter(new StringConverter<>() {
             @Override
@@ -180,7 +183,7 @@ final class DownloadVersionSetupView extends VBox implements PageLifecycle {
     private void configureForgeSelector(VersionManifest.Version version) {
         forgeSelector.setPrefWidth(280);
         forgeSelector.setMaxWidth(280);
-        forgeSelector.setPromptText("正在获取 Forge 版本...");
+        forgeSelector.setPromptText(Language.tr("download.prompt.loading.forge"));
         forgeSelector.setConverter(new StringConverter<>() {
             @Override
             public String toString(ForgeVersion forge) {
@@ -199,16 +202,16 @@ final class DownloadVersionSetupView extends VBox implements PageLifecycle {
             scheduleInstanceNameCheck();
             OptiFineVersion optiFine = optiFineSelector.getValue();
             if (optiFine != null && !OptiFineCompatibility.isForgeCompatible(forge, optiFine)) {
-                clearSelection(optiFineSelector, "当前 Forge 与 OptiFine 不兼容");
+                clearSelection(optiFineSelector, Language.tr("download.setup.optifineIncompatibleForge"));
                 updateOptiFineState();
                 autoUpdateInstanceName(forge.versionId());
                 showStatus(OptiFineCompatibility.incompatibleMessage(forge, optiFine), true);
                 return;
             }
             updatingLoaders = true;
-            clearSelection(fabricLoaderSelector, "请选择 Fabric 版本");
-            clearSelection(fabricApiSelector, "请先选择 Fabric 版本");
-            clearSelection(neoForgeSelector, "请选择 NeoForge 版本");
+            clearSelection(fabricLoaderSelector, Language.tr("download.prompt.select.fabric"));
+            clearSelection(fabricApiSelector, Language.tr("download.prompt.fabricFirst"));
+            clearSelection(neoForgeSelector, Language.tr("download.prompt.select.neoforge"));
             updatingLoaders = false;
             updateFabricApiState();
             updateOptiFineState();
@@ -220,7 +223,7 @@ final class DownloadVersionSetupView extends VBox implements PageLifecycle {
     private void configureOptiFineSelector() {
         optiFineSelector.setPrefWidth(280);
         optiFineSelector.setMaxWidth(280);
-        optiFineSelector.setPromptText("请先选择 Forge 版本");
+        optiFineSelector.setPromptText(Language.tr("download.prompt.forgeFirst"));
         optiFineSelector.setDisable(true);
         optiFineSelector.setConverter(new StringConverter<>() {
             @Override
@@ -239,7 +242,7 @@ final class DownloadVersionSetupView extends VBox implements PageLifecycle {
             }
             ForgeVersion forge = forgeSelector.getValue();
             if (forge == null) {
-                clearSelection(optiFineSelector, "请先选择 Forge 版本");
+                clearSelection(optiFineSelector, Language.tr("download.prompt.forgeFirst"));
                 return;
             }
             if (!OptiFineCompatibility.isForgeCompatible(forge, optiFine)) {
@@ -248,7 +251,7 @@ final class DownloadVersionSetupView extends VBox implements PageLifecycle {
                         .findFirst()
                         .orElse(null);
                 if (compatible == null) {
-                    clearSelection(optiFineSelector, "没有兼容当前 Forge 的 OptiFine 版本");
+                    clearSelection(optiFineSelector, Language.tr("download.setup.noCompatibleOptiFine"));
                     showStatus(OptiFineCompatibility.incompatibleMessage(forge, optiFine), true);
                     return;
                 }
@@ -256,7 +259,7 @@ final class DownloadVersionSetupView extends VBox implements PageLifecycle {
                 forgeSelector.setValue(compatible);
                 updatingLoaders = false;
                 forge = compatible;
-                showStatus("Forge 与 OptiFine 不兼容，已自动切换 Forge " + compatible.version(), false);
+                showStatus(Language.tr("download.setup.optifineSwitched", compatible.version()), false);
             }
             autoUpdateInstanceName(forge.versionId() + "-optifine-" + optiFine.version());
         });
@@ -265,7 +268,7 @@ final class DownloadVersionSetupView extends VBox implements PageLifecycle {
     private void configureNeoForgeSelector(VersionManifest.Version version) {
         neoForgeSelector.setPrefWidth(280);
         neoForgeSelector.setMaxWidth(280);
-        neoForgeSelector.setPromptText("正在获取 NeoForge 版本...");
+        neoForgeSelector.setPromptText(Language.tr("download.prompt.loading.neoforge"));
         neoForgeSelector.setConverter(new StringConverter<>() {
             @Override
             public String toString(NeoForgeVersion neoForge) {
@@ -283,10 +286,10 @@ final class DownloadVersionSetupView extends VBox implements PageLifecycle {
             }
             scheduleInstanceNameCheck();
             updatingLoaders = true;
-            clearSelection(forgeSelector, "请选择 Forge 版本");
-            clearSelection(fabricLoaderSelector, "请选择 Fabric 版本");
-            clearSelection(fabricApiSelector, "请先选择 Fabric 版本");
-            clearSelection(optiFineSelector, "请先选择 Forge 版本");
+            clearSelection(forgeSelector, Language.tr("download.prompt.select.forge"));
+            clearSelection(fabricLoaderSelector, Language.tr("download.prompt.select.fabric"));
+            clearSelection(fabricApiSelector, Language.tr("download.prompt.fabricFirst"));
+            clearSelection(optiFineSelector, Language.tr("download.prompt.forgeFirst"));
             updatingLoaders = false;
             updateFabricApiState();
             updateOptiFineState();
@@ -308,7 +311,7 @@ final class DownloadVersionSetupView extends VBox implements PageLifecycle {
         String name = instanceNameField.getText().trim();
         if (name.isEmpty()) {
             instanceNameDebounce.stop();
-            showInstanceNameHint("实例名字不能为空", true);
+            showInstanceNameHint(Language.tr("download.setup.nameEmpty"), true);
             return;
         }
 
@@ -321,15 +324,15 @@ final class DownloadVersionSetupView extends VBox implements PageLifecycle {
         Path gameDirectory = launchSettings.gameDirectory();
         int generation = instanceNameCheckGeneration;
         if (name.isEmpty()) {
-            showInstanceNameHint("实例名字不能为空", true);
+            showInstanceNameHint(Language.tr("download.setup.nameEmpty"), true);
             return;
         }
         if (gameDirectory == null) {
-            showInstanceNameHint("尚未设置游戏位置", true);
+            showInstanceNameHint(Language.tr("download.setup.noGameDirectory"), true);
             return;
         }
 
-        showInstanceNameHint("正在检查实例名...", false);
+        showInstanceNameHint(Language.tr("download.setup.checkingName"), false);
         if (instanceNameTask != null) {
             instanceNameTask.cancel();
         }
@@ -346,18 +349,18 @@ final class DownloadVersionSetupView extends VBox implements PageLifecycle {
                 return;
             }
             if (hasLoaderSelected() && name.equals(gameVersion)) {
-                showInstanceNameHint("安装加载器时实例名不能与游戏版本号相同", true);
+                showInstanceNameHint(Language.tr("download.setup.nameSameAsLoader"), true);
                 return;
             }
             availableInstanceName = name;
             downloadButton.setDisable(false);
-            showInstanceNameHint("实例名可用", false);
+            showInstanceNameHint(Language.tr("download.setup.nameAvailable"), false);
         }, message -> {
             if (generation != instanceNameCheckGeneration
                     || !name.equals(instanceNameField.getText().trim())) {
                 return;
             }
-            showInstanceNameHint("检查实例名失败：" + message, true);
+            showInstanceNameHint(Language.tr("download.setup.checkNameFailed", message), true);
         });
     }
 
@@ -379,17 +382,17 @@ final class DownloadVersionSetupView extends VBox implements PageLifecycle {
     private void clearOtherLoaders(CamlComboBox<?> selected) {
         updatingLoaders = true;
         if (selected != forgeSelector) {
-            clearSelection(forgeSelector, "请选择 Forge 版本");
+            clearSelection(forgeSelector, Language.tr("download.prompt.select.forge"));
         }
         if (selected != neoForgeSelector) {
-            clearSelection(neoForgeSelector, "请选择 NeoForge 版本");
+            clearSelection(neoForgeSelector, Language.tr("download.prompt.select.neoforge"));
         }
         if (selected != fabricLoaderSelector) {
-            clearSelection(fabricLoaderSelector, "请选择 Fabric 版本");
-            clearSelection(fabricApiSelector, "请先选择 Fabric 版本");
+            clearSelection(fabricLoaderSelector, Language.tr("download.prompt.select.fabric"));
+            clearSelection(fabricApiSelector, Language.tr("download.prompt.fabricFirst"));
         }
         if (selected != forgeSelector) {
-            clearSelection(optiFineSelector, "请先选择 Forge 版本");
+            clearSelection(optiFineSelector, Language.tr("download.prompt.forgeFirst"));
         }
         updatingLoaders = false;
         updateOptiFineState();
@@ -420,16 +423,16 @@ final class DownloadVersionSetupView extends VBox implements PageLifecycle {
 
     private void loadLoaderVersions(String gameVersion, DownloadsController controller) {
         loaderTasks.add(controller.fetchFabricLoaderVersions(gameVersion, this::showFabricLoaders,
-                message -> fabricLoaderSelector.setPromptText("获取 Fabric 版本失败")));
+                message -> fabricLoaderSelector.setPromptText(Language.tr("download.prompt.error.fabric"))));
         loaderTasks.add(controller.fetchFabricApiVersions(gameVersion, this::showFabricApiVersions,
-                message -> fabricApiSelector.setPromptText("获取 Fabric API 版本失败")));
+                message -> fabricApiSelector.setPromptText(Language.tr("download.prompt.error.fabricApi"))));
         loaderTasks.add(controller.fetchForgeVersions(gameVersion, this::showForgeVersions,
-                message -> forgeSelector.setPromptText("获取 Forge 版本失败")));
+                message -> forgeSelector.setPromptText(Language.tr("download.prompt.error.forge"))));
         loaderTasks.add(controller.fetchNeoForgeVersions(gameVersion, this::showNeoForgeVersions,
-                message -> neoForgeSelector.setPromptText("获取 NeoForge 版本失败")));
+                message -> neoForgeSelector.setPromptText(Language.tr("download.prompt.error.neoforge"))));
         loaderTasks.add(controller.fetchOptiFineVersions(gameVersion, this::showOptiFineVersions,
                 message -> {
-                    optiFineSelector.setPromptText("获取 OptiFine 版本失败");
+                    optiFineSelector.setPromptText(Language.tr("download.prompt.error.optifine"));
                     optiFineSelector.setDisable(true);
                 }));
     }
@@ -440,8 +443,8 @@ final class DownloadVersionSetupView extends VBox implements PageLifecycle {
         }
         fabricLoaderSelector.getItems().setAll(loaders);
         fabricLoaderSelector.setPromptText(loaders.isEmpty()
-                ? "没有可用的 Fabric 版本"
-                : "请选择 Fabric 版本");
+                ? Language.tr("download.prompt.empty.fabric")
+                : Language.tr("download.prompt.select.fabric"));
         updateFabricApiState();
     }
 
@@ -451,8 +454,8 @@ final class DownloadVersionSetupView extends VBox implements PageLifecycle {
         }
         fabricApiSelector.getItems().setAll(versions);
         fabricApiSelector.setPromptText(versions.isEmpty()
-                ? "没有可用的 Fabric API 版本"
-                : "请选择 Fabric API 版本");
+                ? Language.tr("download.prompt.empty.fabricApi")
+                : Language.tr("download.prompt.select.fabricApi"));
         updateFabricApiState();
     }
 
@@ -462,8 +465,8 @@ final class DownloadVersionSetupView extends VBox implements PageLifecycle {
         }
         forgeSelector.getItems().setAll(versions);
         forgeSelector.setPromptText(versions.isEmpty()
-                ? "没有可用的 Forge 版本"
-                : "请选择 Forge 版本");
+                ? Language.tr("download.prompt.empty.forge")
+                : Language.tr("download.prompt.select.forge"));
     }
 
     private void showNeoForgeVersions(List<NeoForgeVersion> versions) {
@@ -472,8 +475,8 @@ final class DownloadVersionSetupView extends VBox implements PageLifecycle {
         }
         neoForgeSelector.getItems().setAll(versions);
         neoForgeSelector.setPromptText(versions.isEmpty()
-                ? "没有可用的 NeoForge 版本"
-                : "请选择 NeoForge 版本");
+                ? Language.tr("download.prompt.empty.neoforge")
+                : Language.tr("download.prompt.select.neoforge"));
     }
 
     private void showOptiFineVersions(List<OptiFineVersion> versions) {
@@ -482,8 +485,8 @@ final class DownloadVersionSetupView extends VBox implements PageLifecycle {
         }
         optiFineSelector.getItems().setAll(versions);
         optiFineSelector.setPromptText(versions.isEmpty()
-                ? "没有可用的 OptiFine 版本"
-                : "请先选择 Forge 版本");
+                ? Language.tr("download.prompt.empty.optifine")
+                : Language.tr("download.prompt.forgeFirst"));
         updateOptiFineState();
     }
 
@@ -506,14 +509,14 @@ final class DownloadVersionSetupView extends VBox implements PageLifecycle {
                 && fabricLoaderSelector.getValue() == null
                 && neoForgeSelector.getValue() == null;
         if (!hasForge) {
-            clearSelection(optiFineSelector, "请先选择 Forge 版本");
+            clearSelection(optiFineSelector, Language.tr("download.prompt.forgeFirst"));
             optiFineSelector.setDisable(true);
             return;
         }
 
         optiFineSelector.setDisable(optiFineSelector.getItems().isEmpty());
         if (!optiFineSelector.getItems().isEmpty() && optiFineSelector.getValue() == null) {
-            optiFineSelector.setPromptText("请选择 OptiFine 版本");
+            optiFineSelector.setPromptText(Language.tr("download.prompt.select.optifine"));
         }
     }
 
@@ -522,9 +525,9 @@ final class DownloadVersionSetupView extends VBox implements PageLifecycle {
                 && forgeSelector.getValue() == null
                 && neoForgeSelector.getValue() == null;
         if (!hasFabric) {
-            clearSelection(fabricApiSelector, "请先选择 Fabric 版本");
+            clearSelection(fabricApiSelector, Language.tr("download.prompt.fabricFirst"));
         } else if (fabricApiSelector.getValue() == null && !fabricApiSelector.getItems().isEmpty()) {
-            fabricApiSelector.setPromptText("请选择 Fabric API 版本");
+            fabricApiSelector.setPromptText(Language.tr("download.prompt.select.fabricApi"));
         }
         fabricApiSelector.setDisable(!hasFabric || fabricApiSelector.getItems().isEmpty());
     }
@@ -533,11 +536,11 @@ final class DownloadVersionSetupView extends VBox implements PageLifecycle {
         Path gameDirectory = launchSettings.gameDirectory();
         String instanceId = instanceNameField.getText().trim();
         if (!instanceId.equals(availableInstanceName)) {
-            showStatus("实例名尚未通过检查，请稍候再试。", true);
+            showStatus(Language.tr("download.setup.nameNotChecked"), true);
             return;
         }
         if (gameDirectory == null) {
-            showStatus("尚未设置游戏位置，请先到设置中保存游戏位置。", true);
+            showStatus(Language.tr("download.setup.noGameDirectoryLong"), true);
             return;
         }
 
@@ -547,7 +550,7 @@ final class DownloadVersionSetupView extends VBox implements PageLifecycle {
         OptiFineVersion optiFine = optiFineSelector.getValue();
         NeoForgeVersion neoForge = neoForgeSelector.getValue();
         if (optiFine != null && forge == null) {
-            showStatus("OptiFine 只能与 Forge 一起安装。", true);
+            showStatus(Language.tr("download.setup.optifineRequiresForge"), true);
             return;
         }
         if (optiFine != null && !OptiFineCompatibility.isForgeCompatible(forge, optiFine)) {
@@ -555,7 +558,7 @@ final class DownloadVersionSetupView extends VBox implements PageLifecycle {
             return;
         }
         if (hasLoaderSelected() && instanceId.equals(version.id())) {
-            showStatus("安装加载器时实例名不能与游戏版本号相同。", true);
+            showStatus(Language.tr("download.setup.nameSameAsLoader"), true);
             return;
         }
 

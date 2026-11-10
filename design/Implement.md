@@ -304,6 +304,24 @@ CAML
 - NeoForge 26.2 选择 Vulkan 时自动关闭 `earlyWindowControl`，避免 GLFW 65540。
 - 版本隔离时工作目录为 `versions/<id>`，但 Windows `APPDATA` 仍按 `.minecraft` 根目录计算。
 
+### 3.15 前端多语言
+
+- 视图和控制器不再硬编码界面文案，统一调用 `translation.Language.tr(key[, args])`。
+- 翻译键与文案放在 `CAMLFront/src/main/resources/lang/zh_cn.json` 和 `en_us.json`，
+  结构参考 Minecraft 的 `lang` 文件（扁平键 + `%s`/`%d` 占位符）。
+- `Language` 在首次调用时按 `-Dcaml.language`、系统语言顺序选择语言，
+  缺失文件回退 `zh_cn`；键缺失返回键名。
+- `LanguageTranslationGenerator` 负责写 JSON；`TranslationTable` 按键排序保存文案，
+  子类以实例方法 `t.put(key, value)` 登记，重复键直接失败。
+- `translation/generator` 只存放生成 `lang/*.json` 的语言类：
+  `ZHCNGenerator` 与 `ENUSGenerator`；`Language`、抽象基类、`TranslationTable`
+  和 `TranslationGeneratorRunner` 位于 `translation` 根目录。
+- Gradle 任务 `:CAMLFront:generateTranslation`（`.run/generateTranslation`）先编译再生成，
+  输出到 `src/main/resources/lang`。
+- `LanguageTest` 覆盖语言切换、占位符、缺失键回退、格式化失败回退，
+  以及生成器与已提交 JSON 的一致性、各语言键集合一致性。
+- 后端产生的阶段名和错误信息保持原样展示。
+
 ## 4. 对外 API
 
 ```java
@@ -354,9 +372,15 @@ PATH=/usr/lib/jvm/zulu-25/bin:$PATH \
 
 ## 6. 已验证内容
 
-- 后端构建通过。
+- 后端编译通过。
 - JavaFX 启动冒烟测试通过。
-- 115 个后端测试和 11 个前端测试全部通过（共 126 个）。
+- 162 个后端测试、24 个前端测试；前端测试全部通过（含 `LanguageTest`）。
+- 后端测试在当前 Windows 环境有 7 个既有失败，与前端和翻译无关：
+  - `LaunchCommandBuilderTest#placesMainClassBetweenJvmAndGameArguments`
+  - `LaunchArgumentsBuilderTest#buildsJvmArgumentsWithMemoryDefaultsAndClasspath`
+  - `ExternalLoaderInstallerTest`（3 个用例，子进程 `LinkageError`）
+  - `GameLaunchServiceTest#installsAndLaunchesFakeClientEndToEnd`
+  - `NeoForge262VulkanFixTest#createsFmlConfigWhenMissing`
 - 集成测试覆盖：
   - 版本清单获取与缓存。
   - 版本 JSON 获取。
@@ -398,6 +422,8 @@ PATH=/usr/lib/jvm/zulu-25/bin:$PATH \
   - Minecraft Log4j XML 事件转换为原版日志风格。
   - NeoForge 26.2 + Vulkan 的 `earlyWindowControl` 兼容修复。
   - OptiFine 官方/镜像版本解析、installer URL 和 Forge 清单合并。
+  - 多语言：语言切换、占位符、缺失键回退、格式化失败回退、生成器与 `lang/*.json` 一致性。
+  - 下载阶段名随语言切换，`DownloadTelemetry` 不再硬编码文案。
 
 ## 7. 当前未实现
 
@@ -420,3 +446,4 @@ PATH=/usr/lib/jvm/zulu-25/bin:$PATH \
 - [界面设计](ui.md)
 - [版本下载与启动链路](version-download-and-launch.md)
 - [runtime 包](runtime.md)
+

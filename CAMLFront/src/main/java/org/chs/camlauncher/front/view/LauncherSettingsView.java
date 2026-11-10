@@ -4,6 +4,7 @@ import javafx.scene.control.Label;
 import javafx.scene.layout.VBox;
 import javafx.util.StringConverter;
 import org.chs.camlauncher.backend.theme.ThemeInfo;
+import org.chs.camlauncher.front.translation.Language;
 import org.chs.camlauncher.ui.control.CamlComboBox;
 
 import java.util.List;
@@ -16,21 +17,21 @@ final class LauncherSettingsView extends VBox {
     LauncherSettingsView() {
         themeBox = new CamlComboBox<>();
         themeBox.setMaxWidth(Double.MAX_VALUE);
-        themeBox.setAccessibleText("主题");
+        themeBox.setAccessibleText(Language.tr("settings.appearance.theme.accessible"));
 
-        Label heading = new Label("外观");
+        Label heading = new Label(Language.tr("settings.appearance.title"));
         heading.getStyleClass().add("app-settings-group-title");
 
-        Label description = new Label("调整启动器自身的外观。");
+        Label description = new Label(Language.tr("settings.appearance.description"));
         description.getStyleClass().addAll("caml-body-medium", "caml-on-surface-muted");
         description.setWrapText(true);
 
-        Label themeHint = new Label("主题来自 ~/.caml/themes，切换后立即生效");
+        Label themeHint = new Label(Language.tr("settings.appearance.themeHint"));
         themeHint.getStyleClass().addAll("caml-body-small", "field-hint");
         themeHint.setWrapText(true);
 
         VBox group = new VBox(16, heading, description,
-                ViewSupport.buildField("主题", themeBox, themeHint));
+                ViewSupport.buildField(Language.tr("settings.appearance.theme"), themeBox, themeHint));
         group.getStyleClass().add("app-settings-group");
         group.setMaxWidth(Double.MAX_VALUE);
 

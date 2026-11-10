@@ -9,6 +9,7 @@ import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import org.chs.camlauncher.front.controller.HomeController;
 import org.chs.camlauncher.front.controller.FrontTask;
+import org.chs.camlauncher.front.translation.Language;
 import org.chs.camlauncher.ui.control.CamlButton;
 
 import java.nio.file.Path;
@@ -16,7 +17,7 @@ import java.util.function.Consumer;
 
 /** 主页的二级菜单：列出当前游戏位置扫描出的所有实例。 */
 final class InstancePickerView extends VBox implements PageLifecycle {
-    private final Label statusLabel = new Label("正在扫描游戏实例...");
+    private final Label statusLabel = new Label(Language.tr("instances.picker.scanning"));
     private final ScrollPane scroll = new ScrollPane();
     private FrontTask<?> scanTask;
     private boolean disposed;
@@ -30,12 +31,12 @@ final class InstancePickerView extends VBox implements PageLifecycle {
 
         CamlButton backButton = ViewSupport.backButton(onBack);
 
-        Label title = new Label("选择游戏实例");
+        Label title = new Label(Language.tr("instances.picker.title"));
         title.getStyleClass().add("caml-headline-small");
 
         Label pathLabel = new Label(gameDirectory == null
-                ? "尚未设置游戏位置"
-                : "游戏位置：" + gameDirectory);
+                ? Language.tr("instances.picker.noGameDirectory")
+                : Language.tr("instances.picker.gameDirectory", gameDirectory));
         pathLabel.getStyleClass().addAll("caml-body-small", "caml-on-surface-muted");
         pathLabel.setWrapText(true);
 
@@ -55,7 +56,7 @@ final class InstancePickerView extends VBox implements PageLifecycle {
         getChildren().addAll(header, statusLabel, scroll);
 
         if (gameDirectory == null) {
-            statusLabel.setText("尚未设置游戏位置，请先到设置中保存游戏位置");
+            statusLabel.setText(Language.tr("instances.picker.noGameDirectoryHint"));
             return;
         }
 
@@ -64,11 +65,11 @@ final class InstancePickerView extends VBox implements PageLifecycle {
                 return;
             }
             if (!info.directoryExists()) {
-                statusLabel.setText("游戏位置不存在：" + info.directory());
+                statusLabel.setText(Language.tr("instances.picker.missing", info.directory()));
                 return;
             }
             if (!info.hasInstalledVersions()) {
-                statusLabel.setText("当前游戏位置没有已安装实例");
+                statusLabel.setText(Language.tr("instances.picker.empty"));
                 return;
             }
 
@@ -83,10 +84,11 @@ final class InstancePickerView extends VBox implements PageLifecycle {
                 list.getChildren().add(item);
             }
             scroll.setContent(list);
-            statusLabel.setText("共 " + info.installedVersions().size() + " 个游戏实例");
+            statusLabel.setText(Language.tr("instances.picker.count",
+                    info.installedVersions().size()));
         }, message -> {
             if (!disposed) {
-                statusLabel.setText("扫描游戏实例失败：" + message);
+                statusLabel.setText(Language.tr("instances.picker.scanFailed", message));
             }
         });
     }

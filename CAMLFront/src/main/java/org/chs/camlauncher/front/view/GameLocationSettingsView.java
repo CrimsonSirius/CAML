@@ -6,6 +6,7 @@ import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import javafx.stage.DirectoryChooser;
 import org.chs.camlauncher.front.controller.SettingsController;
+import org.chs.camlauncher.front.translation.Language;
 import org.chs.camlauncher.ui.control.CamlButton;
 import org.chs.camlauncher.ui.control.CamlTextField;
 
@@ -25,10 +26,10 @@ final class GameLocationSettingsView extends VBox {
         this.launchSettings = launchSettings;
         this.controller = controller;
 
-        Label heading = new Label("游戏位置");
+        Label heading = new Label(Language.tr("settings.game.location.title"));
         heading.getStyleClass().add("app-settings-group-title");
 
-        Label description = new Label("设置 Minecraft 游戏数据目录。手动输入后必须点击保存才会生效。");
+        Label description = new Label(Language.tr("settings.game.location.description"));
         description.getStyleClass().addAll("caml-body-medium", "caml-on-surface-muted");
         description.setWrapText(true);
 
@@ -37,12 +38,12 @@ final class GameLocationSettingsView extends VBox {
         pathField.setText(launchSettings.gameDirectory().toString());
         HBox.setHgrow(pathField, Priority.ALWAYS);
 
-        CamlButton browseButton = CamlButton.outlined("浏览");
+        CamlButton browseButton = CamlButton.outlined(Language.tr("settings.game.location.browse"));
         browseButton.setMinWidth(64);
         browseButton.setMaxWidth(javafx.scene.layout.Region.USE_PREF_SIZE);
         browseButton.setOnAction(event -> chooseDirectory());
 
-        saveButton = CamlButton.filled("保存");
+        saveButton = CamlButton.filled(Language.tr("settings.game.location.save"));
         saveButton.setMinWidth(72);
         saveButton.setMaxWidth(javafx.scene.layout.Region.USE_PREF_SIZE);
         saveButton.setOnAction(event -> saveDirectory());
@@ -71,7 +72,7 @@ final class GameLocationSettingsView extends VBox {
 
     private void chooseDirectory() {
         DirectoryChooser chooser = new DirectoryChooser();
-        chooser.setTitle("选择游戏位置");
+        chooser.setTitle(Language.tr("settings.game.location.chooserTitle"));
         File current = launchSettings.gameDirectory().toFile();
         if (current.isDirectory()) {
             chooser.setInitialDirectory(current);
@@ -80,14 +81,14 @@ final class GameLocationSettingsView extends VBox {
         File selected = chooser.showDialog(getScene() == null ? null : getScene().getWindow());
         if (selected != null) {
             pathField.setText(selected.toPath().toAbsolutePath().normalize().toString());
-            showStatus("尚未保存", false);
+            showStatus(Language.tr("settings.game.location.notSaved"), false);
         }
     }
 
     private void saveDirectory() {
         String raw = pathField.getText().trim();
         if (raw.isEmpty()) {
-            showStatus("游戏位置不能为空", true);
+            showStatus(Language.tr("settings.game.location.empty"), true);
             return;
         }
 
@@ -95,25 +96,25 @@ final class GameLocationSettingsView extends VBox {
         try {
             path = Path.of(raw).toAbsolutePath().normalize();
         } catch (InvalidPathException e) {
-            showStatus("游戏位置格式无效", true);
+            showStatus(Language.tr("settings.game.location.invalid"), true);
             return;
         }
 
         saveButton.setDisable(true);
-        showStatus("正在检查目录...", false);
+        showStatus(Language.tr("settings.game.location.checking"), false);
         controller.inspectGameDirectory(path, info -> {
             saveButton.setDisable(false);
             if (!info.directoryExists()) {
-                showStatus("目录不存在：" + path, true);
+                showStatus(Language.tr("settings.game.location.missing", path), true);
                 return;
             }
             launchSettings.setGameDirectory(path);
             controller.saveGameDirectoryAsync(path);
             pathField.setText(path.toString());
-            showStatus("游戏位置已保存", false);
+            showStatus(Language.tr("settings.game.location.saved"), false);
         }, message -> {
             saveButton.setDisable(false);
-            showStatus("检查目录失败：" + message, true);
+            showStatus(Language.tr("settings.game.location.checkFailed", message), true);
         });
     }
 
