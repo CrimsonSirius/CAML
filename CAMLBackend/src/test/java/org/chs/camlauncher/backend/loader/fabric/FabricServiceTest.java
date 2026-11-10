@@ -2,6 +2,7 @@ package org.chs.camlauncher.backend.loader.fabric;
 
 import com.google.gson.Gson;
 import com.sun.net.httpserver.HttpServer;
+import org.chs.camlauncher.backend.download.source.DownloadSource;
 import org.chs.camlauncher.backend.download.source.MirrorDownloadSource;
 import org.junit.jupiter.api.Test;
 
@@ -149,6 +150,110 @@ class FabricServiceTest {
             emptyServer.stop(0);
             dataServer.stop(0);
         }
+    }
+
+    @Test
+    void fallsBackWhenApiJsonIsEmptyOrInvalid() throws Exception {
+        String apiJson = """
+                [{
+                  "name":"Fabric API",
+                  "version_number":"0.119.4+1.21.4",
+                  "date_published":"2025-08-08T13:22:14Z",
+                  "status":"listed",
+                  "files":[{
+                    "url":"https://cdn.example/fabric-api.jar",
+                    "filename":"fabric-api.jar",
+                    "hashes":{"sha1":"api-sha1"},
+                    "size":123,
+                    "primary":true
+                  }]
+                }]
+                """;
+        HttpServer emptyServer = apiServer("[]");
+        HttpServer invalidServer = apiServer("{");
+        HttpServer dataServer = apiServer(apiJson);
+
+        try {
+            FabricService service = new FabricService(
+                    HttpClient.newBuilder().version(HttpClient.Version.HTTP_1_1).build(),
+                    new Gson(),
+                    URI.create("https://meta.fabricmc.net/"),
+                    URI.create("https://api.modrinth.com/")
+            );
+            service.setSources(List.of(
+                    rewriteTo(emptyServer),
+                    rewriteTo(invalidServer),
+                    rewriteTo(dataServer)
+            ));
+
+            List<FabricApiVersion> apis = service.fetchApiVersions("1.21.4");
+
+            assertEquals(1, apis.size());
+            assertEquals("0.119.4+1.21.4", apis.getFirst().versionNumber());
+        } finally {
+            emptyServer.stop(0);
+            invalidServer.stop(0);
+            dataServer.stop(0);
+        }
+    }
+
+    @Test
+    void fallsBackWhenLoaderProfileIsInvalid() throws Exception {
+        String profileJson = """
+                {"id":"fabric-loader-0.20.1-1.21.4","inheritsFrom":"1.21.4",
+                 "mainClass":"net.fabricmc.loader.impl.launch.knot.KnotClient"}
+                """;
+        HttpServer emptyServer = profileServer("{}");
+        HttpServer dataServer = profileServer(profileJson);
+
+        try {
+            FabricService service = new FabricService(
+                    HttpClient.newBuilder().version(HttpClient.Version.HTTP_1_1).build(),
+                    new Gson(),
+                    URI.create("https://meta.fabricmc.net/"),
+                    URI.create("https://api.modrinth.com/")
+            );
+            service.setSources(List.of(rewriteTo(emptyServer), rewriteTo(dataServer)));
+
+            String profile = service.fetchLoaderProfile("1.21.4", "0.20.1");
+
+            assertTrue(profile.contains("KnotClient"));
+        } finally {
+            emptyServer.stop(0);
+            dataServer.stop(0);
+        }
+    }
+
+    private static HttpServer apiServer(String body) throws Exception {
+        HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        server.createContext("/v2/project/fabric-api/version", exchange -> respond(exchange, body));
+        server.start();
+        return server;
+    }
+
+    private static HttpServer profileServer(String body) throws Exception {
+        HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        server.createContext("/v2/versions/loader/1.21.4/0.20.1/profile/json",
+                exchange -> respond(exchange, body));
+        server.start();
+        return server;
+    }
+
+    private static DownloadSource rewriteTo(HttpServer server) {
+        String root = serverRoot(server);
+        return new DownloadSource() {
+            @Override
+            public String name() {
+                return "test";
+            }
+
+            @Override
+            public List<URI> candidates(URI original) {
+                String base = root.endsWith("/") ? root.substring(0, root.length() - 1) : root;
+                String query = original.getRawQuery() == null ? "" : "?" + original.getRawQuery();
+                return List.of(URI.create(base + original.getRawPath() + query));
+            }
+        };
     }
 
     private static String serverRoot(HttpServer server) {

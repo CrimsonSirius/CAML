@@ -2,6 +2,7 @@ package org.chs.camlauncher.backend.loader.optifine;
 
 import com.google.gson.Gson;
 import com.sun.net.httpserver.HttpServer;
+import org.chs.camlauncher.backend.download.source.DownloadSource;
 import org.chs.camlauncher.backend.download.source.DownloadSourceMode;
 import org.junit.jupiter.api.Test;
 
@@ -9,6 +10,7 @@ import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -111,5 +113,65 @@ class OptiFineServiceTest {
         } finally {
             server.stop(0);
         }
+    }
+
+    @Test
+    void fallsBackWhenMirrorJsonIsEmptyOrInvalid() throws Exception {
+        String body = """
+                [
+                  {"mcversion":"1.20.1","type":"HD_U","patch":"I5","filename":"OptiFine_1.20.1_HD_U_I5.jar"}
+                ]
+                """;
+        HttpServer emptyServer = mirrorServer("[]");
+        HttpServer invalidServer = mirrorServer("{");
+        HttpServer dataServer = mirrorServer(body);
+
+        try {
+            OptiFineService service = new OptiFineService(
+                    HttpClient.newHttpClient(), new Gson(),
+                    URI.create("http://127.0.0.1:1/optifine/"));
+            service.setSources(List.of(
+                    rewriteTo(emptyServer),
+                    rewriteTo(invalidServer),
+                    rewriteTo(dataServer)
+            ));
+
+            var versions = service.fetchVersions("1.20.1");
+
+            assertEquals(1, versions.size());
+            assertEquals("HD_U_I5", versions.getFirst().version());
+        } finally {
+            emptyServer.stop(0);
+            invalidServer.stop(0);
+            dataServer.stop(0);
+        }
+    }
+
+    private static HttpServer mirrorServer(String body) throws Exception {
+        HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        server.createContext("/optifine/1.20.1", exchange -> {
+            byte[] bytes = body.getBytes(StandardCharsets.UTF_8);
+            exchange.getResponseHeaders().add("Content-Type", "application/json");
+            exchange.sendResponseHeaders(200, bytes.length);
+            exchange.getResponseBody().write(bytes);
+            exchange.close();
+        });
+        server.start();
+        return server;
+    }
+
+    private static DownloadSource rewriteTo(HttpServer server) {
+        String base = "http://127.0.0.1:" + server.getAddress().getPort();
+        return new DownloadSource() {
+            @Override
+            public String name() {
+                return "test";
+            }
+
+            @Override
+            public List<URI> candidates(URI original) {
+                return List.of(URI.create(base + original.getRawPath()));
+            }
+        };
     }
 }

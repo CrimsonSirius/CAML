@@ -14,7 +14,13 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-/** 按下载源候选顺序执行 HTTP 请求。 */
+/**
+ * 按下载源候选顺序执行 HTTP 请求。
+ *
+ * <p>{@link #getText} / {@link #getBytes} 只在传输或 HTTP 状态失败时切换候选源；
+ * 需要把无效 JSON/XML 或空结果也视为失败时，调用方必须使用
+ * {@link #getParsedText} / {@link #getParsedBytes}。</p>
+ */
 public final class SourceAwareHttpClient {
     private static final String USER_AGENT = "CAML/1.0";
 
