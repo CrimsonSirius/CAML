@@ -120,7 +120,7 @@ public final class MainView extends BorderPane {
     }
 
     private CamlTopBar buildTopBar() {
-        CamlTopBar bar = new CamlTopBar("CAML", "Minecraft Launcher");
+        CamlTopBar bar = new CamlTopBar("CAML", Language.tr("app.subtitle"));
 
         navigation = new CamlTopNav();
         CamlTopNavItem home = navigation.addItem(Language.tr("nav.home"));

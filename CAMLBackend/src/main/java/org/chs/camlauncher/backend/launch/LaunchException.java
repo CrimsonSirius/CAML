@@ -1,14 +1,20 @@
 package org.chs.camlauncher.backend.launch;
 
+import org.chs.camlauncher.backend.error.BackendError;
+import org.chs.camlauncher.backend.error.BackendErrorCarrier;
+
 import java.io.IOException;
+import java.util.Objects;
 import java.util.Locale;
 
-public final class LaunchException extends IOException {
+public final class LaunchException extends IOException implements BackendErrorCarrier {
     private final LaunchFailure failure;
+    private final BackendError error;
 
-    public LaunchException(LaunchFailure failure, String userMessage, Throwable cause) {
-        super(userMessage, cause);
-        this.failure = failure;
+    public LaunchException(LaunchFailure failure, BackendError error, Throwable cause) {
+        super(Objects.requireNonNull(error, "error").code(), cause);
+        this.failure = Objects.requireNonNull(failure, "failure");
+        this.error = error;
     }
 
     public LaunchFailure failure() {
@@ -17,6 +23,11 @@ public final class LaunchException extends IOException {
 
     public String userMessage() {
         return getMessage();
+    }
+
+    @Override
+    public BackendError error() {
+        return error;
     }
 
     public static LaunchException from(IOException exception) {
@@ -28,7 +39,7 @@ public final class LaunchException extends IOException {
                 || lower.contains("error=13")) {
             return new LaunchException(
                     LaunchFailure.PERMISSION_DENIED,
-                    "没有权限执行 Java 或访问游戏目录，请检查文件权限。",
+                    BackendError.of("launch.permissionDenied"),
                     exception
             );
         }
@@ -37,20 +48,20 @@ public final class LaunchException extends IOException {
                 || lower.contains("error=2")) {
             return new LaunchException(
                     LaunchFailure.EXECUTABLE_NOT_FOUND,
-                    "找不到 Java 可执行文件，请重新选择 Java。",
+                    BackendError.of("launch.executableNotFound"),
                     exception
             );
         }
         if (isCommandTooLong(exception)) {
             return new LaunchException(
                     LaunchFailure.COMMAND_TOO_LONG,
-                    "启动命令过长，请缩短游戏路径或减少类路径。",
+                    BackendError.of("launch.commandTooLong"),
                     exception
             );
         }
         return new LaunchException(
                 LaunchFailure.PROCESS_START_FAILED,
-                "启动游戏进程失败，请查看日志了解详情。",
+                BackendError.of("launch.processStartFailed"),
                 exception
         );
     }

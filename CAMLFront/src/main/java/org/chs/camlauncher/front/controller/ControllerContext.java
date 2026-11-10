@@ -5,6 +5,8 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.chs.camlauncher.backend.api.CAMLBackend;
 import org.chs.camlauncher.backend.api.GameDirectoryInfo;
+import org.chs.camlauncher.backend.error.BackendError;
+import org.chs.camlauncher.backend.error.BackendErrorCarrier;
 import org.chs.camlauncher.language.Language;
 
 import java.io.IOException;
@@ -195,7 +197,7 @@ final class ControllerContext {
         if (root instanceof CancellationException) {
             return;
         }
-        String message = messageOf(root);
+        String message = userMessage(root);
         LOGGER.warn("{}失败", operation, root);
         if (fatal) {
             markFailure();
@@ -216,8 +218,26 @@ final class ControllerContext {
         return current;
     }
 
-    private static String messageOf(Throwable cause) {
-        return cause.getMessage() == null ? cause.getClass().getSimpleName() : cause.getMessage();
+    private static String userMessage(Throwable cause) {
+        BackendError error = backendError(cause);
+        return error == null
+                ? Language.tr("error.unknown")
+                : Language.tr(error.code(), error.args().toArray());
+    }
+
+    private static BackendError backendError(Throwable cause) {
+        Throwable current = cause;
+        while (current != null) {
+            if (current instanceof BackendErrorCarrier carrier) {
+                return carrier.error();
+            }
+            Throwable next = current.getCause();
+            if (next == current) {
+                break;
+            }
+            current = next;
+        }
+        return null;
     }
 
     void shutdown() {

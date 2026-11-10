@@ -8,6 +8,7 @@ import com.google.gson.JsonParser;
 import org.chs.camlauncher.backend.download.DownloadCancellationToken;
 import org.chs.camlauncher.backend.download.DownloadListener;
 import org.chs.camlauncher.backend.download.DownloadStage;
+import org.chs.camlauncher.backend.error.BackendException;
 import org.chs.camlauncher.backend.download.FileDownloader;
 import org.chs.camlauncher.backend.download.model.DownloadItem;
 import org.chs.camlauncher.backend.download.source.DownloadSource;
@@ -152,8 +153,8 @@ public final class OptiFineInstaller {
         Objects.requireNonNull(optiFineVersion, "optiFineVersion");
         Objects.requireNonNull(gameDirectory, "gameDirectory");
         if (!OptiFineCompatibility.isForgeCompatible(forgeVersion, optiFineVersion)) {
-            throw new IllegalArgumentException(
-                    OptiFineCompatibility.incompatibleMessage(forgeVersion, optiFineVersion));
+            throw new BackendException(
+                    OptiFineCompatibility.incompatibleError(forgeVersion, optiFineVersion));
         }
 
         InstalledVersion base = versionInstaller.install(

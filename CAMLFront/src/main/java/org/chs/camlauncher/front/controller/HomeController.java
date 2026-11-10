@@ -92,7 +92,7 @@ public final class HomeController {
                     sendStatus(Language.tr("status.started"), false);
                 },
                 message -> {
-                    sendStatus(Language.tr("status.launchFailed"), true);
+                    sendStatus(Language.tr("status.launchFailedDetail", message), true);
                     notifyLaunchFinished();
                 });
     }

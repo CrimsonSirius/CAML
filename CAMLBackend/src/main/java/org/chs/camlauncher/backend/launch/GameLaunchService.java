@@ -1,5 +1,6 @@
 package org.chs.camlauncher.backend.launch;
 
+import org.chs.camlauncher.backend.error.BackendError;
 import org.chs.camlauncher.backend.auth.AuthSession;
 import org.chs.camlauncher.backend.auth.OfflineAccount;
 import org.chs.camlauncher.backend.download.DownloadListener;
@@ -170,13 +171,13 @@ public final class GameLaunchService {
             if (path == null) {
                 throw new LaunchException(
                         LaunchFailure.EXECUTABLE_NOT_FOUND,
-                        "已启用手动 Java 选择，但没有选择 Java 路径。",
+                        BackendError.of("launch.manualJavaNotConfigured"),
                         null
                 );
             }
             return javaLocator.inspect(path).orElseThrow(() -> new LaunchException(
                     LaunchFailure.EXECUTABLE_NOT_FOUND,
-                    "手动选择的 Java 不可用：" + path,
+                    BackendError.of("launch.manualJavaUnavailable", path),
                     null
             ));
         }
@@ -184,7 +185,7 @@ public final class GameLaunchService {
         JavaRequirement requirement = JavaRequirement.from(installed.manifest());
         return javaLocator.findSuitable(requirement).orElseThrow(() -> new LaunchException(
                 LaunchFailure.EXECUTABLE_NOT_FOUND,
-                "找不到满足版本要求的 Java " + requirement.majorVersion() + "，请安装或选择 Java。",
+                BackendError.of("launch.javaRequirementNotFound", requirement.majorVersion()),
                 null
         ));
     }

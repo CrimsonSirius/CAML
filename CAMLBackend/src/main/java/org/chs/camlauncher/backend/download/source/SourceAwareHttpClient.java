@@ -1,5 +1,8 @@
 package org.chs.camlauncher.backend.download.source;
 
+import org.chs.camlauncher.backend.error.BackendError;
+import org.chs.camlauncher.backend.error.BackendException;
+
 import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -71,7 +74,11 @@ public final class SourceAwareHttpClient {
                 lastFailure = e;
             }
         }
-        throw new IOException("无法请求 " + original + "（最后地址: " + lastUri + "）", lastFailure);
+        throw new BackendException(BackendError.of(
+                "network.requestFailed",
+                original,
+                lastUri == null ? "" : lastUri
+        ), lastFailure);
     }
 
     private <T, R> Optional<R> getParsed(URI original, Duration timeout, String accept,
@@ -95,14 +102,19 @@ public final class SourceAwareHttpClient {
                 lastFailure = e;
                 lastWasEmpty = false;
             } catch (RuntimeException e) {
-                lastFailure = new IOException("无法解析响应：" + candidate, e);
+                lastFailure = new BackendException(
+                        BackendError.of("network.responseInvalid", candidate), e);
                 lastWasEmpty = false;
             }
         }
         if (lastWasEmpty) {
             return Optional.empty();
         }
-        throw new IOException("无法请求 " + original + "（最后地址: " + lastUri + "）", lastFailure);
+        throw new BackendException(BackendError.of(
+                "network.requestFailed",
+                original,
+                lastUri == null ? "" : lastUri
+        ), lastFailure);
     }
 
     private <T> T send(URI uri, Duration timeout, String accept,
@@ -122,7 +134,8 @@ public final class SourceAwareHttpClient {
             response = future.get(Math.max(1, timeout.toMillis()), TimeUnit.MILLISECONDS);
         } catch (TimeoutException e) {
             future.cancel(true);
-            throw new IOException("请求超时（" + timeout.toMillis() + "ms）：" + uri, e);
+            throw new BackendException(
+                    BackendError.of("network.timeout", timeout.toMillis(), uri), e);
         } catch (ExecutionException e) {
             Throwable cause = e.getCause() == null ? e : e.getCause();
             if (cause instanceof IOException ioException) {
@@ -131,14 +144,15 @@ public final class SourceAwareHttpClient {
             if (cause instanceof RuntimeException runtimeException) {
                 throw runtimeException;
             }
-            throw new IOException("请求失败：" + uri, cause);
+            throw new BackendException(BackendError.of("network.requestFailed", uri, uri), cause);
         } catch (InterruptedException e) {
             future.cancel(true);
             Thread.currentThread().interrupt();
             throw e;
         }
         if (response.statusCode() < 200 || response.statusCode() >= 300) {
-            throw new IOException("HTTP " + response.statusCode() + " for " + uri);
+            throw new BackendException(
+                    BackendError.of("network.httpError", response.statusCode(), uri));
         }
         return response.body();
     }

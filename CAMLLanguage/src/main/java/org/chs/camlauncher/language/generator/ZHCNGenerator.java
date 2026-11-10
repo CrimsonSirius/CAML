@@ -22,6 +22,7 @@ public final class ZHCNGenerator extends LanguageTranslationGenerator {
         t.put("nav.home", "主页");
         t.put("nav.downloads", "下载");
         t.put("nav.settings", "设置");
+        t.put("app.subtitle", "Minecraft 启动器");
         t.put("footer.status", "CAML %s · 后端%s · 数据目录: %s");
         t.put("footer.backend.ready", "已就绪");
         t.put("footer.backend.notReady", "未就绪");
@@ -65,6 +66,26 @@ public final class ZHCNGenerator extends LanguageTranslationGenerator {
         t.put("status.starting", "正在启动 %s...");
         t.put("status.started", "启动指令已发送");
         t.put("status.launchFailed", "启动失败！");
+        t.put("status.launchFailedDetail", "启动失败：%s");
+        t.put("error.unknown", "发生未知错误，请查看日志。");
+        t.put("download.error.failed", "无法下载 %s（已尝试 %s 次，最后地址: %s）");
+        t.put("network.requestFailed", "无法请求 %s（最后地址: %s）");
+        t.put("network.timeout", "请求超时（%s ms）：%s");
+        t.put("network.httpError", "HTTP %s：%s");
+        t.put("network.responseInvalid", "无法解析响应：%s");
+        t.put("network.redirectLocationMissing", "重定向缺少 Location：%s");
+        t.put("network.tooManyRedirects", "重定向次数过多：%s");
+        t.put("network.noSource", "没有可用的下载源：%s");
+        t.put("metadata.manifestEmpty", "版本清单为空");
+        t.put("metadata.versionJsonEmpty", "版本 JSON 为空");
+        t.put("launch.permissionDenied", "没有权限执行 Java 或访问游戏目录，请检查文件权限。");
+        t.put("launch.executableNotFound", "找不到 Java 可执行文件，请重新选择 Java。");
+        t.put("launch.commandTooLong", "启动命令过长，请缩短游戏路径或减少类路径。");
+        t.put("launch.commandTooLongAfterFallback", "启动命令过长，已尝试参数文件和 manifest 回退，但仍无法启动。请缩短游戏路径或减少类路径。");
+        t.put("launch.processStartFailed", "启动游戏进程失败，请查看日志了解详情。");
+        t.put("launch.manualJavaNotConfigured", "已启用手动 Java 选择，但没有选择 Java 路径。");
+        t.put("launch.manualJavaUnavailable", "手动选择的 Java 不可用：%s");
+        t.put("launch.javaRequirementNotFound", "找不到满足版本要求的 Java %s，请安装或选择 Java。");
 
         // 下载版本类别与来源
         t.put("download.category.release", "正式版");
@@ -105,7 +126,12 @@ public final class ZHCNGenerator extends LanguageTranslationGenerator {
         t.put("download.setup.optifineSwitched", "Forge 与 OptiFine 不兼容，已自动切换 Forge %s");
         t.put("download.setup.optifineIncompatibleForge", "当前 Forge 与 OptiFine 不兼容");
         t.put("download.setup.noCompatibleOptiFine", "没有兼容当前 Forge 的 OptiFine 版本");
+        t.put("download.setup.optifineForgeConflict", "Forge %s 与 OptiFine %s 不兼容，请选择 Forge %s 或更早版本。");
         t.put("download.setup.nameEmpty", "实例名字不能为空");
+        t.put("download.setup.nameDotSegments", "实例名字不能是 . 或 ..");
+        t.put("download.setup.nameTrailing", "实例名字不能以点或空格结尾");
+        t.put("download.setup.nameIllegalCharacter", "实例名字包含非法字符: %s");
+        t.put("download.setup.nameExists", "实例名已存在：%s，请换一个名字。");
         t.put("download.setup.noGameDirectory", "尚未设置游戏位置");
         t.put("download.setup.checkingName", "正在检查实例名...");
         t.put("download.setup.nameSameAsLoader", "安装加载器时实例名不能与游戏版本号相同");
@@ -218,6 +244,7 @@ public final class ZHCNGenerator extends LanguageTranslationGenerator {
 
         // 内存
         t.put("settings.game.memory.title", "内存");
+        t.put("settings.game.memory.accessible", "最大内存");
         t.put("settings.game.memory.description", "调整游戏启动时使用的内存。");
         t.put("settings.game.memory.label", "内存分配");
         t.put("settings.game.memory.hint", "拖动小球调整游戏分配；灰色条为已使用 + 游戏分配，右侧淡灰为未使用内存。");

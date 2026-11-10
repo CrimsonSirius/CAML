@@ -46,6 +46,7 @@ final class GameSettingsView extends VBox {
                 Math.max(0, totalMemoryMb - availableMemoryMb));
         memorySlider = new CamlMemorySlider(512, maxMemoryMb, 256, initialMemoryMb, usedMemoryMb);
         memorySlider.setMaxWidth(Double.MAX_VALUE);
+        memorySlider.setAccessibleText(Language.tr("settings.game.memory.accessible"));
 
         memorySummary = new Label();
         memorySummary.getStyleClass().addAll("caml-body-medium", "app-memory-summary");

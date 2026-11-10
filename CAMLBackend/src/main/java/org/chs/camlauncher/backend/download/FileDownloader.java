@@ -1,6 +1,8 @@
 package org.chs.camlauncher.backend.download;
 
 import com.google.gson.Gson;
+import org.chs.camlauncher.backend.error.BackendError;
+import org.chs.camlauncher.backend.error.BackendException;
 import org.chs.camlauncher.backend.download.hash.HashVerifier;
 import org.chs.camlauncher.backend.download.model.DownloadItem;
 
@@ -127,11 +129,12 @@ public final class FileDownloader {
             }
         }
 
-        String location = lastUri == null ? "" : "，最后地址: " + lastUri;
-        throw new IOException(
-                "无法下载 " + item.label() + "（已尝试 " + attempted + " 次" + location + "）",
-                lastFailure
-        );
+        throw new BackendException(BackendError.of(
+                "download.error.failed",
+                item.label(),
+                attempted,
+                lastUri == null ? "" : lastUri
+        ), lastFailure);
     }
 
     private void downloadOnce(URI uri, DownloadItem item, DownloadListener listener,

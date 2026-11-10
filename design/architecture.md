@@ -279,8 +279,10 @@ CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
 - `TranslationGeneratorRunner` 遍历生成器；Gradle 任务 `:CAMLLanguage:generateTranslation`
   先编译再生成，`.run/generateTranslation` 提供 IDEA 入口。
 - `LanguageTest` 校验生成器输出与已提交 JSON 一致，并检查各语言键集合相同。
-- 下载阶段使用 `DownloadStage` 稳定键和可选参数，由前端按当前语言翻译；
-  后端异常文本仍由后端生成，前端按原样展示。
+- 下载阶段使用 `DownloadStage` 稳定键和可选参数，由前端按当前语言翻译。
+- 后端用户可见失败使用 `BackendError(code, args)` / `BackendException` 传递；
+  前端 `ControllerContext` 按 code 翻译，未结构化异常统一显示 `error.unknown`，
+  原始异常消息只写入开发日志。
 
 ## 4. 尚未实现的能力
 

@@ -1,5 +1,8 @@
 package org.chs.camlauncher.backend.instance;
 
+import org.chs.camlauncher.backend.error.BackendError;
+import org.chs.camlauncher.backend.error.BackendException;
+
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -13,20 +16,21 @@ public final class InstanceNameRules {
     public static String validate(String instanceId) {
         String value = Objects.requireNonNull(instanceId, "instanceId").trim();
         if (value.isEmpty()) {
-            throw new IllegalArgumentException("实例名字不能为空");
+            throw new InstanceNameException(BackendError.of("download.setup.nameEmpty"));
         }
         if (value.equals(".") || value.equals("..")) {
-            throw new IllegalArgumentException("实例名字不能是 . 或 ..");
+            throw new InstanceNameException(BackendError.of("download.setup.nameDotSegments"));
         }
         if (value.endsWith(".") || value.endsWith(" ")) {
-            throw new IllegalArgumentException("实例名字不能以点或空格结尾");
+            throw new InstanceNameException(BackendError.of("download.setup.nameTrailing"));
         }
 
         String invalidChars = "<>:\"/\\|?*";
         for (int index = 0; index < value.length(); index++) {
             char character = value.charAt(index);
             if (Character.isISOControl(character) || invalidChars.indexOf(character) >= 0) {
-                throw new IllegalArgumentException("实例名字包含非法字符: " + character);
+                throw new InstanceNameException(BackendError.of(
+                        "download.setup.nameIllegalCharacter", character));
             }
         }
         return value;
@@ -36,11 +40,12 @@ public final class InstanceNameRules {
         String value;
         try {
             value = validate(instanceId);
-        } catch (IllegalArgumentException e) {
-            return new InstanceNameCheck(false, e.getMessage());
+        } catch (InstanceNameException e) {
+            return InstanceNameCheck.unavailable(e.error());
         }
         if (gameDirectory == null) {
-            return new InstanceNameCheck(false, "尚未设置游戏位置");
+            return InstanceNameCheck.unavailable(
+                    BackendError.of("download.setup.noGameDirectory"));
         }
 
         Path target = gameDirectory
@@ -49,15 +54,16 @@ public final class InstanceNameRules {
                 .toAbsolutePath()
                 .normalize();
         if (Files.exists(target)) {
-            return new InstanceNameCheck(false, "实例名已存在：" + value + "，请换一个名字。");
+            return InstanceNameCheck.unavailable(
+                    BackendError.of("download.setup.nameExists", value));
         }
-        return new InstanceNameCheck(true, "");
+        return InstanceNameCheck.valid();
     }
 
     public static void ensureNewInstance(Path gameDirectory, String instanceId) throws IOException {
         InstanceNameCheck check = check(gameDirectory, instanceId);
         if (!check.available()) {
-            throw new IOException(check.message());
+            throw new BackendException(check.error());
         }
     }
 }
