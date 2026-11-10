@@ -5,6 +5,7 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import org.chs.camlauncher.backend.download.DownloadCancellationToken;
 import org.chs.camlauncher.backend.download.DownloadListener;
 import org.chs.camlauncher.backend.download.FileDownloader;
 import org.chs.camlauncher.backend.download.model.DownloadItem;
@@ -107,13 +108,29 @@ public final class OptiFineInstaller {
             Path gameDirectory,
             DownloadListener listener
     ) throws IOException, InterruptedException {
+        return install(gameVersion, instanceId, forgeVersion, optiFineVersion, gameDirectory,
+                listener, new DownloadCancellationToken());
+    }
+
+    public InstalledVersion install(
+            String gameVersion,
+            String instanceId,
+            ForgeVersion forgeVersion,
+            OptiFineVersion optiFineVersion,
+            Path gameDirectory,
+            DownloadListener listener,
+            DownloadCancellationToken token
+    ) throws IOException, InterruptedException {
+        Objects.requireNonNull(token, "token");
+        token.throwIfCancelled();
         Objects.requireNonNull(gameDirectory, "gameDirectory");
         InstanceNameRules.ensureNewInstance(gameDirectory, instanceId);
         Path targetVersionDirectory = SafePaths.resolveChild(
                 gameDirectory.resolve("versions"), instanceId, "version id");
         try {
             return installInternal(
-                    gameVersion, instanceId, forgeVersion, optiFineVersion, gameDirectory, listener);
+                    gameVersion, instanceId, forgeVersion, optiFineVersion, gameDirectory,
+                    listener, token);
         } catch (IOException | RuntimeException | InterruptedException e) {
             deleteRecursively(targetVersionDirectory);
             throw e;
@@ -126,8 +143,10 @@ public final class OptiFineInstaller {
             ForgeVersion forgeVersion,
             OptiFineVersion optiFineVersion,
             Path gameDirectory,
-            DownloadListener listener
+            DownloadListener listener,
+            DownloadCancellationToken token
     ) throws IOException, InterruptedException {
+        token.throwIfCancelled();
         Objects.requireNonNull(forgeVersion, "forgeVersion");
         Objects.requireNonNull(optiFineVersion, "optiFineVersion");
         Objects.requireNonNull(gameDirectory, "gameDirectory");
@@ -142,7 +161,8 @@ public final class OptiFineInstaller {
                 gameDirectory,
                 manifestUri,
                 manifestCacheFile,
-                listener
+                listener,
+                token
         );
         InstalledVersion forge = externalLoaderInstaller.install(
                 "Forge",
@@ -150,7 +170,8 @@ public final class OptiFineInstaller {
                 instanceId,
                 forgeVersion.installerUri(),
                 gameDirectory,
-                listener
+                listener,
+                token
         );
 
         JavaRuntime java = javaLocator.findSuitable(JavaRequirement.from(base.manifest()))
@@ -162,19 +183,22 @@ public final class OptiFineInstaller {
         try {
             URI installerUri = optiFineService.resolveDownloadUri(optiFineVersion);
             DownloadListener.notifyStage(listener, "下载 OptiFine 安装器");
+            token.throwIfCancelled();
             fileDownloader.download(new DownloadItem(
                     "OptiFine installer",
                     DownloadSources.candidates(sources, installerUri.toString()),
                     installer,
                     null,
                     -1
-            ), listener, OptiFineInstaller::validateInstallerArchive);
+            ), listener, OptiFineInstaller::validateInstallerArchive, token);
 
+            token.throwIfCancelled();
             prepareStaging(staging, gameVersion, base);
             DownloadListener.notifyStage(listener, "运行 OptiFine 安装器");
-            runInstaller(java, installer, staging);
+            runInstaller(java, installer, staging, token);
             OptiFineVersionFiles generated = findGeneratedVersion(staging, gameVersion);
             DownloadListener.notifyStage(listener, "合并 OptiFine 文件");
+            token.throwIfCancelled();
             mergeLibraries(staging.resolve("libraries"), gameDirectory.resolve("libraries"));
             removeModsToml(gameDirectory.resolve("libraries").resolve("optifine"));
 
@@ -191,7 +215,8 @@ public final class OptiFineInstaller {
                 gameDirectory,
                 manifestUri,
                 manifestCacheFile,
-                listener
+                listener,
+                token
         );
     }
 
@@ -217,7 +242,8 @@ public final class OptiFineInstaller {
         }
     }
 
-    private static void runInstaller(JavaRuntime java, Path installer, Path staging)
+    private static void runInstaller(JavaRuntime java, Path installer, Path staging,
+                                     DownloadCancellationToken token)
             throws IOException, InterruptedException {
         List<String> command = new ArrayList<>();
         command.add(java.executable().toString());
@@ -237,9 +263,15 @@ public final class OptiFineInstaller {
         reader.setDaemon(true);
         reader.start();
 
-        boolean finished;
+        boolean finished = false;
+        long deadline = System.nanoTime() + TimeUnit.MINUTES.toNanos(INSTALL_TIMEOUT_MINUTES);
         try {
-            finished = process.waitFor(INSTALL_TIMEOUT_MINUTES, TimeUnit.MINUTES);
+            while (!(finished = process.waitFor(200, TimeUnit.MILLISECONDS))) {
+                token.throwIfCancelled();
+                if (System.nanoTime() >= deadline) {
+                    break;
+                }
+            }
         } catch (InterruptedException e) {
             process.destroyForcibly();
             throw e;

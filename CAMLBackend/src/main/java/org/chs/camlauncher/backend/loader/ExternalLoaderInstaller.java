@@ -7,6 +7,7 @@ import com.google.gson.reflect.TypeToken;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.chs.camlauncher.backend.download.DownloadConcurrency;
+import org.chs.camlauncher.backend.download.DownloadCancellationToken;
 import org.chs.camlauncher.backend.download.io.DownloadExecutor;
 import org.chs.camlauncher.backend.download.model.DownloadItem;
 import org.chs.camlauncher.backend.download.source.DownloadSource;
@@ -105,6 +106,21 @@ public final class ExternalLoaderInstaller {
             Path gameDirectory,
             DownloadListener listener
     ) throws IOException, InterruptedException {
+        return install(loaderName, gameVersion, instanceId, installerUri, gameDirectory, listener,
+                new DownloadCancellationToken());
+    }
+
+    public InstalledVersion install(
+            String loaderName,
+            String gameVersion,
+            String instanceId,
+            URI installerUri,
+            Path gameDirectory,
+            DownloadListener listener,
+            DownloadCancellationToken token
+    ) throws IOException, InterruptedException {
+        Objects.requireNonNull(token, "token");
+        token.throwIfCancelled();
         Objects.requireNonNull(loaderName, "loaderName");
         Objects.requireNonNull(gameVersion, "gameVersion");
         Objects.requireNonNull(installerUri, "installerUri");
@@ -127,7 +143,8 @@ public final class ExternalLoaderInstaller {
                 gameDirectory,
                 manifestUri,
                 manifestCacheFile,
-                listener
+                listener,
+                token
         );
         DownloadListener.notifyStage(listener, "准备 " + loaderName + " 安装器");
         JavaRuntime java = javaLocator.findSuitable(JavaRequirement.from(base.manifest()))
@@ -143,21 +160,24 @@ public final class ExternalLoaderInstaller {
             Path installerJar = staging.resolve("installer.jar");
             String installerSha1 = resolveSha1(installerUri);
             DownloadListener.notifyStage(listener, "下载 " + loaderName + " 安装器");
+            token.throwIfCancelled();
             fileDownloader.download(new DownloadItem(
                     loaderName + " installer",
                     DownloadSources.candidates(sources, installerUri.toString()),
                     installerJar,
                     installerSha1,
                     -1
-            ), listener, ExternalLoaderInstaller::validateInstallerArchive);
+            ), listener, ExternalLoaderInstaller::validateInstallerArchive, token);
 
+            token.throwIfCancelled();
             String installedVersionId = readInstallerVersionId(installerJar);
             Path installedVersionDirectory = staging.resolve("versions").resolve(installedVersionId);
             String installerOutput = "";
-            predownloadInstallerLibraries(loaderName, installerJar, staging, listener);
+            predownloadInstallerLibraries(loaderName, installerJar, staging, listener, token);
             DownloadListener.notifyStage(listener, "运行 " + loaderName + " 安装器");
             for (int attempt = 0; attempt < INSTALL_ATTEMPTS; attempt++) {
-                installerOutput = runInstaller(loaderName, java, installerJar, staging);
+                token.throwIfCancelled();
+                installerOutput = runInstaller(loaderName, java, installerJar, staging, token);
                 if (Files.isDirectory(installedVersionDirectory)) {
                     break;
                 }
@@ -170,6 +190,7 @@ public final class ExternalLoaderInstaller {
             validateGeneratedVersion(loaderName, installedVersionDirectory, installedVersionId);
 
             DownloadListener.notifyStage(listener, "合并 " + loaderName + " 文件");
+            token.throwIfCancelled();
             mergeLibraries(staging.resolve("libraries"), gameDirectory.resolve("libraries"));
             moveVersionDirectory(
                     installedVersionDirectory,
@@ -183,7 +204,8 @@ public final class ExternalLoaderInstaller {
                     gameDirectory,
                     manifestUri,
                     manifestCacheFile,
-                    listener
+                    listener,
+                    token
             );
             verifyInstalledLibraries(loaderName, installed);
             return installed;
@@ -253,7 +275,8 @@ public final class ExternalLoaderInstaller {
             String loaderName,
             JavaRuntime java,
             Path installerJar,
-            Path staging
+            Path staging,
+            DownloadCancellationToken token
     ) throws IOException, InterruptedException {
         List<String> command = new ArrayList<>();
         command.add(java.executable().toString());
@@ -274,9 +297,15 @@ public final class ExternalLoaderInstaller {
         reader.setDaemon(true);
         reader.start();
 
-        boolean finished;
+        boolean finished = false;
+        long deadline = System.nanoTime() + TimeUnit.MINUTES.toNanos(INSTALL_TIMEOUT_MINUTES);
         try {
-            finished = process.waitFor(INSTALL_TIMEOUT_MINUTES, TimeUnit.MINUTES);
+            while (!(finished = process.waitFor(200, TimeUnit.MILLISECONDS))) {
+                token.throwIfCancelled();
+                if (System.nanoTime() >= deadline) {
+                    break;
+                }
+            }
         } catch (InterruptedException e) {
             process.destroyForcibly();
             throw e;
@@ -345,7 +374,8 @@ public final class ExternalLoaderInstaller {
             String loaderName,
             Path installerJar,
             Path staging,
-            DownloadListener listener
+            DownloadListener listener,
+            DownloadCancellationToken token
     ) throws IOException, InterruptedException {
         Map<Path, DownloadItem> items = new LinkedHashMap<>();
         for (Library library : readInstallerLibraries(installerJar)) {
@@ -375,7 +405,8 @@ public final class ExternalLoaderInstaller {
                 items.values().stream().toList(),
                 downloadConcurrency,
                 listener,
-                fileDownloader::download
+                (item, itemListener) -> fileDownloader.download(item, itemListener, null, token),
+                token
         );
     }
 

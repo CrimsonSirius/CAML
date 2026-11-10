@@ -1,6 +1,7 @@
 package org.chs.camlauncher.backend.loader.fabric;
 
 import org.chs.camlauncher.backend.download.model.DownloadItem;
+import org.chs.camlauncher.backend.download.DownloadCancellationToken;
 import org.chs.camlauncher.backend.download.DownloadListener;
 import org.chs.camlauncher.backend.download.FileDownloader;
 import org.chs.camlauncher.backend.download.source.DownloadSource;
@@ -55,6 +56,21 @@ public final class FabricInstaller {
             Path gameDirectory,
             DownloadListener listener
     ) throws IOException, InterruptedException {
+        return install(gameVersion, instanceId, loaderVersion, apiVersion, gameDirectory, listener,
+                new DownloadCancellationToken());
+    }
+
+    public InstalledVersion install(
+            String gameVersion,
+            String instanceId,
+            String loaderVersion,
+            FabricApiVersion apiVersion,
+            Path gameDirectory,
+            DownloadListener listener,
+            DownloadCancellationToken token
+    ) throws IOException, InterruptedException {
+        Objects.requireNonNull(token, "token");
+        token.throwIfCancelled();
         Objects.requireNonNull(gameVersion, "gameVersion");
         Objects.requireNonNull(instanceId, "instanceId");
         Objects.requireNonNull(loaderVersion, "loaderVersion");
@@ -74,23 +90,26 @@ public final class FabricInstaller {
                     gameDirectory,
                     manifestUri,
                     manifestCacheFile,
-                    listener
+                    listener,
+                    token
             );
 
             DownloadListener.notifyStage(listener, "获取 Fabric 配置");
+            token.throwIfCancelled();
             String profileJson = fabricService.fetchLoaderProfile(gameVersion, loaderVersion);
             DownloadListener.notifyStage(listener, "安装 Fabric Loader");
             InstalledVersion installed = versionInstaller.installProfile(
                     normalizedInstanceId,
                     gameDirectory,
                     profileJson,
-                    listener
+                    listener,
+                    token
             );
 
             if (apiVersion != null) {
                 DownloadListener.notifyStage(listener, "下载 Fabric API");
                 Path versionMods = targetVersionDirectory.resolve("mods");
-                Path apiFile = downloadApi(apiVersion, versionMods, listener);
+                Path apiFile = downloadApi(apiVersion, versionMods, listener, token);
                 Path rootMods = gameDirectory.resolve("mods");
                 Path rootApiFile = SafePaths.resolveChild(
                         rootMods, apiFile.getFileName().toString(), "Fabric API file");
@@ -104,8 +123,10 @@ public final class FabricInstaller {
         }
     }
 
-    private Path downloadApi(FabricApiVersion apiVersion, Path modsDirectory, DownloadListener listener)
+    private Path downloadApi(FabricApiVersion apiVersion, Path modsDirectory,
+                             DownloadListener listener, DownloadCancellationToken token)
             throws IOException, InterruptedException {
+        token.throwIfCancelled();
         String filename;
         try {
             filename = Path.of(apiVersion.filename()).getFileName().toString();
@@ -125,7 +146,7 @@ public final class FabricInstaller {
                 destination,
                 apiVersion.sha1(),
                 apiVersion.size()
-        ), listener);
+        ), listener, null, token);
         return destination;
     }
 
