@@ -3,6 +3,7 @@ package org.chs.camlauncher.backend.settings;
 import org.chs.camlauncher.backend.instance.VersionIsolationMode;
 import org.chs.camlauncher.backend.download.source.DownloadSourceMode;
 import org.chs.camlauncher.backend.runtime.JavaSelectionMode;
+import org.chs.camlauncher.language.contract.LanguageSelectionMode;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 

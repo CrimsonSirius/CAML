@@ -7,7 +7,7 @@ import org.chs.camlauncher.backend.instance.VersionIsolationMode;
 import org.chs.camlauncher.backend.launch.GameLaunch;
 import org.chs.camlauncher.backend.launch.LaunchOptions;
 import org.chs.camlauncher.backend.launch.process.ProcessListener;
-import org.chs.camlauncher.language.Language;
+import org.chs.camlauncher.front.text.UiText;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -72,16 +72,16 @@ public final class HomeController {
             public void onExit(int exitCode) {
                 if (exitCode != 0) {
                     context.markFailure();
-                    context.sendLog(Language.tr("log.gameProcess.exitError", exitCode));
+                    context.sendLog(UiText.tr("log.gameProcess.exitError", exitCode));
                 } else {
-                    context.sendLog(Language.tr("log.gameProcess.exit", exitCode));
+                    context.sendLog(UiText.tr("log.gameProcess.exit", exitCode));
                 }
                 notifyLaunchFinished();
             }
         };
 
-        sendStatus(Language.tr("status.starting", version), false);
-        return context.runLaunch(Language.tr("operation.launchGame", version),
+        sendStatus(UiText.tr("status.starting", version), false);
+        return context.runLaunch(UiText.tr("operation.launchGame", version),
                 () -> context.backend().launchGame(version, gameDirectory, username, options,
                         fullVersionIsolation
                                 ? VersionIsolationMode.FULL
@@ -89,10 +89,10 @@ public final class HomeController {
                         downloadListener, processListener),
                 launch -> {
                     saveLastLaunchedInstance(version);
-                    sendStatus(Language.tr("status.started"), false);
+                    sendStatus(UiText.tr("status.started"), false);
                 },
                 message -> {
-                    sendStatus(Language.tr("status.launchFailedDetail", message), true);
+                    sendStatus(UiText.tr("status.launchFailedDetail", message), true);
                     notifyLaunchFinished();
                 });
     }
@@ -101,7 +101,7 @@ public final class HomeController {
         try {
             context.backend().setLastLaunchedInstanceId(version);
         } catch (IOException | RuntimeException e) {
-            context.reportError(Language.tr("operation.saveLastInstance"), e, null);
+            context.reportError(UiText.tr("operation.saveLastInstance"), e, null);
         }
     }
 
@@ -155,10 +155,10 @@ public final class HomeController {
             }
 
             if (progress.total() > 0) {
-                context.sendLog(Language.tr("log.download.progress",
+                context.sendLog(UiText.tr("log.download.progress",
                         progress.label(), progress.downloaded(), progress.total()));
             } else {
-                context.sendLog(Language.tr("log.download.progressNoTotal",
+                context.sendLog(UiText.tr("log.download.progressNoTotal",
                         progress.label(), progress.downloaded()));
             }
         }

@@ -16,6 +16,6 @@ tasks.register<JavaExec>("generateTranslation") {
     description = "Generate language JSON files from LanguageTranslationGenerator subclasses."
     dependsOn(tasks.named("classes"))
     classpath = sourceSets["main"].runtimeClasspath
-    mainClass.set("org.chs.camlauncher.language.TranslationGeneratorRunner")
+    mainClass.set("org.chs.camlauncher.language.generator.TranslationGeneratorRunner")
     args(layout.projectDirectory.dir("src/main/resources/lang").asFile.absolutePath)
 }

@@ -7,7 +7,7 @@ import org.chs.camlauncher.backend.api.CAMLBackend;
 import org.chs.camlauncher.backend.api.GameDirectoryInfo;
 import org.chs.camlauncher.backend.error.BackendError;
 import org.chs.camlauncher.backend.error.BackendErrorCarrier;
-import org.chs.camlauncher.language.Language;
+import org.chs.camlauncher.front.text.UiText;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -109,6 +109,11 @@ final class ControllerContext {
         return submit(operation, javaExecutor, supplier, onSuccess, onError, false);
     }
 
+    <T> FrontTask<T> runSettings(String operation, IoSupplier<T> supplier,
+                                 Consumer<T> onSuccess, Consumer<String> onError) {
+        return submit(operation, settingsExecutor, supplier, onSuccess, onError, false);
+    }
+
     <T> FrontTask<T> runLaunch(String operation, IoSupplier<T> supplier,
                                Consumer<T> onSuccess, Consumer<String> onError) {
         return submit(operation, launchExecutor, supplier, onSuccess, onError, true);
@@ -183,7 +188,7 @@ final class ControllerContext {
             return null;
         }
 
-        return runDownload(Language.tr("operation.inspectGameDirectory"),
+        return runDownload(UiText.tr("operation.inspectGameDirectory"),
                 () -> backend.inspectGameDirectory(directory), callback, onError);
     }
 
@@ -192,7 +197,7 @@ final class ControllerContext {
         if (directory == null) {
             return null;
         }
-        return runCheck(Language.tr("operation.inspectGameDirectory"),
+        return runCheck(UiText.tr("operation.inspectGameDirectory"),
                 () -> backend.directoryExists(directory), callback, onError);
     }
 
@@ -211,7 +216,7 @@ final class ControllerContext {
         if (fatal) {
             markFailure();
         }
-        sendLog(Language.tr("log.error.operationFailed", operation, message));
+        sendLog(UiText.tr("log.error.operationFailed", operation, message));
         if (onError != null) {
             Platform.runLater(() -> onError.accept(message));
         }
@@ -230,8 +235,8 @@ final class ControllerContext {
     private static String userMessage(Throwable cause) {
         BackendError error = backendError(cause);
         return error == null
-                ? Language.tr("error.unknown")
-                : Language.tr(error.code(), error.args().toArray());
+                ? UiText.tr("error.unknown")
+                : UiText.tr(error.code(), error.args().toArray());
     }
 
     private static BackendError backendError(Throwable cause) {

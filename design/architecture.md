@@ -8,7 +8,7 @@ CAML 采用前后端分离的多模块结构：
 
 ```text
 CAMLUI      JavaFX + CSS 的 CAML 组件库
-CAMLLanguage 纯 Java 多语言运行时、生成器与语言资源
+CAMLLanguage 纯 Java 语言契约、生成器与语言资源
 CAMLFront   JavaFX 界面，只负责展示和交互
 CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
 ```
@@ -20,10 +20,11 @@ CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
 - `CAMLUI` 只依赖 JavaFX 和自身 CSS，不依赖 `CAMLBackend` 或 `CAMLFront`。
 - `CAMLUI` 不定义固定配色；组件颜色全部来自外部主题文件。
 - `CAMLLanguage` 是纯 Java 模块，不依赖 JavaFX、`CAMLBackend` 或 `CAMLFront`；
-  它负责把内置 `lang/*.json` 安装到 `<data>/lang` 并从该目录加载翻译。
+  它只定义语言事件、错误、枚举和 DTO，并提供开发期 JSON 生成器与资源。
+- 语言运行时全部位于 `CAMLBackend` 的 `language` 包，负责文件安装、检测、加载、回退、格式化和日志。
 - `CAMLFront` 不直接读写文件、不直接发 HTTP、不直接启动进程。
-- `CAMLFront` 不在视图和控制器中硬编码界面文案，统一通过 `CAMLLanguage` 的
-  `Language.tr(key)` 读取 `<data>/lang/*.json`。
+- `CAMLFront` 不在视图和控制器中硬编码界面文案，统一通过 `UiText` 显示后端提供的最终文案；
+  `UiText` 不读取文件、不做回退、不做格式化。
 - 前后端通过 facade、DTO、事件和 `CompletableFuture` 交互。
 
 ## 2. 后端模块职责
@@ -260,32 +261,34 @@ CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
 
 ### 3.13 前端多语言
 
-- 多语言系统位于独立的 `CAMLLanguage` 模块；内置资源放在
+- 多语言契约位于独立的 `CAMLLanguage` 模块，分为 `contract` 和 `generator` 两个包；内置资源放在
   `CAMLLanguage/src/main/resources/lang/<locale>.json`。
-- `org.chs.camlauncher.language.Language` 是唯一运行时入口：
-  `Language.tr(key)` 取文案，`Language.tr(key, args...)` 支持占位符；
-  键缺失时返回键名本身。
-- `CAMLApplication` 启动时调用 `Language.initialize(dataDirectory)`，把内置语言文件复制到
-  `~/.caml/lang`：同名文件与内置资源按键值比对，不一致（含 JSON 损坏）就按内置文件重写；非内置语言文件原样保留，之后从该目录加载并自动发现用户新增的 `.json`。
+- 运行时的唯一入口是后端 `org.chs.camlauncher.backend.language.LanguageService`。它负责：
+  安装和同步内置语言、扫描自定义语言、检测系统语言、读取和校验 JSON、逐键回退、
+  占位符格式化、维护不可变快照、发布结构化事件，并写入运行日志。
+- `CAMLApplication` 启动时由 `CAMLBackend.start()` 初始化语言服务；前端通过
+  `UiText.initialize(backend.languageService())` 取得只读显示入口。
+- 语言文件同步到 `~/.caml/lang`：内置同名文件与资源按键值比对，不一致（含 JSON 损坏）就原子重写；
+  非内置语言文件原样保留。
 - 语言选择顺序：系统属性 `caml.language` → 系统语言。默认语言是 `en_us`，所以不再检测英语系统，
   只识别简体中文系统（`zh_CN`、`zh_SG`、脚本 `Hans` 等）并使用 `zh_cn`；其余系统（含繁体中文，
   翻译待做）一律使用默认语言。找不到对应文件时回退默认语言。
-- 语言下拉框中的语言名**不参与翻译**：`Language.localeDisplayName(locale)` 直接查运行时硬编码的
-  `Language.NATIVE_NAMES`，既不读取翻译文件也不经过当前界面语言，因此 `zh_cn` 永远显示
+- 语言下拉框中的语言名**不参与翻译**：后端 `LanguageService.displayName(locale)` 直接查运行时名称表，
+  既不读取翻译文件也不经过当前界面语言，因此 `zh_cn` 永远显示
   “简体中文”、`en_us` 永远显示“English”、`fn_cn` 永远显示“地道中国话”；翻译文件写错名称
   或用户改坏语言文件都不会影响下拉框。未登记的自定义语言显示 locale 标识。
-- 新增内置语言时在 `Language.NATIVE_NAMES` 中登记该语言的自称，翻译文件只登记界面文案。
+- 新增内置语言时在后端语言名称表中登记该语言的自称，翻译文件只登记界面文案。
 - 设置 → 外观 → 语言提供自动/手动两种模式；模式与手动语言写入
   `~/.caml/settings.properties` 的 `languageMode`、`language`。手动切换后
   `CAMLApplication` 复用当前 `LaunchSettings` 快照重建 `MainView`，立即应用新语言。
-- `LanguageTranslationGenerator` 是抽象生成器，负责写 JSON；`TranslationTable` 按键排序保存文案，
-  `put(key, value)` 为实例方法并拒绝重复键。每种语言一个生成器子类，只放在 `language/generator`
-  （`ZHCNGenerator`、`ENUSGenerator`、`FNCNGenerator`）；运行时入口 `Language`、抽象基类、`TranslationTable`
-  和 `TranslationGeneratorRunner` 都在 `CAMLLanguage` 模块的 `org.chs.camlauncher.language` 根目录。
+- `LanguageTranslationGenerator` 是开发期生成器基类，负责写 JSON；`TranslationTable` 按键排序保存文案，
+  `put(key, value)` 为实例方法并拒绝重复键。生成器、`TranslationTable` 和 `TranslationGeneratorRunner`
+  全部位于 `org.chs.camlauncher.language.generator`，不参与运行时语言逻辑。
 - `TranslationGeneratorRunner` 遍历生成器；Gradle 任务 `:CAMLLanguage:generateTranslation`
   先编译再生成，`.run/generateTranslation` 提供 IDEA 入口。
-- `LanguageTest` 校验生成器输出与已提交 JSON 一致，并检查各语言键集合相同。
-- 下载阶段使用 `DownloadStage` 稳定键和可选参数，由前端按当前语言翻译。
+- `LanguageTest` 只校验生成器输出与已提交 JSON 一致、各语言键集合相同和重复键保护。
+- 后端 `LanguageServiceTest` 覆盖安装修复、系统语言检测、逐键回退、缺键诊断、自定义语言和文件损坏。
+- 下载阶段使用 `DownloadStage` 稳定键和可选参数，由后端语言服务按当前快照翻译，前端只显示最终文本。
 - 后端用户可见失败使用 `BackendError(code, args)` / `BackendException` 传递；
   前端 `ControllerContext` 按 code 翻译，未结构化异常统一显示 `error.unknown`，
   原始异常消息只写入开发日志。

@@ -1,8 +1,8 @@
-package org.chs.camlauncher.language;
+package org.chs.camlauncher.language.generator;
 
-import org.chs.camlauncher.language.generator.ENUSGenerator;
-import org.chs.camlauncher.language.generator.FNCNGenerator;
-import org.chs.camlauncher.language.generator.ZHCNGenerator;
+import org.chs.camlauncher.language.generator.lang.ENUSGenerator;
+import org.chs.camlauncher.language.generator.lang.FNCNGenerator;
+import org.chs.camlauncher.language.generator.lang.ZHCNGenerator;
 
 import java.io.IOException;
 import java.nio.file.Files;

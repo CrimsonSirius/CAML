@@ -2,10 +2,15 @@ package org.chs.camlauncher.front.view;
 
 import org.chs.camlauncher.backend.download.DownloadListener;
 import org.chs.camlauncher.backend.download.DownloadStage;
-import org.chs.camlauncher.language.Language;
+import org.chs.camlauncher.backend.language.LanguageService;
+import org.chs.camlauncher.backend.settings.SettingsService;
+import org.chs.camlauncher.front.text.UiText;
+import org.chs.camlauncher.language.contract.LanguageSelectionMode;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
+import java.nio.file.Path;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -13,9 +18,17 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class DownloadTelemetryTest {
+    @TempDir
+    Path dataDirectory;
+
+    private LanguageService languageService;
+
     @BeforeEach
-    void useChineseLocale() {
-        Language.setLocale("zh_cn");
+    void useChineseLocale() throws Exception {
+        languageService = new LanguageService(dataDirectory, new SettingsService(dataDirectory));
+        languageService.initialize();
+        languageService.switchLanguage(LanguageSelectionMode.MANUAL, "zh_cn");
+        UiText.initialize(languageService);
     }
 
     @Test
@@ -29,20 +42,20 @@ class DownloadTelemetryTest {
         DownloadTelemetry.Snapshot snapshot = telemetry.snapshot();
         assertEquals(
                 List.of(
-                        Language.tr("download.stage.preparing"),
-                        Language.tr("download.stage.version.fetch"),
-                        Language.tr("download.stage.version.downloadFiles")
+                        UiText.tr("download.stage.preparing"),
+                        UiText.tr("download.stage.version.fetch"),
+                        UiText.tr("download.stage.version.downloadFiles")
                 ),
                 snapshot.stages()
         );
-        assertEquals(Language.tr("download.stage.version.downloadFiles"), snapshot.currentStage());
+        assertEquals(UiText.tr("download.stage.version.downloadFiles"), snapshot.currentStage());
         assertFalse(snapshot.finished());
         assertFalse(snapshot.failed());
     }
 
     @Test
-    void translatesStageCodesWithCurrentLocale() {
-        Language.setLocale("en_us");
+    void translatesStageCodesWithCurrentLocale() throws Exception {
+        languageService.switchLanguage(LanguageSelectionMode.MANUAL, "en_us");
         DownloadTelemetry telemetry = new DownloadTelemetry();
 
         telemetry.onStage(DownloadStage.of("loader.installer.download", "Forge"));
@@ -66,8 +79,8 @@ class DownloadTelemetryTest {
         assertTrue(completed.finished());
         assertEquals(100, completed.downloadedBytes());
         assertEquals(2, completed.completedItems());
-        assertEquals(Language.tr("download.stage.completed"), completed.currentStage());
-        assertTrue(completed.stages().contains(Language.tr("download.stage.completed")));
+        assertEquals(UiText.tr("download.stage.completed"), completed.currentStage());
+        assertTrue(completed.stages().contains(UiText.tr("download.stage.completed")));
     }
 
     @Test
@@ -77,7 +90,7 @@ class DownloadTelemetryTest {
 
         DownloadTelemetry.Snapshot snapshot = telemetry.snapshot();
         assertTrue(snapshot.failed());
-        assertEquals(Language.tr("download.stage.failed"), snapshot.currentStage());
+        assertEquals(UiText.tr("download.stage.failed"), snapshot.currentStage());
         assertEquals("网络中断", snapshot.failureMessage());
     }
 

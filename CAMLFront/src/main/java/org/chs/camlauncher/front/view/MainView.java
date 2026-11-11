@@ -5,14 +5,14 @@ import javafx.scene.control.Label;
 import javafx.scene.layout.BorderPane;
 import org.chs.camlauncher.backend.api.BackendStatus;
 import org.chs.camlauncher.backend.runtime.JavaSelectionMode;
-import org.chs.camlauncher.backend.settings.LanguageSelectionMode;
+import org.chs.camlauncher.language.contract.LanguageSelectionMode;
 import org.chs.camlauncher.backend.system.SystemMemoryInfo;
 import org.chs.camlauncher.backend.theme.ThemeInfo;
 import org.chs.camlauncher.front.controller.DownloadsController;
 import org.chs.camlauncher.front.controller.HomeController;
 import org.chs.camlauncher.front.controller.MainController;
 import org.chs.camlauncher.front.controller.SettingsController;
-import org.chs.camlauncher.language.Language;
+import org.chs.camlauncher.front.text.UiText;
 import org.chs.camlauncher.ui.control.CamlPageHost;
 import org.chs.camlauncher.ui.control.CamlTopBar;
 import org.chs.camlauncher.ui.control.CamlTopNav;
@@ -72,7 +72,7 @@ public final class MainView extends BorderPane {
         this.languageMode = initialLanguageMode == null
                 ? LanguageSelectionMode.AUTO
                 : initialLanguageMode;
-        this.language = initialLanguage == null ? Language.DEFAULT_LOCALE : initialLanguage;
+        this.language = initialLanguage == null ? UiText.DEFAULT_LOCALE : initialLanguage;
         getStyleClass().add("app-root");
 
         HomeController homeController = controller.homeController();
@@ -89,7 +89,7 @@ public final class MainView extends BorderPane {
                 language,
                 (mode, locale) -> {
                     this.languageMode = mode;
-                    this.language = locale == null ? Language.DEFAULT_LOCALE : locale;
+                    this.language = locale == null ? UiText.DEFAULT_LOCALE : locale;
                     this.onLanguageChanged.accept(mode, this.language);
                 }
         );
@@ -120,12 +120,12 @@ public final class MainView extends BorderPane {
     }
 
     private CamlTopBar buildTopBar() {
-        CamlTopBar bar = new CamlTopBar("CAML", Language.tr("app.subtitle"));
+        CamlTopBar bar = new CamlTopBar("CAML", UiText.tr("app.subtitle"));
 
         navigation = new CamlTopNav();
-        CamlTopNavItem home = navigation.addItem(Language.tr("nav.home"));
-        CamlTopNavItem downloads = navigation.addItem(Language.tr("nav.downloads"));
-        settingsNavItem = navigation.addItem(Language.tr("nav.settings"));
+        CamlTopNavItem home = navigation.addItem(UiText.tr("nav.home"));
+        CamlTopNavItem downloads = navigation.addItem(UiText.tr("nav.downloads"));
+        settingsNavItem = navigation.addItem(UiText.tr("nav.settings"));
         navigation.select(home);
         navigation.selectedItemProperty().addListener((observable, oldValue, selected) -> {
             if (selected == home) {
@@ -154,11 +154,11 @@ public final class MainView extends BorderPane {
 
     private Label buildFooter() {
         BackendStatus backendStatus = controller.status();
-        Label footer = new Label(Language.tr("footer.status",
+        Label footer = new Label(UiText.tr("footer.status",
                 backendStatus.version(),
                 backendStatus.ready()
-                        ? Language.tr("footer.backend.ready")
-                        : Language.tr("footer.backend.notReady"),
+                        ? UiText.tr("footer.backend.ready")
+                        : UiText.tr("footer.backend.notReady"),
                 backendStatus.dataDirectory()));
         footer.getStyleClass().addAll("caml-body-small", "app-footer-bar");
         footer.setWrapText(true);

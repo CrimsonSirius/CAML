@@ -7,7 +7,7 @@ import javafx.scene.layout.VBox;
 import javafx.util.Duration;
 import org.chs.camlauncher.backend.system.SystemMemoryInfo;
 import org.chs.camlauncher.front.controller.SettingsController;
-import org.chs.camlauncher.language.Language;
+import org.chs.camlauncher.front.text.UiText;
 import org.chs.camlauncher.ui.control.CamlMemorySlider;
 
 import java.util.function.IntConsumer;
@@ -46,7 +46,7 @@ final class GameSettingsView extends VBox {
                 Math.max(0, totalMemoryMb - availableMemoryMb));
         memorySlider = new CamlMemorySlider(512, maxMemoryMb, 256, initialMemoryMb, usedMemoryMb);
         memorySlider.setMaxWidth(Double.MAX_VALUE);
-        memorySlider.setAccessibleText(Language.tr("settings.game.memory.accessible"));
+        memorySlider.setAccessibleText(UiText.tr("settings.game.memory.accessible"));
 
         memorySummary = new Label();
         memorySummary.getStyleClass().addAll("caml-body-medium", "app-memory-summary");
@@ -90,21 +90,21 @@ final class GameSettingsView extends VBox {
     }
 
     private void buildLayout() {
-        Label heading = new Label(Language.tr("settings.game.memory.title"));
+        Label heading = new Label(UiText.tr("settings.game.memory.title"));
         heading.getStyleClass().add("app-settings-group-title");
 
-        Label description = new Label(Language.tr("settings.game.memory.description"));
+        Label description = new Label(UiText.tr("settings.game.memory.description"));
         description.getStyleClass().addAll("caml-body-medium", "caml-on-surface-muted");
         description.setWrapText(true);
 
-        Label memoryLabel = new Label(Language.tr("settings.game.memory.label"));
+        Label memoryLabel = new Label(UiText.tr("settings.game.memory.label"));
         memoryLabel.getStyleClass().add("caml-label-medium");
         memoryLabel.setLabelFor(memorySlider);
 
         VBox memoryBlock = new VBox(10, memoryLabel, memorySummary, memorySlider);
         memoryBlock.getStyleClass().add("app-memory-block");
 
-        Label hint = new Label(Language.tr("settings.game.memory.hint"));
+        Label hint = new Label(UiText.tr("settings.game.memory.hint"));
         hint.getStyleClass().addAll("caml-body-small", "field-hint");
         hint.setWrapText(true);
 
@@ -126,7 +126,7 @@ final class GameSettingsView extends VBox {
     }
 
     private void updateMemorySummary(int value) {
-        memorySummary.setText(Language.tr("settings.game.memory.summary",
+        memorySummary.setText(UiText.tr("settings.game.memory.summary",
                 usedMemoryMb, value, availableMemoryMb, totalMemoryMb));
     }
 

@@ -1,4 +1,4 @@
-package org.chs.camlauncher.language;
+package org.chs.camlauncher.language.generator;
 
 import java.util.TreeMap;
 

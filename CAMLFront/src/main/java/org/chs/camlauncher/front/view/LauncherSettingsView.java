@@ -6,9 +6,9 @@ import javafx.scene.control.ToggleGroup;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.util.StringConverter;
-import org.chs.camlauncher.backend.settings.LanguageSelectionMode;
+import org.chs.camlauncher.language.contract.LanguageSelectionMode;
 import org.chs.camlauncher.backend.theme.ThemeInfo;
-import org.chs.camlauncher.language.Language;
+import org.chs.camlauncher.front.text.UiText;
 import org.chs.camlauncher.ui.control.CamlComboBox;
 import org.chs.camlauncher.ui.control.CamlRadioButton;
 
@@ -29,35 +29,35 @@ final class LauncherSettingsView extends VBox {
                          BiConsumer<LanguageSelectionMode, String> onLanguageChanged) {
         themeBox = new CamlComboBox<>();
         themeBox.setMaxWidth(Double.MAX_VALUE);
-        themeBox.setAccessibleText(Language.tr("settings.appearance.theme.accessible"));
+        themeBox.setAccessibleText(UiText.tr("settings.appearance.theme.accessible"));
 
-        automaticLanguage = new CamlRadioButton(Language.tr("settings.appearance.language.auto"));
-        manualLanguage = new CamlRadioButton(Language.tr("settings.appearance.language.manual"));
+        automaticLanguage = new CamlRadioButton(UiText.tr("settings.appearance.language.auto"));
+        manualLanguage = new CamlRadioButton(UiText.tr("settings.appearance.language.manual"));
         languageBox = new CamlComboBox<>();
         languageBox.setMaxWidth(Double.MAX_VALUE);
-        languageBox.setAccessibleText(Language.tr("settings.appearance.language.accessible"));
+        languageBox.setAccessibleText(UiText.tr("settings.appearance.language.accessible"));
 
-        Label heading = new Label(Language.tr("settings.appearance.title"));
+        Label heading = new Label(UiText.tr("settings.appearance.title"));
         heading.getStyleClass().add("app-settings-group-title");
 
-        Label description = new Label(Language.tr("settings.appearance.description"));
+        Label description = new Label(UiText.tr("settings.appearance.description"));
         description.getStyleClass().addAll("caml-body-medium", "caml-on-surface-muted");
         description.setWrapText(true);
 
-        Label themeHint = new Label(Language.tr("settings.appearance.themeHint"));
+        Label themeHint = new Label(UiText.tr("settings.appearance.themeHint"));
         themeHint.getStyleClass().addAll("caml-body-small", "field-hint");
         themeHint.setWrapText(true);
 
         VBox appearanceGroup = new VBox(16, heading, description,
-                ViewSupport.buildField(Language.tr("settings.appearance.theme"), themeBox, themeHint));
+                ViewSupport.buildField(UiText.tr("settings.appearance.theme"), themeBox, themeHint));
         appearanceGroup.getStyleClass().add("app-settings-group");
         appearanceGroup.setMaxWidth(Double.MAX_VALUE);
 
-        Label languageHeading = new Label(Language.tr("settings.appearance.language.title"));
+        Label languageHeading = new Label(UiText.tr("settings.appearance.language.title"));
         languageHeading.getStyleClass().add("app-settings-group-title");
 
         Label languageDescription = new Label(
-                Language.tr("settings.appearance.language.description"));
+                UiText.tr("settings.appearance.language.description"));
         languageDescription.getStyleClass().addAll("caml-body-medium", "caml-on-surface-muted");
         languageDescription.setWrapText(true);
 
@@ -67,27 +67,27 @@ final class LauncherSettingsView extends VBox {
         HBox languageModes = new HBox(18, automaticLanguage, manualLanguage);
         languageModes.setAlignment(Pos.CENTER_LEFT);
 
-        languageBox.getItems().setAll(Language.supportedLocales());
+        languageBox.getItems().setAll(UiText.supportedLocales());
         languageBox.setConverter(new StringConverter<>() {
             @Override
             public String toString(String locale) {
-                return locale == null ? "" : Language.localeDisplayName(locale);
+                return locale == null ? "" : UiText.localeDisplayName(locale);
             }
 
             @Override
             public String fromString(String value) {
-                return Language.supportedLocales().stream()
+                return UiText.supportedLocales().stream()
                         .filter(locale -> toString(locale).equals(value))
                         .findFirst()
                         .orElse(null);
             }
         });
-        manualLocale = Language.normalizeLocale(initialLocale);
-        if (!Language.isSupportedLocale(manualLocale)) {
-            manualLocale = Language.locale();
+        manualLocale = UiText.normalizeLocale(initialLocale);
+        if (!UiText.isSupportedLocale(manualLocale)) {
+            manualLocale = UiText.locale();
         }
-        if (!Language.isSupportedLocale(manualLocale)) {
-            manualLocale = Language.DEFAULT_LOCALE;
+        if (!UiText.isSupportedLocale(manualLocale)) {
+            manualLocale = UiText.DEFAULT_LOCALE;
         }
         boolean manualMode = initialMode == LanguageSelectionMode.MANUAL;
         languageBox.setValue(manualMode ? manualLocale : effectiveLocale());
@@ -95,7 +95,7 @@ final class LauncherSettingsView extends VBox {
         automaticLanguage.setSelected(!manualMode);
         languageBox.setDisable(!manualMode);
 
-        Label languageHint = new Label(Language.tr("settings.appearance.language.hint"));
+        Label languageHint = new Label(UiText.tr("settings.appearance.language.hint"));
         languageHint.getStyleClass().addAll("caml-body-small", "field-hint");
         languageHint.setWrapText(true);
 
@@ -103,7 +103,7 @@ final class LauncherSettingsView extends VBox {
                 languageHeading,
                 languageDescription,
                 languageModes,
-                ViewSupport.buildField(Language.tr("settings.appearance.language.label"),
+                ViewSupport.buildField(UiText.tr("settings.appearance.language.label"),
                         languageBox, languageHint)
         );
         languageGroupBox.getStyleClass().add("app-settings-group");
@@ -139,8 +139,8 @@ final class LauncherSettingsView extends VBox {
     }
 
     private static String effectiveLocale() {
-        String current = Language.normalizeLocale(Language.locale());
-        return Language.isSupportedLocale(current) ? current : Language.DEFAULT_LOCALE;
+        String current = UiText.normalizeLocale(UiText.locale());
+        return UiText.isSupportedLocale(current) ? current : UiText.DEFAULT_LOCALE;
     }
 
     void configureThemes(List<ThemeInfo> themes, ThemeInfo active, Consumer<ThemeInfo> onSelected) {

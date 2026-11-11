@@ -1,6 +1,6 @@
 package org.chs.camlauncher.front.view;
 
-import org.chs.camlauncher.language.Language;
+import org.chs.camlauncher.front.text.UiText;
 
 import java.util.Locale;
 
@@ -17,12 +17,12 @@ enum VersionCategory {
     }
 
     String label() {
-        return Language.tr(labelKey);
+        return UiText.tr(labelKey);
     }
 
     static String labelOfType(String type) {
         if (type == null || type.isBlank()) {
-            return Language.tr("download.category.unknown");
+            return UiText.tr("download.category.unknown");
         }
         return switch (type.toLowerCase(Locale.ROOT)) {
             case "release" -> RELEASE.label();

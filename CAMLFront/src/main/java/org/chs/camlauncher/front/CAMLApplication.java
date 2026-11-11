@@ -11,12 +11,12 @@ import org.chs.camlauncher.backend.api.CAMLBackend;
 import org.chs.camlauncher.backend.config.BackendConfig;
 import org.chs.camlauncher.backend.instance.VersionIsolationMode;
 import org.chs.camlauncher.backend.runtime.JavaSelectionMode;
-import org.chs.camlauncher.backend.settings.LanguageSelectionMode;
+import org.chs.camlauncher.language.contract.LanguageSelectionMode;
 import org.chs.camlauncher.backend.settings.SettingsService;
 import org.chs.camlauncher.backend.system.SystemMemoryInfo;
 import org.chs.camlauncher.backend.theme.ThemeInfo;
 import org.chs.camlauncher.front.controller.MainController;
-import org.chs.camlauncher.language.Language;
+import org.chs.camlauncher.front.text.UiText;
 import org.chs.camlauncher.front.view.MainView;
 import org.chs.camlauncher.ui.theme.CamlTheme;
 
@@ -48,7 +48,7 @@ public final class CAMLApplication extends Application {
     private Path selectedJavaPath;
     private String lastLaunchedInstanceId = "1.21.4";
     private LanguageSelectionMode languageSelectionMode = LanguageSelectionMode.AUTO;
-    private String language = Language.DEFAULT_LOCALE;
+    private String language = UiText.DEFAULT_LOCALE;
     private long languageChangeGeneration;
     private volatile boolean stopping;
 
@@ -63,11 +63,9 @@ public final class CAMLApplication extends Application {
         backend = new CAMLBackend(config);
         backend.start();
 
-        try {
-            Language.initialize(config.dataDirectory());
-        } catch (IOException e) {
-            logger.warn("无法初始化语言目录，使用内置语言资源", e);
-        }
+        UiText.initialize(backend.languageService());
+        languageSelectionMode = backend.languageSelectionMode();
+        language = backend.languageSnapshot().activeLocale();
 
         try {
             themes = backend.listThemes();
@@ -104,13 +102,6 @@ public final class CAMLApplication extends Application {
         } catch (IOException e) {
             logger.warn("无法读取 Java 选择设置，使用自动选择", e);
         }
-        try {
-            languageSelectionMode = backend.languageSelectionMode();
-            language = backend.language().orElse(Language.DEFAULT_LOCALE);
-        } catch (IOException e) {
-            logger.warn("无法读取语言设置，使用自动语言", e);
-        }
-        applyLanguage(languageSelectionMode, language);
         systemMemory = backend.systemMemory();
 
         logger.info("CAML frontend initialized");
@@ -188,21 +179,15 @@ public final class CAMLApplication extends Application {
         languageSelectionMode = mode;
         language = nextLanguage;
         long generation = ++languageChangeGeneration;
-        controller.settingsController().saveLanguageAsync(mode, nextLanguage);
-        controller.settingsController().switchLanguageAsync(mode, nextLanguage, () -> {
-            if (stopping || generation != languageChangeGeneration) {
-                return;
-            }
-            rebuildView();
-        });
-    }
-
-    private static void applyLanguage(LanguageSelectionMode mode, String locale) {
-        if (mode == LanguageSelectionMode.MANUAL) {
-            Language.setLocale(locale);
-        } else {
-            Language.useAutomaticLocale();
-        }
+        controller.settingsController().switchLanguageAsync(mode, nextLanguage,
+                snapshot -> {
+                    if (stopping || generation != languageChangeGeneration) {
+                        return;
+                    }
+                    language = snapshot.activeLocale();
+                    rebuildView();
+                },
+                message -> logger.warn("切换语言失败: {}", message));
     }
 
     private void rebuildView() {

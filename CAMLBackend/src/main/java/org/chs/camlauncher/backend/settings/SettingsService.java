@@ -4,6 +4,7 @@ import org.chs.camlauncher.backend.download.DownloadConcurrency;
 import org.chs.camlauncher.backend.download.source.DownloadSourceMode;
 import org.chs.camlauncher.backend.instance.VersionIsolationMode;
 import org.chs.camlauncher.backend.runtime.JavaSelectionMode;
+import org.chs.camlauncher.language.contract.LanguageSelectionMode;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -225,7 +226,10 @@ public final class SettingsService {
     }
 
     public LanguageSelectionMode languageSelectionMode() throws IOException {
-        return LanguageSelectionMode.fromStored(load().getProperty(LANGUAGE_MODE_KEY));
+        String value = load().getProperty(LANGUAGE_MODE_KEY);
+        return value != null && "manual".equalsIgnoreCase(value.trim())
+                ? LanguageSelectionMode.MANUAL
+                : LanguageSelectionMode.AUTO;
     }
 
     public Optional<String> language() throws IOException {
@@ -239,7 +243,7 @@ public final class SettingsService {
                 ? ""
                 : locale.trim().toLowerCase(Locale.ROOT).replace('-', '_');
         update(properties -> {
-            properties.setProperty(LANGUAGE_MODE_KEY, mode.storedName());
+            properties.setProperty(LANGUAGE_MODE_KEY, mode.name().toLowerCase(Locale.ROOT));
             if (value.isEmpty()) {
                 properties.remove(LANGUAGE_KEY);
             } else {
