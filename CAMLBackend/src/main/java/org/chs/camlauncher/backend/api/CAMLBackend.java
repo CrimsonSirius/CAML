@@ -205,6 +205,7 @@ public final class CAMLBackend implements AutoCloseable {
             latestLogService.start();
             languageService.initialize();
         } catch (IOException e) {
+            LOGGER.error("后端初始化失败，无法准备目录、主题、日志或语言系统", e);
             throw new UncheckedIOException("Failed to prepare CAML directories", e);
         }
         try {

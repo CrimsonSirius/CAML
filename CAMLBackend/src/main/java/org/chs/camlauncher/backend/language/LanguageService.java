@@ -48,49 +48,60 @@ public final class LanguageService implements LanguageTextProvider {
     }
 
     public synchronized LanguageSnapshot initialize() throws IOException {
-        Files.createDirectories(dataDirectory);
-        Files.createDirectories(languageDirectory);
-        for (BuiltinLanguageInstaller.Repair repair : installer.install()) {
-            reportRepair(repair);
-        }
+        try {
+            Files.createDirectories(dataDirectory);
+            Files.createDirectories(languageDirectory);
+            for (BuiltinLanguageInstaller.Repair repair : installer.install()) {
+                reportRepair(repair);
+            }
 
-        selectionMode = readSelectionMode();
-        storedLocale = readStoredLocale();
-        String requestedLocale = selectionMode == LanguageSelectionMode.MANUAL
-                ? normalizeLocale(storedLocale)
-                : detectLocale();
-        LanguageSnapshot next = createSnapshot(
-                requestedLocale,
-                catalogLoader.load(requestedLocale),
-                discovery.scan()
-        );
-        snapshot = next;
-        publishState(next);
-        return next;
+            selectionMode = readSelectionMode();
+            storedLocale = readStoredLocale();
+            String requestedLocale = selectionMode == LanguageSelectionMode.MANUAL
+                    ? normalizeLocale(storedLocale)
+                    : detectLocale();
+            LanguageSnapshot next = createSnapshot(
+                    requestedLocale,
+                    catalogLoader.load(requestedLocale),
+                    discovery.scan()
+            );
+            snapshot = next;
+            publishState(next);
+            return next;
+        } catch (IOException | RuntimeException e) {
+            LOGGER.error("语言系统初始化失败 dataDirectory={}", dataDirectory, e);
+            throw e;
+        }
     }
 
     public synchronized LanguageSnapshot switchLanguage(LanguageSelectionMode mode, String locale)
             throws IOException {
-        Objects.requireNonNull(mode, "mode");
-        settingsService.setLanguage(mode, locale);
-        selectionMode = mode;
-        storedLocale = locale == null ? "" : locale;
-        String requestedLocale = mode == LanguageSelectionMode.MANUAL
-                ? normalizeLocale(locale)
-                : detectLocale();
-        LanguageSnapshot next = createSnapshot(
-                requestedLocale,
-                catalogLoader.load(requestedLocale),
-                discovery.scan()
-        );
-        snapshot = next;
-        publishState(next);
-        return next;
+        try {
+            Objects.requireNonNull(mode, "mode");
+            settingsService.setLanguage(mode, locale);
+            selectionMode = mode;
+            storedLocale = locale == null ? "" : locale;
+            String requestedLocale = mode == LanguageSelectionMode.MANUAL
+                    ? normalizeLocale(locale)
+                    : detectLocale();
+            LanguageSnapshot next = createSnapshot(
+                    requestedLocale,
+                    catalogLoader.load(requestedLocale),
+                    discovery.scan()
+            );
+            snapshot = next;
+            publishState(next);
+            return next;
+        } catch (IOException | RuntimeException e) {
+            LOGGER.error("切换语言失败 mode={} locale={}", mode, locale, e);
+            throw e;
+        }
     }
 
     public LanguageSnapshot snapshot() {
         LanguageSnapshot current = snapshot;
         if (current == null) {
+            LOGGER.error("语言快照尚未初始化，拒绝提供语言状态");
             throw new LanguageException(
                     LanguageErrorCode.BOOTSTRAP_FAILED, null, null, null);
         }

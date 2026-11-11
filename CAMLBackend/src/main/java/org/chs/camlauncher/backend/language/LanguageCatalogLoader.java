@@ -41,6 +41,10 @@ final class LanguageCatalogLoader {
     }
 
     private Map<String, String> loadLocaleMap(String locale) {
+        if (!LanguageLocales.isValid(locale)) {
+            diagnostics.accept(new InvalidFile(locale, null, "invalid-locale", null));
+            return Map.of();
+        }
         Path runtime = LanguageLocales.runtimeFile(languageDirectory, locale);
         if (runtime != null && Files.isRegularFile(runtime)) {
             try {
