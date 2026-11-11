@@ -20,6 +20,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -28,6 +29,9 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class FileDownloaderTest {
+    private static final String RANGE_ETAG = "\"caml-test-etag\"";
+    private static final String RANGE_LAST_MODIFIED = "Wed, 01 Jan 2025 00:00:00 GMT";
+
     @TempDir
     Path tempDirectory;
 
@@ -274,7 +278,8 @@ class FileDownloaderTest {
             content[index] = (byte) (index % 251);
         }
         AtomicInteger requests = new AtomicInteger();
-        HttpServer server = rangeServer(content, requests, new AtomicBoolean(false), new AtomicBoolean(false));
+        HttpServer server = rangeServer(
+                content, requests, new AtomicBoolean(false), new AtomicBoolean(false));
 
         try {
             Path destination = tempDirectory.resolve("segmented.bin");
@@ -306,11 +311,15 @@ class FileDownloaderTest {
         }
         AtomicInteger requests = new AtomicInteger();
         AtomicBoolean resumedMidFirstSegment = new AtomicBoolean();
+        AtomicReference<String> observedIfRange = new AtomicReference<>();
         HttpServer server = rangeServer(
                 content,
                 requests,
                 new AtomicBoolean(true),
-                resumedMidFirstSegment
+                resumedMidFirstSegment,
+                RANGE_ETAG,
+                RANGE_LAST_MODIFIED,
+                observedIfRange
         );
 
         try {
@@ -328,6 +337,93 @@ class FileDownloaderTest {
 
             assertArrayEquals(content, Files.readAllBytes(destination));
             assertTrue(resumedMidFirstSegment.get(), "应至少出现一次从分片中间位置继续的 Range 请求");
+            assertEquals(RANGE_ETAG, observedIfRange.get());
+        } finally {
+            server.stop(0);
+        }
+    }
+
+    @Test
+    void resumesWithLastModifiedWhenEtagIsWeak() throws Exception {
+        byte[] content = new byte[5 * 1024 * 1024];
+        for (int index = 0; index < content.length; index++) {
+            content[index] = (byte) (index % 239);
+        }
+        AtomicInteger requests = new AtomicInteger();
+        AtomicBoolean resumedMidFirstSegment = new AtomicBoolean();
+        AtomicReference<String> observedIfRange = new AtomicReference<>();
+        HttpServer server = rangeServer(
+                content,
+                requests,
+                new AtomicBoolean(true),
+                resumedMidFirstSegment,
+                "W/\"weak-etag\"",
+                RANGE_LAST_MODIFIED,
+                observedIfRange
+        );
+
+        try {
+            Path destination = tempDirectory.resolve("last-modified.bin");
+            DownloadItem item = new DownloadItem(
+                    "last-modified",
+                    List.of(URI.create("http://127.0.0.1:"
+                            + server.getAddress().getPort() + "/resumed.bin")),
+                    destination,
+                    sha1(content),
+                    content.length
+            );
+
+            new FileDownloader().download(item, DownloadListener.NONE);
+
+            assertArrayEquals(content, Files.readAllBytes(destination));
+            assertTrue(resumedMidFirstSegment.get());
+            assertEquals(RANGE_LAST_MODIFIED, observedIfRange.get());
+        } finally {
+            server.stop(0);
+        }
+    }
+
+    @Test
+    void discardsCheckpointWhenStoredEtagDoesNotMatch() throws Exception {
+        byte[] content = new byte[5 * 1024 * 1024];
+        for (int index = 0; index < content.length; index++) {
+            content[index] = (byte) (index % 237);
+        }
+        AtomicInteger requests = new AtomicInteger();
+        AtomicBoolean resumedMidFirstSegment = new AtomicBoolean();
+        HttpServer server = rangeServer(
+                content, requests, new AtomicBoolean(false), resumedMidFirstSegment);
+
+        try {
+            Path destination = tempDirectory.resolve("stale-etag.bin");
+            Path part = destination.resolveSibling(destination.getFileName() + ".part");
+            Path meta = destination.resolveSibling(destination.getFileName() + ".part.json");
+            Files.write(part, new byte[content.length]);
+            Files.writeString(meta, """
+                    {
+                      "total": %d,
+                      "sha1": "%s",
+                      "etag": "\\"stale-etag\\"",
+                      "lastModified": "%s",
+                      "segments": [
+                        {"start": 0, "end": 2621439, "downloaded": 1},
+                        {"start": 2621440, "end": 5242879, "downloaded": 0}
+                      ]
+                    }
+                    """.formatted(content.length, sha1(content), RANGE_LAST_MODIFIED));
+            DownloadItem item = new DownloadItem(
+                    "stale-etag",
+                    List.of(URI.create("http://127.0.0.1:"
+                            + server.getAddress().getPort() + "/resumed.bin")),
+                    destination,
+                    sha1(content),
+                    content.length
+            );
+
+            new FileDownloader().download(item, DownloadListener.NONE);
+
+            assertArrayEquals(content, Files.readAllBytes(destination));
+            assertFalse(resumedMidFirstSegment.get(), "ETag 变化后不能从旧检查点继续");
         } finally {
             server.stop(0);
         }
@@ -521,11 +617,23 @@ class FileDownloaderTest {
     private static HttpServer rangeServer(byte[] content, AtomicInteger requests,
                                           AtomicBoolean failFirstSegment,
                                           AtomicBoolean resumedMidFirstSegment) throws IOException {
+        return rangeServer(
+                content, requests, failFirstSegment, resumedMidFirstSegment,
+                RANGE_ETAG, RANGE_LAST_MODIFIED, new AtomicReference<>());
+    }
+
+    private static HttpServer rangeServer(byte[] content, AtomicInteger requests,
+                                          AtomicBoolean failFirstSegment,
+                                          AtomicBoolean resumedMidFirstSegment,
+                                          String etag, String lastModified,
+                                          AtomicReference<String> observedIfRange) throws IOException {
         HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
         server.createContext("/segmented.bin", exchange -> handleRange(
-                exchange, content, requests, failFirstSegment, resumedMidFirstSegment));
+                exchange, content, requests, failFirstSegment, resumedMidFirstSegment,
+                etag, lastModified, observedIfRange));
         server.createContext("/resumed.bin", exchange -> handleRange(
-                exchange, content, requests, failFirstSegment, resumedMidFirstSegment));
+                exchange, content, requests, failFirstSegment, resumedMidFirstSegment,
+                etag, lastModified, observedIfRange));
         server.start();
         return server;
     }
@@ -533,9 +641,12 @@ class FileDownloaderTest {
     private static void handleRange(com.sun.net.httpserver.HttpExchange exchange,
                                     byte[] content, AtomicInteger requests,
                                     AtomicBoolean failFirstSegment,
-                                    AtomicBoolean resumedMidFirstSegment) throws IOException {
+                                    AtomicBoolean resumedMidFirstSegment,
+                                    String etag, String lastModified,
+                                    AtomicReference<String> observedIfRange) throws IOException {
         String range = exchange.getRequestHeaders().getFirst("Range");
         if (range == null || !range.startsWith("bytes=")) {
+            addValidators(exchange, etag, lastModified);
             exchange.sendResponseHeaders(200, content.length);
             try (OutputStream output = exchange.getResponseBody()) {
                 output.write(content);
@@ -556,6 +667,11 @@ class FileDownloaderTest {
             resumedMidFirstSegment.set(true);
         }
 
+        String ifRange = exchange.getRequestHeaders().getFirst("If-Range");
+        if (ifRange != null) {
+            observedIfRange.set(ifRange);
+        }
+        addValidators(exchange, etag, lastModified);
         exchange.getResponseHeaders().add(
                 "Content-Range", "bytes " + start + "-" + end + "/" + content.length);
         exchange.sendResponseHeaders(206, length);
@@ -566,6 +682,16 @@ class FileDownloaderTest {
                 return;
             }
             output.write(content, (int) start, (int) length);
+        }
+    }
+
+    private static void addValidators(com.sun.net.httpserver.HttpExchange exchange,
+                                      String etag, String lastModified) {
+        if (etag != null) {
+            exchange.getResponseHeaders().add("ETag", etag);
+        }
+        if (lastModified != null) {
+            exchange.getResponseHeaders().add("Last-Modified", lastModified);
         }
     }
 

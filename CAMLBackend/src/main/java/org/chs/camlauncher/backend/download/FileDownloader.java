@@ -248,10 +248,11 @@ public final class FileDownloader {
         Path destination = item.destination();
         Path part = partialPath(destination);
         Path metaPath = metaPath(part);
-        ResumeMeta meta = loadResumeMeta(item, part, metaPath, probe.totalSize());
+        ResumeMeta meta = loadResumeMeta(item, part, metaPath, probe);
         if (meta == null) {
             clearPartial(item);
-            meta = ResumeMeta.create(probe.totalSize(), item.sha1());
+            meta = ResumeMeta.create(
+                    probe.totalSize(), item.sha1(), probe.etag(), probe.lastModified());
             preallocate(part, probe.totalSize());
             persistMeta(metaPath, meta);
         } else {
@@ -339,13 +340,14 @@ public final class FileDownloader {
         }
 
         try {
-            HttpRequest request = HttpRequest.newBuilder(uri)
+            HttpRequest.Builder request = HttpRequest.newBuilder(uri)
                     .timeout(Duration.ofMinutes(2))
-                    .header("Range", "bytes=" + start + "-" + end)
-                    .GET()
-                    .build();
+                    .header("Range", "bytes=" + start + "-" + end);
+            if (meta.ifRange() != null) {
+                request.header("If-Range", meta.ifRange());
+            }
             HttpResponse<InputStream> response = httpClient.send(
-                    request,
+                    request.GET().build(),
                     HttpResponse.BodyHandlers.ofInputStream()
             );
             if (response.statusCode() == 200) {
@@ -354,6 +356,7 @@ public final class FileDownloader {
             if (response.statusCode() != 206) {
                 throw new IOException("HTTP " + response.statusCode() + " for " + uri);
             }
+            verifySegmentValidators(response, meta);
 
             String contentRange = response.headers().firstValue("Content-Range").orElse("");
             Matcher matcher = CONTENT_RANGE.matcher(contentRange);
@@ -429,36 +432,44 @@ public final class FileDownloader {
                 String contentRange = response.headers().firstValue("Content-Range").orElse("");
                 Matcher matcher = CONTENT_RANGE.matcher(contentRange);
                 if (matcher.matches()) {
-                    return new RangeProbe(true, Long.parseLong(matcher.group(3)));
+                    return new RangeProbe(
+                            true,
+                            Long.parseLong(matcher.group(3)),
+                            strongEtag(response),
+                            lastModified(response)
+                    );
                 }
-                return new RangeProbe(false, -1);
+                return new RangeProbe(false, -1, null, null);
             }
             if (status == 200 || status == 416) {
                 return new RangeProbe(false, response.headers()
-                        .firstValueAsLong("Content-Length").orElse(-1));
+                        .firstValueAsLong("Content-Length").orElse(-1), null, null);
             }
             throw new IOException("HTTP " + status + " for " + uri);
         }
     }
 
     private ResumeMeta loadResumeMeta(DownloadItem item, Path part, Path metaPathForRead,
-                                      long total) throws IOException {
+                                      RangeProbe probe) throws IOException {
         if (!Files.isRegularFile(part) || !Files.isRegularFile(metaPathForRead)) {
             return null;
         }
         try {
             ResumeMeta meta = GSON.fromJson(
                     Files.readString(metaPathForRead), ResumeMeta.class);
-            if (meta == null || meta.total() != total || meta.segments() == null) {
+            if (meta == null || meta.total() != probe.totalSize() || meta.segments() == null) {
                 return null;
             }
             if (item.sha1() != null && !item.sha1().isBlank()
                     && !item.sha1().equalsIgnoreCase(meta.sha1())) {
                 return null;
             }
-            if (Files.size(part) != total || !meta.matchesPlan()) {
+            if (!validatorsMatch(meta, probe)
+                    || Files.size(part) != probe.totalSize()
+                    || !meta.matchesPlan()) {
                 return null;
             }
+            meta.updateValidators(probe.etag(), probe.lastModified());
             meta.markPersisted(System.nanoTime());
             return meta;
         } catch (RuntimeException e) {
@@ -504,6 +515,40 @@ public final class FileDownloader {
         if (validator != null) {
             validator.validate(file);
         }
+    }
+
+    private static void verifySegmentValidators(HttpResponse<?> response, ResumeMeta meta)
+            throws RangeUnsupportedException {
+        if (meta.etag() != null) {
+            if (!meta.etag().equals(strongEtag(response))) {
+                throw new RangeUnsupportedException("ETag changed during resume");
+            }
+            return;
+        }
+        if (meta.lastModified() != null && !meta.lastModified().equals(lastModified(response))) {
+            throw new RangeUnsupportedException("Last-Modified changed during resume");
+        }
+    }
+
+    private static boolean validatorsMatch(ResumeMeta meta, RangeProbe probe) {
+        if (probe.etag() != null) {
+            return probe.etag().equals(meta.etag());
+        }
+        return probe.lastModified() != null
+                && probe.lastModified().equals(meta.lastModified());
+    }
+
+    private static String strongEtag(HttpResponse<?> response) {
+        String etag = response.headers().firstValue("ETag").orElse(null);
+        return etag == null || etag.isBlank() || etag.regionMatches(true, 0, "W/", 0, 2)
+                ? null
+                : etag;
+    }
+
+    private static String lastModified(HttpResponse<?> response) {
+        return response.headers().firstValue("Last-Modified")
+                .filter(value -> !value.isBlank())
+                .orElse(null);
     }
 
     private static boolean validatesExistingFile(Path file, DownloadValidator validator) {
@@ -593,7 +638,7 @@ public final class FileDownloader {
                 .build();
     }
 
-    private record RangeProbe(boolean ranged, long totalSize) {
+    private record RangeProbe(boolean ranged, long totalSize, String etag, String lastModified) {
     }
 
     private static final class RangeUnsupportedException extends IOException {
@@ -637,15 +682,19 @@ public final class FileDownloader {
     private static final class ResumeMeta {
         private long total;
         private String sha1;
+        private String etag;
+        private String lastModified;
         private List<SegmentState> segments;
 
         private ResumeMeta() {
         }
 
-        static ResumeMeta create(long total, String sha1) {
+        static ResumeMeta create(long total, String sha1, String etag, String lastModified) {
             ResumeMeta meta = new ResumeMeta();
             meta.total = total;
             meta.sha1 = sha1;
+            meta.etag = etag;
+            meta.lastModified = lastModified;
             meta.segments = createSegments(total);
             return meta;
         }
@@ -656,6 +705,23 @@ public final class FileDownloader {
 
         String sha1() {
             return sha1;
+        }
+
+        String etag() {
+            return etag;
+        }
+
+        String lastModified() {
+            return lastModified;
+        }
+
+        String ifRange() {
+            return etag != null ? etag : lastModified;
+        }
+
+        void updateValidators(String etag, String lastModified) {
+            this.etag = etag;
+            this.lastModified = lastModified;
         }
 
         List<SegmentState> segments() {
