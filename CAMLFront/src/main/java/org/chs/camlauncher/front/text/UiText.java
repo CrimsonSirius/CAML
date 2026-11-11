@@ -1,5 +1,7 @@
 package org.chs.camlauncher.front.text;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.chs.camlauncher.language.contract.LanguageConstants;
 import org.chs.camlauncher.language.contract.LanguageTextProvider;
 
@@ -8,6 +10,7 @@ import java.util.Objects;
 
 /** 前端显示适配器；所有语言逻辑由后端 LanguageTextProvider 实现。 */
 public final class UiText {
+    private static final Logger LOGGER = LogManager.getLogger(UiText.class);
     public static final String DEFAULT_LOCALE = LanguageConstants.DEFAULT_LOCALE;
 
     private static volatile LanguageTextProvider provider;
@@ -16,6 +19,9 @@ public final class UiText {
     }
 
     public static void initialize(LanguageTextProvider languageProvider) {
+        if (languageProvider == null) {
+            LOGGER.error("初始化 UiText 失败：LanguageTextProvider 为 null");
+        }
         provider = Objects.requireNonNull(languageProvider, "languageProvider");
     }
 
@@ -46,6 +52,7 @@ public final class UiText {
     private static LanguageTextProvider requireProvider() {
         LanguageTextProvider current = provider;
         if (current == null) {
+            LOGGER.error("UiText 尚未初始化，无法获取后端语言文本");
             throw new IllegalStateException("UiText is not initialized");
         }
         return current;
