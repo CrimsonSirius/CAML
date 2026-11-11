@@ -24,7 +24,7 @@ CAML 是一个基于 **Java 25 + JavaFX** 的 Minecraft 启动器，采用前后
 | Java | 扫描 `java.home`、`JAVA_HOME`、`PATH` 及常见 JDK 目录；读取版本、供应商、架构、位数；按版本要求选择运行时；Windows 优先 `javaw.exe` |
 | 启动 | 不可变 `LaunchPlan`、classpath 构建、JVM/游戏参数与 `${...}` 占位符、natives 子目录解压、Log4j 配置、旧版本 virtual assets 重建；NeoForge 26.2 + Vulkan 自动关闭 early window；根据设置选择，`--gameDir` 指向 `versions/<id>` 或 `.minecraft` 根目录 |
 | 进程 | `ProcessBuilder` 启动、工作目录与环境变量、stdout/stderr 转发、Minecraft Log4j XML 转原版日志风格、退出码回调、停止能力；命令行过长时自动回退 `@argfile` / manifest classpath jar；`LaunchException` 分类错误并提供中文提示 |
-| 多语言 | 独立 `CAMLLanguage` 模块；内置 `zh_cn`、`en_us`，首次启动复制到 `~/.caml/lang`，之后从该目录读取；视图与控制器只引用翻译键，`Language.tr` 支持占位符和缺失键回退；翻译文件由 `LanguageTranslationGenerator` 子类生成，`:CAMLLanguage:generateTranslation` 刷新 |
+| 多语言 | 独立 `CAMLLanguage` 模块；内置 `zh_cn`、`en_us`、`fn_cn`，首次启动复制到 `~/.caml/lang`，之后从该目录读取；视图与控制器只引用翻译键，`Language.tr` 支持占位符和缺失键回退；语言下拉框中的语言名硬编码在 `Language.NATIVE_NAMES`，使用该语言自己的写法且不随界面语言变化；翻译文件由 `LanguageTranslationGenerator` 子类生成，`:CAMLLanguage:generateTranslation` 刷新 |
 
 ### 尚未实现
 
@@ -70,8 +70,8 @@ CAML/
 │  │  ├─ LanguageTranslationGenerator.java 翻译生成器抽象类
 │  │  ├─ TranslationTable.java        翻译键值表（实例 put，拒绝重复键）
 │  │  ├─ TranslationGeneratorRunner.java 生成任务入口
-│  │  └─ generator/                   ZHCNGenerator、ENUSGenerator
-│  ├─ src/main/resources/lang/        zh_cn.json、en_us.json
+│  │  └─ generator/                   ZHCNGenerator、ENUSGenerator、FNCNGenerator
+│  ├─ src/main/resources/lang/        zh_cn.json、en_us.json、fn_cn.json
 │  └─ src/test/java/                  LanguageTest
 ├─ CAMLFront/                         JavaFX 界面（不直接读写文件/发 HTTP/启动进程）
 │  ├─ src/main/java/org/chs/camlauncher/front/
@@ -199,8 +199,10 @@ CamlCard card = new CamlCard(
 ```text
 CAMLLanguage/src/main/resources/lang/zh_cn.json
 CAMLLanguage/src/main/resources/lang/en_us.json
+CAMLLanguage/src/main/resources/lang/fn_cn.json
 ~/.caml/lang/zh_cn.json
 ~/.caml/lang/en_us.json
+~/.caml/lang/fn_cn.json
 ```
 
 首次启动时，`CAMLLanguage` 把内置语言文件复制到 `~/.caml/lang`；之后只从该目录读取，
@@ -216,15 +218,19 @@ statusLabel.setText(Language.tr("home.instance.current", version));
 ```
 
 - `Language.tr(key)` 找不到键时直接返回键名，方便发现遗漏；支持 `%s` / `%d` 等占位符。
-- 当前语言按顺序取 `-Dcaml.language`、系统语言（`en*` → `en_us`，其余 → `zh_cn`）。
+- 当前语言按顺序取 `-Dcaml.language`、系统语言（`en*` → `en_us`，其余 → `Language.DEFAULT_LOCALE`）。
 - 首次启动时 `CAMLLanguage` 把内置 `lang/*.json` 复制到 `~/.caml/lang`；之后从该目录读取。
   已存在的文件不覆盖，缺失的内置文件会在下次启动补齐。
 - 设置 → 外观 → 语言提供“自动 / 手动”两种模式；手动模式可从语言下拉框选择
-  `zh_cn` 或 `en_us`。模式与手动语言分别保存在 `settings.properties` 的
+  `zh_cn`、`en_us` 或 `fn_cn`。模式与手动语言分别保存在 `settings.properties` 的
   `languageMode` 和 `language`，切换后立即重建主视图刷新界面文案。
+- 语言下拉框中的语言名不参与翻译，始终使用该语言自己的写法：`zh_cn` → `简体中文`、
+  `en_us` → `English`、`fn_cn` → `地道中国话`。名称**硬编码**在 `Language.NATIVE_NAMES`，
+  不写入也不读取翻译文件，因此切换界面语言、或翻译文件写错名称都不会改变下拉框内容；
+  未登记的 locale 回退显示 locale 标识。新增内置语言时在 `Language.NATIVE_NAMES` 中登记自称。
 - 语言文件**由代码生成**，不要手工编辑：每种语言实现一个继承
   `LanguageTranslationGenerator` 的生成器（`CAMLLanguage` 下的 `ZHCNGenerator`、
-  `ENUSGenerator`），在 `populate(TranslationTable)` 中用实例方法登记键和文案：
+  `ENUSGenerator`、`FNCNGenerator`），在 `populate(TranslationTable)` 中用实例方法登记键和文案：
 
   ```java
   @Override
@@ -234,23 +240,8 @@ statusLabel.setText(Language.tr("home.instance.current", version));
   }
   ```
 
-- `CAMLLanguage` 模块只存放语言运行时、生成器和语言资源；运行时入口
-  `Language`、抽象基类 `LanguageTranslationGenerator`、翻译表 `TranslationTable`
-  和生成入口 `TranslationGeneratorRunner` 都放在 `org.chs.camlauncher.language` 根目录。
-- 新增语言只需在 `generator` 下添加一个生成器，并在 `TranslationGeneratorRunner` 中登记。
-
-生成翻译文件：
-
-```bash
-# Windows
-.\gradlew.bat :CAMLLanguage:generateTranslation
-
-# Linux / macOS
-./gradlew :CAMLLanguage:generateTranslation
-```
-
-任务会先编译 `CAMLLanguage`，再把结果写入 `CAMLLanguage/src/main/resources/lang`；
-`LanguageTest` 会校验生成器与已提交的 JSON 保持一致，并检查各语言键集合相同。
+- 新增语言只需在 `generator` 下添加一个生成器、在 `TranslationGeneratorRunner` 中登记，
+  并在 `Language.NATIVE_NAMES` 中补充该语言的自称（语言名不写进翻译文件）。
 
 ### 主题系统
 

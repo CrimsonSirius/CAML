@@ -1,6 +1,7 @@
 package org.chs.camlauncher.language;
 
 import org.chs.camlauncher.language.generator.ENUSGenerator;
+import org.chs.camlauncher.language.generator.FNCNGenerator;
 import org.chs.camlauncher.language.generator.ZHCNGenerator;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -68,11 +69,33 @@ class LanguageTest {
 
     @Test
     void exposesSupportedLocalesAndNormalization() {
-        assertEquals(List.of("zh_cn", "en_us"), Language.supportedLocales());
+        assertEquals(List.of("zh_cn", "en_us", "fn_cn"), Language.supportedLocales());
         assertTrue(Language.isSupportedLocale("EN-US"));
         assertEquals("en_us", Language.normalizeLocale("EN-US"));
         assertTrue(Files.isRegularFile(dataDirectory.resolve("lang").resolve("zh_cn.json")));
         assertTrue(Files.isRegularFile(dataDirectory.resolve("lang").resolve("en_us.json")));
+        assertTrue(Files.isRegularFile(dataDirectory.resolve("lang").resolve("fn_cn.json")));
+    }
+
+    @Test
+    void localeDisplayNamesAreHardcodedAndIgnoreLanguageFiles() throws IOException {
+        List<String> expected = List.of("简体中文", "English", "地道中国话");
+
+        Language.setLocale("zh_cn");
+        assertEquals(expected, displayNames());
+        Language.setLocale("en_us");
+        assertEquals(expected, displayNames());
+        Language.setLocale("fn_cn");
+        assertEquals(expected, displayNames());
+
+        // 翻译文件里写错语言名也不会影响下拉框
+        Files.writeString(dataDirectory.resolve("lang").resolve("zh_cn.json"),
+                "{\"settings.appearance.language.zh_cn\":\"Wrong name\"}");
+        Language.setLocale("zh_cn");
+        assertEquals(expected, displayNames());
+
+        assertEquals("简体中文", Language.localeDisplayName("ZH-CN"));
+        assertEquals("fr_fr", Language.localeDisplayName("fr_fr"));
     }
 
     @Test
@@ -89,10 +112,13 @@ class LanguageTest {
     void generatedFilesMatchEachOther(@TempDir Path tempDirectory) throws IOException {
         Map<String, String> zhen = generated(tempDirectory, new ZHCNGenerator());
         Map<String, String> enus = generated(tempDirectory, new ENUSGenerator());
+        Map<String, String> fncn = generated(tempDirectory, new FNCNGenerator());
 
         assertFalse(zhen.isEmpty(), "中文翻译不能为空");
         assertEquals(new TreeMap<>(zhen).keySet(), new TreeMap<>(enus).keySet(),
                 "中英文翻译键必须一致");
+        assertEquals(new TreeMap<>(zhen).keySet(), new TreeMap<>(fncn).keySet(),
+                "各语言翻译键必须一致");
     }
 
     @Test
@@ -117,5 +143,9 @@ class LanguageTest {
         return new com.google.gson.Gson().fromJson(json, new com.google.gson.reflect.TypeToken<
                 java.util.LinkedHashMap<String, String>>() {
         }.getType());
+    }
+
+    private static List<String> displayNames() {
+        return Language.supportedLocales().stream().map(Language::localeDisplayName).toList();
     }
 }

@@ -267,14 +267,19 @@ CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
   键缺失时返回键名本身。
 - `CAMLApplication` 启动时调用 `Language.initialize(dataDirectory)`，把内置语言文件复制到
   `~/.caml/lang`；已存在的文件不覆盖，之后只从该目录加载并自动发现用户新增的 `.json`。
-- 语言选择顺序：系统属性 `caml.language` → 系统语言（`en*` 用 `en_us`，其余用 `zh_cn`）。
-  找不到对应文件时回退 `zh_cn`。
+- 语言选择顺序：系统属性 `caml.language` → 系统语言（`en*` 用 `en_us`，其余用默认语言）。
+  找不到对应文件时回退默认语言。
+- 语言下拉框中的语言名**不参与翻译**：`Language.localeDisplayName(locale)` 直接查运行时硬编码的
+  `Language.NATIVE_NAMES`，既不读取翻译文件也不经过当前界面语言，因此 `zh_cn` 永远显示
+  “简体中文”、`en_us` 永远显示“English”、`fn_cn` 永远显示“地道中国话”；翻译文件写错名称
+  或用户改坏语言文件都不会影响下拉框。未登记的自定义语言显示 locale 标识。
+- 新增内置语言时在 `Language.NATIVE_NAMES` 中登记该语言的自称，翻译文件只登记界面文案。
 - 设置 → 外观 → 语言提供自动/手动两种模式；模式与手动语言写入
   `~/.caml/settings.properties` 的 `languageMode`、`language`。手动切换后
   `CAMLApplication` 复用当前 `LaunchSettings` 快照重建 `MainView`，立即应用新语言。
 - `LanguageTranslationGenerator` 是抽象生成器，负责写 JSON；`TranslationTable` 按键排序保存文案，
   `put(key, value)` 为实例方法并拒绝重复键。每种语言一个生成器子类，只放在 `language/generator`
-  （`ZHCNGenerator`、`ENUSGenerator`）；运行时入口 `Language`、抽象基类、`TranslationTable`
+  （`ZHCNGenerator`、`ENUSGenerator`、`FNCNGenerator`）；运行时入口 `Language`、抽象基类、`TranslationTable`
   和 `TranslationGeneratorRunner` 都在 `CAMLLanguage` 模块的 `org.chs.camlauncher.language` 根目录。
 - `TranslationGeneratorRunner` 遍历生成器；Gradle 任务 `:CAMLLanguage:generateTranslation`
   先编译再生成，`.run/generateTranslation` 提供 IDEA 入口。

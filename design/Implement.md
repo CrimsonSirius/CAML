@@ -308,15 +308,19 @@ CAML
 
 - 多语言运行时位于独立 `CAMLLanguage` 模块，视图和控制器统一调用
   `org.chs.camlauncher.language.Language.tr(key[, args])`。
-- 内置翻译键与文案放在 `CAMLLanguage/src/main/resources/lang/zh_cn.json` 和 `en_us.json`；
+- 内置翻译键与文案放在 `CAMLLanguage/src/main/resources/lang/zh_cn.json`、`en_us.json` 和 `fn_cn.json`；
   首次启动复制到 `~/.caml/lang`，之后运行时不覆盖并从该目录读取。
   结构参考 Minecraft 的 `lang` 文件（扁平键 + `%s`/`%d` 占位符）。
 - `Language` 在首次调用时按 `-Dcaml.language`、系统语言顺序选择语言，
-  缺失文件回退 `zh_cn`；键缺失返回键名。
+  缺失文件回退默认语言（`Language.DEFAULT_LOCALE`）；键缺失返回键名。
+- 语言下拉框中的语言名不参与翻译：`Language.localeDisplayName(locale)` 直接读取运行时硬编码的
+  `Language.NATIVE_NAMES`，所以 `zh_cn` 恒为“简体中文”、`en_us` 恒为“English”、
+  `fn_cn` 恒为“地道中国话”，切换界面语言或翻译文件写错名称都不会改变列表内容；
+  没有登记名称的自定义语言显示 locale 标识。新增内置语言时在 `Language.NATIVE_NAMES` 登记自称。
 - `LanguageTranslationGenerator` 负责写 JSON；`TranslationTable` 按键排序保存文案，
   子类以实例方法 `t.put(key, value)` 登记，重复键直接失败。
 - `language/generator` 只存放生成 `lang/*.json` 的语言类：
-  `ZHCNGenerator` 与 `ENUSGenerator`；`Language`、抽象基类、`TranslationTable`
+  `ZHCNGenerator`、`ENUSGenerator` 与 `FNCNGenerator`；`Language`、抽象基类、`TranslationTable`
   和 `TranslationGeneratorRunner` 位于 `CAMLLanguage` 的 `org.chs.camlauncher.language` 根目录。
 - Gradle 任务 `:CAMLLanguage:generateTranslation`（`.run/generateTranslation`）先编译再生成，
   输出到 `CAMLLanguage/src/main/resources/lang`。
@@ -448,4 +452,3 @@ PATH=/usr/lib/jvm/zulu-25/bin:$PATH \
 - [界面设计](ui.md)
 - [版本下载与启动链路](version-download-and-launch.md)
 - [runtime 包](runtime.md)
-

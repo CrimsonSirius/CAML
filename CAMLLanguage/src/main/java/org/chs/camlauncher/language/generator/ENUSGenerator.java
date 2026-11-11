@@ -292,8 +292,6 @@ public final class ENUSGenerator extends LanguageTranslationGenerator {
         t.put("settings.appearance.language.label", "Interface language");
         t.put("settings.appearance.language.hint", "Automatic follows the system language; manual uses the language selected below.");
         t.put("settings.appearance.language.accessible", "Interface language");
-        t.put("settings.appearance.language.zh_cn", "Simplified Chinese");
-        t.put("settings.appearance.language.en_us", "English");
 
         // Instance picker
         t.put("instances.picker.scanning", "Scanning game instances...");

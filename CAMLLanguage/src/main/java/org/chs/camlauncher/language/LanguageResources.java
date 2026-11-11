@@ -9,7 +9,7 @@ import java.util.List;
 
 /** 内置语言资源安装与读取。 */
 final class LanguageResources {
-    static final List<String> BUNDLED_LOCALES = List.of("zh_cn", "en_us");
+    static final List<String> BUNDLED_LOCALES = List.of("zh_cn", "en_us", "fn_cn");
     private static final String RESOURCE_ROOT = "/lang/";
 
     private LanguageResources() {
