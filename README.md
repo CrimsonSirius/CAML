@@ -219,7 +219,8 @@ statusLabel.setText(Language.tr("home.instance.current", version));
 ```
 
 - `Language.tr(key)` 找不到键时直接返回键名，方便发现遗漏；支持 `%s` / `%d` 等占位符。
-- 当前语言按顺序取 `-Dcaml.language`、系统语言（`en*` → `en_us`，其余 → `Language.DEFAULT_LOCALE`）。
+- 当前语言按顺序取 `-Dcaml.language`、系统语言。默认语言是 `en_us`，因此只需识别简体中文系统：
+  `zh_CN` / `zh_SG` 等简体中文系统使用 `zh_cn`，其余系统（含尚未提供翻译的繁体中文）一律使用 `en_us`。
 - 每次启动时 `CAMLLanguage` 把内置 `lang/*.json` 与 `~/.caml/lang` 的同名文件按键值比对，
   不一致（含 JSON 损坏）就按内置文件重写；非内置语言文件始终原样保留。
 - 设置 → 外观 → 语言提供“自动 / 手动”两种模式；手动模式可从语言下拉框选择

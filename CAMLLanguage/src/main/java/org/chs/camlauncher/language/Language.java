@@ -30,11 +30,19 @@ import java.util.stream.Stream;
  * {@link #initialize(Path)} 在启动时同步：缺失或内容与内置资源不一致时按内置资源重写，
  * 用户自行新增的语言文件保持原样。翻译键缺失时回退为键名，方便发现遗漏。</p>
  *
- * <p>语言选择顺序：系统属性 {@code caml.language}、系统语言（en → {@code en_us}，
- * 其余回退到 {@code zh_cn}）。</p>
+ * <p>语言选择顺序：系统属性 {@code caml.language} → 系统语言。默认语言是
+ * {@code en_us}，因此只需识别简体中文系统：简体中文使用 {@code zh_cn}，其余系统
+ * （含尚未提供翻译的繁体中文）一律使用默认语言。</p>
  */
 public final class Language {
-    public static final String DEFAULT_LOCALE = "fn_cn";
+    public static final String DEFAULT_LOCALE = "en_us";
+
+    /** 简体中文语言的 locale 标识。 */
+    public static final String SIMPLIFIED_CHINESE_LOCALE = "zh_cn";
+
+    private static final String CHINESE_LANGUAGE = "zh";
+    private static final String TRADITIONAL_SCRIPT = "Hant";
+    private static final Set<String> TRADITIONAL_REGIONS = Set.of("TW", "HK", "MO");
 
     /**
      * 内置语言的自称，硬编码在运行时而不是翻译文件里。
@@ -219,8 +227,25 @@ public final class Language {
         if (override != null && !override.isBlank()) {
             return normalize(override);
         }
-        String language = Locale.getDefault().getLanguage();
-        return "en".equalsIgnoreCase(language) ? "en_us" : DEFAULT_LOCALE;
+        return detectSystemLocale(Locale.getDefault());
+    }
+
+    /**
+     * 按系统语言选择界面语言：简体中文系统 → {@code zh_cn}，其余一律默认语言 {@code en_us}。
+     *
+     * <p>默认语言就是英语，所以不需要再检测英语系统，只需识别简体中文。繁体中文
+     * （脚本 {@code Hant} 或台港澳地区）暂无翻译，先回退默认语言，待繁体语言文件
+     * 补齐后在这里映射到对应 locale。</p>
+     */
+    static String detectSystemLocale(Locale systemLocale) {
+        if (systemLocale == null || !CHINESE_LANGUAGE.equalsIgnoreCase(systemLocale.getLanguage())) {
+            return DEFAULT_LOCALE;
+        }
+        if (TRADITIONAL_SCRIPT.equalsIgnoreCase(systemLocale.getScript())) {
+            return DEFAULT_LOCALE;
+        }
+        String country = systemLocale.getCountry().toUpperCase(Locale.ROOT);
+        return TRADITIONAL_REGIONS.contains(country) ? DEFAULT_LOCALE : SIMPLIFIED_CHINESE_LOCALE;
     }
 
     private static String normalize(String locale) {
