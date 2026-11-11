@@ -39,7 +39,11 @@ public final class CamlTheme {
         if (!scene.getStylesheets().contains(base)) {
             scene.getStylesheets().add(base);
         }
-        Parent root = scene.getRoot();
+        markRoot(scene.getRoot());
+    }
+
+    /** 给即将挂到场景上的主题根节点添加 {@code caml-root} 标记。 */
+    public static void markRoot(Parent root) {
         if (root != null && !root.getStyleClass().contains(ROOT_CLASS)) {
             root.getStyleClass().add(ROOT_CLASS);
         }

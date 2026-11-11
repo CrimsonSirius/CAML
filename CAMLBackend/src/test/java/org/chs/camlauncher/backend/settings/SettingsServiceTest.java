@@ -250,4 +250,21 @@ class SettingsServiceTest {
         assertEquals(second, loaded.selectedJavaPath().orElseThrow());
         assertEquals(List.of(first, second), loaded.manualJavaPaths());
     }
+
+    @Test
+    void defaultsToAutomaticLanguageSelection() throws Exception {
+        SettingsService service = new SettingsService(dataDirectory);
+
+        assertEquals(LanguageSelectionMode.AUTO, service.languageSelectionMode());
+        assertTrue(service.language().isEmpty());
+    }
+
+    @Test
+    void persistsLanguageSelectionAndNormalizesLocale() throws Exception {
+        new SettingsService(dataDirectory).setLanguage(LanguageSelectionMode.MANUAL, "EN-US");
+
+        SettingsService loaded = new SettingsService(dataDirectory);
+        assertEquals(LanguageSelectionMode.MANUAL, loaded.languageSelectionMode());
+        assertEquals("en_us", loaded.language().orElseThrow());
+    }
 }

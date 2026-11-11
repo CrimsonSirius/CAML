@@ -4,21 +4,24 @@ import javafx.scene.Node;
 import javafx.scene.control.Label;
 import javafx.scene.layout.BorderPane;
 import org.chs.camlauncher.backend.api.BackendStatus;
-import org.chs.camlauncher.backend.theme.ThemeInfo;
-import org.chs.camlauncher.backend.system.SystemMemoryInfo;
 import org.chs.camlauncher.backend.runtime.JavaSelectionMode;
+import org.chs.camlauncher.backend.settings.LanguageSelectionMode;
+import org.chs.camlauncher.backend.system.SystemMemoryInfo;
+import org.chs.camlauncher.backend.theme.ThemeInfo;
 import org.chs.camlauncher.front.controller.DownloadsController;
 import org.chs.camlauncher.front.controller.HomeController;
 import org.chs.camlauncher.front.controller.MainController;
 import org.chs.camlauncher.front.controller.SettingsController;
-import org.chs.camlauncher.front.translation.Language;
+import org.chs.camlauncher.language.Language;
 import org.chs.camlauncher.ui.control.CamlPageHost;
 import org.chs.camlauncher.ui.control.CamlTopBar;
 import org.chs.camlauncher.ui.control.CamlTopNav;
 import org.chs.camlauncher.ui.control.CamlTopNavItem;
 
-import java.util.List;
 import java.nio.file.Path;
+import java.util.List;
+import java.util.Objects;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 /**
@@ -29,27 +32,49 @@ import java.util.function.Consumer;
  */
 public final class MainView extends BorderPane {
     private final MainController controller;
+    private final LaunchSettings launchSettings;
+    private final SystemMemoryInfo systemMemory;
+    private final BiConsumer<LanguageSelectionMode, String> onLanguageChanged;
     private final HomeView homeView;
     private final DownloadsView downloadsView;
     private final SettingsView settingsView;
     private final CamlPageHost pageHost;
+    private CamlTopNav navigation;
+    private CamlTopNavItem settingsNavItem;
     private PageLifecycle activePage;
+    private LanguageSelectionMode languageMode;
+    private String language;
 
     public MainView(MainController controller, int initialMaxMemoryMb,
                     SystemMemoryInfo systemMemory, Path initialGameDirectory,
                     boolean fullVersionIsolation, String initialSelectedInstance,
-                    JavaSelectionMode initialJavaSelectionMode, Path initialJavaPath) {
-        this.controller = controller;
-        getStyleClass().add("app-root");
-
-        LaunchSettings launchSettings = new LaunchSettings(
+                    JavaSelectionMode initialJavaSelectionMode, Path initialJavaPath,
+                    LanguageSelectionMode initialLanguageMode, String initialLanguage,
+                    BiConsumer<LanguageSelectionMode, String> onLanguageChanged) {
+        this(controller, new LaunchSettings(
                 initialMaxMemoryMb,
                 initialGameDirectory,
                 fullVersionIsolation,
                 initialSelectedInstance,
                 initialJavaSelectionMode,
                 initialJavaPath
-        );
+        ), systemMemory, initialLanguageMode, initialLanguage, onLanguageChanged);
+    }
+
+    private MainView(MainController controller, LaunchSettings launchSettings,
+                     SystemMemoryInfo systemMemory, LanguageSelectionMode initialLanguageMode,
+                     String initialLanguage,
+                     BiConsumer<LanguageSelectionMode, String> onLanguageChanged) {
+        this.controller = Objects.requireNonNull(controller, "controller");
+        this.launchSettings = Objects.requireNonNull(launchSettings, "launchSettings");
+        this.systemMemory = Objects.requireNonNull(systemMemory, "systemMemory");
+        this.onLanguageChanged = Objects.requireNonNull(onLanguageChanged, "onLanguageChanged");
+        this.languageMode = initialLanguageMode == null
+                ? LanguageSelectionMode.AUTO
+                : initialLanguageMode;
+        this.language = initialLanguage == null ? Language.DEFAULT_LOCALE : initialLanguage;
+        getStyleClass().add("app-root");
+
         HomeController homeController = controller.homeController();
         DownloadsController downloadsController = controller.downloadsController();
         SettingsController settingsController = controller.settingsController();
@@ -59,7 +84,14 @@ public final class MainView extends BorderPane {
                 settingsController::saveMaxMemoryMbAsync,
                 settingsController::saveVersionIsolationAsync,
                 systemMemory,
-                settingsController
+                settingsController,
+                languageMode,
+                language,
+                (mode, locale) -> {
+                    this.languageMode = mode;
+                    this.language = locale == null ? Language.DEFAULT_LOCALE : locale;
+                    this.onLanguageChanged.accept(mode, this.language);
+                }
         );
         homeView = new HomeView(homeController, launchSettings);
         downloadsView = new DownloadsView(downloadsController, launchSettings);
@@ -73,20 +105,34 @@ public final class MainView extends BorderPane {
         setBottom(buildFooter());
     }
 
-    private CamlTopBar buildTopBar() {
-        CamlTopBar bar = new CamlTopBar("CAML", "Minecraft Launcher");
+    /** 使用当前共享状态重建视图，用于语言切换后立即刷新全部文案。 */
+    public MainView recreate() {
+        LaunchSettings copiedSettings = new LaunchSettings(
+                launchSettings.maxMemoryMb(),
+                launchSettings.gameDirectory(),
+                launchSettings.fullVersionIsolation(),
+                launchSettings.selectedVersion(),
+                launchSettings.javaSelectionMode(),
+                launchSettings.selectedJavaPath()
+        );
+        return new MainView(controller, copiedSettings, systemMemory,
+                languageMode, language, onLanguageChanged);
+    }
 
-        CamlTopNav navigation = new CamlTopNav();
+    private CamlTopBar buildTopBar() {
+        CamlTopBar bar = new CamlTopBar("CAML", Language.tr("app.subtitle"));
+
+        navigation = new CamlTopNav();
         CamlTopNavItem home = navigation.addItem(Language.tr("nav.home"));
         CamlTopNavItem downloads = navigation.addItem(Language.tr("nav.downloads"));
-        CamlTopNavItem settings = navigation.addItem(Language.tr("nav.settings"));
+        settingsNavItem = navigation.addItem(Language.tr("nav.settings"));
         navigation.select(home);
         navigation.selectedItemProperty().addListener((observable, oldValue, selected) -> {
             if (selected == home) {
                 showPage(homeView);
             } else if (selected == downloads) {
                 showPage(downloadsView);
-            } else if (selected == settings) {
+            } else if (selected == settingsNavItem) {
                 showPage(settingsView);
             }
         });
@@ -108,12 +154,11 @@ public final class MainView extends BorderPane {
 
     private Label buildFooter() {
         BackendStatus backendStatus = controller.status();
-        Label footer = new Label(Language.tr(
-                "footer.status",
+        Label footer = new Label(Language.tr("footer.status",
                 backendStatus.version(),
-                Language.tr(backendStatus.ready()
-                        ? "footer.backend.ready"
-                        : "footer.backend.notReady"),
+                backendStatus.ready()
+                        ? Language.tr("footer.backend.ready")
+                        : Language.tr("footer.backend.notReady"),
                 backendStatus.dataDirectory()));
         footer.getStyleClass().addAll("caml-body-small", "app-footer-bar");
         footer.setWrapText(true);
@@ -129,6 +174,12 @@ public final class MainView extends BorderPane {
     /** 提交所有仍处于防抖窗口内的设置修改。 */
     public void flushPendingSettings() {
         settingsView.flushPendingSettings();
+    }
+
+    /** 语言切换重建后回到设置页的外观分组。 */
+    public void showSettingsPage() {
+        navigation.select(settingsNavItem);
+        settingsView.showAppearanceSection();
     }
 
     public void dispose() {

@@ -1,4 +1,4 @@
-package org.chs.camlauncher.front.translation;
+package org.chs.camlauncher.language;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -9,7 +9,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 /**
- * 前端翻译文件生成器基类。
+ * CAML 翻译文件生成器基类。
  *
  * <p>每种语言实现一个子类（例如 {@code ZHCNGenerator}），在 {@link #populate(TranslationTable)}
  * 中以 {@code t.put(key, value)} 登记翻译键和文案。{@link #generate(Path)} 统一校验、排序并写出

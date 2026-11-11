@@ -1,4 +1,4 @@
-package org.chs.camlauncher.front.translation;
+package org.chs.camlauncher.language;
 
 import java.util.TreeMap;
 

@@ -1,5 +1,6 @@
 package org.chs.camlauncher.backend.loader.optifine;
 
+import org.chs.camlauncher.backend.error.BackendError;
 import org.chs.camlauncher.backend.loader.forge.ForgeVersion;
 
 import java.util.Objects;
@@ -19,9 +20,13 @@ public final class OptiFineCompatibility {
         return compareVersions(forge.version(), "47.4.27") < 0;
     }
 
-    public static String incompatibleMessage(ForgeVersion forge, OptiFineVersion optiFine) {
-        return "Forge " + forge.version() + " 与 OptiFine " + optiFine.version()
-                + " 不兼容，请选择 Forge 47.4.26 或更早版本。";
+    public static BackendError incompatibleError(ForgeVersion forge, OptiFineVersion optiFine) {
+        return BackendError.of(
+                "download.setup.optifineForgeConflict",
+                forge.version(),
+                optiFine.version(),
+                "47.4.26"
+        );
     }
 
     static int compareVersions(String left, String right) {

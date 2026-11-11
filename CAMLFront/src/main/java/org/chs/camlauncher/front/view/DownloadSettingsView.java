@@ -9,7 +9,7 @@ import javafx.scene.layout.VBox;
 import javafx.util.Duration;
 import org.chs.camlauncher.backend.download.source.DownloadSourceMode;
 import org.chs.camlauncher.backend.settings.SettingsService;
-import org.chs.camlauncher.front.translation.Language;
+import org.chs.camlauncher.language.Language;
 import org.chs.camlauncher.ui.control.CamlRadioButton;
 import org.chs.camlauncher.ui.control.CamlSlider;
 import org.chs.camlauncher.ui.control.CamlTextField;

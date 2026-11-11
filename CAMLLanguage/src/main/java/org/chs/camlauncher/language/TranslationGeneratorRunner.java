@@ -1,7 +1,7 @@
-package org.chs.camlauncher.front.translation;
+package org.chs.camlauncher.language;
 
-import org.chs.camlauncher.front.translation.generator.ENUSGenerator;
-import org.chs.camlauncher.front.translation.generator.ZHCNGenerator;
+import org.chs.camlauncher.language.generator.ENUSGenerator;
+import org.chs.camlauncher.language.generator.ZHCNGenerator;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -12,14 +12,14 @@ import java.util.List;
  * 翻译文件生成入口。
  *
  * <p>由 Gradle {@code generateTranslation} 任务调用，依次执行所有
- * {@link LanguageTranslationGenerator}，把结果写入 {@code CAMLFront/src/main/resources/lang}。</p>
+ * {@link LanguageTranslationGenerator}，把结果写入 {@code CAMLLanguage/src/main/resources/lang}。</p>
  */
 public final class TranslationGeneratorRunner {
     private TranslationGeneratorRunner() {
     }
 
     public static void main(String[] args) throws IOException {
-        Path output = Path.of(args.length > 0 ? args[0] : "CAMLFront/src/main/resources/lang");
+        Path output = Path.of(args.length > 0 ? args[0] : "CAMLLanguage/src/main/resources/lang");
         Files.createDirectories(output);
         List<LanguageTranslationGenerator> generators = List.of(
                 new ZHCNGenerator(),

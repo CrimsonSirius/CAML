@@ -1,7 +1,8 @@
 package org.chs.camlauncher.front.view;
 
 import org.chs.camlauncher.backend.download.DownloadListener;
-import org.chs.camlauncher.front.translation.Language;
+import org.chs.camlauncher.backend.download.DownloadStage;
+import org.chs.camlauncher.language.Language;
 
 import java.util.ArrayDeque;
 import java.util.Deque;
@@ -108,6 +109,17 @@ final class DownloadTelemetry implements DownloadListener {
                 currentStage = stage;
             }
         }
+    }
+
+    @Override
+    public void onStage(DownloadStage stage) {
+        if (stage == null) {
+            return;
+        }
+        String label = stage.detail() == null
+                ? Language.tr("download.stage." + stage.key())
+                : Language.tr("download.stage." + stage.key(), stage.detail());
+        onStage(label);
     }
 
     void markCompleted() {

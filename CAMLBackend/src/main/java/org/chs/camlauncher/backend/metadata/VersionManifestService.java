@@ -1,5 +1,7 @@
 package org.chs.camlauncher.backend.metadata;
 
+import org.chs.camlauncher.backend.error.BackendError;
+import org.chs.camlauncher.backend.error.BackendException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.chs.camlauncher.backend.download.source.DownloadSource;
@@ -139,7 +141,9 @@ public final class VersionManifestService {
                         uri, attempt + 1, sourceAttempts, lastFailure.getMessage());
             }
         }
-        throw lastFailure == null ? new IOException("请求失败：" + uri) : lastFailure;
+        throw lastFailure == null
+                ? new BackendException(BackendError.of("network.requestFailed", uri, uri))
+                : lastFailure;
     }
 
     private String fetchFollowingRedirects(URI uri, long deadline)
@@ -148,7 +152,8 @@ public final class VersionManifestService {
         for (int redirects = 0; redirects <= MAX_REDIRECTS; redirects++) {
             long remainingNanos = deadline - System.nanoTime();
             if (remainingNanos <= 0) {
-                throw new IOException("请求超时（" + requestTimeout.toMillis() + "ms）：" + uri);
+                throw new BackendException(BackendError.of(
+                        "network.timeout", requestTimeout.toMillis(), uri));
             }
 
             HttpRequest request = HttpRequest.newBuilder(current)
@@ -165,13 +170,14 @@ public final class VersionManifestService {
                 response = future.get(remainingNanos, TimeUnit.NANOSECONDS);
             } catch (TimeoutException e) {
                 future.cancel(true);
-                throw new IOException(
-                        "请求超时（" + requestTimeout.toMillis() + "ms）：" + uri, e);
+                throw new BackendException(
+                        BackendError.of("network.timeout", requestTimeout.toMillis(), uri), e);
             } catch (ExecutionException e) {
                 Throwable cause = e.getCause() == null ? e : e.getCause();
                 throw cause instanceof IOException ioException
                         ? ioException
-                        : new IOException("请求失败：" + current, cause);
+                        : new BackendException(
+                                BackendError.of("network.requestFailed", current, current), cause);
             } catch (InterruptedException e) {
                 future.cancel(true);
                 Thread.currentThread().interrupt();
@@ -185,14 +191,16 @@ public final class VersionManifestService {
             if (isRedirect(status)) {
                 String location = response.headers().firstValue("Location").orElse(null);
                 if (location == null || location.isBlank()) {
-                    throw new IOException("重定向缺少 Location：" + current);
+                    throw new BackendException(
+                            BackendError.of("network.redirectLocationMissing", current));
                 }
                 current = current.resolve(location);
                 continue;
             }
-            throw new IOException("HTTP " + status + " for " + current);
+            throw new BackendException(
+                    BackendError.of("network.httpError", status, current));
         }
-        throw new IOException("重定向次数过多：" + uri);
+        throw new BackendException(BackendError.of("network.tooManyRedirects", uri));
     }
 
     private static boolean isRedirect(int status) {
@@ -210,19 +218,20 @@ public final class VersionManifestService {
                 lastFailure = e;
                 LOGGER.warn("Failed to fetch metadata from {}, trying next source", candidate, e);
             } catch (RuntimeException e) {
-                lastFailure = new IOException("Invalid metadata from " + candidate, e);
+                lastFailure = new BackendException(
+                        BackendError.of("network.responseInvalid", candidate), e);
                 LOGGER.warn("Invalid metadata from {}, trying next source", candidate, e);
             }
         }
         throw lastFailure == null
-                ? new IOException("No download source available for " + uri)
+                ? new BackendException(BackendError.of("network.noSource", uri))
                 : lastFailure;
     }
 
     private VersionManifest parseManifest(String text) throws IOException {
         VersionManifest manifest = metadata.parseVersionManifest(text);
         if (manifest == null || manifest.versions().isEmpty()) {
-            throw new IOException("版本清单为空");
+            throw new BackendException(BackendError.of("metadata.manifestEmpty"));
         }
         return manifest;
     }
@@ -230,7 +239,7 @@ public final class VersionManifestService {
     private VersionInfo parseVersionInfo(String text) throws IOException {
         VersionInfo info = metadata.parseVersionInfo(text);
         if (info == null) {
-            throw new IOException("版本 JSON 为空");
+            throw new BackendException(BackendError.of("metadata.versionJsonEmpty"));
         }
         return info;
     }

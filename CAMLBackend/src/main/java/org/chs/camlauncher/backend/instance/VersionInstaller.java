@@ -3,6 +3,7 @@ package org.chs.camlauncher.backend.instance;
 import org.chs.camlauncher.backend.download.plan.AssetDownloadPlanner;
 import org.chs.camlauncher.backend.download.DownloadCancellationToken;
 import org.chs.camlauncher.backend.download.DownloadConcurrency;
+import org.chs.camlauncher.backend.download.DownloadStage;
 import org.chs.camlauncher.backend.download.io.DownloadExecutor;
 import org.chs.camlauncher.backend.download.model.DownloadItem;
 import org.chs.camlauncher.backend.download.DownloadListener;
@@ -130,12 +131,12 @@ public final class VersionInstaller {
         token.throwIfCancelled();
         Objects.requireNonNull(versionId, "versionId");
         instanceId = validateInstanceId(instanceId);
-        DownloadListener.notifyStage(listener, "获取版本信息");
+        DownloadListener.notifyStage(listener, DownloadStage.of("version.fetch"));
         Path localVersionFile = versionFile(instanceId, gameDirectory);
 
         // 1. 本地已安装：直接读取本地版本 JSON。
         if (Files.isRegularFile(localVersionFile)) {
-            DownloadListener.notifyStage(listener, "检查本地版本");
+            DownloadListener.notifyStage(listener, DownloadStage.of("version.checkLocal"));
             String localJson = Files.readString(localVersionFile, StandardCharsets.UTF_8);
             return complete(instanceId, gameDirectory, localJson, listener, token, false);
         }
@@ -231,13 +232,13 @@ public final class VersionInstaller {
         Path assetsDirectory = gameDirectory.resolve("assets");
 
         token.throwIfCancelled();
-        DownloadListener.notifyStage(listener, "下载游戏文件与依赖库");
+        DownloadListener.notifyStage(listener, DownloadStage.of("version.downloadFiles"));
         downloadPlan(downloadPlanner.plan(resolved, gameDirectory, clientJarId), listener, token);
 
         Path assetIndexFile = null;
         if (resolved.assetIndex() != null) {
             token.throwIfCancelled();
-            DownloadListener.notifyStage(listener, "下载资源文件");
+            DownloadListener.notifyStage(listener, DownloadStage.of("version.downloadAssets"));
             assetIndexFile = SafePaths.resolveChild(
                     assetsDirectory.resolve("indexes"),
                     resolved.assetIndex().id() + ".json",
@@ -248,7 +249,7 @@ public final class VersionInstaller {
 
         if (writeVersionJson) {
             token.throwIfCancelled();
-            DownloadListener.notifyStage(listener, "写入版本信息");
+            DownloadListener.notifyStage(listener, DownloadStage.of("version.writeJson"));
             writeAtomically(versionFile, versionJson);
         }
 

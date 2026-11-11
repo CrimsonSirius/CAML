@@ -57,6 +57,7 @@ import org.chs.camlauncher.backend.runtime.JavaCandidate;
 import org.chs.camlauncher.backend.runtime.JavaRuntime;
 import org.chs.camlauncher.backend.runtime.JavaSelectionMode;
 import org.chs.camlauncher.backend.settings.SettingsService;
+import org.chs.camlauncher.backend.settings.LanguageSelectionMode;
 import org.chs.camlauncher.backend.system.SystemMemoryInfo;
 import org.chs.camlauncher.backend.system.SystemMemoryService;
 import org.chs.camlauncher.backend.theme.ThemeInfo;
@@ -390,6 +391,18 @@ public final class CAMLBackend implements AutoCloseable {
                 : selectedJavaPath.toAbsolutePath().normalize();
         settingsService.setJavaSelection(mode, normalized);
         gameLaunchService.setJavaSelection(mode, normalized);
+    }
+
+    public LanguageSelectionMode languageSelectionMode() throws IOException {
+        return settingsService.languageSelectionMode();
+    }
+
+    public Optional<String> language() throws IOException {
+        return settingsService.language();
+    }
+
+    public void setLanguage(LanguageSelectionMode mode, String locale) throws IOException {
+        settingsService.setLanguage(mode, locale);
     }
 
     public VersionManifestService versionManifestService() {

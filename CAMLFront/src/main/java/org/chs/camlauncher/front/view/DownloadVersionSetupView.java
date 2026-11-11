@@ -11,6 +11,7 @@ import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import javafx.util.Duration;
 import javafx.util.StringConverter;
+import org.chs.camlauncher.backend.error.BackendError;
 import org.chs.camlauncher.backend.loader.fabric.FabricApiVersion;
 import org.chs.camlauncher.backend.loader.fabric.FabricLoaderVersion;
 import org.chs.camlauncher.backend.loader.forge.ForgeVersion;
@@ -20,7 +21,7 @@ import org.chs.camlauncher.backend.loader.optifine.OptiFineCompatibility;
 import org.chs.camlauncher.backend.metadata.model.VersionManifest;
 import org.chs.camlauncher.front.controller.DownloadsController;
 import org.chs.camlauncher.front.controller.FrontTask;
-import org.chs.camlauncher.front.translation.Language;
+import org.chs.camlauncher.language.Language;
 import org.chs.camlauncher.ui.control.CamlButton;
 import org.chs.camlauncher.ui.control.CamlComboBox;
 import org.chs.camlauncher.ui.control.CamlTextField;
@@ -205,7 +206,7 @@ final class DownloadVersionSetupView extends VBox implements PageLifecycle {
                 clearSelection(optiFineSelector, Language.tr("download.setup.optifineIncompatibleForge"));
                 updateOptiFineState();
                 autoUpdateInstanceName(forge.versionId());
-                showStatus(OptiFineCompatibility.incompatibleMessage(forge, optiFine), true);
+                showStatus(translate(OptiFineCompatibility.incompatibleError(forge, optiFine)), true);
                 return;
             }
             updatingLoaders = true;
@@ -252,7 +253,7 @@ final class DownloadVersionSetupView extends VBox implements PageLifecycle {
                         .orElse(null);
                 if (compatible == null) {
                     clearSelection(optiFineSelector, Language.tr("download.setup.noCompatibleOptiFine"));
-                    showStatus(OptiFineCompatibility.incompatibleMessage(forge, optiFine), true);
+                    showStatus(translate(OptiFineCompatibility.incompatibleError(forge, optiFine)), true);
                     return;
                 }
                 updatingLoaders = true;
@@ -345,7 +346,7 @@ final class DownloadVersionSetupView extends VBox implements PageLifecycle {
                 return;
             }
             if (!check.available()) {
-                showInstanceNameHint(check.message(), true);
+                showInstanceNameHint(translate(check.error()), true);
                 return;
             }
             if (hasLoaderSelected() && name.equals(gameVersion)) {
@@ -443,11 +444,11 @@ final class DownloadVersionSetupView extends VBox implements PageLifecycle {
         }
         cancelLoaderTasks();
         updatingLoaders = true;
-        resetSelector(fabricLoaderSelector, "正在获取 Fabric 版本...");
-        resetSelector(fabricApiSelector, "请先选择 Fabric 版本");
-        resetSelector(forgeSelector, "正在获取 Forge 版本...");
-        resetSelector(optiFineSelector, "请先选择 Forge 版本");
-        resetSelector(neoForgeSelector, "正在获取 NeoForge 版本...");
+        resetSelector(fabricLoaderSelector, Language.tr("download.prompt.loading.fabric"));
+        resetSelector(fabricApiSelector, Language.tr("download.prompt.fabricFirst"));
+        resetSelector(forgeSelector, Language.tr("download.prompt.loading.forge"));
+        resetSelector(optiFineSelector, Language.tr("download.prompt.forgeFirst"));
+        resetSelector(neoForgeSelector, Language.tr("download.prompt.loading.neoforge"));
         updatingLoaders = false;
         updateFabricApiState();
         updateOptiFineState();
@@ -583,7 +584,7 @@ final class DownloadVersionSetupView extends VBox implements PageLifecycle {
             return;
         }
         if (optiFine != null && !OptiFineCompatibility.isForgeCompatible(forge, optiFine)) {
-            showStatus(OptiFineCompatibility.incompatibleMessage(forge, optiFine), true);
+            showStatus(translate(OptiFineCompatibility.incompatibleError(forge, optiFine)), true);
             return;
         }
         if (hasLoaderSelected() && instanceId.equals(version.id())) {
@@ -600,6 +601,12 @@ final class DownloadVersionSetupView extends VBox implements PageLifecycle {
         statusLabel.setText(text);
         statusLabel.getStyleClass().removeAll("field-hint", "field-hint-error");
         statusLabel.getStyleClass().add(error ? "field-hint-error" : "field-hint");
+    }
+
+    private static String translate(BackendError error) {
+        return error == null
+                ? Language.tr("error.unknown")
+                : Language.tr(error.code(), error.args().toArray());
     }
 
     private static HBox optionBar(String title, Node control) {

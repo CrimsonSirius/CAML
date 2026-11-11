@@ -7,7 +7,7 @@ import org.chs.camlauncher.backend.instance.VersionIsolationMode;
 import org.chs.camlauncher.backend.launch.GameLaunch;
 import org.chs.camlauncher.backend.launch.LaunchOptions;
 import org.chs.camlauncher.backend.launch.process.ProcessListener;
-import org.chs.camlauncher.front.translation.Language;
+import org.chs.camlauncher.language.Language;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -92,7 +92,7 @@ public final class HomeController {
                     sendStatus(Language.tr("status.started"), false);
                 },
                 message -> {
-                    sendStatus(Language.tr("status.launchFailed"), true);
+                    sendStatus(Language.tr("status.launchFailedDetail", message), true);
                     notifyLaunchFinished();
                 });
     }

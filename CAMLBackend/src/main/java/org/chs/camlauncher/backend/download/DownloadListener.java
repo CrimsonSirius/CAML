@@ -9,10 +9,20 @@ public interface DownloadListener {
     default void onStage(String stage) {
     }
 
+    default void onStage(DownloadStage stage) {
+        onStage(stage.key());
+    }
+
     default void onSummary(DownloadSummary summary) {
     }
 
     static void notifyStage(DownloadListener listener, String stage) {
+        if (listener != null) {
+            listener.onStage(stage);
+        }
+    }
+
+    static void notifyStage(DownloadListener listener, DownloadStage stage) {
         if (listener != null) {
             listener.onStage(stage);
         }

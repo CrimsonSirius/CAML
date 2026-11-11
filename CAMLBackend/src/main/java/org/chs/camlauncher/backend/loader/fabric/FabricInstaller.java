@@ -3,6 +3,7 @@ package org.chs.camlauncher.backend.loader.fabric;
 import org.chs.camlauncher.backend.download.model.DownloadItem;
 import org.chs.camlauncher.backend.download.DownloadCancellationToken;
 import org.chs.camlauncher.backend.download.DownloadListener;
+import org.chs.camlauncher.backend.download.DownloadStage;
 import org.chs.camlauncher.backend.download.FileDownloader;
 import org.chs.camlauncher.backend.download.source.DownloadSource;
 import org.chs.camlauncher.backend.download.source.DownloadSources;
@@ -94,10 +95,10 @@ public final class FabricInstaller {
                     token
             );
 
-            DownloadListener.notifyStage(listener, "获取 Fabric 配置");
+            DownloadListener.notifyStage(listener, DownloadStage.of("fabric.config.fetch"));
             token.throwIfCancelled();
             String profileJson = fabricService.fetchLoaderProfile(gameVersion, loaderVersion);
-            DownloadListener.notifyStage(listener, "安装 Fabric Loader");
+            DownloadListener.notifyStage(listener, DownloadStage.of("fabric.loader.install"));
             InstalledVersion installed = versionInstaller.installProfile(
                     normalizedInstanceId,
                     gameDirectory,
@@ -107,7 +108,7 @@ public final class FabricInstaller {
             );
 
             if (apiVersion != null) {
-                DownloadListener.notifyStage(listener, "下载 Fabric API");
+                DownloadListener.notifyStage(listener, DownloadStage.of("fabric.api.download"));
                 Path versionMods = targetVersionDirectory.resolve("mods");
                 Path apiFile = downloadApi(apiVersion, versionMods, listener, token);
                 Path rootMods = gameDirectory.resolve("mods");
@@ -115,7 +116,7 @@ public final class FabricInstaller {
                         rootMods, apiFile.getFileName().toString(), "Fabric API file");
                 copyIfDifferent(apiFile, rootApiFile);
             }
-            DownloadListener.notifyStage(listener, "校验 Fabric 安装结果");
+            DownloadListener.notifyStage(listener, DownloadStage.of("fabric.verify"));
             return installed;
         } catch (IOException | RuntimeException | InterruptedException e) {
             deleteRecursively(targetVersionDirectory);

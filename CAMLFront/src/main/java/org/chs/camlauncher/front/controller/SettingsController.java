@@ -6,9 +6,11 @@ import org.chs.camlauncher.backend.download.source.DownloadSourceMode;
 import org.chs.camlauncher.backend.instance.VersionIsolationMode;
 import org.chs.camlauncher.backend.runtime.JavaCandidate;
 import org.chs.camlauncher.backend.runtime.JavaSelectionMode;
+import org.chs.camlauncher.backend.settings.LanguageSelectionMode;
 import org.chs.camlauncher.backend.system.SystemMemoryInfo;
-import org.chs.camlauncher.front.translation.Language;
+import org.chs.camlauncher.language.Language;
 
+import java.io.IOException;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Objects;
@@ -120,6 +122,19 @@ public final class SettingsController {
         Objects.requireNonNull(themeId, "themeId");
         context.executeSettings(Language.tr("operation.saveTheme"),
                 () -> context.backend().selectTheme(themeId));
+    }
+
+    public LanguageSelectionMode languageSelectionMode() throws IOException {
+        return context.backend().languageSelectionMode();
+    }
+
+    public String language() throws IOException {
+        return context.backend().language().orElse(Language.DEFAULT_LOCALE);
+    }
+
+    public void saveLanguageAsync(LanguageSelectionMode mode, String locale) {
+        context.executeSettings(Language.tr("operation.saveLanguage"),
+                () -> context.backend().setLanguage(mode, locale));
     }
 
     public void setOnDownloadSourceSaved(Runnable listener) {

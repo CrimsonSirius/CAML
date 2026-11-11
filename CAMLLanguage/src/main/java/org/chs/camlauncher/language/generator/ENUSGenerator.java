@@ -1,7 +1,7 @@
-package org.chs.camlauncher.front.translation.generator;
+package org.chs.camlauncher.language.generator;
 
-import org.chs.camlauncher.front.translation.LanguageTranslationGenerator;
-import org.chs.camlauncher.front.translation.TranslationTable;
+import org.chs.camlauncher.language.LanguageTranslationGenerator;
+import org.chs.camlauncher.language.TranslationTable;
 
 /** English translations. */
 public final class ENUSGenerator extends LanguageTranslationGenerator {
@@ -22,6 +22,7 @@ public final class ENUSGenerator extends LanguageTranslationGenerator {
         t.put("nav.home", "Home");
         t.put("nav.downloads", "Downloads");
         t.put("nav.settings", "Settings");
+        t.put("app.subtitle", "Minecraft Launcher");
         t.put("footer.status", "CAML %s · Backend %s · Data directory: %s");
         t.put("footer.backend.ready", "Ready");
         t.put("footer.backend.notReady", "Not ready");
@@ -65,6 +66,26 @@ public final class ENUSGenerator extends LanguageTranslationGenerator {
         t.put("status.starting", "Starting %s...");
         t.put("status.started", "Launch command sent");
         t.put("status.launchFailed", "Launch failed!");
+        t.put("status.launchFailedDetail", "Launch failed: %s");
+        t.put("error.unknown", "An unknown error occurred. Check the logs.");
+        t.put("download.error.failed", "Failed to download %s after %s attempts (last address: %s)");
+        t.put("network.requestFailed", "Failed to request %s (last address: %s)");
+        t.put("network.timeout", "Request timed out (%s ms): %s");
+        t.put("network.httpError", "HTTP %s: %s");
+        t.put("network.responseInvalid", "Failed to parse response: %s");
+        t.put("network.redirectLocationMissing", "Redirect is missing Location: %s");
+        t.put("network.tooManyRedirects", "Too many redirects: %s");
+        t.put("network.noSource", "No download source available: %s");
+        t.put("metadata.manifestEmpty", "Version manifest is empty");
+        t.put("metadata.versionJsonEmpty", "Version JSON is empty");
+        t.put("launch.permissionDenied", "Permission denied while running Java or accessing the game directory. Check file permissions.");
+        t.put("launch.executableNotFound", "Java executable not found. Select a Java installation again.");
+        t.put("launch.commandTooLong", "The launch command is too long. Shorten the game path or classpath.");
+        t.put("launch.commandTooLongAfterFallback", "The launch command is too long even after argfile and manifest fallback. Shorten the game path or classpath.");
+        t.put("launch.processStartFailed", "Failed to start the game process. Check the logs for details.");
+        t.put("launch.manualJavaNotConfigured", "Manual Java selection is enabled, but no Java path is selected.");
+        t.put("launch.manualJavaUnavailable", "The selected Java is unavailable: %s");
+        t.put("launch.javaRequirementNotFound", "No Java satisfying the version requirement %s was found. Install or select Java.");
 
         // Version categories and download sources
         t.put("download.category.release", "Release");
@@ -105,7 +126,12 @@ public final class ENUSGenerator extends LanguageTranslationGenerator {
         t.put("download.setup.optifineSwitched", "Forge and OptiFine are incompatible; switched to Forge %s");
         t.put("download.setup.optifineIncompatibleForge", "The current Forge is incompatible with OptiFine");
         t.put("download.setup.noCompatibleOptiFine", "No OptiFine version is compatible with the current Forge");
+        t.put("download.setup.optifineForgeConflict", "Forge %s is not compatible with OptiFine %s. Choose Forge %s or earlier.");
         t.put("download.setup.nameEmpty", "Instance name cannot be empty");
+        t.put("download.setup.nameDotSegments", "Instance name cannot be . or ..");
+        t.put("download.setup.nameTrailing", "Instance name cannot end with a dot or space");
+        t.put("download.setup.nameIllegalCharacter", "Instance name contains an illegal character: %s");
+        t.put("download.setup.nameExists", "Instance name already exists: %s. Choose another name.");
         t.put("download.setup.noGameDirectory", "Game directory is not set");
         t.put("download.setup.checkingName", "Checking instance name...");
         t.put("download.setup.nameSameAsLoader", "When installing a loader, the instance name cannot equal the game version");
@@ -165,6 +191,24 @@ public final class ENUSGenerator extends LanguageTranslationGenerator {
         t.put("download.stage.completed", "Complete");
         t.put("download.stage.failed", "Download failed");
         t.put("download.stage.unknownError", "Unknown error");
+        t.put("download.stage.version.fetch", "Fetching version metadata");
+        t.put("download.stage.version.checkLocal", "Checking local version");
+        t.put("download.stage.version.downloadFiles", "Downloading game files and libraries");
+        t.put("download.stage.version.downloadAssets", "Downloading assets");
+        t.put("download.stage.version.writeJson", "Writing version metadata");
+        t.put("download.stage.loader.installer.prepare", "Preparing %s installer");
+        t.put("download.stage.loader.installer.download", "Downloading %s installer");
+        t.put("download.stage.loader.installer.run", "Running %s installer");
+        t.put("download.stage.loader.libraries.download", "Downloading %s libraries");
+        t.put("download.stage.loader.files.merge", "Merging %s files");
+        t.put("download.stage.loader.verify", "Verifying %s installation");
+        t.put("download.stage.fabric.config.fetch", "Fetching Fabric configuration");
+        t.put("download.stage.fabric.loader.install", "Installing Fabric Loader");
+        t.put("download.stage.fabric.api.download", "Downloading Fabric API");
+        t.put("download.stage.fabric.verify", "Verifying Fabric installation");
+        t.put("download.stage.optifine.installer.download", "Downloading OptiFine installer");
+        t.put("download.stage.optifine.installer.run", "Running OptiFine installer");
+        t.put("download.stage.optifine.files.merge", "Merging OptiFine files");
 
         // Download settings
         t.put("download.settings.source", "Download source");
@@ -200,6 +244,7 @@ public final class ENUSGenerator extends LanguageTranslationGenerator {
 
         // Memory
         t.put("settings.game.memory.title", "Memory");
+        t.put("settings.game.memory.accessible", "Maximum memory");
         t.put("settings.game.memory.description", "Adjust the memory used when launching the game.");
         t.put("settings.game.memory.label", "Memory allocation");
         t.put("settings.game.memory.hint", "Drag the handle to adjust the game allocation; the gray bar shows used + game memory, and the light gray bar on the right is unused memory.");
@@ -240,6 +285,15 @@ public final class ENUSGenerator extends LanguageTranslationGenerator {
         t.put("settings.appearance.themeHint", "Themes come from ~/.caml/themes; changes apply immediately");
         t.put("settings.appearance.theme", "Theme");
         t.put("settings.appearance.theme.accessible", "Theme");
+        t.put("settings.appearance.language.title", "Language");
+        t.put("settings.appearance.language.description", "Choose how the launcher interface language is selected.");
+        t.put("settings.appearance.language.auto", "Automatic");
+        t.put("settings.appearance.language.manual", "Manual");
+        t.put("settings.appearance.language.label", "Interface language");
+        t.put("settings.appearance.language.hint", "Automatic follows the system language; manual uses the language selected below.");
+        t.put("settings.appearance.language.accessible", "Interface language");
+        t.put("settings.appearance.language.zh_cn", "Simplified Chinese");
+        t.put("settings.appearance.language.en_us", "English");
 
         // Instance picker
         t.put("instances.picker.scanning", "Scanning game instances...");
@@ -274,6 +328,7 @@ public final class ENUSGenerator extends LanguageTranslationGenerator {
         t.put("operation.saveDownloadConcurrency", "Save download concurrency");
         t.put("operation.saveDownloadSource", "Save download source setting");
         t.put("operation.saveTheme", "Save theme selection");
+        t.put("operation.saveLanguage", "Save language setting");
         t.put("operation.saveLastInstance", "Save last launched instance");
         t.put("operation.launchGame", "Launch game %s");
     }

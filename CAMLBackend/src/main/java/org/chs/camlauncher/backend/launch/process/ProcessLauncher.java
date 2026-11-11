@@ -1,5 +1,6 @@
 package org.chs.camlauncher.backend.launch.process;
 
+import org.chs.camlauncher.backend.error.BackendError;
 import org.chs.camlauncher.backend.launch.LaunchException;
 import org.chs.camlauncher.backend.launch.LaunchFailure;
 import org.chs.camlauncher.backend.launch.LaunchPlan;
@@ -53,7 +54,7 @@ public final class ProcessLauncher {
                 }
                 throw new LaunchException(
                         LaunchFailure.COMMAND_TOO_LONG,
-                        "启动命令过长，已尝试参数文件和 manifest 回退，但仍无法启动。请缩短游戏路径或减少类路径。",
+                        BackendError.of("launch.commandTooLongAfterFallback"),
                         manifestFailure
                 );
             }
