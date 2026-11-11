@@ -218,12 +218,12 @@ class ForgeAndNeoForgeServiceTest {
     void fallsBackToNextSourceWhenNeoForgeMetadataHasNoMatchingVersion() throws Exception {
         String otherVersionXml = """
                 <metadata><versioning><versions>
-                  <version>20.2.86</version>
+                  <version>21.1.0</version>
                 </versions></versioning></metadata>
                 """;
         String matchingVersionXml = """
                 <metadata><versioning><versions>
-                  <version>20.1.0</version>
+                  <version>20.2.85</version>
                 </versions></versioning></metadata>
                 """;
 
@@ -243,13 +243,83 @@ class ForgeAndNeoForgeServiceTest {
                     new MirrorDownloadSource(serverRoot(dataServer))
             ));
 
-            List<NeoForgeVersion> versions = service.fetchVersions("1.20.1");
+            List<NeoForgeVersion> versions = service.fetchVersions("1.20.2");
 
             assertEquals(1, versions.size());
-            assertEquals("20.1.0", versions.getFirst().version());
+            assertEquals("20.2.85", versions.getFirst().version());
         } finally {
             staleServer.stop(0);
             dataServer.stop(0);
+        }
+    }
+
+    @Test
+    void queriesLegacyForgeMavenForNeoForge1201() throws Exception {
+        String legacyXml = """
+                <metadata><versioning><versions>
+                  <version>1.20.1-47.1.105</version>
+                  <version>1.20.1-forge-47.1.106</version>
+                </versions></versioning></metadata>
+                """;
+
+        HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        server.createContext("/maven/net/neoforged/forge/maven-metadata.xml",
+                exchange -> respond(exchange, legacyXml));
+        server.start();
+
+        try {
+            NeoForgeService service = new NeoForgeService();
+            service.setSources(List.of(new MirrorDownloadSource(serverRoot(server))));
+
+            List<NeoForgeVersion> versions = service.fetchVersions("1.20.1");
+
+            assertEquals(2, versions.size());
+            assertEquals("47.1.106", versions.getFirst().version());
+            assertEquals("neoforge-47.1.106", versions.getFirst().versionId());
+            assertEquals(
+                    "https://maven.neoforged.net/releases/net/neoforged/forge/"
+                            + "1.20.1-47.1.106/forge-1.20.1-47.1.106-installer.jar",
+                    versions.getFirst().installerUri().toString()
+            );
+        } finally {
+            server.stop(0);
+        }
+    }
+
+    @Test
+    void buildsLegacyInstallerUrisFromBmclApiVersions() throws Exception {
+        String legacyJson = """
+                [
+                  {"version":"47.1.5","rawVersion":"1.20.1-47.1.5","mcversion":"1.20.1"},
+                  {"version":"1.20.1-47.1.106","rawVersion":"1.20.1-forge-47.1.106","mcversion":"1.20.1"}
+                ]
+                """;
+
+        HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        server.createContext("/neoforge/list/1.20.1", exchange -> respond(exchange, legacyJson));
+        server.start();
+
+        try {
+            NeoForgeService service = new NeoForgeService();
+            service.setSourceMode(DownloadSourceMode.CUSTOM, serverRoot(server));
+
+            List<NeoForgeVersion> versions = service.fetchVersions("1.20.1");
+
+            assertEquals(2, versions.size());
+            assertEquals("47.1.106", versions.getFirst().version());
+            assertEquals(
+                    "https://maven.neoforged.net/releases/net/neoforged/forge/"
+                            + "1.20.1-47.1.106/forge-1.20.1-47.1.106-installer.jar",
+                    versions.getFirst().installerUri().toString()
+            );
+            assertEquals("47.1.5", versions.getLast().version());
+            assertEquals(
+                    "https://maven.neoforged.net/releases/net/neoforged/forge/"
+                            + "1.20.1-47.1.5/forge-1.20.1-47.1.5-installer.jar",
+                    versions.getLast().installerUri().toString()
+            );
+        } finally {
+            server.stop(0);
         }
     }
 

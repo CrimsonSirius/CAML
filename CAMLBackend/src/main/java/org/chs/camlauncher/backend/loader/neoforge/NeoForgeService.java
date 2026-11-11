@@ -28,11 +28,17 @@ import java.util.Objects;
 /** 从 NeoForge Maven/API 获取与 Minecraft 版本匹配的 NeoForge 版本。 */
 public final class NeoForgeService {
     private static final Logger LOGGER = LogManager.getLogger(NeoForgeService.class);
+    private static final String LEGACY_GAME_VERSION = "1.20.1";
     private static final URI METADATA_URI = URI.create(
             "https://maven.neoforged.net/releases/net/neoforged/neoforge/maven-metadata.xml"
     );
     private static final String MAVEN_BASE =
             "https://maven.neoforged.net/releases/net/neoforged/neoforge/";
+    private static final URI LEGACY_METADATA_URI = URI.create(
+            "https://maven.neoforged.net/releases/net/neoforged/forge/maven-metadata.xml"
+    );
+    private static final String LEGACY_MAVEN_BASE =
+            "https://maven.neoforged.net/releases/net/neoforged/forge/";
 
     private final MavenMetadataClient metadataClient;
     private final URI metadataUri;
@@ -97,6 +103,7 @@ public final class NeoForgeService {
 
         JsonArray entries = JsonParser.parseString(response.body()).getAsJsonArray();
         List<NeoForgeVersion> result = new ArrayList<>();
+        boolean legacy = isLegacy(gameVersion);
         for (JsonElement element : entries) {
             if (!element.isJsonObject()) {
                 continue;
@@ -110,10 +117,14 @@ public final class NeoForgeService {
             if (!gameVersion.equals(minecraft) || version.contains("-installer")) {
                 continue;
             }
-            result.add(new NeoForgeVersion(
+            String rawVersion = legacy && object.has("rawVersion")
+                    ? object.get("rawVersion").getAsString()
+                    : version;
+            result.add(legacyVersion(
                     gameVersion,
                     version,
-                    URI.create(mavenBase + version + "/neoforge-" + version + "-installer.jar")
+                    rawVersion,
+                    legacy
             ));
         }
         Collections.reverse(result);
@@ -125,23 +136,69 @@ public final class NeoForgeService {
 
     private List<NeoForgeVersion> fetchMetadataVersions(String gameVersion)
             throws IOException, InterruptedException {
+        boolean legacy = isLegacy(gameVersion);
+        URI metadata = legacy ? LEGACY_METADATA_URI : metadataUri;
         List<String> metadataVersions = new ArrayList<>(metadataClient.fetchVersions(
-                metadataUri,
-                versions -> versions.stream().anyMatch(version -> isNeoForgeVersion(gameVersion, version))
+                metadata,
+                versions -> versions.stream().anyMatch(version ->
+                        legacy ? isUsableLegacyVersion(version) : isNeoForgeVersion(gameVersion, version))
         ));
         Collections.reverse(metadataVersions);
         List<NeoForgeVersion> result = new ArrayList<>();
         for (String version : metadataVersions) {
-            if (!isNeoForgeVersion(gameVersion, version)) {
+            if (legacy ? !isUsableLegacyVersion(version) : !isNeoForgeVersion(gameVersion, version)) {
                 continue;
             }
-            result.add(new NeoForgeVersion(
+            result.add(legacyVersion(gameVersion, version, version, legacy));
+        }
+        return List.copyOf(result);
+    }
+
+    private NeoForgeVersion legacyVersion(String gameVersion, String version,
+                                          String rawVersion, boolean legacy) {
+        if (!legacy) {
+            return new NeoForgeVersion(
                     gameVersion,
                     version,
                     URI.create(mavenBase + version + "/neoforge-" + version + "-installer.jar")
-            ));
+            );
         }
-        return List.copyOf(result);
+
+        String normalized = normalizeLegacyVersion(gameVersion, version);
+        String installerVersion = legacyInstallerVersion(gameVersion, rawVersion);
+        return new NeoForgeVersion(
+                gameVersion,
+                normalized,
+                URI.create(LEGACY_MAVEN_BASE + installerVersion + "/forge-"
+                        + installerVersion + "-installer.jar")
+        );
+    }
+
+    private static boolean isLegacy(String gameVersion) {
+        return LEGACY_GAME_VERSION.equals(gameVersion);
+    }
+
+    private static boolean isUsableLegacyVersion(String version) {
+        return !version.contains("-installer");
+    }
+
+    private static String normalizeLegacyVersion(String gameVersion, String version) {
+        String prefix = gameVersion + "-";
+        String normalized = version.startsWith(prefix) ? version.substring(prefix.length()) : version;
+        return normalized.startsWith("forge-")
+                ? normalized.substring("forge-".length())
+                : normalized;
+    }
+
+    private static String legacyInstallerVersion(String gameVersion, String version) {
+        String forgePrefix = gameVersion + "-forge-";
+        if (version.startsWith(forgePrefix)) {
+            return gameVersion + "-" + version.substring(forgePrefix.length());
+        }
+        if (version.startsWith(gameVersion + "-")) {
+            return version;
+        }
+        return gameVersion + "-" + version;
     }
 
     private static boolean isNeoForgeVersion(String gameVersion, String version) {
