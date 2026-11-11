@@ -133,7 +133,7 @@
   不写死按钮、标签、提示和状态文字；键缺失时界面显示键名，便于发现遗漏。
 - 语言文件由独立 `CAMLLanguage` 模块中的语言生成器类（`LanguageTranslationGenerator` 子类）
   以 `t.put(key, value)` 登记生成，执行 `:CAMLLanguage:generateTranslation` 刷新；
-  首次启动复制到 `~/.caml/lang`，之后从该目录加载。
+  每次启动与内置资源比对，不一致就按内置文件重写；非内置语言文件原样保留，之后从该目录加载。
 
 ## 6. 无障碍
 

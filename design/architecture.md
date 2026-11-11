@@ -266,7 +266,7 @@ CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
   `Language.tr(key)` 取文案，`Language.tr(key, args...)` 支持占位符；
   键缺失时返回键名本身。
 - `CAMLApplication` 启动时调用 `Language.initialize(dataDirectory)`，把内置语言文件复制到
-  `~/.caml/lang`；已存在的文件不覆盖，之后只从该目录加载并自动发现用户新增的 `.json`。
+  `~/.caml/lang`：同名文件与内置资源按键值比对，不一致（含 JSON 损坏）就按内置文件重写；非内置语言文件原样保留，之后从该目录加载并自动发现用户新增的 `.json`。
 - 语言选择顺序：系统属性 `caml.language` → 系统语言（`en*` 用 `en_us`，其余用默认语言）。
   找不到对应文件时回退默认语言。
 - 语言下拉框中的语言名**不参与翻译**：`Language.localeDisplayName(locale)` 直接查运行时硬编码的

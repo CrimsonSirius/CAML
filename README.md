@@ -24,7 +24,7 @@ CAML 是一个基于 **Java 25 + JavaFX** 的 Minecraft 启动器，采用前后
 | Java | 扫描 `java.home`、`JAVA_HOME`、`PATH` 及常见 JDK 目录；读取版本、供应商、架构、位数；按版本要求选择运行时；Windows 优先 `javaw.exe` |
 | 启动 | 不可变 `LaunchPlan`、classpath 构建、JVM/游戏参数与 `${...}` 占位符、natives 子目录解压、Log4j 配置、旧版本 virtual assets 重建；NeoForge 26.2 + Vulkan 自动关闭 early window；根据设置选择，`--gameDir` 指向 `versions/<id>` 或 `.minecraft` 根目录 |
 | 进程 | `ProcessBuilder` 启动、工作目录与环境变量、stdout/stderr 转发、Minecraft Log4j XML 转原版日志风格、退出码回调、停止能力；命令行过长时自动回退 `@argfile` / manifest classpath jar；`LaunchException` 分类错误并提供中文提示 |
-| 多语言 | 独立 `CAMLLanguage` 模块；内置 `zh_cn`、`en_us`、`fn_cn`，首次启动复制到 `~/.caml/lang`，之后从该目录读取；视图与控制器只引用翻译键，`Language.tr` 支持占位符和缺失键回退；语言下拉框中的语言名硬编码在 `Language.NATIVE_NAMES`，使用该语言自己的写法且不随界面语言变化；翻译文件由 `LanguageTranslationGenerator` 子类生成，`:CAMLLanguage:generateTranslation` 刷新 |
+| 多语言 | 独立 `CAMLLanguage` 模块；内置 `zh_cn`、`en_us`、`fn_cn`，启动时与 `~/.caml/lang` 中同名文件比对，不一致就按内置资源重写（用户新增的语言文件不受影响），之后从该目录读取；视图与控制器只引用翻译键，`Language.tr` 支持占位符和缺失键回退；语言下拉框中的语言名硬编码在 `Language.NATIVE_NAMES`，使用该语言自己的写法且不随界面语言变化；翻译文件由 `LanguageTranslationGenerator` 子类生成，`:CAMLLanguage:generateTranslation` 刷新 |
 
 ### 尚未实现
 
@@ -66,7 +66,7 @@ CAML/
 ├─ CAMLLanguage/                      纯 Java 多语言运行时、生成器与语言资源
 │  ├─ src/main/java/org/chs/camlauncher/language/
 │  │  ├─ Language.java                从 ~/.caml/lang 读取翻译
-│  │  ├─ LanguageResources.java       首次复制内置 lang/*.json
+│  │  ├─ LanguageResources.java       同步内置 lang/*.json（不一致即重写）
 │  │  ├─ LanguageTranslationGenerator.java 翻译生成器抽象类
 │  │  ├─ TranslationTable.java        翻译键值表（实例 put，拒绝重复键）
 │  │  ├─ TranslationGeneratorRunner.java 生成任务入口
@@ -205,8 +205,9 @@ CAMLLanguage/src/main/resources/lang/fn_cn.json
 ~/.caml/lang/fn_cn.json
 ```
 
-首次启动时，`CAMLLanguage` 把内置语言文件复制到 `~/.caml/lang`；之后只从该目录读取，
-已存在的文件不会被覆盖，用户可以直接修改或新增语言文件。
+每次启动时，`CAMLLanguage` 都会把内置语言文件与 `~/.caml/lang` 中的同名文件按翻译键值比对：
+缺失或内容不一致（改过文案、缺键、JSON 损坏）时**按内置文件重写**，保证新版内置翻译和新增键总能生效。
+`~/.caml/lang` 中**非内置**的语言文件不参与比对，始终原样保留，仍可自由新增或修改。
 
 视图和控制器只引用翻译键：
 
@@ -219,8 +220,8 @@ statusLabel.setText(Language.tr("home.instance.current", version));
 
 - `Language.tr(key)` 找不到键时直接返回键名，方便发现遗漏；支持 `%s` / `%d` 等占位符。
 - 当前语言按顺序取 `-Dcaml.language`、系统语言（`en*` → `en_us`，其余 → `Language.DEFAULT_LOCALE`）。
-- 首次启动时 `CAMLLanguage` 把内置 `lang/*.json` 复制到 `~/.caml/lang`；之后从该目录读取。
-  已存在的文件不覆盖，缺失的内置文件会在下次启动补齐。
+- 每次启动时 `CAMLLanguage` 把内置 `lang/*.json` 与 `~/.caml/lang` 的同名文件按键值比对，
+  不一致（含 JSON 损坏）就按内置文件重写；非内置语言文件始终原样保留。
 - 设置 → 外观 → 语言提供“自动 / 手动”两种模式；手动模式可从语言下拉框选择
   `zh_cn`、`en_us` 或 `fn_cn`。模式与手动语言分别保存在 `settings.properties` 的
   `languageMode` 和 `language`，切换后立即重建主视图刷新界面文案。
@@ -452,4 +453,4 @@ info.isolatedVersions();
 
 ## 许可证
 
-本项目基于 [GPL-3.0-only](LICENSE) 发布。
+本项目基于 [GPL-3.0-only](LICENSE) 发布
