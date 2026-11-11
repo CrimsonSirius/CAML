@@ -6,6 +6,7 @@ import com.google.gson.JsonParser;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.Reader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -26,8 +27,8 @@ import java.util.stream.Stream;
  *
  * <p>参考 Minecraft 的 {@code lang/*.json}：界面只引用翻译键，运行时优先从
  * 数据目录中的 {@code lang/<locale>.json} 读取文案。内置语言文件由
- * {@link #initialize(Path)} 在首次启动时复制，用户可以直接修改或新增语言文件。
- * 翻译键缺失时回退为键名，方便发现遗漏。</p>
+ * {@link #initialize(Path)} 在启动时同步：缺失或内容与内置资源不一致时按内置资源重写，
+ * 用户自行新增的语言文件保持原样。翻译键缺失时回退为键名，方便发现遗漏。</p>
  *
  * <p>语言选择顺序：系统属性 {@code caml.language}、系统语言（en → {@code en_us}，
  * 其余回退到 {@code zh_cn}）。</p>
@@ -176,18 +177,24 @@ public final class Language {
             Path file = directory.resolve(locale + ".json");
             if (Files.isRegularFile(file)) {
                 try (Reader reader = Files.newBufferedReader(file, StandardCharsets.UTF_8)) {
-                    return parse(reader);
+                    Map<String, String> parsed = parse(reader);
+                    if (!parsed.isEmpty()) {
+                        return parsed;
+                    }
                 } catch (IOException | JsonParseException | IllegalStateException e) {
-                    return Map.of();
+                    // 数据目录文件损坏时退回内置资源，避免整个界面只剩键名。
                 }
             }
         }
+        return loadBundled(locale);
+    }
 
+    private static Map<String, String> loadBundled(String locale) {
         try (InputStream stream = LanguageResources.openBundled(locale)) {
             if (stream == null) {
                 return Map.of();
             }
-            try (Reader reader = new java.io.InputStreamReader(stream, StandardCharsets.UTF_8)) {
+            try (Reader reader = new InputStreamReader(stream, StandardCharsets.UTF_8)) {
                 return parse(reader);
             }
         } catch (IOException | JsonParseException | IllegalStateException e) {
@@ -195,7 +202,8 @@ public final class Language {
         }
     }
 
-    private static Map<String, String> parse(Reader reader) {
+    /** 解析语言 JSON；同步内置资源比对也复用这里的逻辑。 */
+    static Map<String, String> parse(Reader reader) {
         JsonObject object = JsonParser.parseReader(reader).getAsJsonObject();
         Map<String, String> map = new HashMap<>();
         for (Map.Entry<String, com.google.gson.JsonElement> entry : object.entrySet()) {

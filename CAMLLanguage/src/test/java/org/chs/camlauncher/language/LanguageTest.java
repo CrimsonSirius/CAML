@@ -118,6 +118,42 @@ class LanguageTest {
     }
 
     @Test
+    void rewritesBundledLocaleFileThatDiffersFromResource() throws IOException {
+        Path file = dataDirectory.resolve("lang").resolve("fn_cn.json");
+        Files.writeString(file, "{\"home.launch\":\"改坏的文案\"}");
+
+        Language.initialize(dataDirectory);
+        Language.setLocale("fn_cn");
+
+        Map<String, String> repaired = readJson(file);
+        assertTrue(repaired.size() > 1, "内置语言文件应被重新写入");
+        assertTrue(repaired.containsKey("metadata.versionJsonHashMismatch"),
+                "重写后应包含内置资源中的新增键");
+        assertEquals("发射比赛", Language.tr("home.launch"));
+    }
+
+    @Test
+    void keepsUserAddedLocaleFileUntouched() throws IOException {
+        Path custom = dataDirectory.resolve("lang").resolve("xx_yy.json");
+        String content = "{\"home.launch\":\"Custom launch\"}";
+        Files.writeString(custom, content);
+
+        Language.initialize(dataDirectory);
+
+        assertEquals(content, Files.readString(custom));
+        assertTrue(Language.supportedLocales().contains("xx_yy"));
+    }
+
+    @Test
+    void fallsBackToBundledResourceWhenDataFileIsCorrupt() throws IOException {
+        Files.writeString(dataDirectory.resolve("lang").resolve("fn_cn.json"), "{ broken json");
+
+        Language.setLocale("fn_cn");
+
+        assertEquals("发射比赛", Language.tr("home.launch"));
+    }
+
+    @Test
     void generatedFilesMatchEachOther(@TempDir Path tempDirectory) throws IOException {
         Map<String, String> zhen = generated(tempDirectory, new ZHCNGenerator());
         Map<String, String> enus = generated(tempDirectory, new ENUSGenerator());

@@ -309,7 +309,7 @@ CAML
 - 多语言运行时位于独立 `CAMLLanguage` 模块，视图和控制器统一调用
   `org.chs.camlauncher.language.Language.tr(key[, args])`。
 - 内置翻译键与文案放在 `CAMLLanguage/src/main/resources/lang/zh_cn.json`、`en_us.json` 和 `fn_cn.json`；
-  首次启动复制到 `~/.caml/lang`，之后运行时不覆盖并从该目录读取。
+  每次启动与内置资源按键值比对，不一致（含 JSON 损坏）就按内置文件重写；非内置语言文件原样保留，之后从该目录读取。
   结构参考 Minecraft 的 `lang` 文件（扁平键 + `%s`/`%d` 占位符）。
 - `Language` 在首次调用时按 `-Dcaml.language`、系统语言顺序选择语言，
   缺失文件回退默认语言（`Language.DEFAULT_LOCALE`）；键缺失返回键名。
