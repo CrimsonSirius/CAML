@@ -3,6 +3,7 @@ package org.chs.camlauncher.language.generator;
 import org.chs.camlauncher.language.LanguageTranslationGenerator;
 import org.chs.camlauncher.language.TranslationTable;
 
+/*地道中国话翻译*/
 public final class FNCNGenerator extends LanguageTranslationGenerator {
     @Override
     protected String locale() {
@@ -77,6 +78,7 @@ public final class FNCNGenerator extends LanguageTranslationGenerator {
         t.put("network.noSource", "没有能用的向下装载源头：%s");
         t.put("metadata.manifestEmpty", "译本清单是空气");
         t.put("metadata.versionJsonEmpty", "译本 JSON 是空气");
+        t.put("metadata.versionJsonHashMismatch", "译本 JSON 的 SHA-1 穿错鞋：%s");
         t.put("launch.permissionDenied", "没有通行证处决爪哇或拜访比赛名录，请检查公文通行证。");
         t.put("launch.executableNotFound", "撞不见爪哇能处决的公文，请重新揪出爪哇。");
         t.put("launch.commandTooLong", "发射命令太长，请截短比赛小径或减少类别小径。");

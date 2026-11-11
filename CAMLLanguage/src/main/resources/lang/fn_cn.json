@@ -180,6 +180,7 @@
   "log.title": "原木标题",
   "metadata.manifestEmpty": "译本清单是空气",
   "metadata.versionJsonEmpty": "译本 JSON 是空气",
+  "metadata.versionJsonHashMismatch": "译本 JSON 的 SHA-1 穿错鞋：%s",
   "nav.downloads": "向下装载们",
   "nav.home": "家",
   "nav.settings": "安放们",
