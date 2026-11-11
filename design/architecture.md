@@ -267,8 +267,9 @@ CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
   键缺失时返回键名本身。
 - `CAMLApplication` 启动时调用 `Language.initialize(dataDirectory)`，把内置语言文件复制到
   `~/.caml/lang`：同名文件与内置资源按键值比对，不一致（含 JSON 损坏）就按内置文件重写；非内置语言文件原样保留，之后从该目录加载并自动发现用户新增的 `.json`。
-- 语言选择顺序：系统属性 `caml.language` → 系统语言（`en*` 用 `en_us`，其余用默认语言）。
-  找不到对应文件时回退默认语言。
+- 语言选择顺序：系统属性 `caml.language` → 系统语言。默认语言是 `en_us`，所以不再检测英语系统，
+  只识别简体中文系统（`zh_CN`、`zh_SG`、脚本 `Hans` 等）并使用 `zh_cn`；其余系统（含繁体中文，
+  翻译待做）一律使用默认语言。找不到对应文件时回退默认语言。
 - 语言下拉框中的语言名**不参与翻译**：`Language.localeDisplayName(locale)` 直接查运行时硬编码的
   `Language.NATIVE_NAMES`，既不读取翻译文件也不经过当前界面语言，因此 `zh_cn` 永远显示
   “简体中文”、`en_us` 永远显示“English”、`fn_cn` 永远显示“地道中国话”；翻译文件写错名称

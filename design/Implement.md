@@ -311,8 +311,9 @@ CAML
 - 内置翻译键与文案放在 `CAMLLanguage/src/main/resources/lang/zh_cn.json`、`en_us.json` 和 `fn_cn.json`；
   每次启动与内置资源按键值比对，不一致（含 JSON 损坏）就按内置文件重写；非内置语言文件原样保留，之后从该目录读取。
   结构参考 Minecraft 的 `lang` 文件（扁平键 + `%s`/`%d` 占位符）。
-- `Language` 在首次调用时按 `-Dcaml.language`、系统语言顺序选择语言，
-  缺失文件回退默认语言（`Language.DEFAULT_LOCALE`）；键缺失返回键名。
+- `Language` 在首次调用时按 `-Dcaml.language`、系统语言顺序选择语言：默认语言为 `en_us`，
+  因此无需检测英语系统，只在检测到简体中文系统时使用 `zh_cn`，其余系统（含繁体中文，待做）
+  使用默认语言；缺失文件回退默认语言（`Language.DEFAULT_LOCALE`）；键缺失返回键名。
 - 语言下拉框中的语言名不参与翻译：`Language.localeDisplayName(locale)` 直接读取运行时硬编码的
   `Language.NATIVE_NAMES`，所以 `zh_cn` 恒为“简体中文”、`en_us` 恒为“English”、
   `fn_cn` 恒为“地道中国话”，切换界面语言或翻译文件写错名称都不会改变列表内容；

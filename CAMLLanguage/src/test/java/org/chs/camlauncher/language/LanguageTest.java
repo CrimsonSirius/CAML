@@ -12,6 +12,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.TreeMap;
 
@@ -151,6 +152,27 @@ class LanguageTest {
         Language.setLocale("fn_cn");
 
         assertEquals("发射比赛", Language.tr("home.launch"));
+    }
+
+    @Test
+    void detectsOnlySimplifiedChineseSystemLocale() {
+        assertEquals("zh_cn", Language.detectSystemLocale(Locale.forLanguageTag("zh-CN")));
+        assertEquals("zh_cn", Language.detectSystemLocale(Locale.forLanguageTag("zh-SG")));
+        assertEquals("zh_cn", Language.detectSystemLocale(Locale.forLanguageTag("zh-Hans")));
+        assertEquals("zh_cn", Language.detectSystemLocale(Locale.SIMPLIFIED_CHINESE));
+
+        // 默认语言即英语，英语系统无需特殊检测
+        assertEquals("en_us", Language.detectSystemLocale(Locale.US));
+        assertEquals("en_us", Language.detectSystemLocale(Locale.UK));
+        assertEquals("en_us", Language.detectSystemLocale(Locale.ROOT));
+        assertEquals("en_us", Language.detectSystemLocale(Locale.JAPAN));
+
+        // 繁体中文翻译待做，暂回退默认语言
+        assertEquals("en_us", Language.detectSystemLocale(Locale.TRADITIONAL_CHINESE));
+        assertEquals("en_us", Language.detectSystemLocale(Locale.forLanguageTag("zh-TW")));
+        assertEquals("en_us", Language.detectSystemLocale(Locale.forLanguageTag("zh-HK")));
+        assertEquals("en_us", Language.detectSystemLocale(Locale.forLanguageTag("zh-Hant")));
+        assertEquals("en_us", Language.detectSystemLocale(null));
     }
 
     @Test
