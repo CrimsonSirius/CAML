@@ -5,6 +5,7 @@ import org.chs.camlauncher.backend.download.source.DownloadSourceMode;
 import org.chs.camlauncher.backend.instance.VersionIsolationMode;
 import org.chs.camlauncher.backend.runtime.JavaSelectionMode;
 import org.chs.camlauncher.language.contract.LanguageSelectionMode;
+import org.chs.camlauncher.language.contract.LanguageFallbackMode;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -44,6 +45,8 @@ public final class SettingsService {
     private static final String MANUAL_JAVA_PATHS_KEY = "manualJavaPaths";
     private static final String LANGUAGE_MODE_KEY = "languageMode";
     private static final String LANGUAGE_KEY = "language";
+    private static final String LANGUAGE_FALLBACK_MODE_KEY = "languageFallbackMode";
+    private static final String LANGUAGE_FALLBACK_LOCALE_KEY = "languageFallbackLocale";
 
     private final Path settingsFile;
     private final Object writeLock = new Object();
@@ -248,6 +251,41 @@ public final class SettingsService {
                 properties.remove(LANGUAGE_KEY);
             } else {
                 properties.setProperty(LANGUAGE_KEY, value);
+            }
+        });
+    }
+
+    public LanguageFallbackMode languageFallbackMode() throws IOException {
+        String value = load().getProperty(LANGUAGE_FALLBACK_MODE_KEY);
+        if (value == null) {
+            return LanguageFallbackMode.KEY;
+        }
+        try {
+            String normalized = value.trim().toUpperCase(Locale.ROOT);
+            return "AUTO".equals(normalized)
+                    ? LanguageFallbackMode.SYSTEM
+                    : LanguageFallbackMode.valueOf(normalized);
+        } catch (IllegalArgumentException e) {
+            return LanguageFallbackMode.KEY;
+        }
+    }
+
+    public Optional<String> languageFallbackLocale() throws IOException {
+        String raw = load().getProperty(LANGUAGE_FALLBACK_LOCALE_KEY);
+        return raw == null || raw.isBlank() ? Optional.empty() : Optional.of(raw.trim());
+    }
+
+    public void setLanguageFallback(LanguageFallbackMode mode, String locale) throws IOException {
+        Objects.requireNonNull(mode, "mode");
+        String value = locale == null
+                ? ""
+                : locale.trim().toLowerCase(Locale.ROOT).replace('-', '_');
+        update(properties -> {
+            properties.setProperty(LANGUAGE_FALLBACK_MODE_KEY, mode.name().toLowerCase(Locale.ROOT));
+            if (value.isEmpty()) {
+                properties.remove(LANGUAGE_FALLBACK_LOCALE_KEY);
+            } else {
+                properties.setProperty(LANGUAGE_FALLBACK_LOCALE_KEY, value);
             }
         });
     }

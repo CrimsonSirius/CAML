@@ -9,6 +9,7 @@ import org.chs.camlauncher.language.contract.LanguageErrorCode;
 import org.chs.camlauncher.language.contract.LanguageEvent;
 import org.chs.camlauncher.language.contract.LanguageEventListener;
 import org.chs.camlauncher.language.contract.LanguageException;
+import org.chs.camlauncher.language.contract.LanguageFallbackMode;
 import org.chs.camlauncher.language.contract.LanguageSelectionMode;
 import org.chs.camlauncher.language.contract.LanguageTextProvider;
 
@@ -17,7 +18,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Locale;
+import java.util.LinkedHashSet;
 import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /** 语言运行时编排器；具体文件、目录、发现、事件和渲染逻辑由协作类负责。 */
@@ -37,6 +40,8 @@ public final class LanguageService implements LanguageTextProvider {
     private volatile LanguageSnapshot snapshot;
     private volatile LanguageSelectionMode selectionMode = LanguageSelectionMode.AUTO;
     private volatile String storedLocale = "";
+    private volatile LanguageFallbackMode fallbackMode = LanguageFallbackMode.KEY;
+    private volatile String fallbackLocale = LanguageConstants.DEFAULT_LOCALE;
 
     public LanguageService(Path dataDirectory, SettingsService settingsService) {
         this.dataDirectory = Objects.requireNonNull(dataDirectory, "dataDirectory");
@@ -57,12 +62,14 @@ public final class LanguageService implements LanguageTextProvider {
 
             selectionMode = readSelectionMode();
             storedLocale = readStoredLocale();
+            fallbackMode = readFallbackMode();
+            fallbackLocale = readFallbackLocale();
             String requestedLocale = selectionMode == LanguageSelectionMode.MANUAL
                     ? normalizeLocale(storedLocale)
                     : detectLocale();
             LanguageSnapshot next = createSnapshot(
                     requestedLocale,
-                    catalogLoader.load(requestedLocale),
+                    loadCatalog(requestedLocale),
                     discovery.scan()
             );
             snapshot = next;
@@ -86,7 +93,7 @@ public final class LanguageService implements LanguageTextProvider {
                     : detectLocale();
             LanguageSnapshot next = createSnapshot(
                     requestedLocale,
-                    catalogLoader.load(requestedLocale),
+                    loadCatalog(requestedLocale),
                     discovery.scan()
             );
             snapshot = next;
@@ -94,6 +101,30 @@ public final class LanguageService implements LanguageTextProvider {
             return next;
         } catch (IOException | RuntimeException e) {
             LOGGER.error("切换语言失败 mode={} locale={}", mode, locale, e);
+            throw e;
+        }
+    }
+
+    public synchronized LanguageSnapshot setLanguageFallback(
+            LanguageFallbackMode mode, String locale) throws IOException {
+        try {
+            Objects.requireNonNull(mode, "mode");
+            settingsService.setLanguageFallback(mode, locale);
+            fallbackMode = mode;
+            fallbackLocale = locale == null || locale.isBlank()
+                    ? LanguageConstants.DEFAULT_LOCALE
+                    : normalizeLocale(locale);
+            String requestedLocale = snapshot().requestedLocale();
+            LanguageSnapshot next = createSnapshot(
+                    requestedLocale,
+                    loadCatalog(requestedLocale),
+                    discovery.scan()
+            );
+            snapshot = next;
+            publishState(next);
+            return next;
+        } catch (IOException | RuntimeException e) {
+            LOGGER.error("设置语言回退失败 mode={} locale={}", mode, locale, e);
             throw e;
         }
     }
@@ -114,6 +145,14 @@ public final class LanguageService implements LanguageTextProvider {
 
     public String storedLocale() {
         return storedLocale;
+    }
+
+    public LanguageFallbackMode fallbackMode() {
+        return fallbackMode;
+    }
+
+    public String fallbackLocale() {
+        return fallbackLocale;
     }
 
     public void addEventListener(LanguageEventListener listener) {
@@ -185,9 +224,39 @@ public final class LanguageService implements LanguageTextProvider {
                 requestedLocale,
                 catalog.activeLocale(),
                 catalog.fallbackReason(),
+                fallbackMode,
+                fallbackLocale,
                 List.copyOf(descriptors),
                 catalog.messages()
         );
+    }
+
+    private LanguageCatalogLoader.Catalog loadCatalog(String requestedLocale) {
+        LanguageCatalogLoader.Catalog catalog = catalogLoader.load(
+                requestedLocale, fallbackTargets(requestedLocale));
+        if (catalog.messages().isEmpty() && fallbackMode == LanguageFallbackMode.DEFAULT) {
+            throw new LanguageException(
+                    LanguageErrorCode.BOOTSTRAP_FAILED, requestedLocale, null, null);
+        }
+        return catalog;
+    }
+
+    private List<String> fallbackTargets(String requestedLocale) {
+        Set<String> targets = new LinkedHashSet<>();
+        switch (fallbackMode) {
+            case KEY -> {
+                return List.of();
+            }
+            case DEFAULT -> targets.add(LanguageConstants.DEFAULT_LOCALE);
+            case SYSTEM -> targets.add(detectLocale());
+            case CUSTOM -> {
+                if (fallbackLocale != null && !fallbackLocale.isBlank()) {
+                    targets.add(normalizeLocale(fallbackLocale));
+                }
+            }
+        }
+        targets.remove(requestedLocale);
+        return List.copyOf(targets);
     }
 
     private void publishState(LanguageSnapshot state) {
@@ -241,6 +310,26 @@ public final class LanguageService implements LanguageTextProvider {
         } catch (IOException e) {
             LOGGER.warn("无法读取语言设置，使用自动选择", e);
             return "";
+        }
+    }
+
+    private LanguageFallbackMode readFallbackMode() {
+        try {
+            return settingsService.languageFallbackMode();
+        } catch (IOException e) {
+            LOGGER.warn("无法读取语言回退模式，使用自动回退", e);
+            return LanguageFallbackMode.KEY;
+        }
+    }
+
+    private String readFallbackLocale() {
+        try {
+            return settingsService.languageFallbackLocale()
+                    .map(this::normalizeLocale)
+                    .orElse(LanguageConstants.DEFAULT_LOCALE);
+        } catch (IOException e) {
+            LOGGER.warn("无法读取自定义回退语言，使用默认语言", e);
+            return LanguageConstants.DEFAULT_LOCALE;
         }
     }
 }

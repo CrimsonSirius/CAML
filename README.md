@@ -223,6 +223,9 @@ statusLabel.setText(UiText.tr("home.instance.current", version));
 - 设置 → 外观 → 语言提供“自动 / 手动”两种模式；手动模式可从语言下拉框选择
   `zh_cn`、`en_us` 或 `fn_cn`。模式与手动语言分别保存在 `settings.properties` 的
   `languageMode` 和 `language`，切换后立即重建主视图刷新界面文案。
+- 外观页同时提供语言回退策略：`系统语言`、`默认语言`（固定英语）、
+  `裸键`（不回退）和`自定义语言`（仅下拉选择的 locale）。除默认语言外，缺失内容显示裸键。模式与自定义 locale
+  持久化为 `languageFallbackMode` 和 `languageFallbackLocale`。
 - 语言下拉框中的语言名不参与翻译，始终使用该语言自己的写法：`zh_cn` → `简体中文`、
   `en_us` → `English`、`fn_cn` → `地道中国话`。名称**硬编码**在后端 `LanguageService`，
   不写入也不读取翻译文件，因此切换界面语言、或翻译文件写错名称都不会改变下拉框内容；

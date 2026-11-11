@@ -14,6 +14,7 @@ import javafx.util.Duration;
 import org.chs.camlauncher.backend.theme.ThemeInfo;
 import org.chs.camlauncher.backend.system.SystemMemoryInfo;
 import org.chs.camlauncher.language.contract.LanguageSelectionMode;
+import org.chs.camlauncher.language.contract.LanguageFallbackMode;
 import org.chs.camlauncher.front.controller.SettingsController;
 import org.chs.camlauncher.front.text.UiText;
 import org.chs.camlauncher.ui.control.CamlSideNav;
@@ -43,7 +44,9 @@ final class SettingsView extends VBox implements SidebarPage, PageLifecycle {
                  Consumer<Boolean> onVersionIsolationChanged,
                  SystemMemoryInfo systemMemory, SettingsController controller,
                  LanguageSelectionMode initialLanguageMode, String initialLanguage,
-                 BiConsumer<LanguageSelectionMode, String> onLanguageChanged) {
+                 LanguageFallbackMode initialFallbackMode, String initialFallbackLocale,
+                 BiConsumer<LanguageSelectionMode, String> onLanguageChanged,
+                 BiConsumer<LanguageFallbackMode, String> onLanguageFallbackChanged) {
         this.controller = controller;
         gameSettings = new GameSettingsView(
                 launchSettings, onMemoryChanged, onVersionIsolationChanged, systemMemory, controller);
@@ -56,7 +59,9 @@ final class SettingsView extends VBox implements SidebarPage, PageLifecycle {
                 controller::saveDownloadSourceAsync
         );
         launcherSettings = new LauncherSettingsView(
-                initialLanguageMode, initialLanguage, onLanguageChanged);
+                initialLanguageMode, initialLanguage,
+                initialFallbackMode, initialFallbackLocale,
+                onLanguageChanged, onLanguageFallbackChanged);
 
         sideNav = new CamlSideNav();
         sideNav.getStyleClass().add("app-settings-sidebar");

@@ -12,6 +12,7 @@ import org.chs.camlauncher.backend.config.BackendConfig;
 import org.chs.camlauncher.backend.instance.VersionIsolationMode;
 import org.chs.camlauncher.backend.runtime.JavaSelectionMode;
 import org.chs.camlauncher.language.contract.LanguageSelectionMode;
+import org.chs.camlauncher.language.contract.LanguageFallbackMode;
 import org.chs.camlauncher.backend.settings.SettingsService;
 import org.chs.camlauncher.backend.system.SystemMemoryInfo;
 import org.chs.camlauncher.backend.theme.ThemeInfo;
@@ -49,7 +50,10 @@ public final class CAMLApplication extends Application {
     private String lastLaunchedInstanceId = "1.21.4";
     private LanguageSelectionMode languageSelectionMode = LanguageSelectionMode.AUTO;
     private String language = UiText.DEFAULT_LOCALE;
+    private LanguageFallbackMode languageFallbackMode = LanguageFallbackMode.KEY;
+    private String languageFallbackLocale = UiText.DEFAULT_LOCALE;
     private long languageChangeGeneration;
+    private long languageFallbackChangeGeneration;
     private volatile boolean stopping;
 
     @Override
@@ -64,8 +68,11 @@ public final class CAMLApplication extends Application {
         backend.start();
 
         UiText.initialize(backend.languageService());
+        var languageState = backend.languageSnapshot();
         languageSelectionMode = backend.languageSelectionMode();
-        language = backend.languageSnapshot().activeLocale();
+        language = languageState.activeLocale();
+        languageFallbackMode = languageState.fallbackMode();
+        languageFallbackLocale = languageState.fallbackLocale();
 
         try {
             themes = backend.listThemes();
@@ -114,7 +121,9 @@ public final class CAMLApplication extends Application {
         view = new MainView(
                 controller, savedMaxMemoryMb, systemMemory, gameDirectory,
                 fullVersionIsolation, lastLaunchedInstanceId, javaSelectionMode, selectedJavaPath,
-                languageSelectionMode, language, this::changeLanguage);
+                languageSelectionMode, language,
+                languageFallbackMode, languageFallbackLocale,
+                this::changeLanguage, this::changeLanguageFallback);
 
         // 3. 按主屏幕可用区域决定窗口尺寸：小屏不溢出，大屏不过小，默认居中
         Rectangle2D screen = Screen.getPrimary().getVisualBounds();
@@ -188,6 +197,25 @@ public final class CAMLApplication extends Application {
                     rebuildView();
                 },
                 message -> logger.warn("切换语言失败: {}", message));
+    }
+
+    private void changeLanguageFallback(LanguageFallbackMode mode, String locale) {
+        String nextLocale = UiText.normalizeLocale(locale);
+        if (mode == languageFallbackMode && nextLocale.equals(languageFallbackLocale)) {
+            return;
+        }
+        languageFallbackMode = mode;
+        languageFallbackLocale = nextLocale;
+        long generation = ++languageFallbackChangeGeneration;
+        controller.settingsController().switchLanguageFallbackAsync(mode, nextLocale,
+                snapshot -> {
+                    if (stopping || generation != languageFallbackChangeGeneration) {
+                        return;
+                    }
+                    languageFallbackLocale = snapshot.fallbackLocale();
+                    rebuildView();
+                },
+                message -> logger.warn("设置语言回退失败: {}", message));
     }
 
     private void rebuildView() {

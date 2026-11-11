@@ -60,6 +60,7 @@ import org.chs.camlauncher.backend.runtime.JavaRuntime;
 import org.chs.camlauncher.backend.runtime.JavaSelectionMode;
 import org.chs.camlauncher.backend.settings.SettingsService;
 import org.chs.camlauncher.language.contract.LanguageEventListener;
+import org.chs.camlauncher.language.contract.LanguageFallbackMode;
 import org.chs.camlauncher.language.contract.LanguageSelectionMode;
 import org.chs.camlauncher.backend.system.SystemMemoryInfo;
 import org.chs.camlauncher.backend.system.SystemMemoryService;
@@ -411,6 +412,19 @@ public final class CAMLBackend implements AutoCloseable {
 
     public LanguageSnapshot setLanguage(LanguageSelectionMode mode, String locale) throws IOException {
         return languageService.switchLanguage(mode, locale);
+    }
+
+    public LanguageFallbackMode languageFallbackMode() {
+        return languageService.fallbackMode();
+    }
+
+    public String languageFallbackLocale() {
+        return languageService.fallbackLocale();
+    }
+
+    public LanguageSnapshot setLanguageFallback(LanguageFallbackMode mode, String locale)
+            throws IOException {
+        return languageService.setLanguageFallback(mode, locale);
     }
 
     public LanguageService languageService() {
