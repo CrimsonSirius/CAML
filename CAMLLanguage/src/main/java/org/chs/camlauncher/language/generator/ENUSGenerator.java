@@ -78,6 +78,7 @@ public final class ENUSGenerator extends LanguageTranslationGenerator {
         t.put("network.noSource", "No download source available: %s");
         t.put("metadata.manifestEmpty", "Version manifest is empty");
         t.put("metadata.versionJsonEmpty", "Version JSON is empty");
+        t.put("metadata.versionJsonHashMismatch", "Version JSON SHA-1 mismatch: %s");
         t.put("launch.permissionDenied", "Permission denied while running Java or accessing the game directory. Check file permissions.");
         t.put("launch.executableNotFound", "Java executable not found. Select a Java installation again.");
         t.put("launch.commandTooLong", "The launch command is too long. Shorten the game path or classpath.");

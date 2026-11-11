@@ -1,7 +1,9 @@
 package org.chs.camlauncher.backend.metadata;
 
 import com.sun.net.httpserver.HttpServer;
+import org.chs.camlauncher.backend.download.hash.HashVerifier;
 import org.chs.camlauncher.backend.download.source.MirrorDownloadSource;
+import org.chs.camlauncher.backend.error.BackendException;
 import org.chs.camlauncher.backend.metadata.model.VersionInfo;
 import org.chs.camlauncher.backend.metadata.model.VersionManifest;
 import org.chs.camlauncher.backend.download.source.DownloadSource;
@@ -23,6 +25,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class VersionManifestServiceTest {
@@ -41,7 +44,7 @@ class VersionManifestServiceTest {
                       "url": "http://127.0.0.1:PORT/1.21.5.json",
                       "time": "2026-01-01T00:00:00+00:00",
                       "releaseTime": "2026-01-01T00:00:00+00:00",
-                      "sha1": "manifest-sha1",
+                      "sha1": "SHA1",
                       "complianceLevel": 1
                     }
                   ]
@@ -56,7 +59,10 @@ class VersionManifestServiceTest {
                 """;
 
         try (TestHttpServer server = new TestHttpServer()) {
-            server.handle("/version_manifest_v2.json", manifestJson.replace("PORT", Integer.toString(server.port())));
+            String versionSha1 = HashVerifier.sha1(versionJson.getBytes(StandardCharsets.UTF_8));
+            server.handle("/version_manifest_v2.json", manifestJson
+                    .replace("PORT", Integer.toString(server.port()))
+                    .replace("SHA1", versionSha1));
             server.handle("/1.21.5.json", versionJson);
 
             VersionManifestService service = new VersionManifestService();
@@ -66,6 +72,43 @@ class VersionManifestServiceTest {
             assertEquals("1.21.5", manifest.latest().release());
             assertEquals("1.21.5", version.id());
             assertEquals(1, manifest.versions().size());
+        }
+    }
+
+    @Test
+    void rejectsVersionJsonWithMismatchedSha1() throws Exception {
+        String manifestJson = """
+                {
+                  "latest": {"release": "1.21.5", "snapshot": "25w14a"},
+                  "versions": [{
+                    "id": "1.21.5",
+                    "type": "release",
+                    "url": "http://127.0.0.1:PORT/1.21.5.json",
+                    "releaseTime": "2026-01-01T00:00:00+00:00",
+                    "sha1": "0000000000000000000000000000000000000000"
+                  }]
+                }
+                """;
+        String versionJson = """
+                {
+                  "id": "1.21.5",
+                  "type": "release",
+                  "mainClass": "net.minecraft.client.main.Main"
+                }
+                """;
+
+        try (TestHttpServer server = new TestHttpServer()) {
+            server.handle("/version_manifest_v2.json", manifestJson.replace(
+                    "PORT", Integer.toString(server.port())));
+            server.handle("/1.21.5.json", versionJson);
+
+            VersionManifestService service = new VersionManifestService();
+            VersionManifest manifest = service.fetchManifest(
+                    server.uri("/version_manifest_v2.json"));
+
+            BackendException exception = assertThrows(BackendException.class,
+                    () -> service.fetchVersionInfo(manifest.versions().getFirst()));
+            assertEquals("metadata.versionJsonHashMismatch", exception.error().code());
         }
     }
 

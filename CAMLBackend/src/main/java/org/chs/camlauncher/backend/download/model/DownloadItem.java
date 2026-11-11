@@ -30,7 +30,10 @@ public record DownloadItem(
         if (!Files.isRegularFile(destination) || Files.size(destination) <= 0) {
             return false;
         }
-        return !hasSha1() || HashVerifier.matches(destination, sha1);
+        if (hasSha1()) {
+            return HashVerifier.matches(destination, sha1);
+        }
+        return size <= 0 || Files.size(destination) == size;
     }
 
     /** 是否提供了非空 SHA-1。 */

@@ -91,7 +91,7 @@ public final class FileDownloader {
         Objects.requireNonNull(token, "token");
         token.throwIfCancelled();
         DownloadListener progress = listener == null ? DownloadListener.NONE : listener;
-        if (item.existsAndValid()) {
+        if (item.existsAndValid() && validatesExistingFile(item.destination(), validator)) {
             progress.onProgress(new DownloadListener.DownloadProgress(
                     item.label(), item.size(), item.size()));
             return;
@@ -189,9 +189,14 @@ public final class FileDownloader {
                     throw new IOException("HTTP " + response.statusCode() + " for " + uri);
                 }
 
-                long total = item.size() > 0
-                        ? item.size()
-                        : response.headers().firstValueAsLong("Content-Length").orElse(-1);
+                long expectedSize = item.size();
+                long contentLength = response.headers()
+                        .firstValueAsLong("Content-Length").orElse(-1L);
+                if (expectedSize > 0 && contentLength >= 0 && expectedSize != contentLength) {
+                    throw new IOException("Content-Length mismatch for " + item.label()
+                            + ": expected " + expectedSize + ", got " + contentLength);
+                }
+                long total = expectedSize > 0 ? expectedSize : contentLength;
                 long downloaded = 0;
                 byte[] buffer = new byte[8192];
                 int read;
@@ -212,6 +217,14 @@ public final class FileDownloader {
                 }
 
                 token.throwIfCancelled();
+                if (contentLength >= 0 && downloaded != contentLength) {
+                    throw new IOException("Incomplete response for " + item.label()
+                            + ": expected " + contentLength + " bytes, got " + downloaded);
+                }
+                if (expectedSize > 0 && downloaded != expectedSize) {
+                    throw new IOException("Size mismatch for " + item.label()
+                            + ": expected " + expectedSize + " bytes, got " + downloaded);
+                }
                 verify(part, item, validator);
                 move(part, destination);
                 moved = true;
@@ -490,6 +503,18 @@ public final class FileDownloader {
         }
         if (validator != null) {
             validator.validate(file);
+        }
+    }
+
+    private static boolean validatesExistingFile(Path file, DownloadValidator validator) {
+        if (validator == null) {
+            return true;
+        }
+        try {
+            validator.validate(file);
+            return true;
+        } catch (IOException e) {
+            return false;
         }
     }
 

@@ -63,4 +63,20 @@ class DownloadItemTest {
         assertFalse(item.hasSha1());
         assertTrue(item.existsAndValid());
     }
+
+    @Test
+    void rejectsExistingFileWithMismatchedSizeWithoutChecksum() throws Exception {
+        Path file = tempDirectory.resolve("incomplete.jar");
+        Files.writeString(file, "abc");
+
+        DownloadItem item = new DownloadItem(
+                "incomplete",
+                List.of(URI.create("https://example.com/incomplete.jar")),
+                file,
+                null,
+                5
+        );
+
+        assertFalse(item.existsAndValid());
+    }
 }
