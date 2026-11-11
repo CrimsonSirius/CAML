@@ -187,6 +187,15 @@ final class ControllerContext {
                 () -> backend.inspectGameDirectory(directory), callback, onError);
     }
 
+    FrontTask<Boolean> checkDirectory(Path directory, Consumer<Boolean> callback,
+                                      Consumer<String> onError) {
+        if (directory == null) {
+            return null;
+        }
+        return runCheck(Language.tr("operation.inspectGameDirectory"),
+                () -> backend.directoryExists(directory), callback, onError);
+    }
+
     /** 统一错误动作：记录日志、写入 UI 日志，并把可读消息切回 JavaFX 线程。 */
     void reportError(String operation, Throwable cause, Consumer<String> onError) {
         reportError(operation, cause, false, onError);

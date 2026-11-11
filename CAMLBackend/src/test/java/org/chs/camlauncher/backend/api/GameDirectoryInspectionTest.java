@@ -35,11 +35,13 @@ class GameDirectoryInspectionTest {
             GameDirectoryInfo info = backend.inspectGameDirectory(gameDirectory);
 
             assertTrue(info.directoryExists());
+            assertTrue(backend.directoryExists(gameDirectory));
             assertTrue(info.hasInstalledVersions());
             assertEquals(List.of("1.21.4"), info.installedVersions());
 
             GameDirectoryInfo missing = backend.inspectGameDirectory(root.resolve("missing"));
             assertFalse(missing.directoryExists());
+            assertFalse(backend.directoryExists(root.resolve("missing")));
             assertTrue(missing.installedVersions().isEmpty());
         }
     }

@@ -707,6 +707,10 @@ public final class CAMLBackend implements AutoCloseable {
         return new OfflineAccount(username).login();
     }
 
+    public boolean directoryExists(Path directory) {
+        return directory != null && Files.isDirectory(directory);
+    }
+
     public LaunchPlan createLaunchPlan(
             InstalledVersion instance,
             AuthSession auth,
