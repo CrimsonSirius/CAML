@@ -3,6 +3,7 @@ plugins {
 }
 
 dependencies {
+    implementation(project(":CAMLLanguage"))
     implementation(libs.gson)
     implementation(libs.log4j.api)
 

@@ -4,13 +4,13 @@ import javafx.application.Platform;
 import org.chs.camlauncher.backend.api.GameDirectoryInfo;
 import org.chs.camlauncher.backend.download.source.DownloadSourceMode;
 import org.chs.camlauncher.backend.instance.VersionIsolationMode;
+import org.chs.camlauncher.backend.language.LanguageSnapshot;
 import org.chs.camlauncher.backend.runtime.JavaCandidate;
 import org.chs.camlauncher.backend.runtime.JavaSelectionMode;
-import org.chs.camlauncher.backend.settings.LanguageSelectionMode;
+import org.chs.camlauncher.language.contract.LanguageSelectionMode;
 import org.chs.camlauncher.backend.system.SystemMemoryInfo;
-import org.chs.camlauncher.language.Language;
+import org.chs.camlauncher.front.text.UiText;
 
-import java.io.IOException;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Objects;
@@ -56,18 +56,18 @@ public final class SettingsController {
 
     public FrontTask<List<JavaCandidate>> scanJavaCandidates(
             Consumer<List<JavaCandidate>> onLoaded, Consumer<String> onError) {
-        return context.runJava(Language.tr("operation.scanJava"),
+        return context.runJava(UiText.tr("operation.scanJava"),
                 () -> context.backend().listJavaCandidates(), onLoaded, onError);
     }
 
     public FrontTask<JavaCandidate> addManualJava(
             Path executable, Consumer<JavaCandidate> onAdded, Consumer<String> onError) {
-        return context.runJava(Language.tr("operation.addManualJava"),
+        return context.runJava(UiText.tr("operation.addManualJava"),
                 () -> context.backend().addManualJavaPath(executable), onAdded, onError);
     }
 
     public void saveJavaSelectionAsync(JavaSelectionMode mode, Path selectedJavaPath) {
-        context.executeSettings(Language.tr("operation.saveJavaSelection"),
+        context.executeSettings(UiText.tr("operation.saveJavaSelection"),
                 () -> context.backend().setJavaSelection(mode, selectedJavaPath));
     }
 
@@ -88,19 +88,19 @@ public final class SettingsController {
 
     /** 异步保存最大内存，避免在 JavaFX Application Thread 上写文件。 */
     public void saveMaxMemoryMbAsync(int maxMemoryMb) {
-        context.executeSettings(Language.tr("operation.saveMaxMemory"),
+        context.executeSettings(UiText.tr("operation.saveMaxMemory"),
                 () -> context.backend().setMaxMemoryMb(maxMemoryMb));
     }
 
     /** 异步保存游戏位置，避免在 JavaFX Application Thread 上写文件。 */
     public void saveGameDirectoryAsync(Path gameDirectory) {
-        context.executeSettings(Language.tr("operation.saveGameDirectory"),
+        context.executeSettings(UiText.tr("operation.saveGameDirectory"),
                 () -> context.backend().setGameDirectory(gameDirectory));
     }
 
     /** 异步保存版本隔离选择，避免在 JavaFX Application Thread 上写文件。 */
     public void saveVersionIsolationAsync(boolean fullVersionIsolation) {
-        context.executeSettings(Language.tr("operation.saveVersionIsolation"),
+        context.executeSettings(UiText.tr("operation.saveVersionIsolation"),
                 () -> context.backend().setVersionIsolationMode(fullVersionIsolation
                         ? VersionIsolationMode.FULL
                         : VersionIsolationMode.NONE));
@@ -108,12 +108,12 @@ public final class SettingsController {
 
     /** 异步保存下载并发数，并立即更新后端下载器。 */
     public void saveDownloadConcurrencyAsync(int downloadConcurrency) {
-        context.executeSettings(Language.tr("operation.saveDownloadConcurrency"),
+        context.executeSettings(UiText.tr("operation.saveDownloadConcurrency"),
                 () -> context.backend().setDownloadConcurrency(downloadConcurrency));
     }
 
     public void saveDownloadSourceAsync(DownloadSourceMode mode, String customApi) {
-        context.executeSettings(Language.tr("operation.saveDownloadSource"), () -> {
+        context.executeSettings(UiText.tr("operation.saveDownloadSource"), () -> {
             context.backend().setDownloadSource(mode, customApi);
             Runnable listener = onDownloadSourceSaved;
             if (listener != null) {
@@ -125,36 +125,16 @@ public final class SettingsController {
     /** 异步保存主题选择，确保关闭启动器时也能等待写入完成。 */
     public void saveThemeAsync(String themeId) {
         Objects.requireNonNull(themeId, "themeId");
-        context.executeSettings(Language.tr("operation.saveTheme"),
+        context.executeSettings(UiText.tr("operation.saveTheme"),
                 () -> context.backend().selectTheme(themeId));
     }
 
-    public LanguageSelectionMode languageSelectionMode() throws IOException {
-        return context.backend().languageSelectionMode();
-    }
-
-    public String language() throws IOException {
-        return context.backend().language().orElse(Language.DEFAULT_LOCALE);
-    }
-
-    public void saveLanguageAsync(LanguageSelectionMode mode, String locale) {
-        context.executeSettings(Language.tr("operation.saveLanguage"),
-                () -> context.backend().setLanguage(mode, locale));
-    }
-
-    /** 在设置线程重新扫描语言并切换翻译，完成后回到 JavaFX 线程。 */
-    public void switchLanguageAsync(LanguageSelectionMode mode, String locale, Runnable onLoaded) {
-        context.executeSettings(Language.tr("operation.saveLanguage"), () -> {
-            Language.refreshSupportedLocales();
-            if (mode == LanguageSelectionMode.MANUAL) {
-                Language.setLocale(locale);
-            } else {
-                Language.useAutomaticLocale();
-            }
-            if (onLoaded != null) {
-                Platform.runLater(onLoaded);
-            }
-        });
+    /** 在设置线程完成语言持久化与重载，成功后把快照切回 JavaFX 线程。 */
+    public FrontTask<LanguageSnapshot> switchLanguageAsync(
+            LanguageSelectionMode mode, String locale,
+            Consumer<LanguageSnapshot> onLoaded, Consumer<String> onError) {
+        return context.runSettings(UiText.tr("operation.saveLanguage"),
+                () -> context.backend().setLanguage(mode, locale), onLoaded, onError);
     }
 
     public void setOnDownloadSourceSaved(Runnable listener) {

@@ -49,6 +49,8 @@ import org.chs.camlauncher.backend.launch.prepare.NativeExtractor;
 import org.chs.camlauncher.backend.launch.prepare.VirtualAssetInstaller;
 import org.chs.camlauncher.backend.launch.process.ProcessLauncher;
 import org.chs.camlauncher.backend.launch.process.ProcessListener;
+import org.chs.camlauncher.backend.language.LanguageService;
+import org.chs.camlauncher.backend.language.LanguageSnapshot;
 import org.chs.camlauncher.backend.metadata.MetadataService;
 import org.chs.camlauncher.backend.metadata.model.VersionManifest;
 import org.chs.camlauncher.backend.metadata.VersionManifestService;
@@ -57,7 +59,8 @@ import org.chs.camlauncher.backend.runtime.JavaCandidate;
 import org.chs.camlauncher.backend.runtime.JavaRuntime;
 import org.chs.camlauncher.backend.runtime.JavaSelectionMode;
 import org.chs.camlauncher.backend.settings.SettingsService;
-import org.chs.camlauncher.backend.settings.LanguageSelectionMode;
+import org.chs.camlauncher.language.contract.LanguageEventListener;
+import org.chs.camlauncher.language.contract.LanguageSelectionMode;
 import org.chs.camlauncher.backend.system.SystemMemoryInfo;
 import org.chs.camlauncher.backend.system.SystemMemoryService;
 import org.chs.camlauncher.backend.theme.ThemeInfo;
@@ -110,6 +113,7 @@ public final class CAMLBackend implements AutoCloseable {
     private final GameLaunchService gameLaunchService;
     private final ThemeService themeService;
     private final SettingsService settingsService;
+    private final LanguageService languageService;
     private final SystemMemoryService systemMemoryService;
     private final LatestLogService latestLogService;
     private volatile int downloadConcurrency = DownloadConcurrency.DEFAULT;
@@ -172,6 +176,7 @@ public final class CAMLBackend implements AutoCloseable {
         this.processLauncher = new ProcessLauncher();
         this.themeService = new ThemeService(config.dataDirectory());
         this.settingsService = new SettingsService(config.dataDirectory());
+        this.languageService = new LanguageService(config.dataDirectory(), settingsService);
         this.systemMemoryService = new SystemMemoryService();
         this.latestLogService = new LatestLogService(
                 config.dataDirectory().resolve("logs").resolve("latest.log"));
@@ -198,6 +203,7 @@ public final class CAMLBackend implements AutoCloseable {
             BackendPaths.ensure(config);
             themeService.ensureDefaultTheme();
             latestLogService.start();
+            languageService.initialize();
         } catch (IOException e) {
             throw new UncheckedIOException("Failed to prepare CAML directories", e);
         }
@@ -394,15 +400,32 @@ public final class CAMLBackend implements AutoCloseable {
     }
 
     public LanguageSelectionMode languageSelectionMode() throws IOException {
-        return settingsService.languageSelectionMode();
+        return languageService.selectionMode();
     }
 
     public Optional<String> language() throws IOException {
-        return settingsService.language();
+        String locale = languageService.storedLocale();
+        return locale == null || locale.isBlank() ? Optional.empty() : Optional.of(locale);
     }
 
-    public void setLanguage(LanguageSelectionMode mode, String locale) throws IOException {
-        settingsService.setLanguage(mode, locale);
+    public LanguageSnapshot setLanguage(LanguageSelectionMode mode, String locale) throws IOException {
+        return languageService.switchLanguage(mode, locale);
+    }
+
+    public LanguageService languageService() {
+        return languageService;
+    }
+
+    public LanguageSnapshot languageSnapshot() {
+        return languageService.snapshot();
+    }
+
+    public void addLanguageEventListener(LanguageEventListener listener) {
+        languageService.addEventListener(listener);
+    }
+
+    public void removeLanguageEventListener(LanguageEventListener listener) {
+        languageService.removeEventListener(listener);
     }
 
     public VersionManifestService versionManifestService() {

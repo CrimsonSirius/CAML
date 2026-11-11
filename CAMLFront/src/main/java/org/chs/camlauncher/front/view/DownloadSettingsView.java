@@ -9,7 +9,7 @@ import javafx.scene.layout.VBox;
 import javafx.util.Duration;
 import org.chs.camlauncher.backend.download.source.DownloadSourceMode;
 import org.chs.camlauncher.backend.settings.SettingsService;
-import org.chs.camlauncher.language.Language;
+import org.chs.camlauncher.front.text.UiText;
 import org.chs.camlauncher.ui.control.CamlRadioButton;
 import org.chs.camlauncher.ui.control.CamlSlider;
 import org.chs.camlauncher.ui.control.CamlTextField;
@@ -52,7 +52,7 @@ final class DownloadSettingsView extends VBox {
                 initial
         );
         concurrencySlider.setMaxWidth(Double.MAX_VALUE);
-        concurrencySlider.setAccessibleText(Language.tr("download.settings.concurrency.accessible"));
+        concurrencySlider.setAccessibleText(UiText.tr("download.settings.concurrency.accessible"));
 
         concurrencyValue = new Label();
         concurrencyValue.getStyleClass().add("app-download-concurrency-value");
@@ -72,9 +72,9 @@ final class DownloadSettingsView extends VBox {
         });
 
         ToggleGroup sourceGroup = new ToggleGroup();
-        mirrorSource = new CamlRadioButton(Language.tr("download.settings.source.mirror"));
-        officialSource = new CamlRadioButton(Language.tr("download.settings.source.official"));
-        customSource = new CamlRadioButton(Language.tr("download.settings.source.custom"));
+        mirrorSource = new CamlRadioButton(UiText.tr("download.settings.source.mirror"));
+        officialSource = new CamlRadioButton(UiText.tr("download.settings.source.official"));
+        customSource = new CamlRadioButton(UiText.tr("download.settings.source.custom"));
         mirrorSource.setToggleGroup(sourceGroup);
         officialSource.setToggleGroup(sourceGroup);
         customSource.setToggleGroup(sourceGroup);
@@ -84,7 +84,7 @@ final class DownloadSettingsView extends VBox {
 
         customApiField = new CamlTextField(
                 initialCustomApi == null ? "" : initialCustomApi,
-                Language.tr("download.settings.customApi.placeholder")
+                UiText.tr("download.settings.customApi.placeholder")
         );
         customApiField.setMaxWidth(Double.MAX_VALUE);
         customApiField.setDisable(initialSource != DownloadSourceMode.CUSTOM);
@@ -143,10 +143,10 @@ final class DownloadSettingsView extends VBox {
     }
 
     private void buildLayout() {
-        Label sourceHeading = new Label(Language.tr("download.settings.source"));
+        Label sourceHeading = new Label(UiText.tr("download.settings.source"));
         sourceHeading.getStyleClass().add("app-settings-group-title");
 
-        Label sourceDescription = new Label(Language.tr("download.settings.source.description"));
+        Label sourceDescription = new Label(UiText.tr("download.settings.source.description"));
         sourceDescription.getStyleClass().addAll("caml-body-medium", "caml-on-surface-muted");
         sourceDescription.setWrapText(true);
 
@@ -157,14 +157,14 @@ final class DownloadSettingsView extends VBox {
         sourceGroup.setMaxWidth(Double.MAX_VALUE);
         sourceGroup.getStyleClass().add("app-settings-group");
 
-        Label heading = new Label(Language.tr("download.settings.concurrency"));
+        Label heading = new Label(UiText.tr("download.settings.concurrency"));
         heading.getStyleClass().add("app-settings-group-title");
 
-        Label description = new Label(Language.tr("download.settings.concurrency.description"));
+        Label description = new Label(UiText.tr("download.settings.concurrency.description"));
         description.getStyleClass().addAll("caml-body-medium", "caml-on-surface-muted");
         description.setWrapText(true);
 
-        Label sliderLabel = new Label(Language.tr("download.settings.concurrency.label"));
+        Label sliderLabel = new Label(UiText.tr("download.settings.concurrency.label"));
         sliderLabel.getStyleClass().add("caml-label-medium");
         sliderLabel.setLabelFor(concurrencySlider);
 
@@ -184,6 +184,6 @@ final class DownloadSettingsView extends VBox {
     }
 
     private void updateValue(int value) {
-        concurrencyValue.setText(Language.tr("download.settings.concurrency.value", value));
+        concurrencyValue.setText(UiText.tr("download.settings.concurrency.value", value));
     }
 }

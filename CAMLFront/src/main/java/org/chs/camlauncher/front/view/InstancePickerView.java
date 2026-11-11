@@ -9,7 +9,7 @@ import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import org.chs.camlauncher.front.controller.HomeController;
 import org.chs.camlauncher.front.controller.FrontTask;
-import org.chs.camlauncher.language.Language;
+import org.chs.camlauncher.front.text.UiText;
 import org.chs.camlauncher.ui.control.CamlButton;
 
 import java.nio.file.Path;
@@ -17,7 +17,7 @@ import java.util.function.Consumer;
 
 /** 主页的二级菜单：列出当前游戏位置扫描出的所有实例。 */
 final class InstancePickerView extends VBox implements PageLifecycle {
-    private final Label statusLabel = new Label(Language.tr("instances.picker.scanning"));
+    private final Label statusLabel = new Label(UiText.tr("instances.picker.scanning"));
     private final ScrollPane scroll = new ScrollPane();
     private FrontTask<?> scanTask;
     private boolean disposed;
@@ -31,12 +31,12 @@ final class InstancePickerView extends VBox implements PageLifecycle {
 
         CamlButton backButton = ViewSupport.backButton(onBack);
 
-        Label title = new Label(Language.tr("instances.picker.title"));
+        Label title = new Label(UiText.tr("instances.picker.title"));
         title.getStyleClass().add("caml-headline-small");
 
         Label pathLabel = new Label(gameDirectory == null
-                ? Language.tr("instances.picker.noGameDirectory")
-                : Language.tr("instances.picker.gameDirectory", gameDirectory));
+                ? UiText.tr("instances.picker.noGameDirectory")
+                : UiText.tr("instances.picker.gameDirectory", gameDirectory));
         pathLabel.getStyleClass().addAll("caml-body-small", "caml-on-surface-muted");
         pathLabel.setWrapText(true);
 
@@ -56,7 +56,7 @@ final class InstancePickerView extends VBox implements PageLifecycle {
         getChildren().addAll(header, statusLabel, scroll);
 
         if (gameDirectory == null) {
-            statusLabel.setText(Language.tr("instances.picker.noGameDirectoryHint"));
+            statusLabel.setText(UiText.tr("instances.picker.noGameDirectoryHint"));
             return;
         }
 
@@ -65,11 +65,11 @@ final class InstancePickerView extends VBox implements PageLifecycle {
                 return;
             }
             if (!info.directoryExists()) {
-                statusLabel.setText(Language.tr("instances.picker.missing", info.directory()));
+                statusLabel.setText(UiText.tr("instances.picker.missing", info.directory()));
                 return;
             }
             if (!info.hasInstalledVersions()) {
-                statusLabel.setText(Language.tr("instances.picker.empty"));
+                statusLabel.setText(UiText.tr("instances.picker.empty"));
                 return;
             }
 
@@ -84,11 +84,11 @@ final class InstancePickerView extends VBox implements PageLifecycle {
                 list.getChildren().add(item);
             }
             scroll.setContent(list);
-            statusLabel.setText(Language.tr("instances.picker.count",
+            statusLabel.setText(UiText.tr("instances.picker.count",
                     info.installedVersions().size()));
         }, message -> {
             if (!disposed) {
-                statusLabel.setText(Language.tr("instances.picker.scanFailed", message));
+                statusLabel.setText(UiText.tr("instances.picker.scanFailed", message));
             }
         });
     }

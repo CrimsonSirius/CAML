@@ -1,7 +1,7 @@
-package org.chs.camlauncher.language.generator;
+package org.chs.camlauncher.language.generator.lang;
 
-import org.chs.camlauncher.language.LanguageTranslationGenerator;
-import org.chs.camlauncher.language.TranslationTable;
+import org.chs.camlauncher.language.generator.LanguageTranslationGenerator;
+import org.chs.camlauncher.language.generator.TranslationTable;
 
 /** English translations. */
 public final class ENUSGenerator extends LanguageTranslationGenerator {

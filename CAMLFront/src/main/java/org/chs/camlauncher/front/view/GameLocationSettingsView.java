@@ -6,7 +6,7 @@ import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import javafx.stage.DirectoryChooser;
 import org.chs.camlauncher.front.controller.SettingsController;
-import org.chs.camlauncher.language.Language;
+import org.chs.camlauncher.front.text.UiText;
 import org.chs.camlauncher.ui.control.CamlButton;
 import org.chs.camlauncher.ui.control.CamlTextField;
 
@@ -27,10 +27,10 @@ final class GameLocationSettingsView extends VBox {
         this.launchSettings = launchSettings;
         this.controller = controller;
 
-        Label heading = new Label(Language.tr("settings.game.location.title"));
+        Label heading = new Label(UiText.tr("settings.game.location.title"));
         heading.getStyleClass().add("app-settings-group-title");
 
-        Label description = new Label(Language.tr("settings.game.location.description"));
+        Label description = new Label(UiText.tr("settings.game.location.description"));
         description.getStyleClass().addAll("caml-body-medium", "caml-on-surface-muted");
         description.setWrapText(true);
 
@@ -39,12 +39,12 @@ final class GameLocationSettingsView extends VBox {
         pathField.setText(launchSettings.gameDirectory().toString());
         HBox.setHgrow(pathField, Priority.ALWAYS);
 
-        browseButton = CamlButton.outlined(Language.tr("settings.game.location.browse"));
+        browseButton = CamlButton.outlined(UiText.tr("settings.game.location.browse"));
         browseButton.setMinWidth(64);
         browseButton.setMaxWidth(javafx.scene.layout.Region.USE_PREF_SIZE);
         browseButton.setOnAction(event -> chooseDirectory());
 
-        saveButton = CamlButton.filled(Language.tr("settings.game.location.save"));
+        saveButton = CamlButton.filled(UiText.tr("settings.game.location.save"));
         saveButton.setMinWidth(72);
         saveButton.setMaxWidth(javafx.scene.layout.Region.USE_PREF_SIZE);
         saveButton.setOnAction(event -> saveDirectory());
@@ -95,7 +95,7 @@ final class GameLocationSettingsView extends VBox {
             return;
         }
         DirectoryChooser chooser = new DirectoryChooser();
-        chooser.setTitle(Language.tr("settings.game.location.chooserTitle"));
+        chooser.setTitle(UiText.tr("settings.game.location.chooserTitle"));
         if (initialDirectory != null) {
             chooser.setInitialDirectory(initialDirectory.toFile());
         }
@@ -103,14 +103,14 @@ final class GameLocationSettingsView extends VBox {
         File selected = chooser.showDialog(getScene() == null ? null : getScene().getWindow());
         if (selected != null) {
             pathField.setText(selected.toPath().toAbsolutePath().normalize().toString());
-            showStatus(Language.tr("settings.game.location.notSaved"), false);
+            showStatus(UiText.tr("settings.game.location.notSaved"), false);
         }
     }
 
     private void saveDirectory() {
         String raw = pathField.getText().trim();
         if (raw.isEmpty()) {
-            showStatus(Language.tr("settings.game.location.empty"), true);
+            showStatus(UiText.tr("settings.game.location.empty"), true);
             return;
         }
 
@@ -118,25 +118,25 @@ final class GameLocationSettingsView extends VBox {
         try {
             path = Path.of(raw).toAbsolutePath().normalize();
         } catch (InvalidPathException e) {
-            showStatus(Language.tr("settings.game.location.invalid"), true);
+            showStatus(UiText.tr("settings.game.location.invalid"), true);
             return;
         }
 
         saveButton.setDisable(true);
-        showStatus(Language.tr("settings.game.location.checking"), false);
+        showStatus(UiText.tr("settings.game.location.checking"), false);
         controller.inspectGameDirectory(path, info -> {
             saveButton.setDisable(false);
             if (!info.directoryExists()) {
-                showStatus(Language.tr("settings.game.location.missing", path), true);
+                showStatus(UiText.tr("settings.game.location.missing", path), true);
                 return;
             }
             launchSettings.setGameDirectory(path);
             controller.saveGameDirectoryAsync(path);
             pathField.setText(path.toString());
-            showStatus(Language.tr("settings.game.location.saved"), false);
+            showStatus(UiText.tr("settings.game.location.saved"), false);
         }, message -> {
             saveButton.setDisable(false);
-            showStatus(Language.tr("settings.game.location.checkFailed", message), true);
+            showStatus(UiText.tr("settings.game.location.checkFailed", message), true);
         });
     }
 

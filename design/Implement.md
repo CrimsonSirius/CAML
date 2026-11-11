@@ -306,28 +306,30 @@ CAML
 
 ### 3.15 前端多语言
 
-- 多语言运行时位于独立 `CAMLLanguage` 模块，视图和控制器统一调用
-  `org.chs.camlauncher.language.Language.tr(key[, args])`。
+- `CAMLLanguage` 只包含 `contract` 与 `generator` 两个包及语言 JSON；运行时不读取文件、不检测语言、不做回退或格式化。
+- 运行时唯一入口是后端 `org.chs.camlauncher.backend.language.LanguageService`，负责安装同步、检测、
+  加载、逐键回退、占位符格式化、不可变快照、事件和日志。
+- 前端通过 `org.chs.camlauncher.front.text.UiText` 显示后端 `LanguageTextProvider` 提供的最终文本，
+  不读取语言文件、不执行回退或格式化。
 - 内置翻译键与文案放在 `CAMLLanguage/src/main/resources/lang/zh_cn.json`、`en_us.json` 和 `fn_cn.json`；
   每次启动与内置资源按键值比对，不一致（含 JSON 损坏）就按内置文件重写；非内置语言文件原样保留，之后从该目录读取。
   结构参考 Minecraft 的 `lang` 文件（扁平键 + `%s`/`%d` 占位符）。
-- `Language` 在首次调用时按 `-Dcaml.language`、系统语言顺序选择语言：默认语言为 `en_us`，
+- 后端在初始化时按 `-Dcaml.language`、系统语言顺序选择语言：默认语言为 `en_us`，
   因此无需检测英语系统，只在检测到简体中文系统时使用 `zh_cn`，其余系统（含繁体中文，待做）
   使用默认语言；缺失文件回退默认语言（`Language.DEFAULT_LOCALE`）；键缺失返回键名。
-- 语言下拉框中的语言名不参与翻译：`Language.localeDisplayName(locale)` 直接读取运行时硬编码的
-  `Language.NATIVE_NAMES`，所以 `zh_cn` 恒为“简体中文”、`en_us` 恒为“English”、
+- 语言下拉框中的语言名不参与翻译：`LanguageService.displayName(locale)` 直接读取后端名称表，
+  所以 `zh_cn` 恒为“简体中文”、`en_us` 恒为“English”、
   `fn_cn` 恒为“地道中国话”，切换界面语言或翻译文件写错名称都不会改变列表内容；
-  没有登记名称的自定义语言显示 locale 标识。新增内置语言时在 `Language.NATIVE_NAMES` 登记自称。
+  没有登记名称的自定义语言显示 locale 标识。新增内置语言时在后端名称表登记自称。
 - `LanguageTranslationGenerator` 负责写 JSON；`TranslationTable` 按键排序保存文案，
   子类以实例方法 `t.put(key, value)` 登记，重复键直接失败。
-- `language/generator` 只存放生成 `lang/*.json` 的语言类：
-  `ZHCNGenerator`、`ENUSGenerator` 与 `FNCNGenerator`；`Language`、抽象基类、`TranslationTable`
-  和 `TranslationGeneratorRunner` 位于 `CAMLLanguage` 的 `org.chs.camlauncher.language` 根目录。
+- `language/generator` 存放生成器基类、`TranslationTable` 和 `TranslationGeneratorRunner`；
+  具体语言生成器 `ZHCNGenerator`、`ENUSGenerator`、`FNCNGenerator` 位于 `generator.lang` 子包，只用于开发期生成 JSON。
 - Gradle 任务 `:CAMLLanguage:generateTranslation`（`.run/generateTranslation`）先编译再生成，
   输出到 `CAMLLanguage/src/main/resources/lang`。
-- `LanguageTest` 覆盖语言切换、占位符、缺失键回退、格式化失败回退，
-  以及生成器与已提交 JSON 的一致性、各语言键集合一致性。
-- 下载阶段使用 `DownloadStage` 稳定键，由前端翻译；后端错误信息仍按原样展示。
+- `LanguageTest` 只校验生成器与已提交 JSON 的一致性、各语言键集合一致性及重复键保护；
+  后端 `LanguageServiceTest` 覆盖安装修复、检测、逐键回退、缺键诊断、自定义语言和损坏文件。
+- 下载阶段使用 `DownloadStage` 稳定键，由后端根据当前语言快照翻译；前端只显示最终文本。
 
 ## 4. 对外 API
 

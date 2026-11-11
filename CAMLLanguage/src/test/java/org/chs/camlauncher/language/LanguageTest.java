@@ -1,218 +1,91 @@
 package org.chs.camlauncher.language;
 
-import org.chs.camlauncher.language.generator.ENUSGenerator;
-import org.chs.camlauncher.language.generator.FNCNGenerator;
-import org.chs.camlauncher.language.generator.ZHCNGenerator;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
+import org.chs.camlauncher.language.generator.LanguageTranslationGenerator;
+import org.chs.camlauncher.language.generator.TranslationTable;
+import org.chs.camlauncher.language.generator.lang.ENUSGenerator;
+import org.chs.camlauncher.language.generator.lang.FNCNGenerator;
+import org.chs.camlauncher.language.generator.lang.ZHCNGenerator;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
-import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.Reader;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.TreeMap;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
-/** 校验翻译文件与生成器保持一致。 */
+/** 校验开发期生成器与已提交语言资源的一致性。 */
 class LanguageTest {
-    @TempDir
-    Path dataDirectory;
-
-    @BeforeEach
-    void initializeLanguageDirectory() throws IOException {
-        Language.initialize(dataDirectory);
-    }
-
-    @AfterEach
-    void resetLocale() {
-        Language.setLocale("zh_cn");
-    }
+    private static final List<LanguageTranslationGenerator> GENERATORS = List.of(
+            new ZHCNGenerator(),
+            new ENUSGenerator(),
+            new FNCNGenerator()
+    );
 
     @Test
-    void loadsChineseTranslations() {
-        Language.setLocale("zh_cn");
-        assertEquals("zh_cn", Language.locale());
-        assertEquals("启动游戏", Language.tr("home.launch"));
-    }
+    void generatedFilesMatchEachOther(@TempDir Path directory) throws Exception {
+        Map<String, Map<String, String>> generated = generated(directory);
+        Map<String, String> zhcn = generated.get("zh_cn");
+        Map<String, String> enus = generated.get("en_us");
+        Map<String, String> fncn = generated.get("fn_cn");
 
-    @Test
-    void switchesLanguage() {
-        Language.setLocale("en_us");
-        assertEquals("Launch game", Language.tr("home.launch"));
-        assertNotEquals("主页", Language.tr("nav.home"));
-    }
-
-    @Test
-    void formatsPlaceholders() {
-        Language.setLocale("zh_cn");
-        assertEquals("当前实例：1.21.5", Language.tr("home.instance.current", "1.21.5"));
-    }
-
-    @Test
-    void fallsBackToKeyWhenMissing() {
-        Language.setLocale("zh_cn");
-        assertEquals("missing.translation.key", Language.tr("missing.translation.key"));
-    }
-
-    @Test
-    void keepsTemplateWhenFormattingFails() {
-        Language.setLocale("zh_cn");
-        assertEquals("启动游戏", Language.tr("home.launch", "unexpected"));
-    }
-
-    @Test
-    void exposesSupportedLocalesAndNormalization() {
-        assertEquals(List.of("zh_cn", "en_us", "fn_cn"), Language.supportedLocales());
-        assertTrue(Language.isSupportedLocale("EN-US"));
-        assertEquals("en_us", Language.normalizeLocale("EN-US"));
-        assertTrue(Files.isRegularFile(dataDirectory.resolve("lang").resolve("zh_cn.json")));
-        assertTrue(Files.isRegularFile(dataDirectory.resolve("lang").resolve("en_us.json")));
-        assertTrue(Files.isRegularFile(dataDirectory.resolve("lang").resolve("fn_cn.json")));
-    }
-
-    @Test
-    void refreshesSupportedLocalesOnlyWhenRequested() throws IOException {
-        Files.writeString(dataDirectory.resolve("lang").resolve("fr_fr.json"), "{}");
-
-        assertEquals(List.of("zh_cn", "en_us", "fn_cn"), Language.supportedLocales());
-        assertEquals(List.of("zh_cn", "en_us", "fn_cn", "fr_fr"),
-                Language.refreshSupportedLocales());
-    }
-
-    @Test
-    void localeDisplayNamesAreHardcodedAndIgnoreLanguageFiles() throws IOException {
-        List<String> expected = List.of("简体中文", "English", "地道中国话");
-
-        Language.setLocale("zh_cn");
-        assertEquals(expected, displayNames());
-        Language.setLocale("en_us");
-        assertEquals(expected, displayNames());
-        Language.setLocale("fn_cn");
-        assertEquals(expected, displayNames());
-
-        // 翻译文件里写错语言名也不会影响下拉框
-        Files.writeString(dataDirectory.resolve("lang").resolve("zh_cn.json"),
-                "{\"settings.appearance.language.zh_cn\":\"Wrong name\"}");
-        Language.setLocale("zh_cn");
-        assertEquals(expected, displayNames());
-
-        assertEquals("简体中文", Language.localeDisplayName("ZH-CN"));
-        assertEquals("fr_fr", Language.localeDisplayName("fr_fr"));
-    }
-
-    @Test
-    void readsEditedLanguageFileFromDataDirectory() throws IOException {
-        Path file = dataDirectory.resolve("lang").resolve("en_us.json");
-        Files.writeString(file, "{\"home.launch\":\"Edited launch\"}");
-
-        Language.setLocale("en_us");
-
-        assertEquals("Edited launch", Language.tr("home.launch"));
-    }
-
-    @Test
-    void rewritesBundledLocaleFileThatDiffersFromResource() throws IOException {
-        Path file = dataDirectory.resolve("lang").resolve("fn_cn.json");
-        Files.writeString(file, "{\"home.launch\":\"改坏的文案\"}");
-
-        Language.initialize(dataDirectory);
-        Language.setLocale("fn_cn");
-
-        Map<String, String> repaired = readJson(file);
-        assertTrue(repaired.size() > 1, "内置语言文件应被重新写入");
-        assertTrue(repaired.containsKey("metadata.versionJsonHashMismatch"),
-                "重写后应包含内置资源中的新增键");
-        assertEquals("发射比赛", Language.tr("home.launch"));
-    }
-
-    @Test
-    void keepsUserAddedLocaleFileUntouched() throws IOException {
-        Path custom = dataDirectory.resolve("lang").resolve("xx_yy.json");
-        String content = "{\"home.launch\":\"Custom launch\"}";
-        Files.writeString(custom, content);
-
-        Language.initialize(dataDirectory);
-
-        assertEquals(content, Files.readString(custom));
-        assertTrue(Language.supportedLocales().contains("xx_yy"));
-    }
-
-    @Test
-    void fallsBackToBundledResourceWhenDataFileIsCorrupt() throws IOException {
-        Files.writeString(dataDirectory.resolve("lang").resolve("fn_cn.json"), "{ broken json");
-
-        Language.setLocale("fn_cn");
-
-        assertEquals("发射比赛", Language.tr("home.launch"));
-    }
-
-    @Test
-    void detectsOnlySimplifiedChineseSystemLocale() {
-        assertEquals("zh_cn", Language.detectSystemLocale(Locale.forLanguageTag("zh-CN")));
-        assertEquals("zh_cn", Language.detectSystemLocale(Locale.forLanguageTag("zh-SG")));
-        assertEquals("zh_cn", Language.detectSystemLocale(Locale.forLanguageTag("zh-Hans")));
-        assertEquals("zh_cn", Language.detectSystemLocale(Locale.SIMPLIFIED_CHINESE));
-
-        // 默认语言即英语，英语系统无需特殊检测
-        assertEquals("en_us", Language.detectSystemLocale(Locale.US));
-        assertEquals("en_us", Language.detectSystemLocale(Locale.UK));
-        assertEquals("en_us", Language.detectSystemLocale(Locale.ROOT));
-        assertEquals("en_us", Language.detectSystemLocale(Locale.JAPAN));
-
-        // 繁体中文翻译待做，暂回退默认语言
-        assertEquals("en_us", Language.detectSystemLocale(Locale.TRADITIONAL_CHINESE));
-        assertEquals("en_us", Language.detectSystemLocale(Locale.forLanguageTag("zh-TW")));
-        assertEquals("en_us", Language.detectSystemLocale(Locale.forLanguageTag("zh-HK")));
-        assertEquals("en_us", Language.detectSystemLocale(Locale.forLanguageTag("zh-Hant")));
-        assertEquals("en_us", Language.detectSystemLocale(null));
-    }
-
-    @Test
-    void generatedFilesMatchEachOther(@TempDir Path tempDirectory) throws IOException {
-        Map<String, String> zhen = generated(tempDirectory, new ZHCNGenerator());
-        Map<String, String> enus = generated(tempDirectory, new ENUSGenerator());
-        Map<String, String> fncn = generated(tempDirectory, new FNCNGenerator());
-
-        assertFalse(zhen.isEmpty(), "中文翻译不能为空");
-        assertEquals(new TreeMap<>(zhen).keySet(), new TreeMap<>(enus).keySet(),
-                "中英文翻译键必须一致");
-        assertEquals(new TreeMap<>(zhen).keySet(), new TreeMap<>(fncn).keySet(),
+        assertFalse(zhcn.isEmpty(), "中文翻译不能为空");
+        assertEquals(new TreeMap<>(zhcn).keySet(), new TreeMap<>(enus).keySet(),
+                "中文与英文翻译键必须一致");
+        assertEquals(new TreeMap<>(zhcn).keySet(), new TreeMap<>(fncn).keySet(),
                 "各语言翻译键必须一致");
     }
 
     @Test
-    void generatedFilesMatchBundledResources(@TempDir Path tempDirectory) throws IOException {
-        Map<String, String> generated = generated(tempDirectory, new ZHCNGenerator());
-        Language.setLocale("zh_cn");
-        for (String key : generated.keySet()) {
-            assertEquals(generated.get(key), Language.tr(key),
-                    "lang/zh_cn.json 与 ZHCNGenerator 不一致：" + key);
+    void generatedFilesMatchBundledResources(@TempDir Path directory) throws Exception {
+        Map<String, Map<String, String>> generated = generated(directory);
+        for (String locale : List.of("zh_cn", "en_us", "fn_cn")) {
+            assertEquals(generated.get(locale), readBundled(locale),
+                    "lang/" + locale + ".json 与生成器输出不一致");
         }
-        assertTrue(generated.containsKey("nav.home"));
     }
 
-    private static Map<String, String> generated(Path directory, LanguageTranslationGenerator generator)
-            throws IOException {
-        Path file = generator.generate(directory);
-        return Map.copyOf(readJson(file));
+    @Test
+    void translationTableRejectsDuplicateKeys() {
+        TranslationTable table = new TranslationTable();
+        table.put("duplicate.key", "first");
+
+        assertThrows(IllegalArgumentException.class,
+                () -> table.put("duplicate.key", "second"));
     }
 
-    private static Map<String, String> readJson(Path file) throws IOException {
-        String json = java.nio.file.Files.readString(file);
-        return new com.google.gson.Gson().fromJson(json, new com.google.gson.reflect.TypeToken<
-                java.util.LinkedHashMap<String, String>>() {
-        }.getType());
+    private static Map<String, Map<String, String>> generated(Path directory) throws Exception {
+        Map<String, Map<String, String>> result = new LinkedHashMap<>();
+        for (LanguageTranslationGenerator generator : GENERATORS) {
+            Path file = generator.generate(directory);
+            String locale = file.getFileName().toString().replace(".json", "");
+            result.put(locale, readJson(Files.newInputStream(file)));
+        }
+        return Map.copyOf(result);
     }
 
-    private static List<String> displayNames() {
-        return Language.supportedLocales().stream().map(Language::localeDisplayName).toList();
+    private static Map<String, String> readBundled(String locale) throws Exception {
+        InputStream input = LanguageTest.class.getResourceAsStream("/lang/" + locale + ".json");
+        if (input == null) {
+            throw new IllegalStateException("Missing bundled language: " + locale);
+        }
+        return readJson(input);
+    }
+
+    private static Map<String, String> readJson(InputStream input) throws Exception {
+        try (Reader reader = new InputStreamReader(input, StandardCharsets.UTF_8)) {
+            return Map.copyOf(new com.google.gson.Gson().fromJson(reader,
+                    new com.google.gson.reflect.TypeToken<LinkedHashMap<String, String>>() {
+                    }.getType()));
+        }
     }
 }

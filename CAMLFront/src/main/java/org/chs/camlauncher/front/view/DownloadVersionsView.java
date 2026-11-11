@@ -12,7 +12,7 @@ import javafx.scene.layout.VBox;
 import org.chs.camlauncher.backend.metadata.model.VersionManifest;
 import org.chs.camlauncher.front.controller.DownloadsController;
 import org.chs.camlauncher.front.controller.FrontTask;
-import org.chs.camlauncher.language.Language;
+import org.chs.camlauncher.front.text.UiText;
 import org.chs.camlauncher.ui.control.CamlButton;
 
 import java.util.List;
@@ -30,7 +30,7 @@ final class DownloadVersionsView extends VBox implements PageLifecycle {
                          VersionCategory category,
                          Consumer<VersionManifest.Version> onVersionSelected) {
         this.category = category;
-        statusLabel = new Label(Language.tr("download.versions.loading",
+        statusLabel = new Label(UiText.tr("download.versions.loading",
                 controller.downloadSourceLabel(), category.label()));
         getStyleClass().add("app-download-content");
         setPadding(new Insets(32, 40, 32, 40));
@@ -62,7 +62,7 @@ final class DownloadVersionsView extends VBox implements PageLifecycle {
             return;
         }
         if (versions.isEmpty()) {
-            statusLabel.setText(Language.tr("download.versions.empty", category.label()));
+            statusLabel.setText(UiText.tr("download.versions.empty", category.label()));
             return;
         }
 
@@ -89,12 +89,12 @@ final class DownloadVersionsView extends VBox implements PageLifecycle {
             item.setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
             item.setAccessibleText(date.isBlank()
                     ? version.id()
-                    : Language.tr("download.versions.accessible", version.id(), date));
+                    : UiText.tr("download.versions.accessible", version.id(), date));
             item.setOnAction(event -> onVersionSelected.accept(version));
             list.getChildren().add(item);
         }
         scroll.setContent(list);
-        statusLabel.setText(Language.tr("download.versions.count",
+        statusLabel.setText(UiText.tr("download.versions.count",
                 versions.size(), category.label()));
     }
 
@@ -102,7 +102,7 @@ final class DownloadVersionsView extends VBox implements PageLifecycle {
         if (disposed) {
             return;
         }
-        statusLabel.setText(Language.tr("download.versions.error", category.label(), message));
+        statusLabel.setText(UiText.tr("download.versions.error", category.label(), message));
         statusLabel.getStyleClass().remove("field-hint");
         statusLabel.getStyleClass().add("field-hint-error");
     }

@@ -21,7 +21,7 @@ import org.chs.camlauncher.backend.loader.optifine.OptiFineCompatibility;
 import org.chs.camlauncher.backend.metadata.model.VersionManifest;
 import org.chs.camlauncher.front.controller.DownloadsController;
 import org.chs.camlauncher.front.controller.FrontTask;
-import org.chs.camlauncher.language.Language;
+import org.chs.camlauncher.front.text.UiText;
 import org.chs.camlauncher.ui.control.CamlButton;
 import org.chs.camlauncher.ui.control.CamlComboBox;
 import org.chs.camlauncher.ui.control.CamlTextField;
@@ -33,7 +33,7 @@ import java.util.function.Consumer;
 
 /** 选择版本后的下载设置页：实例名、版本信息和加载器选择。 */
 final class DownloadVersionSetupView extends VBox implements PageLifecycle {
-    private final Label statusLabel = new Label(Language.tr("download.setup.status.idle"));
+    private final Label statusLabel = new Label(UiText.tr("download.setup.status.idle"));
     private final CamlTextField instanceNameField;
     private final Label instanceNameHint = new Label();
     private final CamlButton downloadButton;
@@ -68,11 +68,11 @@ final class DownloadVersionSetupView extends VBox implements PageLifecycle {
         setSpacing(12);
         setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
 
-        CamlButton cancel = CamlButton.outlined(Language.tr("common.cancel"));
+        CamlButton cancel = CamlButton.outlined(UiText.tr("common.cancel"));
         cancel.getStyleClass().add("app-pill-button");
         cancel.setOnAction(event -> onCancel.run());
 
-        Label nameLabel = new Label(Language.tr("download.setup.instanceName"));
+        Label nameLabel = new Label(UiText.tr("download.setup.instanceName"));
         nameLabel.getStyleClass().add("app-download-option-title");
         instanceNameField = new CamlTextField(version.id());
         instanceNameField.setMaxWidth(Double.MAX_VALUE);
@@ -92,18 +92,18 @@ final class DownloadVersionSetupView extends VBox implements PageLifecycle {
 
         String date = ViewSupport.releaseDate(version.releaseTime());
         String versionInfo = date.isBlank()
-                ? Language.tr("download.setup.versionInfo",
+                ? UiText.tr("download.setup.versionInfo",
                         version.id(), VersionCategory.labelOfType(version.type()))
-                : Language.tr("download.setup.versionInfoWithDate",
+                : UiText.tr("download.setup.versionInfoWithDate",
                         version.id(), VersionCategory.labelOfType(version.type()), date);
 
         VBox options = new VBox(12,
-                optionBar(Language.tr("download.setup.option.versionInfo"), valueLabel(versionInfo)),
-                optionBar(Language.tr("download.setup.option.forge"), forgeSelector),
-                optionBar(Language.tr("download.setup.option.optifine"), optiFineSelector),
-                optionBar(Language.tr("download.setup.option.fabric"), fabricLoaderSelector),
-                optionBar(Language.tr("download.setup.option.fabricApi"), fabricApiSelector),
-                optionBar(Language.tr("download.setup.option.neoforge"), neoForgeSelector)
+                optionBar(UiText.tr("download.setup.option.versionInfo"), valueLabel(versionInfo)),
+                optionBar(UiText.tr("download.setup.option.forge"), forgeSelector),
+                optionBar(UiText.tr("download.setup.option.optifine"), optiFineSelector),
+                optionBar(UiText.tr("download.setup.option.fabric"), fabricLoaderSelector),
+                optionBar(UiText.tr("download.setup.option.fabricApi"), fabricApiSelector),
+                optionBar(UiText.tr("download.setup.option.neoforge"), neoForgeSelector)
         );
 
         Region spacer = new Region();
@@ -112,7 +112,7 @@ final class DownloadVersionSetupView extends VBox implements PageLifecycle {
         statusLabel.getStyleClass().addAll("caml-body-small", "field-hint");
         statusLabel.setWrapText(true);
 
-        downloadButton = CamlButton.filled(Language.tr("download.setup.download"));
+        downloadButton = CamlButton.filled(UiText.tr("download.setup.download"));
         downloadButton.getStyleClass().add("app-download-primary-button");
         downloadButton.setMaxWidth(Double.MAX_VALUE);
         downloadButton.setDisable(true);
@@ -138,7 +138,7 @@ final class DownloadVersionSetupView extends VBox implements PageLifecycle {
     private void configureFabricSelectors() {
         fabricLoaderSelector.setPrefWidth(280);
         fabricLoaderSelector.setMaxWidth(280);
-        fabricLoaderSelector.setPromptText(Language.tr("download.prompt.loading.fabric"));
+        fabricLoaderSelector.setPromptText(UiText.tr("download.prompt.loading.fabric"));
         fabricLoaderSelector.setConverter(new StringConverter<>() {
             @Override
             public String toString(FabricLoaderVersion loader) {
@@ -166,7 +166,7 @@ final class DownloadVersionSetupView extends VBox implements PageLifecycle {
 
         fabricApiSelector.setPrefWidth(280);
         fabricApiSelector.setMaxWidth(280);
-        fabricApiSelector.setPromptText(Language.tr("download.prompt.fabricFirst"));
+        fabricApiSelector.setPromptText(UiText.tr("download.prompt.fabricFirst"));
         fabricApiSelector.setDisable(true);
         fabricApiSelector.setConverter(new StringConverter<>() {
             @Override
@@ -184,7 +184,7 @@ final class DownloadVersionSetupView extends VBox implements PageLifecycle {
     private void configureForgeSelector(VersionManifest.Version version) {
         forgeSelector.setPrefWidth(280);
         forgeSelector.setMaxWidth(280);
-        forgeSelector.setPromptText(Language.tr("download.prompt.loading.forge"));
+        forgeSelector.setPromptText(UiText.tr("download.prompt.loading.forge"));
         forgeSelector.setConverter(new StringConverter<>() {
             @Override
             public String toString(ForgeVersion forge) {
@@ -203,16 +203,16 @@ final class DownloadVersionSetupView extends VBox implements PageLifecycle {
             scheduleInstanceNameCheck();
             OptiFineVersion optiFine = optiFineSelector.getValue();
             if (optiFine != null && !OptiFineCompatibility.isForgeCompatible(forge, optiFine)) {
-                clearSelection(optiFineSelector, Language.tr("download.setup.optifineIncompatibleForge"));
+                clearSelection(optiFineSelector, UiText.tr("download.setup.optifineIncompatibleForge"));
                 updateOptiFineState();
                 autoUpdateInstanceName(forge.versionId());
                 showStatus(translate(OptiFineCompatibility.incompatibleError(forge, optiFine)), true);
                 return;
             }
             updatingLoaders = true;
-            clearSelection(fabricLoaderSelector, Language.tr("download.prompt.select.fabric"));
-            clearSelection(fabricApiSelector, Language.tr("download.prompt.fabricFirst"));
-            clearSelection(neoForgeSelector, Language.tr("download.prompt.select.neoforge"));
+            clearSelection(fabricLoaderSelector, UiText.tr("download.prompt.select.fabric"));
+            clearSelection(fabricApiSelector, UiText.tr("download.prompt.fabricFirst"));
+            clearSelection(neoForgeSelector, UiText.tr("download.prompt.select.neoforge"));
             updatingLoaders = false;
             updateFabricApiState();
             updateOptiFineState();
@@ -224,7 +224,7 @@ final class DownloadVersionSetupView extends VBox implements PageLifecycle {
     private void configureOptiFineSelector() {
         optiFineSelector.setPrefWidth(280);
         optiFineSelector.setMaxWidth(280);
-        optiFineSelector.setPromptText(Language.tr("download.prompt.forgeFirst"));
+        optiFineSelector.setPromptText(UiText.tr("download.prompt.forgeFirst"));
         optiFineSelector.setDisable(true);
         optiFineSelector.setConverter(new StringConverter<>() {
             @Override
@@ -243,7 +243,7 @@ final class DownloadVersionSetupView extends VBox implements PageLifecycle {
             }
             ForgeVersion forge = forgeSelector.getValue();
             if (forge == null) {
-                clearSelection(optiFineSelector, Language.tr("download.prompt.forgeFirst"));
+                clearSelection(optiFineSelector, UiText.tr("download.prompt.forgeFirst"));
                 return;
             }
             if (!OptiFineCompatibility.isForgeCompatible(forge, optiFine)) {
@@ -252,7 +252,7 @@ final class DownloadVersionSetupView extends VBox implements PageLifecycle {
                         .findFirst()
                         .orElse(null);
                 if (compatible == null) {
-                    clearSelection(optiFineSelector, Language.tr("download.setup.noCompatibleOptiFine"));
+                    clearSelection(optiFineSelector, UiText.tr("download.setup.noCompatibleOptiFine"));
                     showStatus(translate(OptiFineCompatibility.incompatibleError(forge, optiFine)), true);
                     return;
                 }
@@ -260,7 +260,7 @@ final class DownloadVersionSetupView extends VBox implements PageLifecycle {
                 forgeSelector.setValue(compatible);
                 updatingLoaders = false;
                 forge = compatible;
-                showStatus(Language.tr("download.setup.optifineSwitched", compatible.version()), false);
+                showStatus(UiText.tr("download.setup.optifineSwitched", compatible.version()), false);
             }
             autoUpdateInstanceName(forge.versionId() + "-optifine-" + optiFine.version());
         });
@@ -269,7 +269,7 @@ final class DownloadVersionSetupView extends VBox implements PageLifecycle {
     private void configureNeoForgeSelector(VersionManifest.Version version) {
         neoForgeSelector.setPrefWidth(280);
         neoForgeSelector.setMaxWidth(280);
-        neoForgeSelector.setPromptText(Language.tr("download.prompt.loading.neoforge"));
+        neoForgeSelector.setPromptText(UiText.tr("download.prompt.loading.neoforge"));
         neoForgeSelector.setConverter(new StringConverter<>() {
             @Override
             public String toString(NeoForgeVersion neoForge) {
@@ -287,10 +287,10 @@ final class DownloadVersionSetupView extends VBox implements PageLifecycle {
             }
             scheduleInstanceNameCheck();
             updatingLoaders = true;
-            clearSelection(forgeSelector, Language.tr("download.prompt.select.forge"));
-            clearSelection(fabricLoaderSelector, Language.tr("download.prompt.select.fabric"));
-            clearSelection(fabricApiSelector, Language.tr("download.prompt.fabricFirst"));
-            clearSelection(optiFineSelector, Language.tr("download.prompt.forgeFirst"));
+            clearSelection(forgeSelector, UiText.tr("download.prompt.select.forge"));
+            clearSelection(fabricLoaderSelector, UiText.tr("download.prompt.select.fabric"));
+            clearSelection(fabricApiSelector, UiText.tr("download.prompt.fabricFirst"));
+            clearSelection(optiFineSelector, UiText.tr("download.prompt.forgeFirst"));
             updatingLoaders = false;
             updateFabricApiState();
             updateOptiFineState();
@@ -312,7 +312,7 @@ final class DownloadVersionSetupView extends VBox implements PageLifecycle {
         String name = instanceNameField.getText().trim();
         if (name.isEmpty()) {
             instanceNameDebounce.stop();
-            showInstanceNameHint(Language.tr("download.setup.nameEmpty"), true);
+            showInstanceNameHint(UiText.tr("download.setup.nameEmpty"), true);
             return;
         }
 
@@ -325,15 +325,15 @@ final class DownloadVersionSetupView extends VBox implements PageLifecycle {
         Path gameDirectory = launchSettings.gameDirectory();
         int generation = instanceNameCheckGeneration;
         if (name.isEmpty()) {
-            showInstanceNameHint(Language.tr("download.setup.nameEmpty"), true);
+            showInstanceNameHint(UiText.tr("download.setup.nameEmpty"), true);
             return;
         }
         if (gameDirectory == null) {
-            showInstanceNameHint(Language.tr("download.setup.noGameDirectory"), true);
+            showInstanceNameHint(UiText.tr("download.setup.noGameDirectory"), true);
             return;
         }
 
-        showInstanceNameHint(Language.tr("download.setup.checkingName"), false);
+        showInstanceNameHint(UiText.tr("download.setup.checkingName"), false);
         if (instanceNameTask != null) {
             instanceNameTask.cancel();
         }
@@ -350,18 +350,18 @@ final class DownloadVersionSetupView extends VBox implements PageLifecycle {
                 return;
             }
             if (hasLoaderSelected() && name.equals(gameVersion)) {
-                showInstanceNameHint(Language.tr("download.setup.nameSameAsLoader"), true);
+                showInstanceNameHint(UiText.tr("download.setup.nameSameAsLoader"), true);
                 return;
             }
             availableInstanceName = name;
             downloadButton.setDisable(false);
-            showInstanceNameHint(Language.tr("download.setup.nameAvailable"), false);
+            showInstanceNameHint(UiText.tr("download.setup.nameAvailable"), false);
         }, message -> {
             if (generation != instanceNameCheckGeneration
                     || !name.equals(instanceNameField.getText().trim())) {
                 return;
             }
-            showInstanceNameHint(Language.tr("download.setup.checkNameFailed", message), true);
+            showInstanceNameHint(UiText.tr("download.setup.checkNameFailed", message), true);
         });
     }
 
@@ -383,17 +383,17 @@ final class DownloadVersionSetupView extends VBox implements PageLifecycle {
     private void clearOtherLoaders(CamlComboBox<?> selected) {
         updatingLoaders = true;
         if (selected != forgeSelector) {
-            clearSelection(forgeSelector, Language.tr("download.prompt.select.forge"));
+            clearSelection(forgeSelector, UiText.tr("download.prompt.select.forge"));
         }
         if (selected != neoForgeSelector) {
-            clearSelection(neoForgeSelector, Language.tr("download.prompt.select.neoforge"));
+            clearSelection(neoForgeSelector, UiText.tr("download.prompt.select.neoforge"));
         }
         if (selected != fabricLoaderSelector) {
-            clearSelection(fabricLoaderSelector, Language.tr("download.prompt.select.fabric"));
-            clearSelection(fabricApiSelector, Language.tr("download.prompt.fabricFirst"));
+            clearSelection(fabricLoaderSelector, UiText.tr("download.prompt.select.fabric"));
+            clearSelection(fabricApiSelector, UiText.tr("download.prompt.fabricFirst"));
         }
         if (selected != forgeSelector) {
-            clearSelection(optiFineSelector, Language.tr("download.prompt.forgeFirst"));
+            clearSelection(optiFineSelector, UiText.tr("download.prompt.forgeFirst"));
         }
         updatingLoaders = false;
         updateOptiFineState();
@@ -424,16 +424,16 @@ final class DownloadVersionSetupView extends VBox implements PageLifecycle {
 
     private void loadLoaderVersions(String gameVersion, DownloadsController controller) {
         loaderTasks.add(controller.fetchFabricLoaderVersions(gameVersion, this::showFabricLoaders,
-                message -> fabricLoaderSelector.setPromptText(Language.tr("download.prompt.error.fabric"))));
+                message -> fabricLoaderSelector.setPromptText(UiText.tr("download.prompt.error.fabric"))));
         loaderTasks.add(controller.fetchFabricApiVersions(gameVersion, this::showFabricApiVersions,
-                message -> fabricApiSelector.setPromptText(Language.tr("download.prompt.error.fabricApi"))));
+                message -> fabricApiSelector.setPromptText(UiText.tr("download.prompt.error.fabricApi"))));
         loaderTasks.add(controller.fetchForgeVersions(gameVersion, this::showForgeVersions,
-                message -> forgeSelector.setPromptText(Language.tr("download.prompt.error.forge"))));
+                message -> forgeSelector.setPromptText(UiText.tr("download.prompt.error.forge"))));
         loaderTasks.add(controller.fetchNeoForgeVersions(gameVersion, this::showNeoForgeVersions,
-                message -> neoForgeSelector.setPromptText(Language.tr("download.prompt.error.neoforge"))));
+                message -> neoForgeSelector.setPromptText(UiText.tr("download.prompt.error.neoforge"))));
         loaderTasks.add(controller.fetchOptiFineVersions(gameVersion, this::showOptiFineVersions,
                 message -> {
-                    optiFineSelector.setPromptText(Language.tr("download.prompt.error.optifine"));
+                    optiFineSelector.setPromptText(UiText.tr("download.prompt.error.optifine"));
                     optiFineSelector.setDisable(true);
                 }));
     }
@@ -444,11 +444,11 @@ final class DownloadVersionSetupView extends VBox implements PageLifecycle {
         }
         cancelLoaderTasks();
         updatingLoaders = true;
-        resetSelector(fabricLoaderSelector, Language.tr("download.prompt.loading.fabric"));
-        resetSelector(fabricApiSelector, Language.tr("download.prompt.fabricFirst"));
-        resetSelector(forgeSelector, Language.tr("download.prompt.loading.forge"));
-        resetSelector(optiFineSelector, Language.tr("download.prompt.forgeFirst"));
-        resetSelector(neoForgeSelector, Language.tr("download.prompt.loading.neoforge"));
+        resetSelector(fabricLoaderSelector, UiText.tr("download.prompt.loading.fabric"));
+        resetSelector(fabricApiSelector, UiText.tr("download.prompt.fabricFirst"));
+        resetSelector(forgeSelector, UiText.tr("download.prompt.loading.forge"));
+        resetSelector(optiFineSelector, UiText.tr("download.prompt.forgeFirst"));
+        resetSelector(neoForgeSelector, UiText.tr("download.prompt.loading.neoforge"));
         updatingLoaders = false;
         updateFabricApiState();
         updateOptiFineState();
@@ -476,8 +476,8 @@ final class DownloadVersionSetupView extends VBox implements PageLifecycle {
         }
         fabricLoaderSelector.getItems().setAll(loaders);
         fabricLoaderSelector.setPromptText(loaders.isEmpty()
-                ? Language.tr("download.prompt.empty.fabric")
-                : Language.tr("download.prompt.select.fabric"));
+                ? UiText.tr("download.prompt.empty.fabric")
+                : UiText.tr("download.prompt.select.fabric"));
         updateFabricApiState();
     }
 
@@ -487,8 +487,8 @@ final class DownloadVersionSetupView extends VBox implements PageLifecycle {
         }
         fabricApiSelector.getItems().setAll(versions);
         fabricApiSelector.setPromptText(versions.isEmpty()
-                ? Language.tr("download.prompt.empty.fabricApi")
-                : Language.tr("download.prompt.select.fabricApi"));
+                ? UiText.tr("download.prompt.empty.fabricApi")
+                : UiText.tr("download.prompt.select.fabricApi"));
         updateFabricApiState();
     }
 
@@ -498,8 +498,8 @@ final class DownloadVersionSetupView extends VBox implements PageLifecycle {
         }
         forgeSelector.getItems().setAll(versions);
         forgeSelector.setPromptText(versions.isEmpty()
-                ? Language.tr("download.prompt.empty.forge")
-                : Language.tr("download.prompt.select.forge"));
+                ? UiText.tr("download.prompt.empty.forge")
+                : UiText.tr("download.prompt.select.forge"));
     }
 
     private void showNeoForgeVersions(List<NeoForgeVersion> versions) {
@@ -508,8 +508,8 @@ final class DownloadVersionSetupView extends VBox implements PageLifecycle {
         }
         neoForgeSelector.getItems().setAll(versions);
         neoForgeSelector.setPromptText(versions.isEmpty()
-                ? Language.tr("download.prompt.empty.neoforge")
-                : Language.tr("download.prompt.select.neoforge"));
+                ? UiText.tr("download.prompt.empty.neoforge")
+                : UiText.tr("download.prompt.select.neoforge"));
     }
 
     private void showOptiFineVersions(List<OptiFineVersion> versions) {
@@ -518,8 +518,8 @@ final class DownloadVersionSetupView extends VBox implements PageLifecycle {
         }
         optiFineSelector.getItems().setAll(versions);
         optiFineSelector.setPromptText(versions.isEmpty()
-                ? Language.tr("download.prompt.empty.optifine")
-                : Language.tr("download.prompt.forgeFirst"));
+                ? UiText.tr("download.prompt.empty.optifine")
+                : UiText.tr("download.prompt.forgeFirst"));
         updateOptiFineState();
     }
 
@@ -539,14 +539,14 @@ final class DownloadVersionSetupView extends VBox implements PageLifecycle {
                 && fabricLoaderSelector.getValue() == null
                 && neoForgeSelector.getValue() == null;
         if (!hasForge) {
-            clearSelection(optiFineSelector, Language.tr("download.prompt.forgeFirst"));
+            clearSelection(optiFineSelector, UiText.tr("download.prompt.forgeFirst"));
             optiFineSelector.setDisable(true);
             return;
         }
 
         optiFineSelector.setDisable(optiFineSelector.getItems().isEmpty());
         if (!optiFineSelector.getItems().isEmpty() && optiFineSelector.getValue() == null) {
-            optiFineSelector.setPromptText(Language.tr("download.prompt.select.optifine"));
+            optiFineSelector.setPromptText(UiText.tr("download.prompt.select.optifine"));
         }
     }
 
@@ -555,9 +555,9 @@ final class DownloadVersionSetupView extends VBox implements PageLifecycle {
                 && forgeSelector.getValue() == null
                 && neoForgeSelector.getValue() == null;
         if (!hasFabric) {
-            clearSelection(fabricApiSelector, Language.tr("download.prompt.fabricFirst"));
+            clearSelection(fabricApiSelector, UiText.tr("download.prompt.fabricFirst"));
         } else if (fabricApiSelector.getValue() == null && !fabricApiSelector.getItems().isEmpty()) {
-            fabricApiSelector.setPromptText(Language.tr("download.prompt.select.fabricApi"));
+            fabricApiSelector.setPromptText(UiText.tr("download.prompt.select.fabricApi"));
         }
         fabricApiSelector.setDisable(!hasFabric || fabricApiSelector.getItems().isEmpty());
     }
@@ -566,11 +566,11 @@ final class DownloadVersionSetupView extends VBox implements PageLifecycle {
         Path gameDirectory = launchSettings.gameDirectory();
         String instanceId = instanceNameField.getText().trim();
         if (!instanceId.equals(availableInstanceName)) {
-            showStatus(Language.tr("download.setup.nameNotChecked"), true);
+            showStatus(UiText.tr("download.setup.nameNotChecked"), true);
             return;
         }
         if (gameDirectory == null) {
-            showStatus(Language.tr("download.setup.noGameDirectoryLong"), true);
+            showStatus(UiText.tr("download.setup.noGameDirectoryLong"), true);
             return;
         }
 
@@ -580,7 +580,7 @@ final class DownloadVersionSetupView extends VBox implements PageLifecycle {
         OptiFineVersion optiFine = optiFineSelector.getValue();
         NeoForgeVersion neoForge = neoForgeSelector.getValue();
         if (optiFine != null && forge == null) {
-            showStatus(Language.tr("download.setup.optifineRequiresForge"), true);
+            showStatus(UiText.tr("download.setup.optifineRequiresForge"), true);
             return;
         }
         if (optiFine != null && !OptiFineCompatibility.isForgeCompatible(forge, optiFine)) {
@@ -588,7 +588,7 @@ final class DownloadVersionSetupView extends VBox implements PageLifecycle {
             return;
         }
         if (hasLoaderSelected() && instanceId.equals(version.id())) {
-            showStatus(Language.tr("download.setup.nameSameAsLoader"), true);
+            showStatus(UiText.tr("download.setup.nameSameAsLoader"), true);
             return;
         }
 
@@ -605,8 +605,8 @@ final class DownloadVersionSetupView extends VBox implements PageLifecycle {
 
     private static String translate(BackendError error) {
         return error == null
-                ? Language.tr("error.unknown")
-                : Language.tr(error.code(), error.args().toArray());
+                ? UiText.tr("error.unknown")
+                : UiText.tr(error.code(), error.args().toArray());
     }
 
     private static HBox optionBar(String title, Node control) {

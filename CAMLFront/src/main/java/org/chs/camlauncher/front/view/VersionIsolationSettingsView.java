@@ -3,7 +3,7 @@ package org.chs.camlauncher.front.view;
 import javafx.scene.control.Label;
 import javafx.scene.control.ToggleGroup;
 import javafx.scene.layout.VBox;
-import org.chs.camlauncher.language.Language;
+import org.chs.camlauncher.front.text.UiText;
 import org.chs.camlauncher.ui.control.CamlRadioButton;
 
 import java.util.function.Consumer;
@@ -12,12 +12,12 @@ import java.util.function.Consumer;
 final class VersionIsolationSettingsView extends VBox {
     VersionIsolationSettingsView(LaunchSettings launchSettings,
                                  Consumer<Boolean> onVersionIsolationChanged) {
-        Label heading = new Label(Language.tr("settings.game.isolation.title"));
+        Label heading = new Label(UiText.tr("settings.game.isolation.title"));
         heading.getStyleClass().add("app-settings-group-title");
 
         ToggleGroup isolationGroup = new ToggleGroup();
-        CamlRadioButton fullyIsolated = new CamlRadioButton(Language.tr("settings.game.isolation.full"));
-        CamlRadioButton notIsolated = new CamlRadioButton(Language.tr("settings.game.isolation.none"));
+        CamlRadioButton fullyIsolated = new CamlRadioButton(UiText.tr("settings.game.isolation.full"));
+        CamlRadioButton notIsolated = new CamlRadioButton(UiText.tr("settings.game.isolation.none"));
         fullyIsolated.setToggleGroup(isolationGroup);
         notIsolated.setToggleGroup(isolationGroup);
         fullyIsolated.setSelected(launchSettings.fullVersionIsolation());

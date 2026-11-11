@@ -6,7 +6,7 @@ import org.chs.camlauncher.backend.loader.forge.ForgeVersion;
 import org.chs.camlauncher.backend.loader.neoforge.NeoForgeVersion;
 import org.chs.camlauncher.backend.loader.optifine.OptiFineVersion;
 import org.chs.camlauncher.backend.metadata.model.VersionManifest;
-import org.chs.camlauncher.language.Language;
+import org.chs.camlauncher.front.text.UiText;
 
 import java.nio.file.Path;
 
@@ -23,20 +23,20 @@ record DownloadRequest(
 ) {
     String description() {
         if (optiFine != null) {
-            return Language.tr("download.description.optifine", forge.version(), optiFine.version());
+            return UiText.tr("download.description.optifine", forge.version(), optiFine.version());
         }
         if (forge != null) {
-            return Language.tr("download.description.forge", forge.version());
+            return UiText.tr("download.description.forge", forge.version());
         }
         if (fabricLoader != null) {
             return fabricApi == null
-                    ? Language.tr("download.description.fabric", fabricLoader.version())
-                    : Language.tr("download.description.fabricWithApi",
+                    ? UiText.tr("download.description.fabric", fabricLoader.version())
+                    : UiText.tr("download.description.fabricWithApi",
                             fabricLoader.version(), fabricApi.versionNumber());
         }
         if (neoForge != null) {
-            return Language.tr("download.description.neoforge", neoForge.version());
+            return UiText.tr("download.description.neoforge", neoForge.version());
         }
-        return Language.tr("download.description.vanilla", version.id());
+        return UiText.tr("download.description.vanilla", version.id());
     }
 }

@@ -12,7 +12,7 @@ import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import javafx.util.Duration;
-import org.chs.camlauncher.language.Language;
+import org.chs.camlauncher.front.text.UiText;
 import org.chs.camlauncher.ui.control.CamlButton;
 import org.chs.camlauncher.ui.control.CamlProgressBar;
 
@@ -30,10 +30,10 @@ final class DownloadProgressView extends VBox implements PageLifecycle {
     };
 
     private final DownloadTelemetry telemetry;
-    private final Label speedLabel = new Label(Language.tr("download.progress.speedValue"));
+    private final Label speedLabel = new Label(UiText.tr("download.progress.speedValue"));
     private final Label totalsLabel = new Label();
-    private final Label stageLabel = new Label(Language.tr("download.progress.preparing"));
-    private final Label currentFileLabel = new Label(Language.tr("download.progress.waiting"));
+    private final Label stageLabel = new Label(UiText.tr("download.progress.preparing"));
+    private final Label currentFileLabel = new Label(UiText.tr("download.progress.waiting"));
     private final Label progressDetail = new Label();
     private final CamlProgressBar progressBar = new CamlProgressBar();
     private final VBox stageList = new VBox(8);
@@ -50,16 +50,16 @@ final class DownloadProgressView extends VBox implements PageLifecycle {
         setSpacing(20);
         setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
 
-        Label title = new Label(Language.tr("download.progress.title", request.instanceId()));
+        Label title = new Label(UiText.tr("download.progress.title", request.instanceId()));
         title.getStyleClass().add("app-download-progress-heading");
         title.setWrapText(true);
-        Label subtitle = new Label(Language.tr("download.progress.subtitle",
+        Label subtitle = new Label(UiText.tr("download.progress.subtitle",
                 request.description(), request.version().id()));
         subtitle.getStyleClass().addAll("caml-body-medium", "caml-on-surface-muted");
         subtitle.setWrapText(true);
         VBox titleBlock = new VBox(4, title, subtitle);
 
-        CamlButton back = CamlButton.outlined(Language.tr("download.progress.back"));
+        CamlButton back = CamlButton.outlined(UiText.tr("download.progress.back"));
         back.getStyleClass().add("app-pill-button");
         back.setOnAction(event -> onBack.run());
 
@@ -68,7 +68,7 @@ final class DownloadProgressView extends VBox implements PageLifecycle {
         HBox header = new HBox(16, titleBlock, headerSpacer, back);
         header.setAlignment(Pos.CENTER_LEFT);
 
-        Label speedTitle = new Label(Language.tr("download.progress.speed"));
+        Label speedTitle = new Label(UiText.tr("download.progress.speed"));
         speedTitle.getStyleClass().add("app-download-card-title");
         speedLabel.getStyleClass().add("app-download-speed-value");
         totalsLabel.getStyleClass().addAll("caml-body-small", "caml-on-surface-muted");
@@ -80,7 +80,7 @@ final class DownloadProgressView extends VBox implements PageLifecycle {
         speedCard.setMaxWidth(260);
         speedCard.setAlignment(Pos.TOP_LEFT);
 
-        Label progressTitle = new Label(Language.tr("download.progress.progress"));
+        Label progressTitle = new Label(UiText.tr("download.progress.progress"));
         progressTitle.getStyleClass().add("app-download-card-title");
         progressBar.setMaxWidth(Double.MAX_VALUE);
         stageLabel.getStyleClass().add("app-download-stage-current");
@@ -117,12 +117,12 @@ final class DownloadProgressView extends VBox implements PageLifecycle {
         DownloadTelemetry.Snapshot snapshot = telemetry.snapshot();
         speedLabel.setText(formatSpeed(snapshot.bytesPerSecond()));
         totalsLabel.setText(snapshot.finished()
-                ? Language.tr("download.progress.completedTotal")
+                ? UiText.tr("download.progress.completedTotal")
                 : snapshot.totalBytes() > 0
-                ? Language.tr("download.progress.totalWithMax",
+                ? UiText.tr("download.progress.totalWithMax",
                         formatBytes(snapshot.downloadedBytes()),
                         formatBytes(snapshot.totalBytes()))
-                : Language.tr("download.progress.total",
+                : UiText.tr("download.progress.total",
                         formatBytes(snapshot.downloadedBytes())));
 
         updateStatus(snapshot);
@@ -153,34 +153,34 @@ final class DownloadProgressView extends VBox implements PageLifecycle {
         stageLabel.getStyleClass().removeAll(
                 "app-download-status-error", "app-download-status-success");
         if (snapshot.failed()) {
-            stageLabel.setText(Language.tr("download.progress.failed", snapshot.failureMessage()));
+            stageLabel.setText(UiText.tr("download.progress.failed", snapshot.failureMessage()));
             stageLabel.getStyleClass().add("app-download-status-error");
         } else if (snapshot.finished()) {
-            stageLabel.setText(Language.tr("download.progress.completed"));
+            stageLabel.setText(UiText.tr("download.progress.completed"));
             stageLabel.getStyleClass().add("app-download-status-success");
         } else {
             stageLabel.setText(snapshot.currentStage());
         }
         if (snapshot.currentFile().isBlank()) {
-            currentFileLabel.setText(Language.tr("download.progress.waiting"));
+            currentFileLabel.setText(UiText.tr("download.progress.waiting"));
         } else if (snapshot.currentFileTotal() > 0) {
-            currentFileLabel.setText(Language.tr("download.progress.currentFileWithBytes",
+            currentFileLabel.setText(UiText.tr("download.progress.currentFileWithBytes",
                     snapshot.currentFile(),
                     formatBytes(snapshot.currentFileDownloaded()),
                     formatBytes(snapshot.currentFileTotal())));
         } else {
-            currentFileLabel.setText(Language.tr("download.progress.currentFile", snapshot.currentFile()));
+            currentFileLabel.setText(UiText.tr("download.progress.currentFile", snapshot.currentFile()));
         }
     }
 
     private void updateProgress(DownloadTelemetry.Snapshot snapshot) {
         if (snapshot.finished()) {
             progressBar.setProgress(1.0);
-            progressDetail.setText(Language.tr("download.progress.finishedHint"));
+            progressDetail.setText(UiText.tr("download.progress.finishedHint"));
             return;
         }
         if (snapshot.failed()) {
-            progressDetail.setText(Language.tr("download.progress.failedHint"));
+            progressDetail.setText(UiText.tr("download.progress.failedHint"));
             return;
         }
 
@@ -191,7 +191,7 @@ final class DownloadProgressView extends VBox implements PageLifecycle {
                 progress = Math.min(progress, 0.99);
             }
             progressBar.setProgress(progress);
-            progressDetail.setText(Language.tr("download.progress.bytesDetail",
+            progressDetail.setText(UiText.tr("download.progress.bytesDetail",
                     progress * 100,
                     formatBytes(snapshot.downloadedBytes()),
                     formatBytes(snapshot.totalBytes()),
@@ -201,11 +201,11 @@ final class DownloadProgressView extends VBox implements PageLifecycle {
             double progress = Math.max(0, Math.min(1,
                     snapshot.completedItems() / (double) snapshot.totalItems()));
             progressBar.setProgress(progress);
-            progressDetail.setText(Language.tr("download.progress.filesDetail",
+            progressDetail.setText(UiText.tr("download.progress.filesDetail",
                     snapshot.completedItems(), snapshot.totalItems()));
         } else {
             progressBar.setProgress(ProgressBar.INDETERMINATE_PROGRESS);
-            progressDetail.setText(Language.tr("download.progress.planning"));
+            progressDetail.setText(UiText.tr("download.progress.planning"));
         }
     }
 

@@ -1,4 +1,4 @@
-package org.chs.camlauncher.language;
+package org.chs.camlauncher.language.generator;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;

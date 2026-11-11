@@ -2,7 +2,7 @@ package org.chs.camlauncher.front.view;
 
 import org.chs.camlauncher.backend.download.DownloadListener;
 import org.chs.camlauncher.backend.download.DownloadStage;
-import org.chs.camlauncher.language.Language;
+import org.chs.camlauncher.front.text.UiText;
 
 import java.util.ArrayDeque;
 import java.util.Deque;
@@ -21,7 +21,7 @@ final class DownloadTelemetry implements DownloadListener {
     private final Deque<SpeedSample> speedSamples = new ArrayDeque<>();
     private final LinkedHashSet<String> stages = new LinkedHashSet<>();
 
-    private String currentStage = Language.tr("download.stage.preparing");
+    private String currentStage = UiText.tr("download.stage.preparing");
     private String currentFile = "";
     private long currentFileDownloaded;
     private long currentFileTotal;
@@ -117,8 +117,8 @@ final class DownloadTelemetry implements DownloadListener {
             return;
         }
         String label = stage.detail() == null
-                ? Language.tr("download.stage." + stage.key())
-                : Language.tr("download.stage." + stage.key(), stage.detail());
+                ? UiText.tr("download.stage." + stage.key())
+                : UiText.tr("download.stage." + stage.key(), stage.detail());
         onStage(label);
     }
 
@@ -132,7 +132,7 @@ final class DownloadTelemetry implements DownloadListener {
             currentFile = "";
             currentFileDownloaded = 0;
             currentFileTotal = 0;
-            currentStage = Language.tr("download.stage.completed");
+            currentStage = UiText.tr("download.stage.completed");
             stages.add(currentStage);
             if (totalBytes > 0) {
                 downloadedBytes = totalBytes;
@@ -148,11 +148,11 @@ final class DownloadTelemetry implements DownloadListener {
                 return;
             }
             failed = true;
-            failureMessage = message == null ? Language.tr("download.stage.unknownError") : message;
+            failureMessage = message == null ? UiText.tr("download.stage.unknownError") : message;
             currentFile = "";
             currentFileDownloaded = 0;
             currentFileTotal = 0;
-            currentStage = Language.tr("download.stage.failed");
+            currentStage = UiText.tr("download.stage.failed");
             stages.add(currentStage);
             speedSamples.clear();
         }

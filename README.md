@@ -24,7 +24,7 @@ CAML 是一个基于 **Java 25 + JavaFX** 的 Minecraft 启动器，采用前后
 | Java | 扫描 `java.home`、`JAVA_HOME`、`PATH` 及常见 JDK 目录；读取版本、供应商、架构、位数；按版本要求选择运行时；Windows 优先 `javaw.exe` |
 | 启动 | 不可变 `LaunchPlan`、classpath 构建、JVM/游戏参数与 `${...}` 占位符、natives 子目录解压、Log4j 配置、旧版本 virtual assets 重建；NeoForge 26.2 + Vulkan 自动关闭 early window；根据设置选择，`--gameDir` 指向 `versions/<id>` 或 `.minecraft` 根目录 |
 | 进程 | `ProcessBuilder` 启动、工作目录与环境变量、stdout/stderr 转发、Minecraft Log4j XML 转原版日志风格、退出码回调、停止能力；命令行过长时自动回退 `@argfile` / manifest classpath jar；`LaunchException` 分类错误并提供中文提示 |
-| 多语言 | 独立 `CAMLLanguage` 模块；内置 `zh_cn`、`en_us`、`fn_cn`，启动时与 `~/.caml/lang` 中同名文件比对，不一致就按内置资源重写（用户新增的语言文件不受影响），之后从该目录读取；视图与控制器只引用翻译键，`Language.tr` 支持占位符和缺失键回退；语言下拉框中的语言名硬编码在 `Language.NATIVE_NAMES`，使用该语言自己的写法且不随界面语言变化；翻译文件由 `LanguageTranslationGenerator` 子类生成，`:CAMLLanguage:generateTranslation` 刷新 |
+| 多语言 | `CAMLLanguage` 只包含契约、生成器和语言 JSON；全部运行时逻辑在后端 `LanguageService`：内置文件同步、语言检测、加载、逐键回退、占位符格式化、诊断事件和日志。前端 `UiText` 只转发后端 `LanguageTextProvider` 并显示结果，不读取语言文件、不做回退；翻译文件由 `LanguageTranslationGenerator` 子类生成，`:CAMLLanguage:generateTranslation` 刷新 |
 
 ### 尚未实现
 
@@ -63,14 +63,10 @@ CAML/
 │  │  ├─ theme/       CamlTheme（安装结构样式、加载外部主题）
 │  │  └─ control/     CamlButton、CamlCard、CamlTextField、CamlSwitch 等
 │  └─ src/main/resources/org/chs/camlauncher/ui/caml.css（只含结构，不含配色）
-├─ CAMLLanguage/                      纯 Java 多语言运行时、生成器与语言资源
+├─ CAMLLanguage/                      纯 Java 语言契约、生成器与语言资源
 │  ├─ src/main/java/org/chs/camlauncher/language/
-│  │  ├─ Language.java                从 ~/.caml/lang 读取翻译
-│  │  ├─ LanguageResources.java       同步内置 lang/*.json（不一致即重写）
-│  │  ├─ LanguageTranslationGenerator.java 翻译生成器抽象类
-│  │  ├─ TranslationTable.java        翻译键值表（实例 put，拒绝重复键）
-│  │  ├─ TranslationGeneratorRunner.java 生成任务入口
-│  │  └─ generator/                   ZHCNGenerator、ENUSGenerator、FNCNGenerator
+│  │  ├─ contract/                    事件、错误码、任务类型、DTO、选择枚举
+│  │  └─ generator/                   生成器抽象类、TranslationTable、Runner 和三种语言
 │  ├─ src/main/resources/lang/        zh_cn.json、en_us.json、fn_cn.json
 │  └─ src/test/java/                  LanguageTest
 ├─ CAMLFront/                         JavaFX 界面（不直接读写文件/发 HTTP/启动进程）
@@ -118,9 +114,10 @@ CAML/
 - `CAMLBackend` 是纯 Java，不 import JavaFX，也不依赖 `CAMLFront`。
 - `CAMLUI` 只依赖 JavaFX 和自身 CSS，不依赖 `CAMLBackend` 或 `CAMLFront`。
 - `CAMLUI` 不内置任何固定配色；所有颜色令牌来自外部主题文件。
-- `CAMLLanguage` 是纯 Java 模块，不依赖 JavaFX、`CAMLBackend` 或 `CAMLFront`。
-- `CAMLFront` 只通过 `CAMLUI` 搭建界面、通过 `CAMLLanguage` 读取文案，不直接读写文件、不直接发 HTTP、不直接启动进程。
-- `CAMLFront` 不在视图里硬编码界面文案，统一通过 `Language.tr(key)` 读取 `~/.caml/lang/*.json`。
+- `CAMLLanguage` 只定义语言契约、生成期工具和 JSON 资源，不执行请求线程上的语言运行时逻辑，也不依赖 JavaFX、`CAMLBackend` 或 `CAMLFront`。
+- 后端 `LanguageService` 是唯一运行时语言入口，负责所有语言文件 IO、检测、回退、格式化和日志。
+- `CAMLFront` 只通过 `CAMLUI` 搭建界面、通过 `UiText` 显示后端已经解析好的文案；`UiText` 不读取文件、不做回退、不格式化。
+- `CAMLFront` 不直接读写文件、不直接发 HTTP、不直接启动进程。
 - `MainView` 只负责壳层和页面切换；各页面、表单、日志和设置内容独立成类。
 - `MainController` 只组合 `HomeController`、`DownloadsController` 和 `SettingsController`，具体交互按页面拆分。
 - 前后端通过 facade、DTO、事件和 `CompletableFuture` 交互。
@@ -194,7 +191,7 @@ CamlCard card = new CamlCard(
 
 ### 多语言
 
-前端不在代码里硬编码界面文案，而是通过独立 `CAMLLanguage` 模块读取翻译：
+前端不在代码里硬编码界面文案。语言 JSON 位于 `CAMLLanguage`，运行时由后端加载并解析：
 
 ```text
 CAMLLanguage/src/main/resources/lang/zh_cn.json
@@ -205,34 +202,34 @@ CAMLLanguage/src/main/resources/lang/fn_cn.json
 ~/.caml/lang/fn_cn.json
 ```
 
-每次启动时，`CAMLLanguage` 都会把内置语言文件与 `~/.caml/lang` 中的同名文件按翻译键值比对：
+每次启动时，后端 `LanguageService` 都会把内置语言文件与 `~/.caml/lang` 中的同名文件按翻译键值比对：
 缺失或内容不一致（改过文案、缺键、JSON 损坏）时**按内置文件重写**，保证新版内置翻译和新增键总能生效。
 `~/.caml/lang` 中**非内置**的语言文件不参与比对，始终原样保留，仍可自由新增或修改。
 
-视图和控制器只引用翻译键：
+视图和控制器只引用翻译键，`UiText` 只负责把 query 转给后端并显示最终文本：
 
 ```java
-import org.chs.camlauncher.language.Language;
+import org.chs.camlauncher.front.text.UiText;
 
-CamlButton launch = CamlButton.filled(Language.tr("home.launch"));
-statusLabel.setText(Language.tr("home.instance.current", version));
+CamlButton launch = CamlButton.filled(UiText.tr("home.launch"));
+statusLabel.setText(UiText.tr("home.instance.current", version));
 ```
 
-- `Language.tr(key)` 找不到键时直接返回键名，方便发现遗漏；支持 `%s` / `%d` 等占位符。
+- 运行时文本查询由后端 `LanguageService.text(key, args...)` 完成，支持逐键回退、`%s` / `%d` 等占位符，并记录缺失键与格式化诊断。
 - 当前语言按顺序取 `-Dcaml.language`、系统语言。默认语言是 `en_us`，因此只需识别简体中文系统：
   `zh_CN` / `zh_SG` 等简体中文系统使用 `zh_cn`，其余系统（含尚未提供翻译的繁体中文）一律使用 `en_us`。
-- 每次启动时 `CAMLLanguage` 把内置 `lang/*.json` 与 `~/.caml/lang` 的同名文件按键值比对，
+- 每次启动时后端把内置 `lang/*.json` 与 `~/.caml/lang` 的同名文件按键值比对，
   不一致（含 JSON 损坏）就按内置文件重写；非内置语言文件始终原样保留。
 - 设置 → 外观 → 语言提供“自动 / 手动”两种模式；手动模式可从语言下拉框选择
   `zh_cn`、`en_us` 或 `fn_cn`。模式与手动语言分别保存在 `settings.properties` 的
   `languageMode` 和 `language`，切换后立即重建主视图刷新界面文案。
 - 语言下拉框中的语言名不参与翻译，始终使用该语言自己的写法：`zh_cn` → `简体中文`、
-  `en_us` → `English`、`fn_cn` → `地道中国话`。名称**硬编码**在 `Language.NATIVE_NAMES`，
+  `en_us` → `English`、`fn_cn` → `地道中国话`。名称**硬编码**在后端 `LanguageService`，
   不写入也不读取翻译文件，因此切换界面语言、或翻译文件写错名称都不会改变下拉框内容；
-  未登记的 locale 回退显示 locale 标识。新增内置语言时在 `Language.NATIVE_NAMES` 中登记自称。
+  未登记的 locale 回退显示 locale 标识。新增内置语言时在后端语言名称表中登记自称。
 - 语言文件**由代码生成**，不要手工编辑：每种语言实现一个继承
-  `LanguageTranslationGenerator` 的生成器（`CAMLLanguage` 下的 `ZHCNGenerator`、
-  `ENUSGenerator`、`FNCNGenerator`），在 `populate(TranslationTable)` 中用实例方法登记键和文案：
+  `LanguageTranslationGenerator` 的生成器（`CAMLLanguage` 的 `generator.lang` 包下：
+  `ZHCNGenerator`、`ENUSGenerator`、`FNCNGenerator`），在 `populate(TranslationTable)` 中用实例方法登记键和文案：
 
   ```java
   @Override
@@ -243,7 +240,7 @@ statusLabel.setText(Language.tr("home.instance.current", version));
   ```
 
 - 新增语言只需在 `generator` 下添加一个生成器、在 `TranslationGeneratorRunner` 中登记，
-  并在 `Language.NATIVE_NAMES` 中补充该语言的自称（语言名不写进翻译文件）。
+  并在后端 `LanguageService` 的语言名称表中补充该语言的自称（语言名不写进翻译文件）。
 
 ### 主题系统
 

@@ -12,7 +12,7 @@ import javafx.scene.layout.VBox;
 import org.chs.camlauncher.backend.api.GameDirectoryInfo;
 import org.chs.camlauncher.front.controller.FrontTask;
 import org.chs.camlauncher.front.controller.HomeController;
-import org.chs.camlauncher.language.Language;
+import org.chs.camlauncher.front.text.UiText;
 import org.chs.camlauncher.ui.control.CamlButton;
 import org.chs.camlauncher.ui.control.CamlTextField;
 
@@ -66,7 +66,7 @@ final class LaunchFormView extends BorderPane {
         statusLabel.setVisible(false);
         statusLabel.setManaged(false);
 
-        launchBtn = CamlButton.filled(Language.tr("home.launch"));
+        launchBtn = CamlButton.filled(UiText.tr("home.launch"));
         launchBtn.setMaxWidth(Double.MAX_VALUE);
         launchBtn.setDefaultButton(true);
 
@@ -80,16 +80,16 @@ final class LaunchFormView extends BorderPane {
         instanceInfo.getStyleClass().add("app-instance-info-group");
         VBox fields = new VBox(16,
                 instanceInfo,
-                ViewSupport.buildField(Language.tr("home.username"), usernameField, null)
+                ViewSupport.buildField(UiText.tr("home.username"), usernameField, null)
         );
         fields.getStyleClass().add("app-fields");
 
-        CamlButton chooseInstanceButton = CamlButton.outlined(Language.tr("home.browseInstances"));
+        CamlButton chooseInstanceButton = CamlButton.outlined(UiText.tr("home.browseInstances"));
         chooseInstanceButton.setMinWidth(0);
         chooseInstanceButton.setMaxWidth(Double.MAX_VALUE);
         chooseInstanceButton.setOnAction(event -> onChooseInstance.run());
 
-        CamlButton manageInstancesButton = CamlButton.outlined(Language.tr("home.manageInstances"));
+        CamlButton manageInstancesButton = CamlButton.outlined(UiText.tr("home.manageInstances"));
         manageInstancesButton.setMinWidth(0);
         manageInstancesButton.setMaxWidth(Double.MAX_VALUE);
         manageInstancesButton.setOnAction(event -> onManageInstances.run());
@@ -128,7 +128,7 @@ final class LaunchFormView extends BorderPane {
         controller.setOnLaunchFinished(() -> {
             launchTask = null;
             launchBtn.setDisable(false);
-            launchBtn.setText(Language.tr("home.launch"));
+            launchBtn.setText(UiText.tr("home.launch"));
         });
 
         controller.setOnGameDirectoryInspected(this::applyGameDirectoryInfo);
@@ -152,7 +152,7 @@ final class LaunchFormView extends BorderPane {
             return;
         }
         controller.inspectGameDirectory(gameDirectory, this::applyGameDirectoryInfo,
-                message -> showStatus(Language.tr("home.error.inspectDirectory", message), true));
+                message -> showStatus(UiText.tr("home.error.inspectDirectory", message), true));
     }
 
     private void launchGame() {
@@ -164,24 +164,24 @@ final class LaunchFormView extends BorderPane {
         String username = usernameField.getText().trim();
 
         if (gameDirectory == null) {
-            showStatus(Language.tr("home.error.noGameDirectory"), true);
+            showStatus(UiText.tr("home.error.noGameDirectory"), true);
             return;
         }
         if (lastGameDirectoryInfo != null && !lastGameDirectoryInfo.directoryExists()) {
-            showStatus(Language.tr("home.error.missingGameDirectory"), true);
+            showStatus(UiText.tr("home.error.missingGameDirectory"), true);
             return;
         }
         if (version == null || version.isBlank()) {
-            showStatus(Language.tr("home.error.noInstance"), true);
+            showStatus(UiText.tr("home.error.noInstance"), true);
             return;
         }
         if (username.isEmpty()) {
-            showStatus(Language.tr("home.error.noUsername"), true);
+            showStatus(UiText.tr("home.error.noUsername"), true);
             return;
         }
 
         launchBtn.setDisable(true);
-        launchBtn.setText(Language.tr("home.launching"));
+        launchBtn.setText(UiText.tr("home.launching"));
         onLaunchStarted.run();
 
         launchTask = controller.startGame(version, username, launchSettings.maxMemoryMb(),
@@ -212,30 +212,30 @@ final class LaunchFormView extends BorderPane {
     private void updateInstanceInfo() {
         String version = launchSettings.selectedVersion();
         instanceLabel.setText(version == null || version.isBlank()
-                ? Language.tr("home.instance.current.none")
-                : Language.tr("home.instance.current", version));
+                ? UiText.tr("home.instance.current.none")
+                : UiText.tr("home.instance.current", version));
         Path gameDirectory = launchSettings.gameDirectory();
         if (gameDirectory == null) {
-            gameLocationLabel.setText(Language.tr("home.gameDirectory.none"));
+            gameLocationLabel.setText(UiText.tr("home.gameDirectory.none"));
             styleDetail(gameLocationLabel, true);
-            saveLocationLabel.setText(Language.tr("home.saveLocation.none"));
+            saveLocationLabel.setText(UiText.tr("home.saveLocation.none"));
             styleDetail(saveLocationLabel, true);
             return;
         }
 
         boolean missing = lastGameDirectoryInfo != null && !lastGameDirectoryInfo.directoryExists();
         gameLocationLabel.setText(missing
-                ? Language.tr("home.gameDirectory.missing", gameDirectory)
-                : Language.tr("home.gameDirectory.value", gameDirectory));
+                ? UiText.tr("home.gameDirectory.missing", gameDirectory)
+                : UiText.tr("home.gameDirectory.value", gameDirectory));
         styleDetail(gameLocationLabel, missing);
 
         if (missing) {
-            saveLocationLabel.setText(Language.tr("home.saveLocation.fixDirectory"));
+            saveLocationLabel.setText(UiText.tr("home.saveLocation.fixDirectory"));
             styleDetail(saveLocationLabel, true);
             return;
         }
         if (version == null || version.isBlank()) {
-            saveLocationLabel.setText(Language.tr("home.saveLocation.selectInstance"));
+            saveLocationLabel.setText(UiText.tr("home.saveLocation.selectInstance"));
             styleDetail(saveLocationLabel, false);
             return;
         }
@@ -244,8 +244,8 @@ final class LaunchFormView extends BorderPane {
         Path savePath = isolated
                 ? gameDirectory.resolve("versions").resolve(version).resolve("saves")
                 : gameDirectory.resolve("saves");
-        String suffix = isolated ? Language.tr("home.saveLocation.isolated") : "";
-        saveLocationLabel.setText(Language.tr("home.saveLocation.value", savePath) + suffix);
+        String suffix = isolated ? UiText.tr("home.saveLocation.isolated") : "";
+        saveLocationLabel.setText(UiText.tr("home.saveLocation.value", savePath) + suffix);
         styleDetail(saveLocationLabel, false);
     }
 
