@@ -6,6 +6,7 @@ import javafx.scene.layout.BorderPane;
 import org.chs.camlauncher.backend.api.BackendStatus;
 import org.chs.camlauncher.backend.runtime.JavaSelectionMode;
 import org.chs.camlauncher.language.contract.LanguageSelectionMode;
+import org.chs.camlauncher.language.contract.LanguageFallbackMode;
 import org.chs.camlauncher.backend.system.SystemMemoryInfo;
 import org.chs.camlauncher.backend.theme.ThemeInfo;
 import org.chs.camlauncher.front.controller.DownloadsController;
@@ -35,6 +36,7 @@ public final class MainView extends BorderPane {
     private final LaunchSettings launchSettings;
     private final SystemMemoryInfo systemMemory;
     private final BiConsumer<LanguageSelectionMode, String> onLanguageChanged;
+    private final BiConsumer<LanguageFallbackMode, String> onLanguageFallbackChanged;
     private final HomeView homeView;
     private final DownloadsView downloadsView;
     private final SettingsView settingsView;
@@ -44,13 +46,18 @@ public final class MainView extends BorderPane {
     private PageLifecycle activePage;
     private LanguageSelectionMode languageMode;
     private String language;
+    private LanguageFallbackMode languageFallbackMode;
+    private String languageFallbackLocale;
 
     public MainView(MainController controller, int initialMaxMemoryMb,
                     SystemMemoryInfo systemMemory, Path initialGameDirectory,
                     boolean fullVersionIsolation, String initialSelectedInstance,
                     JavaSelectionMode initialJavaSelectionMode, Path initialJavaPath,
                     LanguageSelectionMode initialLanguageMode, String initialLanguage,
-                    BiConsumer<LanguageSelectionMode, String> onLanguageChanged) {
+                    LanguageFallbackMode initialLanguageFallbackMode,
+                    String initialLanguageFallbackLocale,
+                    BiConsumer<LanguageSelectionMode, String> onLanguageChanged,
+                    BiConsumer<LanguageFallbackMode, String> onLanguageFallbackChanged) {
         this(controller, new LaunchSettings(
                 initialMaxMemoryMb,
                 initialGameDirectory,
@@ -58,21 +65,34 @@ public final class MainView extends BorderPane {
                 initialSelectedInstance,
                 initialJavaSelectionMode,
                 initialJavaPath
-        ), systemMemory, initialLanguageMode, initialLanguage, onLanguageChanged);
+        ), systemMemory, initialLanguageMode, initialLanguage,
+                initialLanguageFallbackMode, initialLanguageFallbackLocale,
+                onLanguageChanged, onLanguageFallbackChanged);
     }
 
     private MainView(MainController controller, LaunchSettings launchSettings,
                      SystemMemoryInfo systemMemory, LanguageSelectionMode initialLanguageMode,
                      String initialLanguage,
-                     BiConsumer<LanguageSelectionMode, String> onLanguageChanged) {
+                     LanguageFallbackMode initialLanguageFallbackMode,
+                     String initialLanguageFallbackLocale,
+                     BiConsumer<LanguageSelectionMode, String> onLanguageChanged,
+                     BiConsumer<LanguageFallbackMode, String> onLanguageFallbackChanged) {
         this.controller = Objects.requireNonNull(controller, "controller");
         this.launchSettings = Objects.requireNonNull(launchSettings, "launchSettings");
         this.systemMemory = Objects.requireNonNull(systemMemory, "systemMemory");
         this.onLanguageChanged = Objects.requireNonNull(onLanguageChanged, "onLanguageChanged");
+        this.onLanguageFallbackChanged = Objects.requireNonNull(
+                onLanguageFallbackChanged, "onLanguageFallbackChanged");
         this.languageMode = initialLanguageMode == null
                 ? LanguageSelectionMode.AUTO
                 : initialLanguageMode;
         this.language = initialLanguage == null ? UiText.DEFAULT_LOCALE : initialLanguage;
+        this.languageFallbackMode = initialLanguageFallbackMode == null
+                ? LanguageFallbackMode.KEY
+                : initialLanguageFallbackMode;
+        this.languageFallbackLocale = initialLanguageFallbackLocale == null
+                ? UiText.DEFAULT_LOCALE
+                : initialLanguageFallbackLocale;
         getStyleClass().add("app-root");
 
         HomeController homeController = controller.homeController();
@@ -87,10 +107,19 @@ public final class MainView extends BorderPane {
                 settingsController,
                 languageMode,
                 language,
+                languageFallbackMode,
+                languageFallbackLocale,
                 (mode, locale) -> {
                     this.languageMode = mode;
                     this.language = locale == null ? UiText.DEFAULT_LOCALE : locale;
                     this.onLanguageChanged.accept(mode, this.language);
+                },
+                (mode, locale) -> {
+                    this.languageFallbackMode = mode;
+                    this.languageFallbackLocale = locale == null
+                            ? UiText.DEFAULT_LOCALE
+                            : locale;
+                    this.onLanguageFallbackChanged.accept(mode, this.languageFallbackLocale);
                 }
         );
         homeView = new HomeView(homeController, launchSettings);
@@ -116,7 +145,8 @@ public final class MainView extends BorderPane {
                 launchSettings.selectedJavaPath()
         );
         return new MainView(controller, copiedSettings, systemMemory,
-                languageMode, language, onLanguageChanged);
+                languageMode, language, languageFallbackMode, languageFallbackLocale,
+                onLanguageChanged, onLanguageFallbackChanged);
     }
 
     private CamlTopBar buildTopBar() {

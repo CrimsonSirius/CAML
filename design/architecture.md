@@ -281,6 +281,9 @@ CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
 - 设置 → 外观 → 语言提供自动/手动两种模式；模式与手动语言写入
   `~/.caml/settings.properties` 的 `languageMode`、`language`。手动切换后
   `CAMLApplication` 复用当前 `LaunchSettings` 快照重建 `MainView`，立即应用新语言。
+- 语言回退由 `LanguageFallbackMode` 控制：`SYSTEM` 只使用系统检测语言，`DEFAULT` 固定
+  `en_us`，`KEY` 不补齐缺失键，`CUSTOM` 只使用选择的自定义 locale。除 `DEFAULT` 外，
+  缺失内容显示裸键。模式和自定义 locale 持久化为 `languageFallbackMode`、`languageFallbackLocale`。
 - `LanguageTranslationGenerator` 是开发期生成器基类，负责写 JSON；`TranslationTable` 按键排序保存文案，
   `put(key, value)` 为实例方法并拒绝重复键。生成器、`TranslationTable` 和 `TranslationGeneratorRunner`
   全部位于 `org.chs.camlauncher.language.generator`，不参与运行时语言逻辑。

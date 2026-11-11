@@ -293,6 +293,14 @@ public final class ZHCNGenerator extends LanguageTranslationGenerator {
         t.put("settings.appearance.language.label", "界面语言");
         t.put("settings.appearance.language.hint", "自动模式跟随系统语言；手动模式使用下方选择的语言。");
         t.put("settings.appearance.language.accessible", "界面语言");
+        t.put("settings.appearance.languageFallback.title", "语言回退");
+        t.put("settings.appearance.languageFallback.description", "设置翻译缺失时使用哪种语言补齐。");
+        t.put("settings.appearance.languageFallback.system", "系统语言");
+        t.put("settings.appearance.languageFallback.default", "默认语言");
+        t.put("settings.appearance.languageFallback.key", "显示裸键");
+        t.put("settings.appearance.languageFallback.custom", "自定义语言");
+        t.put("settings.appearance.languageFallback.hint", "系统语言回退只使用系统检测语言；默认语言固定使用英语；裸键不回退；自定义语言只使用下方选择的语言。除默认语言外，缺失内容都会显示裸键。");
+        t.put("settings.appearance.languageFallback.accessible", "语言回退");
 
         // 实例选择
         t.put("instances.picker.scanning", "正在扫描游戏实例...");
@@ -328,6 +336,7 @@ public final class ZHCNGenerator extends LanguageTranslationGenerator {
         t.put("operation.saveDownloadSource", "保存下载源设置");
         t.put("operation.saveTheme", "保存主题选择");
         t.put("operation.saveLanguage", "保存语言设置");
+        t.put("operation.saveLanguageFallback", "保存语言回退设置");
         t.put("operation.saveLastInstance", "保存最后启动实例");
         t.put("operation.launchGame", "启动游戏 %s");
     }

@@ -293,6 +293,14 @@ public final class ENUSGenerator extends LanguageTranslationGenerator {
         t.put("settings.appearance.language.label", "Interface language");
         t.put("settings.appearance.language.hint", "Automatic follows the system language; manual uses the language selected below.");
         t.put("settings.appearance.language.accessible", "Interface language");
+        t.put("settings.appearance.languageFallback.title", "Language fallback");
+        t.put("settings.appearance.languageFallback.description", "Choose which language supplies missing translations.");
+        t.put("settings.appearance.languageFallback.system", "System language");
+        t.put("settings.appearance.languageFallback.default", "Default language");
+        t.put("settings.appearance.languageFallback.key", "Show raw keys");
+        t.put("settings.appearance.languageFallback.custom", "Custom language");
+        t.put("settings.appearance.languageFallback.hint", "System language uses only the detected system language; Default always uses English; Raw keys disables fallback; Custom uses only the selected language. Except for Default, missing text is shown as raw keys.");
+        t.put("settings.appearance.languageFallback.accessible", "Language fallback");
 
         // Instance picker
         t.put("instances.picker.scanning", "Scanning game instances...");
@@ -328,6 +336,7 @@ public final class ENUSGenerator extends LanguageTranslationGenerator {
         t.put("operation.saveDownloadSource", "Save download source setting");
         t.put("operation.saveTheme", "Save theme selection");
         t.put("operation.saveLanguage", "Save language setting");
+        t.put("operation.saveLanguageFallback", "Save language fallback setting");
         t.put("operation.saveLastInstance", "Save last launched instance");
         t.put("operation.launchGame", "Launch game %s");
     }

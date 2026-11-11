@@ -294,6 +294,14 @@ public final class FNCNGenerator extends LanguageTranslationGenerator {
         t.put("settings.appearance.language.label", "外表舌头");
         t.put("settings.appearance.language.hint", "自动模式跟着体制舌头走；肉手模式使用底下的舌头。");
         t.put("settings.appearance.language.accessible", "外表舌头");
+        t.put("settings.appearance.languageFallback.title", "舌头掉包");
+        t.put("settings.appearance.languageFallback.description", "舌头缺字时抓哪个舌头补洞。");
+        t.put("settings.appearance.languageFallback.system", "体制舌头");
+        t.put("settings.appearance.languageFallback.default", "出厂舌头");
+        t.put("settings.appearance.languageFallback.key", "露出骨牌");
+        t.put("settings.appearance.languageFallback.custom", "自选舌头");
+        t.put("settings.appearance.languageFallback.hint", "体制舌头只按体制里的舌头；出厂舌头只用白话；露出骨牌不回退；自选舌头只用底下的舌头。除了出厂舌头，缺字都会露出骨牌。");
+        t.put("settings.appearance.languageFallback.accessible", "舌头掉包");
 
         // 事例选择
         t.put("instances.picker.scanning", "正在用光扫比赛事例们...");
@@ -329,6 +337,7 @@ public final class FNCNGenerator extends LanguageTranslationGenerator {
         t.put("operation.saveDownloadSource", "拯救向下装载来源摆弄");
         t.put("operation.saveTheme", "拯救命题作文挑三拣四");
         t.put("operation.saveLanguage", "拯救舌头摆弄");
+        t.put("operation.saveLanguageFallback", "拯救舌头掉包摆弄");
         t.put("operation.saveLastInstance", "拯救最后发射的事例");
         t.put("operation.launchGame", "发射比赛 %s");
     }

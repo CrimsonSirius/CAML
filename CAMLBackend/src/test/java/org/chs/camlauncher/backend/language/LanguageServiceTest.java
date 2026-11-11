@@ -2,6 +2,7 @@ package org.chs.camlauncher.backend.language;
 
 import org.chs.camlauncher.backend.settings.SettingsService;
 import org.chs.camlauncher.language.contract.LanguageEvent;
+import org.chs.camlauncher.language.contract.LanguageFallbackMode;
 import org.chs.camlauncher.language.contract.LanguageSelectionMode;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -89,6 +90,7 @@ class LanguageServiceTest {
         service.initialize();
         Files.writeString(dataDirectory.resolve("lang/xx_yy.json"),
                 "{\"home.launch\":\"Custom launch\"}");
+        service.setLanguageFallback(LanguageFallbackMode.DEFAULT, "en_us");
 
         LanguageSnapshot snapshot = service.switchLanguage(LanguageSelectionMode.MANUAL, "xx_yy");
 
@@ -101,6 +103,7 @@ class LanguageServiceTest {
     void reportsFallbackWhenRequestedLocaleIsUnavailable() throws Exception {
         LanguageService service = service();
         service.initialize();
+        service.setLanguageFallback(LanguageFallbackMode.DEFAULT, "en_us");
         List<LanguageEvent> events = new ArrayList<>();
         service.addEventListener(events::add);
 
@@ -124,6 +127,61 @@ class LanguageServiceTest {
     }
 
     @Test
+    void rawKeyFallbackDoesNotMergeDefaultLocale() throws Exception {
+        LanguageService service = service();
+        service.initialize();
+        Files.writeString(dataDirectory.resolve("lang/xx_yy.json"),
+                "{\"home.launch\":\"Custom launch\"}");
+        service.setLanguageFallback(LanguageFallbackMode.KEY, "en_us");
+
+        service.switchLanguage(LanguageSelectionMode.MANUAL, "xx_yy");
+
+        assertEquals("Custom launch", service.text("home.launch"));
+        assertEquals("nav.home", service.text("nav.home"));
+    }
+
+    @Test
+    void defaultFallbackIgnoresDetectedLanguage() throws Exception {
+        System.setProperty("caml.language", "zh_cn");
+        LanguageService service = service();
+        service.initialize();
+        Files.writeString(dataDirectory.resolve("lang/xx_yy.json"),
+                "{\"home.launch\":\"Custom launch\"}");
+        service.setLanguageFallback(LanguageFallbackMode.DEFAULT, "en_us");
+
+        service.switchLanguage(LanguageSelectionMode.MANUAL, "xx_yy");
+
+        assertEquals("Home", service.text("nav.home"));
+    }
+
+    @Test
+    void automaticFallbackUsesDetectedLanguage() throws Exception {
+        System.setProperty("caml.language", "zh_cn");
+        LanguageService service = service();
+        service.initialize();
+        Files.writeString(dataDirectory.resolve("lang/xx_yy.json"),
+                "{\"home.launch\":\"Custom launch\"}");
+        service.setLanguageFallback(LanguageFallbackMode.SYSTEM, "en_us");
+
+        service.switchLanguage(LanguageSelectionMode.MANUAL, "xx_yy");
+
+        assertEquals("主页", service.text("nav.home"));
+    }
+
+    @Test
+    void customFallbackUsesSelectedLanguage() throws Exception {
+        LanguageService service = service();
+        service.initialize();
+        Files.writeString(dataDirectory.resolve("lang/xx_yy.json"),
+                "{\"home.launch\":\"Custom launch\"}");
+        service.setLanguageFallback(LanguageFallbackMode.CUSTOM, "zh_cn");
+
+        service.switchLanguage(LanguageSelectionMode.MANUAL, "xx_yy");
+
+        assertEquals("主页", service.text("nav.home"));
+    }
+
+    @Test
     void keepsOnlyNormalizedCustomLocaleNames() throws Exception {
         LanguageService service = service();
         service.initialize();
@@ -134,7 +192,34 @@ class LanguageServiceTest {
 
         assertFalse(snapshot.availableLanguages().stream()
                 .anyMatch(descriptor -> descriptor.locale().equals("PT-BR")));
-        assertEquals("en_us", snapshot.activeLocale());
+        assertEquals("pt_br", snapshot.activeLocale());
+    }
+
+    @Test
+    void automaticFallbackHasNoEnglishFallback() throws Exception {
+        System.setProperty("caml.language", "fr_fr");
+        LanguageService service = service();
+        service.initialize();
+        Files.writeString(dataDirectory.resolve("lang/xx_yy.json"),
+                "{\"home.launch\":\"Custom launch\"}");
+        service.setLanguageFallback(LanguageFallbackMode.SYSTEM, "en_us");
+
+        service.switchLanguage(LanguageSelectionMode.MANUAL, "xx_yy");
+
+        assertEquals("nav.home", service.text("nav.home"));
+    }
+
+    @Test
+    void customFallbackHasNoEnglishFallback() throws Exception {
+        LanguageService service = service();
+        service.initialize();
+        Files.writeString(dataDirectory.resolve("lang/xx_yy.json"),
+                "{\"home.launch\":\"Custom launch\"}");
+        service.setLanguageFallback(LanguageFallbackMode.CUSTOM, "fr_fr");
+
+        service.switchLanguage(LanguageSelectionMode.MANUAL, "xx_yy");
+
+        assertEquals("nav.home", service.text("nav.home"));
     }
 
     @Test

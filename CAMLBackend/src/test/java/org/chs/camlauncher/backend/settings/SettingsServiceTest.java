@@ -4,6 +4,7 @@ import org.chs.camlauncher.backend.instance.VersionIsolationMode;
 import org.chs.camlauncher.backend.download.source.DownloadSourceMode;
 import org.chs.camlauncher.backend.runtime.JavaSelectionMode;
 import org.chs.camlauncher.language.contract.LanguageSelectionMode;
+import org.chs.camlauncher.language.contract.LanguageFallbackMode;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -267,5 +268,28 @@ class SettingsServiceTest {
         SettingsService loaded = new SettingsService(dataDirectory);
         assertEquals(LanguageSelectionMode.MANUAL, loaded.languageSelectionMode());
         assertEquals("en_us", loaded.language().orElseThrow());
+    }
+
+    @Test
+    void persistsLanguageFallbackSelection() throws Exception {
+        SettingsService service = new SettingsService(dataDirectory);
+
+        assertEquals(LanguageFallbackMode.KEY, service.languageFallbackMode());
+        assertTrue(service.languageFallbackLocale().isEmpty());
+
+        service.setLanguageFallback(LanguageFallbackMode.CUSTOM, "ZH-CN");
+
+        SettingsService loaded = new SettingsService(dataDirectory);
+        assertEquals(LanguageFallbackMode.CUSTOM, loaded.languageFallbackMode());
+        assertEquals("zh_cn", loaded.languageFallbackLocale().orElseThrow());
+    }
+
+    @Test
+    void readsLegacyAutoFallbackModeAsSystem() throws Exception {
+        Files.writeString(dataDirectory.resolve("settings.properties"),
+                "languageFallbackMode=auto\n");
+
+        assertEquals(LanguageFallbackMode.SYSTEM,
+                new SettingsService(dataDirectory).languageFallbackMode());
     }
 }

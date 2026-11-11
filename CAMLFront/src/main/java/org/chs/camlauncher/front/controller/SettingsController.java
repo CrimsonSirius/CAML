@@ -8,6 +8,7 @@ import org.chs.camlauncher.backend.language.LanguageSnapshot;
 import org.chs.camlauncher.backend.runtime.JavaCandidate;
 import org.chs.camlauncher.backend.runtime.JavaSelectionMode;
 import org.chs.camlauncher.language.contract.LanguageSelectionMode;
+import org.chs.camlauncher.language.contract.LanguageFallbackMode;
 import org.chs.camlauncher.backend.system.SystemMemoryInfo;
 import org.chs.camlauncher.front.text.UiText;
 
@@ -135,6 +136,13 @@ public final class SettingsController {
             Consumer<LanguageSnapshot> onLoaded, Consumer<String> onError) {
         return context.runSettings(UiText.tr("operation.saveLanguage"),
                 () -> context.backend().setLanguage(mode, locale), onLoaded, onError);
+    }
+
+    public FrontTask<LanguageSnapshot> switchLanguageFallbackAsync(
+            LanguageFallbackMode mode, String locale,
+            Consumer<LanguageSnapshot> onLoaded, Consumer<String> onError) {
+        return context.runSettings(UiText.tr("operation.saveLanguageFallback"),
+                () -> context.backend().setLanguageFallback(mode, locale), onLoaded, onError);
     }
 
     public void setOnDownloadSourceSaved(Runnable listener) {

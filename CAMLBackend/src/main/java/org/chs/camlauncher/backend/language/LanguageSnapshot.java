@@ -1,6 +1,7 @@
 package org.chs.camlauncher.backend.language;
 
 import org.chs.camlauncher.language.contract.LanguageDescriptor;
+import org.chs.camlauncher.language.contract.LanguageFallbackMode;
 
 import java.util.List;
 import java.util.Map;
@@ -11,6 +12,8 @@ public record LanguageSnapshot(
         String requestedLocale,
         String activeLocale,
         String fallbackReason,
+        LanguageFallbackMode fallbackMode,
+        String fallbackLocale,
         List<LanguageDescriptor> availableLanguages,
         Map<String, String> messages
 ) {

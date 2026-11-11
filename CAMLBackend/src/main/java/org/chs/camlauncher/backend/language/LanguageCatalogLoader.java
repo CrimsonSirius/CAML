@@ -1,13 +1,10 @@
 package org.chs.camlauncher.backend.language;
 
-import org.chs.camlauncher.language.contract.LanguageConstants;
-import org.chs.camlauncher.language.contract.LanguageErrorCode;
-import org.chs.camlauncher.language.contract.LanguageException;
-
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
 
@@ -21,22 +18,25 @@ final class LanguageCatalogLoader {
         this.diagnostics = diagnostics;
     }
 
-    Catalog load(String requestedLocale) {
-        Map<String, String> requested = loadLocaleMap(requestedLocale);
-        Map<String, String> defaults = requestedLocale.equals(LanguageConstants.DEFAULT_LOCALE)
-                ? requested
-                : loadLocaleMap(LanguageConstants.DEFAULT_LOCALE);
-        Map<String, String> merged = new LinkedHashMap<>(defaults);
-        merged.putAll(requested);
-        if (merged.isEmpty()) {
-            throw new LanguageException(
-                    LanguageErrorCode.BOOTSTRAP_FAILED, requestedLocale, null, null);
+    Catalog load(String requestedLocale, List<String> fallbackLocales) {
+        Map<String, String> merged = new LinkedHashMap<>();
+        String activeFallback = null;
+        for (String fallbackLocale : fallbackLocales) {
+            Map<String, String> fallback = loadLocaleMap(fallbackLocale);
+            if (!fallback.isEmpty()) {
+                merged.putAll(fallback);
+                activeFallback = fallbackLocale;
+            }
         }
 
-        boolean fellBack = requested.isEmpty()
-                && !requestedLocale.equals(LanguageConstants.DEFAULT_LOCALE);
-        String activeLocale = fellBack ? LanguageConstants.DEFAULT_LOCALE : requestedLocale;
-        String reason = fellBack ? "requested-locale-unavailable" : null;
+        Map<String, String> requested = loadLocaleMap(requestedLocale);
+        merged.putAll(requested);
+        String activeLocale = !requested.isEmpty()
+                ? requestedLocale
+                : activeFallback == null ? requestedLocale : activeFallback;
+        String reason = requested.isEmpty()
+                ? fallbackLocales.isEmpty() ? "bare-key-mode" : "requested-locale-unavailable"
+                : null;
         return new Catalog(activeLocale, reason, merged);
     }
 
