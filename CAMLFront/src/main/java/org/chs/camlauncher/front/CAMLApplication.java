@@ -49,6 +49,8 @@ public final class CAMLApplication extends Application {
     private String lastLaunchedInstanceId = "1.21.4";
     private LanguageSelectionMode languageSelectionMode = LanguageSelectionMode.AUTO;
     private String language = Language.DEFAULT_LOCALE;
+    private long languageChangeGeneration;
+    private volatile boolean stopping;
 
     @Override
     public void init() throws Exception {
@@ -185,9 +187,14 @@ public final class CAMLApplication extends Application {
         }
         languageSelectionMode = mode;
         language = nextLanguage;
-        applyLanguage(mode, language);
-        controller.settingsController().saveLanguageAsync(mode, language);
-        rebuildView();
+        long generation = ++languageChangeGeneration;
+        controller.settingsController().saveLanguageAsync(mode, nextLanguage);
+        controller.settingsController().switchLanguageAsync(mode, nextLanguage, () -> {
+            if (stopping || generation != languageChangeGeneration) {
+                return;
+            }
+            rebuildView();
+        });
     }
 
     private static void applyLanguage(LanguageSelectionMode mode, String locale) {
@@ -215,6 +222,7 @@ public final class CAMLApplication extends Application {
 
     @Override
     public void stop() {
+        stopping = true;
         // 5. 清理资源：先提交最后一次设置，再排空设置线程并关闭后端
         if (view != null) {
             view.flushPendingSettings();

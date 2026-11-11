@@ -20,6 +20,7 @@ final class GameLocationSettingsView extends VBox {
     private final SettingsController controller;
     private final CamlTextField pathField;
     private final Label statusLabel;
+    private final CamlButton browseButton;
     private final CamlButton saveButton;
 
     GameLocationSettingsView(LaunchSettings launchSettings, SettingsController controller) {
@@ -38,7 +39,7 @@ final class GameLocationSettingsView extends VBox {
         pathField.setText(launchSettings.gameDirectory().toString());
         HBox.setHgrow(pathField, Priority.ALWAYS);
 
-        CamlButton browseButton = CamlButton.outlined(Language.tr("settings.game.location.browse"));
+        browseButton = CamlButton.outlined(Language.tr("settings.game.location.browse"));
         browseButton.setMinWidth(64);
         browseButton.setMaxWidth(javafx.scene.layout.Region.USE_PREF_SIZE);
         browseButton.setOnAction(event -> chooseDirectory());
@@ -71,11 +72,32 @@ final class GameLocationSettingsView extends VBox {
     }
 
     private void chooseDirectory() {
+        Path current = launchSettings.gameDirectory();
+        if (current == null) {
+            showDirectoryChooser(null);
+            return;
+        }
+
+        browseButton.setDisable(true);
+        controller.checkDirectory(current,
+                exists -> {
+                    browseButton.setDisable(false);
+                    showDirectoryChooser(exists ? current : null);
+                },
+                message -> {
+                    browseButton.setDisable(false);
+                    showDirectoryChooser(null);
+                });
+    }
+
+    private void showDirectoryChooser(Path initialDirectory) {
+        if (getScene() == null) {
+            return;
+        }
         DirectoryChooser chooser = new DirectoryChooser();
         chooser.setTitle(Language.tr("settings.game.location.chooserTitle"));
-        File current = launchSettings.gameDirectory().toFile();
-        if (current.isDirectory()) {
-            chooser.setInitialDirectory(current);
+        if (initialDirectory != null) {
+            chooser.setInitialDirectory(initialDirectory.toFile());
         }
 
         File selected = chooser.showDialog(getScene() == null ? null : getScene().getWindow());

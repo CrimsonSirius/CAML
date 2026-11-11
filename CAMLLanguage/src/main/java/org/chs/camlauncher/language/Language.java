@@ -51,14 +51,16 @@ public final class Language {
     private static volatile Path languageDirectory;
     private static volatile String activeLocale;
     private static volatile Map<String, String> translations = Map.of();
+    private static volatile List<String> supportedLocales = LanguageResources.BUNDLED_LOCALES;
 
     private Language() {
     }
 
-    /** 安装内置语言文件并切换到数据目录读取模式。 */
+    /** 安装内置语言文件并切换到数据目录读取模式；会访问磁盘，不得在 JavaFX 线程调用。 */
     public static synchronized void initialize(Path dataDirectory) throws IOException {
         languageDirectory = LanguageResources.install(
                 Objects.requireNonNull(dataDirectory, "dataDirectory"));
+        supportedLocales = discoverSupportedLocales(languageDirectory);
         activeLocale = null;
         translations = Map.of();
     }
@@ -69,20 +71,31 @@ public final class Language {
         return activeLocale;
     }
 
-    /** 切换语言并重新加载；供语言设置使用。 */
+    /** 切换语言并重新加载；会读取语言文件，调用方必须确保不在 JavaFX 线程执行。 */
     public static synchronized void setLocale(String locale) {
-        activeLocale = normalize(locale);
-        translations = load(activeLocale);
+        String normalized = normalize(locale);
+        Map<String, String> loaded = load(normalized);
+        translations = loaded;
+        activeLocale = normalized;
     }
 
-    /** 按系统属性和系统语言重新自动选择语言。 */
+    /** 按系统属性和系统语言重新自动选择语言；会读取语言文件。 */
     public static void useAutomaticLocale() {
         setLocale(detectLocale());
     }
 
-    /** 当前可用的界面语言：内置语言优先，用户新增语言按名称排序。 */
+    /** 当前缓存的可用界面语言；不访问磁盘，可在 JavaFX 线程调用。 */
     public static List<String> supportedLocales() {
-        Path directory = languageDirectory;
+        return supportedLocales;
+    }
+
+    /** 重新扫描语言目录；会访问磁盘，不得在 JavaFX 线程调用。 */
+    public static synchronized List<String> refreshSupportedLocales() {
+        supportedLocales = discoverSupportedLocales(languageDirectory);
+        return supportedLocales;
+    }
+
+    private static List<String> discoverSupportedLocales(Path directory) {
         if (directory == null || !Files.isDirectory(directory)) {
             return LanguageResources.BUNDLED_LOCALES;
         }
@@ -142,8 +155,10 @@ public final class Language {
 
     private static synchronized void ensureLoaded() {
         if (activeLocale == null) {
-            activeLocale = detectLocale();
-            translations = load(activeLocale);
+            String locale = detectLocale();
+            Map<String, String> loaded = load(locale);
+            translations = loaded;
+            activeLocale = locale;
         }
     }
 

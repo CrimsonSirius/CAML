@@ -175,14 +175,37 @@ final class JavaSettingsView extends VBox {
         if (getScene() == null) {
             return;
         }
+        Path current = launchSettings.selectedJavaPath();
+        Path parent = current == null ? null : current.getParent();
+        if (parent == null) {
+            showJavaChooser(null);
+            return;
+        }
+
+        addButton.setDisable(true);
+        controller.checkDirectory(parent,
+                exists -> {
+                    addButton.setDisable(false);
+                    showJavaChooser(exists ? parent : null);
+                },
+                message -> {
+                    addButton.setDisable(false);
+                    showJavaChooser(null);
+                });
+    }
+
+    private void showJavaChooser(Path initialDirectory) {
+        if (getScene() == null) {
+            return;
+        }
         javafx.stage.FileChooser chooser = new javafx.stage.FileChooser();
         chooser.setTitle(Language.tr("settings.game.java.chooserTitle"));
-        Path current = launchSettings.selectedJavaPath();
-        if (current != null && current.getParent() != null && current.getParent().toFile().isDirectory()) {
-            chooser.setInitialDirectory(current.getParent().toFile());
+        if (initialDirectory != null) {
+            chooser.setInitialDirectory(initialDirectory.toFile());
         }
         File selected = chooser.showOpenDialog(getScene().getWindow());
         if (selected == null) {
+            addButton.setDisable(false);
             return;
         }
 

@@ -81,6 +81,11 @@ public final class SettingsController {
         return context.inspectGameDirectory(directory, callback, onError);
     }
 
+    public FrontTask<Boolean> checkDirectory(
+            Path directory, Consumer<Boolean> callback, Consumer<String> onError) {
+        return context.checkDirectory(directory, callback, onError);
+    }
+
     /** 异步保存最大内存，避免在 JavaFX Application Thread 上写文件。 */
     public void saveMaxMemoryMbAsync(int maxMemoryMb) {
         context.executeSettings(Language.tr("operation.saveMaxMemory"),
@@ -135,6 +140,21 @@ public final class SettingsController {
     public void saveLanguageAsync(LanguageSelectionMode mode, String locale) {
         context.executeSettings(Language.tr("operation.saveLanguage"),
                 () -> context.backend().setLanguage(mode, locale));
+    }
+
+    /** 在设置线程重新扫描语言并切换翻译，完成后回到 JavaFX 线程。 */
+    public void switchLanguageAsync(LanguageSelectionMode mode, String locale, Runnable onLoaded) {
+        context.executeSettings(Language.tr("operation.saveLanguage"), () -> {
+            Language.refreshSupportedLocales();
+            if (mode == LanguageSelectionMode.MANUAL) {
+                Language.setLocale(locale);
+            } else {
+                Language.useAutomaticLocale();
+            }
+            if (onLoaded != null) {
+                Platform.runLater(onLoaded);
+            }
+        });
     }
 
     public void setOnDownloadSourceSaved(Runnable listener) {

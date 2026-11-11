@@ -78,6 +78,15 @@ class LanguageTest {
     }
 
     @Test
+    void refreshesSupportedLocalesOnlyWhenRequested() throws IOException {
+        Files.writeString(dataDirectory.resolve("lang").resolve("fr_fr.json"), "{}");
+
+        assertEquals(List.of("zh_cn", "en_us", "fn_cn"), Language.supportedLocales());
+        assertEquals(List.of("zh_cn", "en_us", "fn_cn", "fr_fr"),
+                Language.refreshSupportedLocales());
+    }
+
+    @Test
     void localeDisplayNamesAreHardcodedAndIgnoreLanguageFiles() throws IOException {
         List<String> expected = List.of("简体中文", "English", "地道中国话");
 
