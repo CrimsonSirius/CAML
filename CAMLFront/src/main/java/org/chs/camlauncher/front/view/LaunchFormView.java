@@ -57,7 +57,7 @@ final class LaunchFormView extends BorderPane {
         saveLocationLabel.getStyleClass().add("app-instance-info-detail");
         saveLocationLabel.setWrapText(true);
 
-        usernameField = new CamlTextField("namelessgod");
+        usernameField = new CamlTextField("player");
         usernameField.setMaxWidth(Double.MAX_VALUE);
 
         statusLabel = new Label();
