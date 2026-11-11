@@ -293,8 +293,6 @@ public final class ZHCNGenerator extends LanguageTranslationGenerator {
         t.put("settings.appearance.language.label", "界面语言");
         t.put("settings.appearance.language.hint", "自动模式跟随系统语言；手动模式使用下方选择的语言。");
         t.put("settings.appearance.language.accessible", "界面语言");
-        t.put("settings.appearance.language.zh_cn", "简体中文");
-        t.put("settings.appearance.language.en_us", "English");
 
         // 实例选择
         t.put("instances.picker.scanning", "正在扫描游戏实例...");

@@ -33,7 +33,20 @@ import java.util.stream.Stream;
  * 其余回退到 {@code zh_cn}）。</p>
  */
 public final class Language {
-    public static final String DEFAULT_LOCALE = "zh_cn";
+    public static final String DEFAULT_LOCALE = "fn_cn";
+
+    /**
+     * 内置语言的自称，硬编码在运行时而不是翻译文件里。
+     *
+     * <p>语言名必须使用该语言自己的写法，且与界面语言无关。放在代码中可以保证
+     * 新增语言或修改翻译时不会写出错误的语言名。新增内置语言时在这里登记自称，
+     * 未登记的语言回退显示 locale 标识。</p>
+     */
+    private static final Map<String, String> NATIVE_NAMES = Map.of(
+            "zh_cn", "简体中文",
+            "en_us", "English",
+            "fn_cn", "地道中国话"
+    );
 
     private static volatile Path languageDirectory;
     private static volatile String activeLocale;
@@ -102,12 +115,15 @@ public final class Language {
         return normalize(locale);
     }
 
-    /** 返回语言在当前语言中的名称；没有名称翻译时显示 locale 标识。 */
+    /**
+     * 返回语言在**自身语言**中的名称，例如 {@code zh_cn} → {@code 简体中文}。
+     *
+     * <p>名称来自运行时硬编码的 {@link #NATIVE_NAMES}，不读取翻译文件、也不经过当前
+     * 界面语言的翻译，因此切换界面语言时语言下拉框中的名称始终统一。
+     * 未登记的 locale 回退显示 locale 标识。</p>
+     */
     public static String localeDisplayName(String locale) {
-        String normalized = normalize(locale);
-        ensureLoaded();
-        return translations.getOrDefault(
-                "settings.appearance.language." + normalized, normalized);
+        return NATIVE_NAMES.getOrDefault(normalize(locale), locale);
     }
 
     /** 按翻译键取文案，可选 {@link String#format(Locale, String, Object...)} 占位符。 */
