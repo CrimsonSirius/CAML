@@ -378,6 +378,146 @@ class FileDownloaderTest {
         }
     }
 
+    @Test
+    void redownloadsExistingFileWithMismatchedSizeWithoutChecksum() throws Exception {
+        byte[] content = "fresh".getBytes(StandardCharsets.UTF_8);
+        AtomicInteger requests = new AtomicInteger();
+        HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        server.createContext("/existing.bin", exchange -> {
+            requests.incrementAndGet();
+            exchange.sendResponseHeaders(200, content.length);
+            try (OutputStream output = exchange.getResponseBody()) {
+                output.write(content);
+            }
+        });
+        server.start();
+
+        try {
+            Path destination = tempDirectory.resolve("existing.bin");
+            Files.writeString(destination, "old");
+            DownloadItem item = new DownloadItem(
+                    "existing",
+                    List.of(URI.create("http://127.0.0.1:" + server.getAddress().getPort()
+                            + "/existing.bin")),
+                    destination,
+                    null,
+                    content.length
+            );
+
+            new FileDownloader().download(item, DownloadListener.NONE);
+
+            assertArrayEquals(content, Files.readAllBytes(destination));
+            assertEquals(1, requests.get());
+        } finally {
+            server.stop(0);
+        }
+    }
+
+    @Test
+    void validatesExistingFileBeforeReusingIt() throws Exception {
+        byte[] replacement = "fresh".getBytes(StandardCharsets.UTF_8);
+        AtomicInteger requests = new AtomicInteger();
+        HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        server.createContext("/validated.bin", exchange -> {
+            requests.incrementAndGet();
+            exchange.sendResponseHeaders(200, replacement.length);
+            try (OutputStream output = exchange.getResponseBody()) {
+                output.write(replacement);
+            }
+        });
+        server.start();
+
+        try {
+            Path destination = tempDirectory.resolve("validated.bin");
+            Files.writeString(destination, "stale");
+            DownloadItem item = new DownloadItem(
+                    "validated",
+                    List.of(URI.create("http://127.0.0.1:" + server.getAddress().getPort()
+                            + "/validated.bin")),
+                    destination,
+                    null,
+                    replacement.length
+            );
+
+            new FileDownloader().download(item, DownloadListener.NONE, file -> {
+                if (!Files.readString(file).equals("fresh")) {
+                    throw new IOException("stale content");
+                }
+            });
+
+            assertArrayEquals(replacement, Files.readAllBytes(destination));
+            assertEquals(1, requests.get());
+        } finally {
+            server.stop(0);
+        }
+    }
+
+    @Test
+    void rejectsResponseWithMismatchedContentLengthWithoutChecksum() throws Exception {
+        byte[] content = "abc".getBytes(StandardCharsets.UTF_8);
+        HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        server.createContext("/wrong-length.bin", exchange -> {
+            exchange.sendResponseHeaders(200, content.length);
+            try (OutputStream output = exchange.getResponseBody()) {
+                output.write(content);
+            }
+        });
+        server.start();
+
+        try {
+            DownloadItem item = new DownloadItem(
+                    "wrong-length",
+                    List.of(URI.create("http://127.0.0.1:" + server.getAddress().getPort()
+                            + "/wrong-length.bin")),
+                    tempDirectory.resolve("wrong-length.bin"),
+                    null,
+                    5
+            );
+            FileDownloader downloader = new FileDownloader(HttpClient.newBuilder()
+                    .version(HttpClient.Version.HTTP_1_1)
+                    .build(), 1);
+
+            assertThrows(IOException.class,
+                    () -> downloader.download(item, DownloadListener.NONE));
+            assertFalse(Files.exists(item.destination()));
+        } finally {
+            server.stop(0);
+        }
+    }
+
+    @Test
+    void rejectsResponseShorterThanExpectedSizeWithoutChecksum() throws Exception {
+        byte[] content = "abc".getBytes(StandardCharsets.UTF_8);
+        HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        server.createContext("/short.bin", exchange -> {
+            exchange.sendResponseHeaders(200, 0);
+            try (OutputStream output = exchange.getResponseBody()) {
+                output.write(content);
+            }
+        });
+        server.start();
+
+        try {
+            DownloadItem item = new DownloadItem(
+                    "short",
+                    List.of(URI.create("http://127.0.0.1:" + server.getAddress().getPort()
+                            + "/short.bin")),
+                    tempDirectory.resolve("short.bin"),
+                    null,
+                    5
+            );
+            FileDownloader downloader = new FileDownloader(HttpClient.newBuilder()
+                    .version(HttpClient.Version.HTTP_1_1)
+                    .build(), 1);
+
+            assertThrows(IOException.class,
+                    () -> downloader.download(item, DownloadListener.NONE));
+            assertFalse(Files.exists(item.destination()));
+        } finally {
+            server.stop(0);
+        }
+    }
+
     private static HttpServer rangeServer(byte[] content, AtomicInteger requests,
                                           AtomicBoolean failFirstSegment,
                                           AtomicBoolean resumedMidFirstSegment) throws IOException {

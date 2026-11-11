@@ -78,6 +78,7 @@ public final class ZHCNGenerator extends LanguageTranslationGenerator {
         t.put("network.noSource", "没有可用的下载源：%s");
         t.put("metadata.manifestEmpty", "版本清单为空");
         t.put("metadata.versionJsonEmpty", "版本 JSON 为空");
+        t.put("metadata.versionJsonHashMismatch", "版本 JSON SHA-1 校验失败：%s");
         t.put("launch.permissionDenied", "没有权限执行 Java 或访问游戏目录，请检查文件权限。");
         t.put("launch.executableNotFound", "找不到 Java 可执行文件，请重新选择 Java。");
         t.put("launch.commandTooLong", "启动命令过长，请缩短游戏路径或减少类路径。");

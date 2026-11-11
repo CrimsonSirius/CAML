@@ -180,6 +180,7 @@
   "log.title": "Run log",
   "metadata.manifestEmpty": "Version manifest is empty",
   "metadata.versionJsonEmpty": "Version JSON is empty",
+  "metadata.versionJsonHashMismatch": "Version JSON SHA-1 mismatch: %s",
   "nav.downloads": "Downloads",
   "nav.home": "Home",
   "nav.settings": "Settings",

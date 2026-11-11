@@ -180,6 +180,7 @@
   "log.title": "运行日志",
   "metadata.manifestEmpty": "版本清单为空",
   "metadata.versionJsonEmpty": "版本 JSON 为空",
+  "metadata.versionJsonHashMismatch": "版本 JSON SHA-1 校验失败：%s",
   "nav.downloads": "下载",
   "nav.home": "主页",
   "nav.settings": "设置",

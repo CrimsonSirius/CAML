@@ -4,6 +4,7 @@ import org.chs.camlauncher.backend.error.BackendError;
 import org.chs.camlauncher.backend.error.BackendException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.chs.camlauncher.backend.download.hash.HashVerifier;
 import org.chs.camlauncher.backend.download.source.DownloadSource;
 import org.chs.camlauncher.backend.download.source.DownloadSources;
 import org.chs.camlauncher.backend.download.source.OfficialDownloadSource;
@@ -91,6 +92,7 @@ public final class VersionManifestService {
             throw new IOException("Version has no metadata URL: " + version.id());
         }
         return fetchParsedFromSources(URI.create(version.url()), text -> {
+            verifyVersionJsonSha1(version, text);
             parseVersionInfo(text);
             return text;
         });
@@ -242,6 +244,18 @@ public final class VersionManifestService {
             throw new BackendException(BackendError.of("metadata.versionJsonEmpty"));
         }
         return info;
+    }
+
+    private static void verifyVersionJsonSha1(VersionManifest.Version version, String text)
+            throws IOException {
+        if (version.sha1() == null || version.sha1().isBlank()) {
+            return;
+        }
+        String actual = HashVerifier.sha1(text.getBytes(StandardCharsets.UTF_8));
+        if (!actual.equalsIgnoreCase(version.sha1())) {
+            throw new BackendException(BackendError.of(
+                    "metadata.versionJsonHashMismatch", version.id()));
+        }
     }
 
     @FunctionalInterface
