@@ -1,10 +1,8 @@
 package org.chs.camlauncher.front.view;
 
 import javafx.animation.PauseTransition;
-import javafx.beans.binding.Bindings;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
-import javafx.scene.control.ContentDisplay;
 import javafx.scene.control.Label;
 import javafx.scene.control.OverrunStyle;
 import javafx.scene.control.ScrollPane;
@@ -12,6 +10,7 @@ import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.Pane;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
@@ -39,7 +38,17 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.Consumer;
 
-/** 下载页中的 Mod 搜索与分页列表。 */
+/**
+ * 下载页中的 Mod 搜索与分页列表。
+ *
+ * <p>页面内容整体放在纵向滚动容器中：窗口高度不足以同时容纳搜索卡、状态、结果和分页时
+ * 由整页滚动接管，结果行不会被裁切，也不需要压缩行高和字号。搜索表单方向由
+ * {@link ModDownloadLayout} 按页面宽度切换。</p>
+ *
+ * <p>结果行由 {@link ModViewSupport#resultRow} 组装：下层透明 {@code CamlButton} 负责
+ * 点击、悬停和焦点，上层只读正文负责显示，行高因此由图标与内边距决定，
+ * 不会被按钮样式里的 {@code -fx-min-height} 压缩。</p>
+ */
 final class ModSearchView extends VBox implements PageLifecycle {
     private static final int PAGE_SIZE = 20;
     private static final int ICON_RETRY_LIMIT = 5;
@@ -56,10 +65,16 @@ final class ModSearchView extends VBox implements PageLifecycle {
     private final CamlButton searchButton;
     private final CamlButton resetButton;
     private final Label statusLabel = new Label(UiText.tr("mods.search.loading"));
-    private final VBox resultsBox = new VBox(10);
+    private final VBox formHost = new VBox();
+    private final VBox searchCard;
+    private final VBox resultsBox = new VBox();
     private final Label pageLabel = new Label();
     private final CamlButton previousButton = CamlButton.outlined(UiText.tr("mods.page.previous"));
     private final CamlButton nextButton = CamlButton.outlined(UiText.tr("mods.page.next"));
+    private final HBox pagination;
+    private final VBox content = new VBox();
+    private final ScrollPane pageScroll = new ScrollPane(content);
+    private ModDownloadLayout.Plan appliedPlan;
     private int pageIndex;
     private boolean hasNext;
     private boolean loading;
@@ -74,12 +89,10 @@ final class ModSearchView extends VBox implements PageLifecycle {
         this.controller = controller;
         this.onProjectSelected = onProjectSelected;
         getStyleClass().add("app-download-content");
-        setPadding(new Insets(32, 40, 32, 40));
-        setSpacing(18);
         setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
 
         Label title = new Label(UiText.tr("mods.search.title"));
-        title.getStyleClass().add("app-settings-group-title");
+        title.getStyleClass().add("app-mod-search-title");
 
         queryField.setPromptText(UiText.tr("mods.search.nameHint"));
         gameVersionField.setPromptText(UiText.tr("mods.search.versionHint"));
@@ -98,22 +111,6 @@ final class ModSearchView extends VBox implements PageLifecycle {
         );
         loaderBox.setValue(loaderBox.getItems().getFirst());
 
-        GridPane form = new GridPane();
-        form.setHgap(12);
-        form.setVgap(12);
-        form.add(ViewSupport.fieldLabel(UiText.tr("mods.search.name"), queryField), 0, 0);
-        form.add(queryField, 1, 0);
-        form.add(ViewSupport.fieldLabel(UiText.tr("mods.search.source"), sourceBox), 2, 0);
-        form.add(sourceBox, 3, 0);
-        form.add(ViewSupport.fieldLabel(UiText.tr("mods.search.gameVersion"), gameVersionField), 0, 1);
-        form.add(gameVersionField, 1, 1);
-        form.add(ViewSupport.fieldLabel(UiText.tr("mods.search.loader"), loaderBox), 2, 1);
-        form.add(loaderBox, 3, 1);
-        GridPane.setHgrow(queryField, Priority.ALWAYS);
-        GridPane.setHgrow(gameVersionField, Priority.ALWAYS);
-        GridPane.setHgrow(sourceBox, Priority.ALWAYS);
-        GridPane.setHgrow(loaderBox, Priority.ALWAYS);
-
         searchButton = CamlButton.filled(UiText.tr("mods.search.button"));
         resetButton = CamlButton.outlined(UiText.tr("mods.search.reset"));
         searchButton.setOnAction(event -> searchFirstPage());
@@ -122,29 +119,111 @@ final class ModSearchView extends VBox implements PageLifecycle {
         gameVersionField.setOnAction(event -> searchFirstPage());
         HBox actions = new HBox(12, searchButton, resetButton);
         actions.setAlignment(Pos.CENTER_LEFT);
+        actions.getStyleClass().add("app-mod-search-actions");
 
-        VBox searchCard = new VBox(16, title, form, actions);
-        searchCard.getStyleClass().add("app-download-card");
+        searchCard = new VBox(title, formHost, actions);
+        searchCard.getStyleClass().addAll("app-download-card", "app-mod-search");
+        searchCard.setMaxWidth(Double.MAX_VALUE);
+        searchCard.setFillWidth(true);
 
-        statusLabel.getStyleClass().addAll("caml-body-small", "field-hint");
+        statusLabel.getStyleClass().addAll("caml-body-small", "field-hint", "app-mod-status");
         statusLabel.setWrapText(true);
 
-        ScrollPane scroll = new ScrollPane(resultsBox);
-        scroll.setFitToWidth(true);
-        scroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
-        scroll.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
-        scroll.getStyleClass().add("app-instance-scroll");
-        VBox.setVgrow(scroll, Priority.ALWAYS);
+        resultsBox.getStyleClass().add("app-mod-list");
 
         previousButton.setOnAction(event -> changePage(-1));
         nextButton.setOnAction(event -> changePage(1));
-        HBox pagination = new HBox(12,
-                previousButton, pageLabel, nextButton);
+        pageLabel.getStyleClass().add("app-mod-page-info");
+        pagination = new HBox(previousButton, pageLabel, nextButton);
         pagination.setAlignment(Pos.CENTER);
         pagination.getStyleClass().add("app-mod-pagination");
 
-        getChildren().addAll(searchCard, statusLabel, scroll, pagination);
+        content.getChildren().addAll(searchCard, statusLabel, resultsBox, pagination);
+        content.getStyleClass().add("app-mod-page");
+        content.setFillWidth(true);
+        content.setMaxWidth(Double.MAX_VALUE);
+
+        pageScroll.setContent(content);
+        pageScroll.setFitToWidth(true);
+        pageScroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+        pageScroll.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
+        pageScroll.getStyleClass().add("app-instance-scroll");
+        pageScroll.setMaxWidth(Double.MAX_VALUE);
+        pageScroll.setMaxHeight(Double.MAX_VALUE);
+        VBox.setVgrow(pageScroll, Priority.ALWAYS);
+        getChildren().setAll(pageScroll);
+
+        // 首帧宽度尚未确定，先按宽屏方向摆放；宽度可用后按断点校正。
+        applyPlan(ModDownloadLayout.WIDE);
+        widthProperty().addListener((observable, oldValue, newValue) ->
+                updateLayout(newValue.doubleValue()));
+        sceneProperty().addListener((observable, oldValue, newValue) -> {
+            if (newValue != null) {
+                updateLayout(getWidth());
+            }
+        });
+
         searchFirstPage();
+    }
+
+    private void updateLayout(double width) {
+        if (width <= 0) {
+            return;
+        }
+        applyPlan(ModDownloadLayout.plan(width));
+    }
+
+    private void applyPlan(ModDownloadLayout.Plan plan) {
+        if (plan.equals(appliedPlan)) {
+            return;
+        }
+        appliedPlan = plan;
+
+        content.setPadding(new Insets(plan.contentPaddingVertical(), plan.contentPaddingHorizontal(),
+                plan.contentPaddingVertical(), plan.contentPaddingHorizontal()));
+        content.setSpacing(plan.sectionSpacing());
+        searchCard.setPadding(new Insets(plan.cardPadding()));
+        searchCard.setSpacing(plan.cardSpacing());
+        formHost.setSpacing(plan.formGap());
+        formHost.getChildren().setAll(buildForm(plan));
+        resultsBox.setSpacing(plan.listSpacing());
+        pagination.setSpacing(plan.paginationSpacing());
+        previousButton.setMinWidth(plan.paginationButtonWidth());
+        nextButton.setMinWidth(plan.paginationButtonWidth());
+    }
+
+    private Pane buildForm(ModDownloadLayout.Plan plan) {
+        return switch (plan.mode()) {
+            case INLINE -> {
+                VBox rows = new VBox(plan.formGap(),
+                        ModViewSupport.weightedRow(plan,
+                                ModViewSupport.inlineField(plan, "mods.search.name", queryField),
+                                ModViewSupport.inlineField(plan, "mods.search.source", sourceBox)),
+                        ModViewSupport.weightedRow(plan,
+                                ModViewSupport.inlineField(plan, "mods.search.gameVersion", gameVersionField),
+                                ModViewSupport.inlineField(plan, "mods.search.loader", loaderBox)));
+                rows.getStyleClass().add("app-mod-search-form");
+                yield rows;
+            }
+            case GRID -> {
+                GridPane grid = ModViewSupport.evenGrid(plan, 2);
+                grid.add(ModViewSupport.stackedField("mods.search.name", queryField), 0, 0);
+                grid.add(ModViewSupport.stackedField("mods.search.source", sourceBox), 1, 0);
+                grid.add(ModViewSupport.stackedField("mods.search.gameVersion", gameVersionField), 0, 1);
+                grid.add(ModViewSupport.stackedField("mods.search.loader", loaderBox), 1, 1);
+                grid.getStyleClass().add("app-mod-search-form");
+                yield grid;
+            }
+            case STACKED -> {
+                VBox form = new VBox(plan.formGap(),
+                        ModViewSupport.stackedField("mods.search.name", queryField),
+                        ModViewSupport.stackedField("mods.search.source", sourceBox),
+                        ModViewSupport.stackedField("mods.search.gameVersion", gameVersionField),
+                        ModViewSupport.stackedField("mods.search.loader", loaderBox));
+                form.getStyleClass().add("app-mod-search-form");
+                yield form;
+            }
+        };
     }
 
     private void searchFirstPage() {
@@ -198,42 +277,49 @@ final class ModSearchView extends VBox implements PageLifecycle {
         } else {
             setStatus(UiText.tr("mods.search.count", page.totalCount()), false);
             for (ModProjectSummary project : page.items()) {
-                resultsBox.getChildren().add(projectButton(project, iconTargets));
+                resultsBox.getChildren().add(projectRow(project, iconTargets));
             }
         }
         loadIcons(iconTargets, generation);
         pageLabel.setText(UiText.tr("mods.page.info", pageIndex + 1));
         previousButton.setDisable(pageIndex == 0);
         nextButton.setDisable(!hasNext);
+        pageScroll.setVvalue(0);
     }
 
-    private CamlButton projectButton(ModProjectSummary project, List<IconTarget> iconTargets) {
+    private Region projectRow(ModProjectSummary project, List<IconTarget> iconTargets) {
+        ModDownloadLayout.Plan plan = plan();
+        int iconSize = (int) Math.round(plan.iconSize());
+
         Label iconText = new Label(project.name() == null || project.name().isBlank()
                 ? "?"
                 : project.name().substring(0, 1).toUpperCase());
         iconText.getStyleClass().add("app-mod-icon-text");
         StackPane placeholder = new StackPane(iconText);
         placeholder.getStyleClass().add("app-mod-icon-placeholder");
-        placeholder.setMinSize(80, 80);
-        placeholder.setPrefSize(80, 80);
-        placeholder.setMaxSize(80, 80);
+        placeholder.setMinSize(iconSize, iconSize);
+        placeholder.setPrefSize(iconSize, iconSize);
+        placeholder.setMaxSize(iconSize, iconSize);
         StackPane icon = new StackPane(placeholder);
         icon.getStyleClass().add("app-mod-icon-frame");
-        icon.setMinSize(80, 80);
-        icon.setPrefSize(80, 80);
-        icon.setMaxSize(80, 80);
+        icon.setMinSize(iconSize, iconSize);
+        icon.setPrefSize(iconSize, iconSize);
+        icon.setMaxSize(iconSize, iconSize);
         if (project.iconUrl() != null && !project.iconUrl().isBlank()) {
-            iconTargets.add(new IconTarget(project.iconUrl(), icon, placeholder));
+            iconTargets.add(new IconTarget(project.iconUrl(), icon, placeholder, iconSize));
         }
 
         Label name = new Label(project.name());
         name.getStyleClass().add("app-mod-title");
         name.setWrapText(false);
         name.setTextOverrun(OverrunStyle.ELLIPSIS);
+        name.setMinWidth(0);
         name.setMaxWidth(Double.MAX_VALUE);
         Label source = new Label(ModViewSupport.sourceLabel(project.source()));
         source.getStyleClass().add("app-mod-source");
-        HBox heading = new HBox(10, name, source);
+        source.setMinWidth(Region.USE_PREF_SIZE);
+        source.setAlignment(Pos.CENTER_RIGHT);
+        HBox heading = new HBox(12, name, source);
         heading.setAlignment(Pos.CENTER_LEFT);
         HBox.setHgrow(name, Priority.ALWAYS);
 
@@ -241,6 +327,7 @@ final class ModSearchView extends VBox implements PageLifecycle {
         summary.getStyleClass().add("app-mod-summary");
         summary.setWrapText(false);
         summary.setTextOverrun(OverrunStyle.ELLIPSIS);
+        summary.setMinWidth(0);
         summary.setMaxWidth(Double.MAX_VALUE);
         Label meta = new Label(UiText.tr("mods.list.meta",
                 ModViewSupport.joinLoaders(project.loaders()),
@@ -250,27 +337,22 @@ final class ModSearchView extends VBox implements PageLifecycle {
         meta.getStyleClass().add("app-mod-meta");
         meta.setWrapText(false);
         meta.setTextOverrun(OverrunStyle.ELLIPSIS);
+        meta.setMinWidth(0);
         meta.setMaxWidth(Double.MAX_VALUE);
 
-        VBox text = new VBox(6, heading, summary, meta);
+        VBox text = new VBox(8, heading, summary, meta);
         text.setFillWidth(true);
+        text.setMinWidth(0);
         text.setMaxWidth(Double.MAX_VALUE);
-        HBox graphic = new HBox(10, icon, text);
-        graphic.setAlignment(Pos.CENTER_LEFT);
-        graphic.setMaxWidth(Double.MAX_VALUE);
         HBox.setHgrow(text, Priority.ALWAYS);
 
-        CamlButton item = CamlButton.outlined("");
-        item.getStyleClass().addAll("app-instance-item", "app-mod-item");
-        item.setMaxWidth(Double.MAX_VALUE);
-        item.setMinHeight(Region.USE_PREF_SIZE);
-        item.setMaxHeight(Region.USE_PREF_SIZE);
-        item.setGraphic(graphic);
-        graphic.prefWidthProperty().bind(Bindings.max(0, item.widthProperty().subtract(48)));
-        item.setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
-        item.setAccessibleText(project.name() + " " + project.summary());
-        item.setOnAction(event -> onProjectSelected.accept(project));
-        return item;
+        return ModViewSupport.resultRow(plan, icon, text,
+                project.name() + " " + project.summary(),
+                () -> onProjectSelected.accept(project));
+    }
+
+    private ModDownloadLayout.Plan plan() {
+        return appliedPlan == null ? ModDownloadLayout.WIDE : appliedPlan;
     }
 
     private void loadIcons(List<IconTarget> targets, long generation) {
@@ -386,18 +468,19 @@ final class ModSearchView extends VBox implements PageLifecycle {
         if (frame.getChildren().size() > 1) {
             return;
         }
-        Image image = new Image(new ByteArrayInputStream(bytes), 80, 80, false, true);
+        int size = target.size();
+        Image image = new Image(new ByteArrayInputStream(bytes), size, size, false, true);
         if (image.isError()) {
             return;
         }
         ImageView view = new ImageView(image);
-        view.setFitWidth(80);
-        view.setFitHeight(80);
+        view.setFitWidth(size);
+        view.setFitHeight(size);
         view.setPreserveRatio(false);
         view.setSmooth(true);
-        Rectangle clip = new Rectangle(80, 80);
-        clip.setArcWidth(20);
-        clip.setArcHeight(20);
+        Rectangle clip = new Rectangle(size, size);
+        clip.setArcWidth(size * 0.24);
+        clip.setArcHeight(size * 0.24);
         view.setClip(clip);
         target.placeholder().setVisible(false);
         target.placeholder().setManaged(false);
@@ -446,7 +529,7 @@ final class ModSearchView extends VBox implements PageLifecycle {
         }
     }
 
-    private record IconTarget(String url, StackPane frame, StackPane placeholder) {
+    private record IconTarget(String url, StackPane frame, StackPane placeholder, int size) {
     }
 
     private static final class IconBatch {
@@ -464,3 +547,4 @@ final class ModSearchView extends VBox implements PageLifecycle {
         }
     }
 }
+

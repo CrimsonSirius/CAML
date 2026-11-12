@@ -6,7 +6,9 @@ import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
+import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.Pane;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
@@ -43,8 +45,11 @@ final class ModDetailView extends VBox implements PageLifecycle {
     private final Label summaryLabel = new Label();
     private final CamlComboBox<ModChoice<String>> versionBox = new CamlComboBox<>();
     private final CamlComboBox<ModChoice<String>> loaderBox = new CamlComboBox<>();
-    private final VBox groupsBox = new VBox(12);
+    private final VBox headerCard;
+    private final VBox filterHost = new VBox();
+    private final VBox groupsBox = new VBox();
     private final ScrollPane scroll = new ScrollPane(groupsBox);
+    private ModDownloadLayout.Plan appliedPlan;
     private boolean disposed;
     private FrontTask<ModProjectDetail> loadTask;
     private List<ModFile> files = List.of();
@@ -56,17 +61,19 @@ final class ModDetailView extends VBox implements PageLifecycle {
         this.summary = summary;
         this.onBack = onBack;
         getStyleClass().add("app-download-content");
-        setPadding(new Insets(32, 40, 32, 40));
-        setSpacing(18);
         setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
 
         CamlButton back = ViewSupport.backButton(onBack);
         titleLabel.getStyleClass().add("app-mod-detail-title");
         titleLabel.setText(summary.name());
+        titleLabel.setMinWidth(0);
+        titleLabel.setMaxWidth(Double.MAX_VALUE);
         Label source = new Label(ModViewSupport.sourceLabel(summary.source()));
         source.getStyleClass().add("app-mod-source");
+        source.setMinWidth(Region.USE_PREF_SIZE);
         HBox titleRow = new HBox(12, back, titleLabel, source);
         titleRow.setAlignment(Pos.CENTER_LEFT);
+        HBox.setHgrow(titleLabel, Priority.ALWAYS);
 
         summaryLabel.setText(summary.summary());
         summaryLabel.getStyleClass().add("app-mod-summary");
@@ -76,20 +83,16 @@ final class ModDetailView extends VBox implements PageLifecycle {
                 ViewSupport.releaseDate(summary.updatedAt())));
         metaLabel.getStyleClass().add("app-mod-meta");
 
-        VBox header = new VBox(12, titleRow, summaryLabel, metaLabel);
-        header.getStyleClass().add("app-download-card");
+        headerCard = new VBox(titleRow, summaryLabel, metaLabel);
+        headerCard.getStyleClass().addAll("app-download-card", "app-mod-detail-header");
+        headerCard.setMaxWidth(Double.MAX_VALUE);
 
         versionBox.setMaxWidth(Double.MAX_VALUE);
         loaderBox.setMaxWidth(Double.MAX_VALUE);
         versionBox.valueProperty().addListener((observable, oldValue, newValue) -> rebuildGroups());
         loaderBox.valueProperty().addListener((observable, oldValue, newValue) -> rebuildGroups());
-        HBox filters = new HBox(12,
-                ViewSupport.buildField(UiText.tr("mods.detail.versionFilter"), versionBox, null),
-                ViewSupport.buildField(UiText.tr("mods.detail.loaderFilter"), loaderBox, null));
-        HBox.setHgrow(filters.getChildren().get(0), Priority.ALWAYS);
-        HBox.setHgrow(filters.getChildren().get(1), Priority.ALWAYS);
 
-        statusLabel.getStyleClass().addAll("caml-body-small", "field-hint");
+        statusLabel.getStyleClass().addAll("caml-body-small", "field-hint", "app-mod-status");
         statusLabel.setWrapText(true);
 
         scroll.setFitToWidth(true);
@@ -98,8 +101,59 @@ final class ModDetailView extends VBox implements PageLifecycle {
         scroll.getStyleClass().add("app-instance-scroll");
         VBox.setVgrow(scroll, Priority.ALWAYS);
 
-        getChildren().addAll(header, filters, statusLabel, scroll);
+        getChildren().addAll(headerCard, filterHost, statusLabel, scroll);
+
+        // 首帧宽度尚未确定，先按 1080p 宽屏规则摆放；宽度可用后按断点校正。
+        applyPlan(ModDownloadLayout.WIDE);
+        widthProperty().addListener((observable, oldValue, newValue) ->
+                updateLayout(newValue.doubleValue()));
+        sceneProperty().addListener((observable, oldValue, newValue) -> {
+            if (newValue != null) {
+                updateLayout(getWidth());
+            }
+        });
+
         loadProject();
+    }
+
+    private void updateLayout(double width) {
+        if (width <= 0) {
+            return;
+        }
+        applyPlan(ModDownloadLayout.plan(width));
+    }
+
+    private void applyPlan(ModDownloadLayout.Plan plan) {
+        if (plan.equals(appliedPlan)) {
+            return;
+        }
+        appliedPlan = plan;
+
+        setPadding(new Insets(plan.contentPaddingVertical(), plan.contentPaddingHorizontal(),
+                plan.contentPaddingVertical(), plan.contentPaddingHorizontal()));
+        setSpacing(plan.sectionSpacing());
+        headerCard.setPadding(new Insets(plan.cardPadding()));
+        headerCard.setSpacing(plan.cardSpacing());
+        filterHost.setSpacing(plan.formGap());
+        filterHost.getChildren().setAll(buildFilterLayout(plan));
+        groupsBox.setSpacing(plan.listSpacing());
+    }
+
+    private Pane buildFilterLayout(ModDownloadLayout.Plan plan) {
+        return switch (plan.mode()) {
+            case INLINE -> ModViewSupport.weightedRow(plan,
+                    ModViewSupport.inlineField(plan, "mods.detail.versionFilter", versionBox),
+                    ModViewSupport.inlineField(plan, "mods.detail.loaderFilter", loaderBox));
+            case GRID -> {
+                GridPane grid = ModViewSupport.evenGrid(plan, 2);
+                grid.add(ModViewSupport.stackedField("mods.detail.versionFilter", versionBox), 0, 0);
+                grid.add(ModViewSupport.stackedField("mods.detail.loaderFilter", loaderBox), 1, 0);
+                yield grid;
+            }
+            case STACKED -> new VBox(plan.formGap(),
+                    ModViewSupport.stackedField("mods.detail.versionFilter", versionBox),
+                    ModViewSupport.stackedField("mods.detail.loaderFilter", loaderBox));
+        };
     }
 
     private void loadProject() {
@@ -112,12 +166,12 @@ final class ModDetailView extends VBox implements PageLifecycle {
             return;
         }
         files = project.files();
-        buildFilters();
+        populateFilters();
         rebuildGroups();
         setStatus(UiText.tr("mods.detail.count", files.size()), false);
     }
 
-    private void buildFilters() {
+    private void populateFilters() {
         Set<String> versions = new LinkedHashSet<>();
         Set<String> loaders = new LinkedHashSet<>();
         for (ModFile file : files) {
@@ -192,9 +246,6 @@ final class ModDetailView extends VBox implements PageLifecycle {
         CamlButton header = CamlButton.outlined("");
         header.getStyleClass().add("app-mod-group-header");
         header.setMaxWidth(Double.MAX_VALUE);
-        header.setMinHeight(Region.USE_PREF_SIZE);
-        header.setMaxHeight(Region.USE_PREF_SIZE);
-        header.setGraphic(headerGraphic);
         header.setContentDisplay(javafx.scene.control.ContentDisplay.GRAPHIC_ONLY);
         headerGraphic.prefWidthProperty().bind(
                 Bindings.max(0, header.widthProperty().subtract(52)));
@@ -246,6 +297,7 @@ final class ModDetailView extends VBox implements PageLifecycle {
         HBox.setHgrow(title, Priority.ALWAYS);
 
         CamlButton download = CamlButton.filled(UiText.tr("mods.detail.download"));
+        download.setMinWidth(plan().paginationButtonWidth());
         download.setDisable(file.downloadUri() == null);
         download.setOnAction(event -> startDownload(file, download));
         HBox actions = new HBox(12, dependencies, download);
@@ -255,6 +307,10 @@ final class ModDetailView extends VBox implements PageLifecycle {
         VBox row = new VBox(8, top, actions);
         row.getStyleClass().add("app-mod-version-row");
         return row;
+    }
+
+    private ModDownloadLayout.Plan plan() {
+        return appliedPlan == null ? ModDownloadLayout.WIDE : appliedPlan;
     }
 
     private void startDownload(ModFile file, CamlButton button) {
