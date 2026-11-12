@@ -5,6 +5,7 @@ import org.chs.camlauncher.backend.mod.service.ModIconService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -13,6 +14,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ModIconServiceTest {
@@ -46,6 +48,38 @@ class ModIconServiceTest {
             try (var files = Files.list(dataDirectory.resolve("cache/mod-icons"))) {
                 assertTrue(files.findAny().isPresent());
             }
+        } finally {
+            server.stop(0);
+        }
+    }
+
+    @Test
+    void doesNotRetryInsideSingleAttempt() throws Exception {
+        byte[] content = "retry-image".getBytes(StandardCharsets.UTF_8);
+        AtomicInteger requests = new AtomicInteger();
+        HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        server.createContext("/icon.png", exchange -> {
+            if (requests.incrementAndGet() == 1) {
+                exchange.sendResponseHeaders(500, -1);
+                exchange.close();
+                return;
+            }
+            exchange.sendResponseHeaders(200, content.length);
+            try (var output = exchange.getResponseBody()) {
+                output.write(content);
+            }
+        });
+        server.start();
+
+        try {
+            ModIconService service = new ModIconService(dataDirectory);
+            String url = "http://127.0.0.1:" + server.getAddress().getPort() + "/icon.png";
+
+            assertThrows(IOException.class, () -> service.load(url));
+            assertEquals(1, requests.get());
+
+            assertArrayEquals(content, service.load(url));
+            assertEquals(2, requests.get());
         } finally {
             server.stop(0);
         }
