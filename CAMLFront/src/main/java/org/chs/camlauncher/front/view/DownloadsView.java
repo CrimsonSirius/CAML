@@ -1,6 +1,9 @@
 package org.chs.camlauncher.front.view;
 
+import javafx.beans.binding.Bindings;
+import javafx.beans.binding.DoubleBinding;
 import javafx.event.ActionEvent;
+import javafx.geometry.Insets;
 import javafx.scene.Node;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
@@ -36,6 +39,19 @@ final class DownloadsView extends HBox implements SidebarPage, PageLifecycle {
         sidebar = new CamlSideNav();
         sidebar.getStyleClass().add("app-sidebar");
         sidebar.setMaxHeight(Double.MAX_VALUE);
+        // 图示中侧边栏约占窗口宽度的 1/6；窗口缩放时按比例调整，并限制在 180–260。
+        sidebar.setPadding(new Insets(16, 20, 16, 20));
+        sidebar.setSpacing(8);
+        DoubleBinding sidebarWidth = Bindings.createDoubleBinding(() -> {
+            double width = getWidth();
+            return width <= 0
+                    ? ModDownloadLayout.SIDEBAR_MIN_WIDTH
+                    : ModDownloadLayout.sidebarWidth(width);
+        }, widthProperty());
+        sidebar.minWidthProperty().bind(sidebarWidth);
+        sidebar.prefWidthProperty().bind(sidebarWidth);
+        sidebar.maxWidthProperty().bind(sidebarWidth);
+
         CamlSideNavItem releaseItem = new CamlSideNavItem(VersionCategory.RELEASE.label());
         CamlSideNavItem snapshotItem = new CamlSideNavItem(VersionCategory.SNAPSHOT.label());
         CamlSideNavItem oldItem = new CamlSideNavItem(VersionCategory.OLD.label());

@@ -135,7 +135,7 @@ CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
 - 支持内存、分辨率、JVM 参数、游戏参数和环境变量。
 - 启动计划创建时校验 Java 是否满足版本要求。
 - **版本隔离**：界面持久化 `VersionIsolationMode.FULL` 或 `NONE`。`FULL` 始终把
-  `--gameDir` 指向 `versions/<id>`，`NONE` 始终指向 `.minecraft` 根目录；
+  `--gameDir` 指向 `versions/<id>`，`NONE` 始始终指向 `.minecraft` 根目录；
   `libraries` 与 `assets` 始终来自根目录。旧 API 仍可使用 `AUTO` 按
   `saves`、`options.txt` 等标记自动检测。`GameLaunchService` 接收显式模式并调用
   `GameDataLayout.resolve`。
@@ -209,6 +209,22 @@ CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
   OptiFine 只有在选择 Forge 后才可用。下载设置页提交不可变 `DownloadRequest` 后，
   `DownloadProgressView` 接管页面，展示网速、总进度、当前文件和阶段列表；
   `DownloadTelemetry` 在后台事件与 JavaFX 轮询之间聚合进度和网速。
+- 模组子页由 `ModSearchView`、`ModDetailView`、`ModViewSupport` 和纯计算的
+  `ModDownloadLayout` 组成。`ModDownloadLayout` 以 1920×1080 为设计参考，但所有断点按
+  *内容区宽度*（已扣除左侧导航）判断，而不是假设窗口拥有 1080p 的逻辑像素：
+  侧边栏取窗口宽度 `1/6` 并钳制在 `180–260`，内容区留白 `40/32`，卡片内边距 `24`、
+  内部间距 `18`，字段列与下拉列权重 `2:1`，结果行图标 `88`、最小行高 `112`；
+  内容宽度 `>= 660` 用“标签在左”的两行两列，`520–659` 用“标签在上”的两行两列，
+  `< 520` 用单列堆叠，切换时控件尺寸、行高和字号保持不变。
+- `ModSearchView` 把搜索卡、状态、结果列表和分页放进同一个 `ScrollPane`：
+  高度不足时由整页纵向滚动接管，因此结果行不会被裁切，也不需要压缩行高。
+  表单每次切换方向时由 `applyPlan` 重新挂载到 `formHost`，几何参数全部来自 `ModDownloadLayout`。
+- 模组结果行由 `ModViewSupport.resultRow` 组装成叠层容器：下层是铺满整行的透明
+  `CamlButton`（点击、悬停、焦点与无障碍文本），上层是只读正文与左侧强调条。
+  行高由图标 `88` 加上下内边距 `12` 决定，不使用按钮 `graphic` 承载正文——
+  `caml.css` 的 `-fx-min-height: 44` 会覆盖代码设置，再叠加 `Region.USE_PREF_SIZE`
+  会使皮肤首选高度塌陷为 `0`，正文就会溢出到相邻行。`ModResultRowLayoutTest`
+  用真实样式表在 JavaFX 工具里守住行高、图标边界与点击层覆盖范围。
 - `GameSettingsView` 负责叠层内存滑块，`DownloadSettingsView` 负责下载源三选一、
   自定义 API 输入和 1–256 下载并发滑块，
   `LauncherSettingsView` 负责外观设置中的主题选择。

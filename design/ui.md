@@ -27,6 +27,23 @@
 - 点击“下载实例”后进入独立下载进度页：左侧卡片显示实时网速和累计下载量，
   右侧卡片显示总进度、当前文件、当前阶段和按顺序增长的阶段列表。
   返回下载列表后下载继续，完成或失败状态仍写入启动器日志。
+- 模组子页与版本列表共用左侧导航：侧边栏宽度取窗口宽度的 `1/6`，并限制在 `180–260`。
+  比例按逻辑像素计算，因此 150% 缩放的 1080p 屏幕（逻辑宽度约 `1280`）会自动落在 `180` 下限，
+  不会因为物理分辨率是 1080p 就假设存在 `1920×1080` 的逻辑空间。
+- 模组子页尺寸全部集中在 `ModDownloadLayout`；断点按内容区宽度（已扣除左侧导航）判断，
+  内容区左右留白 `40`、上下 `32`，搜索卡与详情卡内边距 `24`、内部间距 `18`，
+  标题“搜索 Mod”位于卡片左上。
+- 搜索表单三种方向：内容宽度 `>= 660` 为两行两列、“标签在左”，名称/游戏版本输入框与
+  来源/加载器下拉框按 `2:1` 分配列宽；`520–659` 为“标签在上”的两行两列；`< 520` 为单列纵向堆叠。
+  切换方向只改变摆放方式，控件尺寸、行高和字号保持不变。
+- 搜索结果行最小高 `112`、图标 `88`，左侧贴边 `4px` 橙黄强调条，名称与来源标签分居行首行尾，
+  摘要和加载器/版本信息各占一行并以省略号截断。
+- 结果行用“下层透明按钮 + 上层只读正文”的叠层结构：按钮只负责点击、悬停和焦点，
+  行高由图标 `88` 与上下内边距 `12` 共同决定（`12 + 88 + 12 = 112`）。
+  不使用按钮自身的 `graphic` 承载正文——`caml.css` 的 `-fx-min-height: 44` 会覆盖代码设置，
+  叠加 `Region.USE_PREF_SIZE` 后皮肤首选高度会塌陷为 `0`，导致图标与文字溢出并压到相邻行。
+- 搜索卡、状态、结果列表和分页整体放在页面滚动容器中：高度不足时由整页纵向滚动接管，
+  结果行保持 `112` 最小高度而不被裁切，分页随列表滚动到内容末尾。
 - 设置页：左侧“游戏设置 / 下载设置 / 外观”侧边栏，右侧对应内容，不显示页面标题。
 - 设置页右侧内容支持纵向滚动，内容较长时可以从上向下滚动查看。
 - 游戏设置：“游戏位置”圆角分组包含路径输入、浏览和保存；“版本隔离”组包含“完全版本隔离”和“不进行版本隔离”两个圆形单选项；“Java”组包含“自动选择 / 手动选择”两个圆形单选项、重新扫描按钮、添加 Java 按钮、Java 地址下拉框和选中 Java 的版本信息；“内存”组包含描述、内存摘要和叠层滑块。
@@ -63,7 +80,8 @@
 - 视图拆分：`MainView` 是壳层；主页由 `HomeView`、`LaunchFormView`、
   `LogPaneView`、`InstancePickerView` 和 `ManageInstancesView` 组成；下载页由
   `DownloadsView`、`DownloadVersionsView`、`DownloadVersionSetupView`、
-  `DownloadProgressView`、`DownloadTelemetry` 和 `DownloadRequest` 组成；设置页由
+  `DownloadProgressView`、`DownloadTelemetry` 和 `DownloadRequest` 组成；模组子页由
+  `ModSearchView`、`ModDetailView`、`ModViewSupport` 和 `ModDownloadLayout` 组成；设置页由
   `SettingsView`、`GameSettingsView`、`GameLocationSettingsView`、
   `VersionIsolationSettingsView`、`DownloadSettingsView` 和 `LauncherSettingsView` 组成；
   `LaunchSettings` 共享内存值。
@@ -82,6 +100,9 @@
 | 下载源 | `CamlRadioButton` × 3 + `CamlTextField`（下载设置组） |
 | 下载版本列表 | `CamlButton` 列表 + `CamlPageHost` 内部切页 |
 | 下载设置页 | 六个圆角信息条 + Forge/OptiFine/Fabric/Fabric API/NeoForge `CamlComboBox` + 整宽 `CamlButton` |
+| Mod 搜索 | `CamlTextField` × 2 + `CamlComboBox` × 2 + 搜索/重置 `CamlButton`（方向按内容宽度在“两行两列 `2:1` / 两行两列 / 单列”间切换） |
+| Mod 结果列表 | `CamlButton` 行 + `88px` 图标 + 行尾来源标签 + 随内容滚动的分页 |
+| Mod 详情 | 圆角卡 + 版本/加载器 `CamlComboBox` + 可折叠版本组 + `CamlButton` 下载 |
 | 浏览游戏实例 | outlined `CamlButton` → `InstancePickerView` |
 | 管理实例 | outlined `CamlButton` → `ManageInstancesView` |
 | 当前实例信息 | 圆角 `VBox`，三行标签 |

@@ -181,16 +181,11 @@
     -fx-border-width: 0 1 0 0;
 }
 
-.app-sidebar {
-    -fx-min-width: 180;
-    -fx-pref-width: 180;
-    -fx-max-width: 180;
-}
+/* 下载页侧边栏宽度由 DownloadsView 按窗口宽度 1/6（Clamp 180–260）绑定，
+   空侧边栏宽度由 ViewSupport.emptySidebar() 直接设置；
+   这里不写 -fx-min/pref/max-width，避免 CSS 与代码争抢同一属性。 */
 
 .app-settings-sidebar {
-    -fx-min-width: 180;
-    -fx-pref-width: 180;
-    -fx-max-width: 180;
     -fx-padding: 12 8;
 }
 
@@ -420,10 +415,25 @@
 }
 
 .app-mod-item {
-    -fx-padding: 8 16 8 6;
-    -fx-min-height: 96;
-    -fx-pref-height: 96;
-    -fx-max-height: 120;
+    -fx-background-color: -caml-surface-lowest;
+    -fx-background-radius: 12;
+    -fx-border-color: -caml-border-subtle;
+    -fx-border-width: 1;
+    -fx-border-radius: 12;
+    -fx-alignment: center-left;
+}
+
+.app-mod-item:hover {
+    -fx-background-color: -caml-accent-container;
+}
+
+.app-mod-item:pressed {
+    -fx-background-color: derive(-caml-accent-container, -6%);
+}
+
+.app-mod-accent {
+    -fx-background-color: -caml-accent;
+    -fx-background-radius: 12 0 0 12;
 }
 
 .app-mod-icon-frame {
@@ -433,29 +443,34 @@
 
 .app-mod-icon-placeholder {
     -fx-background-color: -caml-accent-container;
-    -fx-background-radius: 10;
+    -fx-background-radius: 12;
 }
 
 .app-mod-icon-text {
     -fx-alignment: center;
     -fx-text-fill: -caml-on-accent-container;
-    -fx-font-size: 28px;
+    -fx-font-size: 30px;
     -fx-font-weight: bold;
 }
 
 .app-mod-title,
 .app-mod-detail-title {
-    -fx-font-size: 18px;
+    -fx-font-size: 20px;
     -fx-font-weight: bold;
     -fx-text-fill: -caml-on-surface;
 }
 
 .app-mod-source {
-    -fx-font-size: 14px;
+    -fx-font-size: 15px;
     -fx-text-fill: -caml-accent-text;
 }
 
-.app-mod-summary,
+.app-mod-summary {
+    -fx-font-size: 16px;
+    -fx-text-fill: -caml-on-surface-muted;
+    -fx-text-overrun: ellipsis;
+}
+
 .app-mod-meta,
 .app-mod-dependency {
     -fx-font-size: 15px;
@@ -464,7 +479,12 @@
 }
 
 .app-mod-pagination {
-    -fx-padding: 8 0 0 0;
+    -fx-padding: 4 0 0 0;
+}
+
+.app-mod-page-info {
+    -fx-font-size: 16px;
+    -fx-text-fill: -caml-on-surface-muted;
 }
 
 .app-mod-group {
@@ -516,4 +536,34 @@
     -fx-font-size: 16px;
     -fx-font-weight: bold;
     -fx-text-fill: -caml-on-surface;
+}
+
+/* 模组页的尺寸全部来自 ModDownloadLayout，CSS 不写 -fx-padding / -fx-min-height，
+   否则会覆盖代码设置，导致布局常量与实际渲染不一致。 */
+
+/* 模组搜索卡：配色与排版；几何尺寸由 ModDownloadLayout 提供。 */
+
+.app-mod-search-title {
+    -fx-text-fill: -caml-on-surface;
+    -fx-font-size: 30px;
+    -fx-font-weight: bold;
+}
+
+.app-mod-search .caml-text-field,
+.app-mod-search .caml-combo-box {
+    -fx-font-size: 16px;
+}
+
+.app-mod-field-label {
+    -fx-text-fill: -caml-on-surface-muted;
+    -fx-font-size: 15px;
+    -fx-font-weight: normal;
+}
+
+.app-mod-search-actions {
+    -fx-padding: 2 0 0 0;
+}
+
+.app-mod-status {
+    -fx-font-size: 16px;
 }
