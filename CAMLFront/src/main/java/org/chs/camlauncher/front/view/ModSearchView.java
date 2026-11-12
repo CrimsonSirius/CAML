@@ -1,5 +1,6 @@
 package org.chs.camlauncher.front.view;
 
+import javafx.animation.PauseTransition;
 import javafx.beans.binding.Bindings;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -16,6 +17,7 @@ import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.shape.Rectangle;
+import javafx.util.Duration;
 import org.chs.camlauncher.backend.mod.model.ModLoader;
 import org.chs.camlauncher.backend.mod.model.ModProjectSummary;
 import org.chs.camlauncher.backend.mod.model.ModSearchPage;
@@ -31,13 +33,19 @@ import org.chs.camlauncher.ui.control.CamlTextField;
 import java.io.ByteArrayInputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Consumer;
 
 /** 下载页中的 Mod 搜索与分页列表。 */
 final class ModSearchView extends VBox implements PageLifecycle {
     private static final int PAGE_SIZE = 20;
+    private static final int ICON_RETRY_LIMIT = 5;
+    private static final long ICON_RETRY_DELAY_MILLIS = 5_000;
+    private static final long ICON_FIRST_ATTEMPT_TIMEOUT_MILLIS = 8_000;
+    private static final byte[] EMPTY_ICON = new byte[0];
 
     private final DownloadsController controller;
     private final Consumer<ModProjectSummary> onProjectSelected;
@@ -58,6 +66,8 @@ final class ModSearchView extends VBox implements PageLifecycle {
     private boolean disposed;
     private FrontTask<ModSearchPage> loadTask;
     private final List<FrontTask<byte[]>> iconTasks = new ArrayList<>();
+    private final List<FrontTask<byte[]>> iconRetryTasks = new ArrayList<>();
+    private final List<PauseTransition> iconTimeouts = new ArrayList<>();
     private long iconGeneration;
 
     ModSearchView(DownloadsController controller, Consumer<ModProjectSummary> onProjectSelected) {
@@ -264,37 +274,88 @@ final class ModSearchView extends VBox implements PageLifecycle {
     }
 
     private void loadIcons(List<IconTarget> targets, long generation) {
-        Map<Integer, byte[]> completed = new HashMap<>();
-        int[] nextToDisplay = {0};
+        IconBatch batch = new IconBatch(targets, generation);
         for (int index = 0; index < targets.size(); index++) {
-            int targetIndex = index;
-            IconTarget target = targets.get(index);
-            iconTasks.add(controller.loadModIcon(target.url(),
-                    bytes -> {
-                        if (disposed || generation != iconGeneration) {
-                            return;
-                        }
-                        completed.put(targetIndex, bytes);
-                        displayCompletedIcons(targets, completed, nextToDisplay, generation);
-                    },
-                    ignored -> {
-                        if (disposed || generation != iconGeneration) {
-                            return;
-                        }
-                        completed.put(targetIndex, new byte[0]);
-                        displayCompletedIcons(targets, completed, nextToDisplay, generation);
-                    }));
+            startIcon(batch, index);
         }
     }
 
-    private void displayCompletedIcons(List<IconTarget> targets, Map<Integer, byte[]> completed,
-                                       int[] nextToDisplay, long generation) {
-        while (!disposed && generation == iconGeneration
-                && completed.containsKey(nextToDisplay[0])) {
-            int index = nextToDisplay[0]++;
-            byte[] bytes = completed.remove(index);
-            IconTarget target = targets.get(index);
-            applyIcon(target.frame(), target.placeholder(), bytes);
+    private void startIcon(IconBatch batch, int index) {
+        IconTarget target = batch.targets.get(index);
+        FrontTask<byte[]> task = controller.loadModIcon(target.url(),
+                bytes -> settleIcon(batch, index, bytes),
+                ignored -> onIconFailed(batch, index));
+        batch.tasks.put(index, task);
+        iconTasks.add(task);
+
+        PauseTransition timeout = new PauseTransition(
+                Duration.millis(ICON_FIRST_ATTEMPT_TIMEOUT_MILLIS));
+        timeout.setOnFinished(event -> {
+            if (!isCurrent(batch.generation) || batch.settled.contains(index)) {
+                return;
+            }
+            FrontTask<byte[]> running = batch.tasks.remove(index);
+            if (running != null) {
+                running.cancel();
+            }
+            onIconFailed(batch, index);
+        });
+        batch.timeouts.put(index, timeout);
+        iconTimeouts.add(timeout);
+        timeout.playFromStart();
+    }
+
+    private void onIconFailed(IconBatch batch, int index) {
+        if (settleIcon(batch, index, EMPTY_ICON)) {
+            scheduleIconRetry(batch, index, 1);
+        }
+    }
+
+    private boolean settleIcon(IconBatch batch, int index, byte[] bytes) {
+        if (!isCurrent(batch.generation) || !batch.settled.add(index)) {
+            return false;
+        }
+        PauseTransition timeout = batch.timeouts.remove(index);
+        if (timeout != null) {
+            timeout.stop();
+        }
+        batch.tasks.remove(index);
+        batch.completed.put(index, bytes);
+        displayCompletedIcons(batch);
+        return true;
+    }
+
+    private void displayCompletedIcons(IconBatch batch) {
+        while (isCurrent(batch.generation)
+                && batch.completed.containsKey(batch.nextToDisplay[0])) {
+            int index = batch.nextToDisplay[0]++;
+            byte[] bytes = batch.completed.remove(index);
+            applyIcon(batch.targets.get(index), bytes);
+        }
+    }
+
+    private void scheduleIconRetry(IconBatch batch, int index, int attempt) {
+        if (!isCurrent(batch.generation) || attempt > ICON_RETRY_LIMIT) {
+            return;
+        }
+        IconTarget target = batch.targets.get(index);
+        FrontTask<byte[]> task = controller.retryModIcon(
+                target.url(),
+                ICON_RETRY_DELAY_MILLIS,
+                bytes -> onIconRetryLoaded(batch, index, bytes),
+                ignored -> scheduleIconRetry(batch, index, attempt + 1));
+        iconRetryTasks.add(task);
+    }
+
+    private void onIconRetryLoaded(IconBatch batch, int index, byte[] bytes) {
+        if (!isCurrent(batch.generation)) {
+            return;
+        }
+        if (batch.nextToDisplay[0] <= index) {
+            batch.completed.put(index, bytes);
+            displayCompletedIcons(batch);
+        } else {
+            applyIcon(batch.targets.get(index), bytes);
         }
     }
 
@@ -303,10 +364,26 @@ final class ModSearchView extends VBox implements PageLifecycle {
             task.cancel();
         }
         iconTasks.clear();
+        for (FrontTask<byte[]> task : iconRetryTasks) {
+            task.cancel();
+        }
+        iconRetryTasks.clear();
+        for (PauseTransition timeout : iconTimeouts) {
+            timeout.stop();
+        }
+        iconTimeouts.clear();
     }
 
-    private static void applyIcon(StackPane frame, StackPane placeholder, byte[] bytes) {
+    private boolean isCurrent(long generation) {
+        return !disposed && generation == iconGeneration;
+    }
+
+    private static void applyIcon(IconTarget target, byte[] bytes) {
         if (bytes == null || bytes.length == 0) {
+            return;
+        }
+        StackPane frame = target.frame();
+        if (frame.getChildren().size() > 1) {
             return;
         }
         Image image = new Image(new ByteArrayInputStream(bytes), 80, 80, false, true);
@@ -322,8 +399,8 @@ final class ModSearchView extends VBox implements PageLifecycle {
         clip.setArcWidth(20);
         clip.setArcHeight(20);
         view.setClip(clip);
-        placeholder.setVisible(false);
-        placeholder.setManaged(false);
+        target.placeholder().setVisible(false);
+        target.placeholder().setManaged(false);
         frame.getChildren().add(view);
     }
 
@@ -370,5 +447,20 @@ final class ModSearchView extends VBox implements PageLifecycle {
     }
 
     private record IconTarget(String url, StackPane frame, StackPane placeholder) {
+    }
+
+    private static final class IconBatch {
+        private final List<IconTarget> targets;
+        private final long generation;
+        private final Map<Integer, byte[]> completed = new HashMap<>();
+        private final Map<Integer, FrontTask<byte[]>> tasks = new HashMap<>();
+        private final Map<Integer, PauseTransition> timeouts = new HashMap<>();
+        private final Set<Integer> settled = new HashSet<>();
+        private final int[] nextToDisplay = {0};
+
+        private IconBatch(List<IconTarget> targets, long generation) {
+            this.targets = targets;
+            this.generation = generation;
+        }
     }
 }

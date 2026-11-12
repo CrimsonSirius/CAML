@@ -80,6 +80,15 @@ public final class DownloadsController {
                 () -> context.backend().loadModIcon(iconUrl), onLoaded, onError);
     }
 
+    public FrontTask<byte[]> retryModIcon(
+            String iconUrl,
+            long delayMillis,
+            Consumer<byte[]> onLoaded,
+            Consumer<String> onError) {
+        return context.runIconRetry(UiText.tr("operation.loadModIcon"), delayMillis,
+                () -> context.backend().loadModIcon(iconUrl), onLoaded, onError);
+    }
+
     public FrontTask<ModDownloadResult> downloadMod(
             ModFile file,
             Path gameDirectory,

@@ -19,6 +19,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
@@ -57,6 +59,12 @@ final class ControllerContext {
         thread.setDaemon(true);
         return thread;
     });
+    private final ScheduledExecutorService iconRetryExecutor =
+            Executors.newScheduledThreadPool(4, runnable -> {
+                Thread thread = new Thread(runnable, "caml-mod-icon-retry");
+                thread.setDaemon(true);
+                return thread;
+            });
     private final ExecutorService javaExecutor = Executors.newSingleThreadExecutor(runnable -> {
         Thread thread = new Thread(runnable, "caml-java-worker");
         thread.setDaemon(true);
@@ -96,70 +104,86 @@ final class ControllerContext {
 
     <T> FrontTask<T> runDownload(String operation, IoSupplier<T> supplier,
                                  Consumer<T> onSuccess, Consumer<String> onError) {
-        return submit(operation, downloadExecutor, supplier, onSuccess, onError, false);
+        return submit(operation, downloadExecutor, supplier, onSuccess, onError,
+                false, FailureMode.REPORT);
     }
 
     <T> FrontTask<T> runCheck(String operation, IoSupplier<T> supplier,
                               Consumer<T> onSuccess, Consumer<String> onError) {
-        return submit(operation, checkExecutor, supplier, onSuccess, onError, false);
+        return submit(operation, checkExecutor, supplier, onSuccess, onError,
+                false, FailureMode.REPORT);
     }
 
     <T> FrontTask<T> runMetadata(String operation, IoSupplier<T> supplier,
                                  Consumer<T> onSuccess, Consumer<String> onError) {
-        return submit(operation, metadataExecutor, supplier, onSuccess, onError, false);
+        return submit(operation, metadataExecutor, supplier, onSuccess, onError,
+                false, FailureMode.REPORT);
     }
 
     <T> FrontTask<T> runIcon(String operation, IoSupplier<T> supplier,
                              Consumer<T> onSuccess, Consumer<String> onError) {
-        return submit(operation, iconExecutor, supplier, onSuccess, onError, false);
+        return submit(operation, iconExecutor, supplier, onSuccess, onError,
+                false, FailureMode.LOG_WARN);
+    }
+
+    /** 图标重试使用独立线程池，不占用正常图标下载的 8 个并发槽。 */
+    <T> FrontTask<T> runIconRetry(String operation, long delayMillis, IoSupplier<T> supplier,
+                                  Consumer<T> onSuccess, Consumer<String> onError) {
+        Objects.requireNonNull(supplier, "supplier");
+        CompletableFuture<T> completion = new CompletableFuture<>();
+        ScheduledFuture<?> running;
+        try {
+            running = iconRetryExecutor.schedule(
+                    () -> execute(supplier, completion),
+                    Math.max(0, delayMillis),
+                    TimeUnit.MILLISECONDS
+            );
+        } catch (RejectedExecutionException e) {
+            return cancelledTask();
+        }
+        return newTask(operation, completion, running, onSuccess, onError,
+                false, FailureMode.LOG_DEBUG);
     }
 
     <T> FrontTask<T> runJava(String operation, IoSupplier<T> supplier,
                              Consumer<T> onSuccess, Consumer<String> onError) {
-        return submit(operation, javaExecutor, supplier, onSuccess, onError, false);
+        return submit(operation, javaExecutor, supplier, onSuccess, onError,
+                false, FailureMode.REPORT);
     }
 
     <T> FrontTask<T> runSettings(String operation, IoSupplier<T> supplier,
                                  Consumer<T> onSuccess, Consumer<String> onError) {
-        return submit(operation, settingsExecutor, supplier, onSuccess, onError, false);
+        return submit(operation, settingsExecutor, supplier, onSuccess, onError,
+                false, FailureMode.REPORT);
     }
 
     <T> FrontTask<T> runLaunch(String operation, IoSupplier<T> supplier,
                                Consumer<T> onSuccess, Consumer<String> onError) {
-        return submit(operation, launchExecutor, supplier, onSuccess, onError, true);
+        return submit(operation, launchExecutor, supplier, onSuccess, onError,
+                true, FailureMode.REPORT);
     }
 
     private <T> FrontTask<T> submit(String operation, ExecutorService executor,
                                     IoSupplier<T> supplier, Consumer<T> onSuccess,
-                                    Consumer<String> onError, boolean fatal) {
+                                    Consumer<String> onError, boolean fatal,
+                                    FailureMode failureMode) {
         Objects.requireNonNull(supplier, "supplier");
         CompletableFuture<T> completion = new CompletableFuture<>();
-        Future<?> running = executor.submit(() -> {
-            try {
-                completion.complete(supplier.get());
-            } catch (IOException | InterruptedException e) {
-                if (e instanceof InterruptedException) {
-                    Thread.currentThread().interrupt();
-                }
-                completion.completeExceptionally(e);
-            } catch (RuntimeException | Error e) {
-                completion.completeExceptionally(e);
-            }
-        });
+        Future<?> running = executor.submit(() -> execute(supplier, completion));
+        return newTask(operation, completion, running, onSuccess, onError, fatal, failureMode);
+    }
+
+    private <T> FrontTask<T> newTask(String operation, CompletableFuture<T> completion,
+                                     Future<?> running, Consumer<T> onSuccess,
+                                     Consumer<String> onError, boolean fatal,
+                                     FailureMode failureMode) {
         FrontTask<T> task = new FrontTask<>(completion, running);
         completion.whenComplete((value, failure) -> {
             if (task.isCancelled()) {
                 return;
             }
             if (failure != null) {
-                Consumer<String> guardedError = onError == null
-                        ? null
-                        : message -> {
-                            if (!task.isCancelled()) {
-                                onError.accept(message);
-                            }
-                        };
-                reportError(operation, failure, fatal, guardedError);
+                handleFailure(operation, failure, fatal, failureMode, task, onError);
             } else if (onSuccess != null) {
                 Platform.runLater(() -> {
                     if (!task.isCancelled()) {
@@ -169,6 +193,69 @@ final class ControllerContext {
             }
         });
         return task;
+    }
+
+    private <T> void handleFailure(String operation, Throwable failure, boolean fatal,
+                                   FailureMode failureMode, FrontTask<T> task,
+                                   Consumer<String> onError) {
+        switch (failureMode) {
+            case REPORT -> {
+                Consumer<String> guardedError = onError == null
+                        ? null
+                        : message -> {
+                            if (!task.isCancelled()) {
+                                onError.accept(message);
+                            }
+                        };
+                reportError(operation, failure, fatal, guardedError);
+            }
+            case LOG_WARN -> {
+                Throwable root = unwrap(failure);
+                if (!(root instanceof CancellationException)) {
+                    LOGGER.warn("{}失败: {}", operation, root.toString());
+                }
+                notifyError(task, root, onError);
+            }
+            case LOG_DEBUG -> {
+                Throwable root = unwrap(failure);
+                if (!(root instanceof CancellationException)) {
+                    LOGGER.debug("{}失败", operation, root);
+                }
+                notifyError(task, root, onError);
+            }
+        }
+    }
+
+    private static <T> void notifyError(FrontTask<T> task, Throwable root,
+                                        Consumer<String> onError) {
+        if (onError == null || root instanceof CancellationException) {
+            return;
+        }
+        String message = userMessage(root);
+        Platform.runLater(() -> {
+            if (!task.isCancelled()) {
+                onError.accept(message);
+            }
+        });
+    }
+
+    private static <T> void execute(IoSupplier<T> supplier, CompletableFuture<T> completion) {
+        try {
+            completion.complete(supplier.get());
+        } catch (IOException | InterruptedException e) {
+            if (e instanceof InterruptedException) {
+                Thread.currentThread().interrupt();
+            }
+            completion.completeExceptionally(e);
+        } catch (RuntimeException | Error e) {
+            completion.completeExceptionally(e);
+        }
+    }
+
+    private static <T> FrontTask<T> cancelledTask() {
+        CompletableFuture<T> completion = new CompletableFuture<>();
+        completion.cancel(false);
+        return new FrontTask<>(completion, completion);
     }
 
     void executeSettings(String operation, IoAction task) {
@@ -269,6 +356,7 @@ final class ControllerContext {
         checkExecutor.shutdownNow();
         metadataExecutor.shutdownNow();
         iconExecutor.shutdownNow();
+        iconRetryExecutor.shutdownNow();
         javaExecutor.shutdownNow();
         launchExecutor.shutdownNow();
         settingsExecutor.shutdown();
@@ -290,5 +378,11 @@ final class ControllerContext {
     @FunctionalInterface
     interface IoAction {
         void run() throws IOException;
+    }
+
+    private enum FailureMode {
+        REPORT,
+        LOG_WARN,
+        LOG_DEBUG
     }
 }
