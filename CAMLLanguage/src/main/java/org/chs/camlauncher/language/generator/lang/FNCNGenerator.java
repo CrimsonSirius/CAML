@@ -315,6 +315,62 @@ public final class FNCNGenerator extends LanguageTranslationGenerator {
         t.put("instances.picker.scanFailed", "用光扫比赛事例们失败：%s");
         t.put("instances.manage.title", "操纵事例们");
 
+        // 零件下载
+        t.put("mods.nav", "零件");
+        t.put("mods.search.title", "翻找零件");
+        t.put("mods.search.name", "名号");
+        t.put("mods.search.nameHint", "把零件名号塞进去");
+        t.put("mods.search.source", "来源地");
+        t.put("mods.search.gameVersion", "比赛译本");
+        t.put("mods.search.versionHint", "比如 1.20.1，空着就是全都抓");
+        t.put("mods.search.loader", "装载器");
+        t.put("mods.search.allSources", "全部来源地");
+        t.put("mods.search.allLoaders", "全部装载器");
+        t.put("mods.search.button", "翻找");
+        t.put("mods.search.reset", "重置陷阱");
+        t.put("mods.search.loading", "正在翻找零件...");
+        t.put("mods.search.empty", "没揪到合适的零件");
+        t.put("mods.search.count", "总共 %d 个结果");
+        t.put("mods.search.failed", "翻找零件失败：%s");
+        t.put("mods.page.previous", "上一摊");
+        t.put("mods.page.next", "下一摊");
+        t.put("mods.page.info", "第 %d 摊");
+        t.put("mods.source.modrinth", "莫德林斯");
+        t.put("mods.source.curseforge", "诅咒熔炉");
+        t.put("mods.loader.fabric", "布料");
+        t.put("mods.loader.forge", "铁砧");
+        t.put("mods.loader.neoforge", "新铁砧");
+        t.put("mods.loader.quilt", "被褥");
+        t.put("mods.value.unknown", "不知道");
+        t.put("mods.list.meta", "装载器：%s · 译本：%s · 向下装载 %s · 更新 %s");
+        t.put("mods.detail.loading", "正在撬开零件详情...");
+        t.put("mods.detail.count", "总共 %d 个文件译本");
+        t.put("mods.detail.meta", "向下装载 %s · 更新 %s");
+        t.put("mods.detail.versionFilter", "比赛译本");
+        t.put("mods.detail.loaderFilter", "装载器");
+        t.put("mods.detail.allVersions", "全部译本");
+        t.put("mods.detail.allLoaders", "全部装载器");
+        t.put("mods.detail.empty", "当前陷阱里没有能用的译本");
+        t.put("mods.detail.versionMeta", "发布 %s · 向下装载 %s · 文件 %s");
+        t.put("mods.detail.download", "向下装载");
+        t.put("mods.detail.downloading", "正在向下装载 %s...");
+        t.put("mods.detail.downloaded", "已经塞进：%s");
+        t.put("mods.detail.noGameDirectory", "先把比赛名录安放好");
+        t.put("mods.detail.noInstance", "先揪出一个比赛事例");
+        t.put("mods.detail.failed", "操作翻车：%s");
+        t.put("mods.detail.dependencies", "依赖：");
+        t.put("mods.detail.noDependencies", "没有依赖");
+        t.put("mods.dependency.required", "非要不可");
+        t.put("mods.dependency.optional", "可有可无");
+        t.put("mods.dependency.incompatible", "八字不合");
+        t.put("mods.dependency.embedded", "藏在一起");
+        t.put("mods.dependency.unknown", "不知道");
+        t.put("mod.error.curseforgeKeyMissing", "诅咒熔炉钥匙没配，请塞好 CURSEFORGE_API_KEY 或 -Dcaml.curseforge.apiKey。");
+        t.put("mod.error.downloadUrlMissing", "这个零件译本没有能用的官方向下装载地址：%s");
+        t.put("mod.error.projectNotFound", "没揪到零件工程：%s");
+        t.put("mod.error.iconUrlInvalid", "零件图案住址不对：%s");
+        t.put("mod.error.iconEmpty", "零件图案空空的：%s");
+
         // 后台操作名
         t.put("operation.inspectGameDirectory", "检查比赛名录");
         t.put("operation.checkInstanceName", "检查事例名字");
@@ -338,6 +394,10 @@ public final class FNCNGenerator extends LanguageTranslationGenerator {
         t.put("operation.saveTheme", "拯救命题作文挑三拣四");
         t.put("operation.saveLanguage", "拯救舌头摆弄");
         t.put("operation.saveLanguageFallback", "拯救舌头掉包摆弄");
+        t.put("operation.searchMods", "翻找零件：%s");
+        t.put("operation.fetchModProject", "揪出零件工程：%s");
+        t.put("operation.downloadMod", "向下装载零件：%s");
+        t.put("operation.loadModIcon", "揪出零件图案");
         t.put("operation.saveLastInstance", "拯救最后发射的事例");
         t.put("operation.launchGame", "发射比赛 %s");
     }

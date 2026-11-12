@@ -36,6 +36,7 @@ CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
 | `metadata` | 版本清单和 JSON；子包 `model`、`rule`、`parse`、`resolve` | 已有 |
 | `instance` | 实例模型、本地版本复用、版本安装和隔离判定 | 已有 |
 | `download` | 下载入口；子包 `model`、`plan`、`source`、`io`、`hash` | 已有 |
+| `mod` | Modrinth/CurseForge 官方 API 搜索、详情、依赖和 Mod 文件下载 | 已有 |
 | `auth` | 账号、AuthSession、离线登录 | 已有离线能力 |
 | `runtime` | Java 运行时检测、版本/架构/位数匹配 | 已有 |
 | `launch` | 启动编排；子包 `command`、`classpath`、`prepare`、`process`、`patch` | 已有 |

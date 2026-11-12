@@ -314,6 +314,62 @@ public final class ZHCNGenerator extends LanguageTranslationGenerator {
         t.put("instances.picker.scanFailed", "扫描游戏实例失败：%s");
         t.put("instances.manage.title", "管理实例");
 
+        // Mod 下载
+        t.put("mods.nav", "模组");
+        t.put("mods.search.title", "搜索 Mod");
+        t.put("mods.search.name", "名称");
+        t.put("mods.search.nameHint", "输入 Mod 名称");
+        t.put("mods.search.source", "来源");
+        t.put("mods.search.gameVersion", "游戏版本");
+        t.put("mods.search.versionHint", "例如 1.20.1，留空表示全部");
+        t.put("mods.search.loader", "加载器");
+        t.put("mods.search.allSources", "全部来源");
+        t.put("mods.search.allLoaders", "全部加载器");
+        t.put("mods.search.button", "搜索");
+        t.put("mods.search.reset", "重置条件");
+        t.put("mods.search.loading", "正在搜索 Mod...");
+        t.put("mods.search.empty", "没有找到匹配的 Mod");
+        t.put("mods.search.count", "共 %d 个结果");
+        t.put("mods.search.failed", "加载 Mod 失败：%s");
+        t.put("mods.page.previous", "上一页");
+        t.put("mods.page.next", "下一页");
+        t.put("mods.page.info", "第 %d 页");
+        t.put("mods.source.modrinth", "Modrinth");
+        t.put("mods.source.curseforge", "CurseForge");
+        t.put("mods.loader.fabric", "Fabric");
+        t.put("mods.loader.forge", "Forge");
+        t.put("mods.loader.neoforge", "NeoForge");
+        t.put("mods.loader.quilt", "Quilt");
+        t.put("mods.value.unknown", "未知");
+        t.put("mods.list.meta", "加载器：%s · 版本：%s · 下载 %s · 更新 %s");
+        t.put("mods.detail.loading", "正在加载 Mod 详情...");
+        t.put("mods.detail.count", "共 %d 个文件版本");
+        t.put("mods.detail.meta", "下载 %s · 更新 %s");
+        t.put("mods.detail.versionFilter", "游戏版本");
+        t.put("mods.detail.loaderFilter", "加载器");
+        t.put("mods.detail.allVersions", "全部版本");
+        t.put("mods.detail.allLoaders", "全部加载器");
+        t.put("mods.detail.empty", "当前筛选条件下没有可用版本");
+        t.put("mods.detail.versionMeta", "发布 %s · 下载 %s · 文件 %s");
+        t.put("mods.detail.download", "下载");
+        t.put("mods.detail.downloading", "正在下载 %s...");
+        t.put("mods.detail.downloaded", "已下载到：%s");
+        t.put("mods.detail.noGameDirectory", "请先设置游戏目录");
+        t.put("mods.detail.noInstance", "请先选择游戏实例");
+        t.put("mods.detail.failed", "操作失败：%s");
+        t.put("mods.detail.dependencies", "依赖：");
+        t.put("mods.detail.noDependencies", "无依赖");
+        t.put("mods.dependency.required", "必需");
+        t.put("mods.dependency.optional", "可选");
+        t.put("mods.dependency.incompatible", "不兼容");
+        t.put("mods.dependency.embedded", "内嵌");
+        t.put("mods.dependency.unknown", "未知");
+        t.put("mod.error.curseforgeKeyMissing", "未配置 CurseForge API Key，请设置 CURSEFORGE_API_KEY 或 -Dcaml.curseforge.apiKey。");
+        t.put("mod.error.downloadUrlMissing", "该 Mod 版本没有可用的官方下载地址：%s");
+        t.put("mod.error.projectNotFound", "找不到 Mod 项目：%s");
+        t.put("mod.error.iconUrlInvalid", "Mod 图标地址无效：%s");
+        t.put("mod.error.iconEmpty", "Mod 图标文件为空：%s");
+
         // 后台操作名
         t.put("operation.inspectGameDirectory", "检查游戏目录");
         t.put("operation.checkInstanceName", "检查实例名");
@@ -337,6 +393,10 @@ public final class ZHCNGenerator extends LanguageTranslationGenerator {
         t.put("operation.saveTheme", "保存主题选择");
         t.put("operation.saveLanguage", "保存语言设置");
         t.put("operation.saveLanguageFallback", "保存语言回退设置");
+        t.put("operation.searchMods", "搜索 Mod：%s");
+        t.put("operation.fetchModProject", "获取 Mod 项目：%s");
+        t.put("operation.downloadMod", "下载 Mod：%s");
+        t.put("operation.loadModIcon", "加载 Mod 图标");
         t.put("operation.saveLastInstance", "保存最后启动实例");
         t.put("operation.launchGame", "启动游戏 %s");
     }

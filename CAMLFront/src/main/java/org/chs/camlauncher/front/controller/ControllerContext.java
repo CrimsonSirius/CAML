@@ -52,6 +52,11 @@ final class ControllerContext {
         thread.setDaemon(true);
         return thread;
     });
+    private final ExecutorService iconExecutor = Executors.newFixedThreadPool(8, runnable -> {
+        Thread thread = new Thread(runnable, "caml-mod-icon-worker");
+        thread.setDaemon(true);
+        return thread;
+    });
     private final ExecutorService javaExecutor = Executors.newSingleThreadExecutor(runnable -> {
         Thread thread = new Thread(runnable, "caml-java-worker");
         thread.setDaemon(true);
@@ -102,6 +107,11 @@ final class ControllerContext {
     <T> FrontTask<T> runMetadata(String operation, IoSupplier<T> supplier,
                                  Consumer<T> onSuccess, Consumer<String> onError) {
         return submit(operation, metadataExecutor, supplier, onSuccess, onError, false);
+    }
+
+    <T> FrontTask<T> runIcon(String operation, IoSupplier<T> supplier,
+                             Consumer<T> onSuccess, Consumer<String> onError) {
+        return submit(operation, iconExecutor, supplier, onSuccess, onError, false);
     }
 
     <T> FrontTask<T> runJava(String operation, IoSupplier<T> supplier,
@@ -258,6 +268,7 @@ final class ControllerContext {
         downloadExecutor.shutdownNow();
         checkExecutor.shutdownNow();
         metadataExecutor.shutdownNow();
+        iconExecutor.shutdownNow();
         javaExecutor.shutdownNow();
         launchExecutor.shutdownNow();
         settingsExecutor.shutdown();
