@@ -418,3 +418,102 @@
 .field-hint-error {
     -fx-text-fill: -caml-danger;
 }
+
+.app-mod-item {
+    -fx-padding: 8 16 8 6;
+    -fx-min-height: 96;
+    -fx-pref-height: 96;
+    -fx-max-height: 120;
+}
+
+.app-mod-icon-frame {
+    -fx-background-color: transparent;
+    -fx-alignment: center;
+}
+
+.app-mod-icon-placeholder {
+    -fx-background-color: -caml-accent-container;
+    -fx-background-radius: 10;
+}
+
+.app-mod-icon-text {
+    -fx-alignment: center;
+    -fx-text-fill: -caml-on-accent-container;
+    -fx-font-size: 28px;
+    -fx-font-weight: bold;
+}
+
+.app-mod-title,
+.app-mod-detail-title {
+    -fx-font-size: 18px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -caml-on-surface;
+}
+
+.app-mod-source {
+    -fx-font-size: 14px;
+    -fx-text-fill: -caml-accent-text;
+}
+
+.app-mod-summary,
+.app-mod-meta,
+.app-mod-dependency {
+    -fx-font-size: 15px;
+    -fx-text-fill: -caml-on-surface-muted;
+    -fx-text-overrun: ellipsis;
+}
+
+.app-mod-pagination {
+    -fx-padding: 8 0 0 0;
+}
+
+.app-mod-group {
+    -fx-background-color: -caml-surface-low;
+    -fx-background-radius: 12;
+    -fx-border-color: -caml-border-subtle;
+    -fx-border-width: 1;
+    -fx-border-radius: 12;
+    -fx-padding: 0;
+}
+
+.app-mod-group-header {
+    -fx-min-height: 52;
+    -fx-background-color: transparent;
+    -fx-border-color: transparent;
+    -fx-padding: 12 18;
+    -fx-alignment: center-left;
+}
+
+.app-mod-group-header:hover {
+    -fx-background-color: -caml-accent-container;
+}
+
+.app-mod-group-title {
+    -fx-font-size: 17px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -caml-on-surface;
+}
+
+.app-mod-group-arrow {
+    -fx-font-size: 15px;
+    -fx-text-fill: -caml-accent-text;
+}
+
+.app-mod-group-content {
+    -fx-padding: 0 12 12 12;
+}
+
+.app-mod-version-row {
+    -fx-background-color: -caml-surface;
+    -fx-background-radius: 10;
+    -fx-border-color: -caml-border-subtle;
+    -fx-border-width: 1;
+    -fx-border-radius: 10;
+    -fx-padding: 14 16;
+}
+
+.app-mod-version-title {
+    -fx-font-size: 16px;
+    -fx-font-weight: bold;
+    -fx-text-fill: -caml-on-surface;
+}

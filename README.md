@@ -19,6 +19,7 @@ CAML 是一个基于 **Java 25 + JavaFX** 的 Minecraft 启动器，采用前后
 | 元数据 | 解析 `version_manifest_v2.json`、单版本 JSON、字符串/带规则参数、libraries、asset index、downloads、javaVersion、logging、`jar`；处理 OS / 架构 / 版本正则 / features 规则；合并 `inheritsFrom` 父版本，子库优先 |
 | 远程元数据 | 拉取版本清单与单版本 JSON，本地缓存，网络失败时回退缓存；请求地址遵循下载源设置 |
 | 下载 | 客户端 jar、libraries、natives、asset index、assets objects 下载计划；镜像源 / 官方源 / 自定义镜像根地址三种下载源，覆盖版本清单、版本 JSON、Fabric/Forge/NeoForge/OptiFine 元数据、加载器 installer/API 和 Fabric Maven 依赖；SHA-1 校验；`.part` 临时文件 + 原子移动；已知大小的大文件使用 HTTP Range 分片下载，`.part.json` 检查点支持断点续传，Range 不可用时回退单流；响应体有 30 秒空闲读超时，元数据请求有总截止时间；显式 `DownloadCancellationToken`，失败或取消时取消剩余任务并等待 worker 收敛；默认总计最多 6 次下载尝试；并发下载数可设 1–256；已有有效文件跳过 |
+| Mod 下载 | 下载页新增 Mod 子页；通过 Modrinth/CurseForge 官方 API 搜索、分页、查看详情、按加载器和游戏版本分组、显示依赖并下载到当前实例 `mods` 目录；不使用镜像源 |
 | 版本安装 | 本地已安装版本直接复用（支持第三方启动器/整合包的自定义版本 ID），下载时可用自定义实例名；官方版本 ID 负责元数据，实例 ID 作为 `versions/<id>` 目录名；支持 Fabric Loader/Fabric API、Forge、NeoForge、OptiFine（仅 Forge）安装；Forge/NeoForge 版本列表优先从 BMCLAPI JSON 接口获取，官方源使用 Maven 元数据和 NeoForge 版本号映射匹配 Minecraft 版本；支持旧式 Forge library、Maven 路径推导和子版本库优先去重；缺失文件自动补齐；兼容 PCL/HMCL 版本隔离布局；基础文件完成后才写入版本 JSON |
 | 账号 | 离线登录，稳定离线 UUID，生成 `AuthSession` |
 | Java | 扫描 `java.home`、`JAVA_HOME`、`PATH` 及常见 JDK 目录；读取版本、供应商、架构、位数；按版本要求选择运行时；Windows 优先 `javaw.exe` |
@@ -244,6 +245,16 @@ statusLabel.setText(UiText.tr("home.instance.current", version));
 
 - 新增语言只需在 `generator` 下添加一个生成器、在 `TranslationGeneratorRunner` 中登记，
   并在后端 `LanguageService` 的语言名称表中补充该语言的自称（语言名不写进翻译文件）。
+
+### Mod 下载
+
+- Modrinth 使用 `https://api.modrinth.com/v2` 官方 API，无需额外配置。
+- CurseForge 使用 `https://api.curseforge.com/v1` 官方 API，必须配置 API Key：
+  环境变量 `CURSEFORGE_API_KEY`，或 JVM 参数 `-Dcaml.curseforge.apiKey=...`。
+  未配置时选择 CurseForge 会显示明确错误；“全部来源”仍会返回 Modrinth 结果。
+- 两个来源都不使用现有镜像下载源，搜索、详情、依赖和文件下载均直连官方地址。
+- 下载目标根据当前实例和版本隔离设置解析为 `<gameDirectory>/mods` 或
+  `<gameDirectory>/versions/<instance>/mods`。
 
 ### 主题系统
 

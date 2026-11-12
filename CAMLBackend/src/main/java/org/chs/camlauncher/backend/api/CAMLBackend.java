@@ -54,6 +54,16 @@ import org.chs.camlauncher.backend.language.LanguageSnapshot;
 import org.chs.camlauncher.backend.metadata.MetadataService;
 import org.chs.camlauncher.backend.metadata.model.VersionManifest;
 import org.chs.camlauncher.backend.metadata.VersionManifestService;
+import org.chs.camlauncher.backend.mod.model.ModDownloadResult;
+import org.chs.camlauncher.backend.mod.model.ModFile;
+import org.chs.camlauncher.backend.mod.model.ModProjectDetail;
+import org.chs.camlauncher.backend.mod.model.ModSearchPage;
+import org.chs.camlauncher.backend.mod.model.ModSearchQuery;
+import org.chs.camlauncher.backend.mod.model.ModSource;
+import org.chs.camlauncher.backend.mod.service.ModService;
+import org.chs.camlauncher.backend.mod.service.ModIconService;
+import org.chs.camlauncher.backend.mod.source.CurseForgeClient;
+import org.chs.camlauncher.backend.mod.source.ModrinthClient;
 import org.chs.camlauncher.backend.runtime.JavaLocator;
 import org.chs.camlauncher.backend.runtime.JavaCandidate;
 import org.chs.camlauncher.backend.runtime.JavaRuntime;
@@ -95,6 +105,8 @@ public final class CAMLBackend implements AutoCloseable {
     private final DownloadPlanner downloadPlanner;
     private final AssetDownloadPlanner assetDownloadPlanner;
     private final FileDownloader fileDownloader;
+    private final ModService modService;
+    private final ModIconService modIconService;
     private final VersionInstaller versionInstaller;
     private final FabricService fabricService;
     private final FabricInstaller fabricInstaller;
@@ -132,6 +144,9 @@ public final class CAMLBackend implements AutoCloseable {
         this.downloadPlanner = new DownloadPlanner();
         this.assetDownloadPlanner = new AssetDownloadPlanner();
         this.fileDownloader = new FileDownloader();
+        this.modService = new ModService(
+                new ModrinthClient(), new CurseForgeClient(), fileDownloader);
+        this.modIconService = new ModIconService(config.dataDirectory());
         this.versionInstaller = new VersionInstaller(
                 metadata,
                 versionManifestService,
@@ -475,6 +490,38 @@ public final class CAMLBackend implements AutoCloseable {
 
     public FileDownloader fileDownloader() {
         return fileDownloader;
+    }
+
+    public ModSearchPage searchMods(ModSearchQuery query) throws IOException, InterruptedException {
+        return modService.search(query);
+    }
+
+    public ModProjectDetail fetchModProject(ModSource source, String projectId)
+            throws IOException, InterruptedException {
+        return modService.project(source, projectId);
+    }
+
+    public ModDownloadResult downloadMod(
+            ModFile file,
+            Path gameDirectory,
+            String instanceId,
+            VersionIsolationMode isolationMode,
+            DownloadListener listener
+    ) throws IOException, InterruptedException {
+        return modService.download(file, gameDirectory, instanceId, isolationMode, listener);
+    }
+
+    public boolean curseForgeConfigured() {
+        return modService.curseForgeConfigured();
+    }
+
+    public byte[] loadModIcon(String iconUrl) throws IOException, InterruptedException {
+        return modIconService.load(iconUrl);
+    }
+
+    public Path modsDirectory(Path gameDirectory, String instanceId,
+                              VersionIsolationMode isolationMode) {
+        return modService.modsDirectory(gameDirectory, instanceId, isolationMode);
     }
 
     public VersionInstaller versionInstaller() {

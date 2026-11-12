@@ -7,12 +7,19 @@ import org.chs.camlauncher.backend.download.source.DownloadSourceFactory;
 import org.chs.camlauncher.backend.download.source.DownloadSourceMode;
 import org.chs.camlauncher.backend.instance.InstalledVersion;
 import org.chs.camlauncher.backend.instance.InstanceNameCheck;
+import org.chs.camlauncher.backend.instance.VersionIsolationMode;
 import org.chs.camlauncher.backend.loader.fabric.FabricApiVersion;
 import org.chs.camlauncher.backend.loader.fabric.FabricLoaderVersion;
 import org.chs.camlauncher.backend.loader.forge.ForgeVersion;
 import org.chs.camlauncher.backend.loader.neoforge.NeoForgeVersion;
 import org.chs.camlauncher.backend.loader.optifine.OptiFineVersion;
 import org.chs.camlauncher.backend.metadata.model.VersionManifest;
+import org.chs.camlauncher.backend.mod.model.ModDownloadResult;
+import org.chs.camlauncher.backend.mod.model.ModFile;
+import org.chs.camlauncher.backend.mod.model.ModProjectDetail;
+import org.chs.camlauncher.backend.mod.model.ModSearchPage;
+import org.chs.camlauncher.backend.mod.model.ModSearchQuery;
+import org.chs.camlauncher.backend.mod.model.ModSource;
 import org.chs.camlauncher.front.text.UiText;
 
 import java.io.IOException;
@@ -42,6 +49,57 @@ public final class DownloadsController {
                     ? UiText.tr("download.source.custom")
                     : UiText.tr("download.source.official");
         };
+    }
+
+    public boolean curseForgeConfigured() {
+        return context.backend().curseForgeConfigured();
+    }
+
+    public FrontTask<ModSearchPage> searchMods(
+            ModSearchQuery query,
+            Consumer<ModSearchPage> onLoaded,
+            Consumer<String> onError) {
+        return context.runMetadata(UiText.tr("operation.searchMods", query.text()),
+                () -> context.backend().searchMods(query), onLoaded, onError);
+    }
+
+    public FrontTask<ModProjectDetail> fetchModProject(
+            ModSource source,
+            String projectId,
+            Consumer<ModProjectDetail> onLoaded,
+            Consumer<String> onError) {
+        return context.runMetadata(UiText.tr("operation.fetchModProject", projectId),
+                () -> context.backend().fetchModProject(source, projectId), onLoaded, onError);
+    }
+
+    public FrontTask<byte[]> loadModIcon(
+            String iconUrl,
+            Consumer<byte[]> onLoaded,
+            Consumer<String> onError) {
+        return context.runIcon(UiText.tr("operation.loadModIcon"),
+                () -> context.backend().loadModIcon(iconUrl), onLoaded, onError);
+    }
+
+    public FrontTask<ModDownloadResult> downloadMod(
+            ModFile file,
+            Path gameDirectory,
+            String instanceId,
+            boolean fullVersionIsolation,
+            DownloadListener listener,
+            Consumer<ModDownloadResult> onSuccess,
+            Consumer<String> onError) {
+        return context.runDownload(UiText.tr("operation.downloadMod", file.name()),
+                () -> context.backend().downloadMod(
+                        file,
+                        gameDirectory,
+                        instanceId,
+                        fullVersionIsolation
+                                ? VersionIsolationMode.FULL
+                                : VersionIsolationMode.NONE,
+                        listener
+                ),
+                onSuccess,
+                onError);
     }
 
     public FrontTask<InstanceNameCheck> checkInstanceName(Path gameDirectory, String instanceId,

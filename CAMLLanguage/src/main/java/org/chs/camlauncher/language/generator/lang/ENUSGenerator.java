@@ -314,6 +314,62 @@ public final class ENUSGenerator extends LanguageTranslationGenerator {
         t.put("instances.picker.scanFailed", "Failed to scan game instances: %s");
         t.put("instances.manage.title", "Manage instances");
 
+        // Mod downloads
+        t.put("mods.nav", "Mods");
+        t.put("mods.search.title", "Search mods");
+        t.put("mods.search.name", "Name");
+        t.put("mods.search.nameHint", "Enter a mod name");
+        t.put("mods.search.source", "Source");
+        t.put("mods.search.gameVersion", "Game version");
+        t.put("mods.search.versionHint", "e.g. 1.20.1; leave empty for all");
+        t.put("mods.search.loader", "Loader");
+        t.put("mods.search.allSources", "All sources");
+        t.put("mods.search.allLoaders", "All loaders");
+        t.put("mods.search.button", "Search");
+        t.put("mods.search.reset", "Reset filters");
+        t.put("mods.search.loading", "Searching mods...");
+        t.put("mods.search.empty", "No matching mods found");
+        t.put("mods.search.count", "%d results");
+        t.put("mods.search.failed", "Failed to load mods: %s");
+        t.put("mods.page.previous", "Previous");
+        t.put("mods.page.next", "Next");
+        t.put("mods.page.info", "Page %d");
+        t.put("mods.source.modrinth", "Modrinth");
+        t.put("mods.source.curseforge", "CurseForge");
+        t.put("mods.loader.fabric", "Fabric");
+        t.put("mods.loader.forge", "Forge");
+        t.put("mods.loader.neoforge", "NeoForge");
+        t.put("mods.loader.quilt", "Quilt");
+        t.put("mods.value.unknown", "Unknown");
+        t.put("mods.list.meta", "Loaders: %s · Versions: %s · Downloads %s · Updated %s");
+        t.put("mods.detail.loading", "Loading mod details...");
+        t.put("mods.detail.count", "%d file versions");
+        t.put("mods.detail.meta", "Downloads %s · Updated %s");
+        t.put("mods.detail.versionFilter", "Game version");
+        t.put("mods.detail.loaderFilter", "Loader");
+        t.put("mods.detail.allVersions", "All versions");
+        t.put("mods.detail.allLoaders", "All loaders");
+        t.put("mods.detail.empty", "No versions match the current filters");
+        t.put("mods.detail.versionMeta", "Published %s · Downloads %s · File %s");
+        t.put("mods.detail.download", "Download");
+        t.put("mods.detail.downloading", "Downloading %s...");
+        t.put("mods.detail.downloaded", "Downloaded to: %s");
+        t.put("mods.detail.noGameDirectory", "Set the game directory first");
+        t.put("mods.detail.noInstance", "Select a game instance first");
+        t.put("mods.detail.failed", "Operation failed: %s");
+        t.put("mods.detail.dependencies", "Dependencies:");
+        t.put("mods.detail.noDependencies", "No dependencies");
+        t.put("mods.dependency.required", "Required");
+        t.put("mods.dependency.optional", "Optional");
+        t.put("mods.dependency.incompatible", "Incompatible");
+        t.put("mods.dependency.embedded", "Embedded");
+        t.put("mods.dependency.unknown", "Unknown");
+        t.put("mod.error.curseforgeKeyMissing", "CurseForge API key is not configured. Set CURSEFORGE_API_KEY or -Dcaml.curseforge.apiKey.");
+        t.put("mod.error.downloadUrlMissing", "No official download URL is available for this mod version: %s");
+        t.put("mod.error.projectNotFound", "Mod project not found: %s");
+        t.put("mod.error.iconUrlInvalid", "Invalid mod icon URL: %s");
+        t.put("mod.error.iconEmpty", "Mod icon is empty: %s");
+
         // Background operation names
         t.put("operation.inspectGameDirectory", "Inspect game directory");
         t.put("operation.checkInstanceName", "Check instance name");
@@ -337,6 +393,10 @@ public final class ENUSGenerator extends LanguageTranslationGenerator {
         t.put("operation.saveTheme", "Save theme selection");
         t.put("operation.saveLanguage", "Save language setting");
         t.put("operation.saveLanguageFallback", "Save language fallback setting");
+        t.put("operation.searchMods", "Search mods: %s");
+        t.put("operation.fetchModProject", "Fetch mod project: %s");
+        t.put("operation.downloadMod", "Download mod: %s");
+        t.put("operation.loadModIcon", "Load mod icon");
         t.put("operation.saveLastInstance", "Save last launched instance");
         t.put("operation.launchGame", "Launch game %s");
     }
