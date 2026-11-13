@@ -1,14 +1,12 @@
 package org.chs.camlauncher.front.view;
 
-import javafx.beans.binding.Bindings;
-import javafx.beans.binding.DoubleBinding;
 import javafx.event.ActionEvent;
-import javafx.geometry.Insets;
 import javafx.scene.Node;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import org.chs.camlauncher.backend.metadata.model.VersionManifest;
 import org.chs.camlauncher.backend.mod.model.ModProjectSummary;
+import org.chs.camlauncher.front.UiScale;
 import org.chs.camlauncher.front.controller.DownloadsController;
 import org.chs.camlauncher.front.text.UiText;
 import org.chs.camlauncher.ui.control.CamlPageHost;
@@ -39,18 +37,9 @@ final class DownloadsView extends HBox implements SidebarPage, PageLifecycle {
         sidebar = new CamlSideNav();
         sidebar.getStyleClass().add("app-sidebar");
         sidebar.setMaxHeight(Double.MAX_VALUE);
-        // 图示中侧边栏约占窗口宽度的 1/6；窗口缩放时按比例调整，并限制在 180–260。
-        sidebar.setPadding(new Insets(16, 20, 16, 20));
-        sidebar.setSpacing(8);
-        DoubleBinding sidebarWidth = Bindings.createDoubleBinding(() -> {
-            double width = getWidth();
-            return width <= 0
-                    ? ModDownloadLayout.SIDEBAR_MIN_WIDTH
-                    : ModDownloadLayout.sidebarWidth(width);
-        }, widthProperty());
-        sidebar.minWidthProperty().bind(sidebarWidth);
-        sidebar.prefWidthProperty().bind(sidebarWidth);
-        sidebar.maxWidthProperty().bind(sidebarWidth);
+        // 图示中侧边栏约占窗口宽度的 1/6；宽度按 UI 缩放因子钳制，几何来自 ModDownloadLayout。
+        // 内边距和子项间距由 app.css 的 .app-sidebar（em）负责，跟随根字号缩放。
+        ViewSupport.onLayoutMetricsChanged(this, this::updateSidebarWidth);
 
         CamlSideNavItem releaseItem = new CamlSideNavItem(VersionCategory.RELEASE.label());
         CamlSideNavItem snapshotItem = new CamlSideNavItem(VersionCategory.SNAPSHOT.label());
@@ -243,5 +232,16 @@ final class DownloadsView extends HBox implements SidebarPage, PageLifecycle {
     private DownloadVersionsView versionsView(VersionCategory category) {
         return versionsViews.computeIfAbsent(category,
                 key -> new DownloadVersionsView(controller, key, this::showVersionSetupPage));
+    }
+
+    private void updateSidebarWidth() {
+        double width = getWidth();
+        double factor = ViewSupport.uiFactor(this);
+        double sidebarWidth = width <= 0
+                ? UiScale.size(ModDownloadLayout.SIDEBAR_MIN_WIDTH, factor)
+                : ModDownloadLayout.sidebarWidth(width, factor);
+        sidebar.setMinWidth(sidebarWidth);
+        sidebar.setPrefWidth(sidebarWidth);
+        sidebar.setMaxWidth(sidebarWidth);
     }
 }

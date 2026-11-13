@@ -1,6 +1,5 @@
 package org.chs.camlauncher.front.view;
 
-import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
@@ -42,8 +41,6 @@ final class LaunchFormView extends BorderPane {
         this.onLaunchStarted = Objects.requireNonNull(onLaunchStarted, "onLaunchStarted");
 
         getStyleClass().add("app-form-pane");
-        setPadding(new Insets(28, 40, 28, 40));
-        setMinHeight(320);
 
         instanceLabel = new Label();
         instanceLabel.getStyleClass().add("app-instance-info-current");
@@ -76,9 +73,9 @@ final class LaunchFormView extends BorderPane {
     }
 
     private void buildLayout(Runnable onChooseInstance, Runnable onManageInstances) {
-        VBox instanceInfo = new VBox(10, instanceLabel, gameLocationLabel, saveLocationLabel);
+        VBox instanceInfo = new VBox(instanceLabel, gameLocationLabel, saveLocationLabel);
         instanceInfo.getStyleClass().add("app-instance-info-group");
-        VBox fields = new VBox(16,
+        VBox fields = new VBox(
                 instanceInfo,
                 ViewSupport.buildField(UiText.tr("home.username"), usernameField, null)
         );
@@ -95,7 +92,7 @@ final class LaunchFormView extends BorderPane {
         manageInstancesButton.setOnAction(event -> onManageInstances.run());
 
         GridPane instanceActions = new GridPane();
-        instanceActions.setHgap(8);
+        instanceActions.getStyleClass().add("app-instance-actions");
         instanceActions.setAlignment(Pos.CENTER_LEFT);
         instanceActions.setMaxWidth(Double.MAX_VALUE);
         ColumnConstraints leftColumn = new ColumnConstraints();
@@ -108,7 +105,7 @@ final class LaunchFormView extends BorderPane {
         GridPane.setHgrow(chooseInstanceButton, Priority.ALWAYS);
         GridPane.setHgrow(manageInstancesButton, Priority.ALWAYS);
 
-        VBox actions = new VBox(12, instanceActions, statusLabel, launchBtn);
+        VBox actions = new VBox(instanceActions, statusLabel, launchBtn);
         actions.getStyleClass().add("app-actions");
 
         ScrollPane fieldScroll = new ScrollPane(fields);
@@ -119,7 +116,6 @@ final class LaunchFormView extends BorderPane {
 
         setCenter(fieldScroll);
         setBottom(actions);
-        BorderPane.setMargin(actions, new Insets(20, 0, 0, 0));
     }
 
     private void wireController() {

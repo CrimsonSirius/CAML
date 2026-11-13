@@ -101,21 +101,20 @@ final class GameSettingsView extends VBox {
         memoryLabel.getStyleClass().add("caml-label-medium");
         memoryLabel.setLabelFor(memorySlider);
 
-        VBox memoryBlock = new VBox(10, memoryLabel, memorySummary, memorySlider);
+        VBox memoryBlock = new VBox(memoryLabel, memorySummary, memorySlider);
         memoryBlock.getStyleClass().add("app-memory-block");
 
         Label hint = new Label(UiText.tr("settings.game.memory.hint"));
         hint.getStyleClass().addAll("caml-body-small", "field-hint");
         hint.setWrapText(true);
 
-        VBox group = new VBox(16, heading, description, memoryBlock, hint);
+        VBox group = new VBox(heading, description, memoryBlock, hint);
         group.getStyleClass().add("app-settings-group");
         group.setMaxWidth(Double.MAX_VALUE);
 
-        setSpacing(20);
+        // 间距、宽度与内边距由 app.css 的 .app-settings-content / .app-settings-group 控制；
+        // 内容宽度在 SettingsView 中按滚动视口重新设置。
         setMinWidth(0);
-        setPrefWidth(560);
-        setMaxWidth(560);
         getStyleClass().add("app-settings-content");
         getChildren().addAll(
                 new GameLocationSettingsView(launchSettings, controller),

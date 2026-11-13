@@ -3,11 +3,13 @@ package org.chs.camlauncher.front;
 /**
  * 根据屏幕可用区域计算启动器窗口的初始尺寸和最小尺寸。
  *
- * <p>启动器不再使用固定窗口大小：初始尺寸取屏幕可用区域的固定比例，
- * 既不会在小屏幕上溢出桌面，也不会在大屏幕上显得过小。初始位置居中，
- * 最小尺寸同样跟随屏幕收缩，保证笔记本等小屏设备的窗口始终放得下。</p>
+ * <p>启动器不使用固定窗口大小，而是让窗口与 {@link UiScale} 的缩放范围对应：
+ * 初始尺寸取屏幕可用区域的固定比例，既不会在小屏幕上溢出桌面，也不会在大屏幕上显得过小。
+ * 上限是设计基准 {@code 1440×900} 放大到最大缩放因子后的尺寸，下限是同一基准缩小到
+ * 最小缩放因子后的尺寸——因此窗口在任何屏幕上都只落在“界面能按比例完整显示”的区间内。</p>
  *
- * <p>该类只做纯计算，不依赖 JavaFX，便于单元测试。</p>
+ * <p>初始位置居中，最小尺寸同样跟随屏幕收缩，保证笔记本等小屏设备的窗口始终放得下。
+ * 该类只做纯计算，不依赖 JavaFX，便于单元测试。</p>
  */
 final class WindowSizePlanner {
     /** 初始窗口占屏幕可用宽度的比例。 */
@@ -17,12 +19,22 @@ final class WindowSizePlanner {
     /** 初始窗口最多占屏幕的比例，用于保留桌面边距。 */
     static final double MAX_WIDTH_RATIO = 0.92;
     static final double MAX_HEIGHT_RATIO = 0.90;
-    /** 大屏幕上的上限，避免启动器被拉得过大。 */
-    static final double MAX_WIDTH = 1440;
-    static final double MAX_HEIGHT = 960;
-    /** 设计上的最小可用尺寸；屏幕过小时按比例收缩。 */
-    static final double DESIGN_MIN_WIDTH = 720;
-    static final double DESIGN_MIN_HEIGHT = 700;
+    /**
+     * 大屏幕上的上限：设计基准放大到最大缩放因子。
+     *
+     * <p>上限与 {@code UiScale.MAX_FACTOR} 绑定，因此窗口放大时界面同步放大，
+     * 不会出现“窗口变大但内容仍是设计稿大小”的比例失衡。</p>
+     */
+    static final double MAX_WIDTH = Math.floor(UiScale.maxWindowWidth());
+    static final double MAX_HEIGHT = Math.floor(UiScale.maxWindowHeight());
+    /**
+     * 设计上的最小可用尺寸：设计基准缩小到最小缩放因子。
+     *
+     * <p>再窄就会触发缩放下限，界面比例无法保持，因此把它作为窗口的最小宽度和高度；
+     * 屏幕本身更小时按 {@link #MIN_SCREEN_RATIO} 继续收缩，保证窗口仍能放进桌面。</p>
+     */
+    static final double DESIGN_MIN_WIDTH = Math.floor(UiScale.size(UiScale.DESIGN_WIDTH, UiScale.MIN_FACTOR));
+    static final double DESIGN_MIN_HEIGHT = Math.floor(UiScale.size(UiScale.DESIGN_HEIGHT, UiScale.MIN_FACTOR));
     /** 小屏幕上最小尺寸最多占屏幕的比例，保证窗口仍能放进桌面。 */
     static final double MIN_SCREEN_RATIO = 0.90;
 

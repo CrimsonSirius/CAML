@@ -75,6 +75,7 @@ final class ModSearchView extends VBox implements PageLifecycle {
     private final VBox content = new VBox();
     private final ScrollPane pageScroll = new ScrollPane(content);
     private ModDownloadLayout.Plan appliedPlan;
+    private List<ModProjectSummary> lastItems = List.of();
     private int pageIndex;
     private boolean hasNext;
     private boolean loading;
@@ -117,7 +118,7 @@ final class ModSearchView extends VBox implements PageLifecycle {
         resetButton.setOnAction(event -> reset());
         queryField.setOnAction(event -> searchFirstPage());
         gameVersionField.setOnAction(event -> searchFirstPage());
-        HBox actions = new HBox(12, searchButton, resetButton);
+        HBox actions = new HBox(searchButton, resetButton);
         actions.setAlignment(Pos.CENTER_LEFT);
         actions.getStyleClass().add("app-mod-search-actions");
 
@@ -153,30 +154,26 @@ final class ModSearchView extends VBox implements PageLifecycle {
         VBox.setVgrow(pageScroll, Priority.ALWAYS);
         getChildren().setAll(pageScroll);
 
-        // 首帧宽度尚未确定，先按宽屏方向摆放；宽度可用后按断点校正。
+        // 首帧宽度与缩放尚未确定，先按宽屏方向摆放；尺寸可用后按断点与缩放校正。
         applyPlan(ModDownloadLayout.WIDE);
-        widthProperty().addListener((observable, oldValue, newValue) ->
-                updateLayout(newValue.doubleValue()));
-        sceneProperty().addListener((observable, oldValue, newValue) -> {
-            if (newValue != null) {
-                updateLayout(getWidth());
-            }
-        });
+        ViewSupport.onLayoutMetricsChanged(this, this::updateLayout);
 
         searchFirstPage();
     }
 
-    private void updateLayout(double width) {
+    private void updateLayout() {
+        double width = getWidth();
         if (width <= 0) {
             return;
         }
-        applyPlan(ModDownloadLayout.plan(width));
+        applyPlan(ModDownloadLayout.plan(width, ViewSupport.uiFactor(this)));
     }
 
     private void applyPlan(ModDownloadLayout.Plan plan) {
         if (plan.equals(appliedPlan)) {
             return;
         }
+        boolean scaleChanged = appliedPlan != null && appliedPlan.factor() != plan.factor();
         appliedPlan = plan;
 
         content.setPadding(new Insets(plan.contentPaddingVertical(), plan.contentPaddingHorizontal(),
@@ -190,6 +187,26 @@ final class ModSearchView extends VBox implements PageLifecycle {
         pagination.setSpacing(plan.paginationSpacing());
         previousButton.setMinWidth(plan.paginationButtonWidth());
         nextButton.setMinWidth(plan.paginationButtonWidth());
+
+        if (scaleChanged) {
+            // 图标与行内边距在创建行时就写进了节点，缩放变化后需要重建，否则行高与文字会错位。
+            rebuildRows();
+        }
+    }
+
+    /** 按当前缩放重建结果行，不重新请求接口、不重置分页。 */
+    private void rebuildRows() {
+        if (lastItems.isEmpty()) {
+            return;
+        }
+        cancelIconTasks();
+        iconGeneration++;
+        resultsBox.getChildren().clear();
+        List<IconTarget> iconTargets = new ArrayList<>();
+        for (ModProjectSummary project : lastItems) {
+            resultsBox.getChildren().add(projectRow(project, iconTargets));
+        }
+        loadIcons(iconTargets, iconGeneration);
     }
 
     private Pane buildForm(ModDownloadLayout.Plan plan) {
@@ -269,6 +286,7 @@ final class ModSearchView extends VBox implements PageLifecycle {
         loading = false;
         setControlsDisabled(false);
         hasNext = page.hasNext();
+        lastItems = page.items();
         resultsBox.getChildren().clear();
         long generation = iconGeneration;
         List<IconTarget> iconTargets = new ArrayList<>();
@@ -319,7 +337,8 @@ final class ModSearchView extends VBox implements PageLifecycle {
         source.getStyleClass().add("app-mod-source");
         source.setMinWidth(Region.USE_PREF_SIZE);
         source.setAlignment(Pos.CENTER_RIGHT);
-        HBox heading = new HBox(12, name, source);
+        HBox heading = new HBox(name, source);
+        heading.getStyleClass().add("app-mod-title-row");
         heading.setAlignment(Pos.CENTER_LEFT);
         HBox.setHgrow(name, Priority.ALWAYS);
 
@@ -340,7 +359,8 @@ final class ModSearchView extends VBox implements PageLifecycle {
         meta.setMinWidth(0);
         meta.setMaxWidth(Double.MAX_VALUE);
 
-        VBox text = new VBox(8, heading, summary, meta);
+        VBox text = new VBox(heading, summary, meta);
+        text.getStyleClass().add("app-mod-text");
         text.setFillWidth(true);
         text.setMinWidth(0);
         text.setMaxWidth(Double.MAX_VALUE);
@@ -547,4 +567,3 @@ final class ModSearchView extends VBox implements PageLifecycle {
         }
     }
 }
-

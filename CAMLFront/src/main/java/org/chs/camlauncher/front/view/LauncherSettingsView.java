@@ -71,7 +71,7 @@ final class LauncherSettingsView extends VBox {
         themeHint.getStyleClass().addAll("caml-body-small", "field-hint");
         themeHint.setWrapText(true);
 
-        VBox appearanceGroup = new VBox(16, heading, description,
+        VBox appearanceGroup = new VBox(heading, description,
                 ViewSupport.buildField(UiText.tr("settings.appearance.theme"), themeBox, themeHint));
         appearanceGroup.getStyleClass().add("app-settings-group");
         appearanceGroup.setMaxWidth(Double.MAX_VALUE);
@@ -87,7 +87,8 @@ final class LauncherSettingsView extends VBox {
         ToggleGroup languageGroup = new ToggleGroup();
         automaticLanguage.setToggleGroup(languageGroup);
         manualLanguage.setToggleGroup(languageGroup);
-        HBox languageModes = new HBox(18, automaticLanguage, manualLanguage);
+        HBox languageModes = new HBox(automaticLanguage, manualLanguage);
+        languageModes.getStyleClass().add("app-settings-row");
         languageModes.setAlignment(Pos.CENTER_LEFT);
 
         languageBox.getItems().setAll(UiText.supportedLocales());
@@ -122,7 +123,7 @@ final class LauncherSettingsView extends VBox {
         languageHint.getStyleClass().addAll("caml-body-small", "field-hint");
         languageHint.setWrapText(true);
 
-        VBox languageGroupBox = new VBox(16,
+        VBox languageGroupBox = new VBox(
                 languageHeading,
                 languageDescription,
                 languageModes,
@@ -146,7 +147,8 @@ final class LauncherSettingsView extends VBox {
         fallbackDefault.setToggleGroup(fallbackGroup);
         fallbackKey.setToggleGroup(fallbackGroup);
         fallbackCustom.setToggleGroup(fallbackGroup);
-        VBox fallbackModes = new VBox(10, fallbackSystem, fallbackDefault, fallbackKey, fallbackCustom);
+        VBox fallbackModes = new VBox(fallbackSystem, fallbackDefault, fallbackKey, fallbackCustom);
+        fallbackModes.getStyleClass().add("app-settings-block");
         fallbackModes.setAlignment(Pos.CENTER_LEFT);
 
         fallbackLanguageBox.getItems().setAll(UiText.supportedLocales());
@@ -184,7 +186,7 @@ final class LauncherSettingsView extends VBox {
         fallbackHint.getStyleClass().addAll("caml-body-small", "field-hint");
         fallbackHint.setWrapText(true);
 
-        VBox fallbackGroupBox = new VBox(16,
+        VBox fallbackGroupBox = new VBox(
                 fallbackHeading,
                 fallbackDescription,
                 fallbackModes,
@@ -239,10 +241,7 @@ final class LauncherSettingsView extends VBox {
             }
         });
 
-        setSpacing(20);
         setMinWidth(0);
-        setPrefWidth(560);
-        setMaxWidth(560);
         getStyleClass().add("app-settings-content");
         getChildren().addAll(languageGroupBox, fallbackGroupBox, appearanceGroup);
     }

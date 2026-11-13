@@ -1,6 +1,12 @@
 /*
  * CAML 组件结构与排版。
  * 所有颜色令牌由 <data>/themes/*.css 提供，本文件不定义固定配色。
+ *
+ * 尺寸纪律：除 1px 描边外，所有长度都用 em，不写固定 px。
+ *   - -fx-font-size 中的 em 相对“父节点字号”；
+ *   - 其余属性中的 em 相对“本节点字号”。
+ * 因此根节点只需改一个字号，整棵组件树（字号、内边距、圆角、最小尺寸）就等比缩放，
+ * 大屏与小屏的界面比例与设计稿一致。1em = 16px 是设计基准，与 UiScale.BASE_FONT_PX 对应。
  */
 
 .caml-root {
@@ -14,66 +20,66 @@
     -fx-control-inner-background-alt: -caml-surface-low;
 }
 
-/* CAML type scale. */
+/* CAML type scale（相对根字号 16px 的设计值 57/45/32/28/24/22/18/14/12/11）。 */
 .caml-display-large {
-    -fx-font-size: 57px;
+    -fx-font-size: 3.5625em;
 }
 
 .caml-display-medium {
-    -fx-font-size: 45px;
+    -fx-font-size: 2.8125em;
 }
 
 .caml-headline-large {
-    -fx-font-size: 32px;
+    -fx-font-size: 2em;
 }
 
 .caml-headline-medium {
-    -fx-font-size: 28px;
+    -fx-font-size: 1.75em;
 }
 
 .caml-headline-small {
-    -fx-font-size: 24px;
+    -fx-font-size: 1.5em;
 }
 
 .caml-title-large {
-    -fx-font-size: 22px;
+    -fx-font-size: 1.375em;
     -fx-font-weight: bold;
 }
 
 .caml-title-medium {
-    -fx-font-size: 18px;
+    -fx-font-size: 1.125em;
     -fx-font-weight: bold;
 }
 
 .caml-title-small {
-    -fx-font-size: 14px;
+    -fx-font-size: 0.875em;
     -fx-font-weight: bold;
 }
 
 .caml-body-large {
-    -fx-font-size: 18px;
+    -fx-font-size: 1.125em;
 }
 
 .caml-body-medium {
-    -fx-font-size: 14px;
+    -fx-font-size: 0.875em;
 }
 
 .caml-body-small {
-    -fx-font-size: 12px;
+    -fx-font-size: 0.75em;
 }
 
 .caml-label-large {
-    -fx-font-size: 14px;
+    -fx-font-size: 0.875em;
     -fx-font-weight: bold;
 }
 
 .caml-label-medium {
-    -fx-font-size: 12px;
+    -fx-font-size: 0.75em;
     -fx-font-weight: bold;
 }
 
 .caml-label-small {
-    -fx-font-size: 11px;
+    -fx-font-size: 0.6875em;
     -fx-font-weight: bold;
 }
 
@@ -85,13 +91,13 @@
     -fx-text-fill: -caml-on-surface;
 }
 
-/* Buttons. */
+/* Buttons（设计字号 14px，几何值按 14px 折算）。 */
 .caml-button {
     -fx-background-insets: 0;
-    -fx-background-radius: 4;
-    -fx-min-height: 44;
-    -fx-padding: 10 24;
-    -fx-font-size: 14px;
+    -fx-background-radius: 0.285714em;
+    -fx-min-height: 3.142857em;
+    -fx-padding: 0.714286em 1.714286em;
+    -fx-font-size: 0.875em;
     -fx-font-weight: bold;
     -fx-cursor: hand;
     -fx-focus-color: -caml-accent;
@@ -101,7 +107,7 @@
 .caml-button:focused {
     -fx-border-color: -caml-on-surface;
     -fx-border-width: 2;
-    -fx-border-radius: 4;
+    -fx-border-radius: 0.285714em;
 }
 
 .caml-button-filled {
@@ -130,7 +136,7 @@
     -fx-background-color: transparent;
     -fx-border-color: -caml-border;
     -fx-border-width: 1;
-    -fx-border-radius: 4;
+    -fx-border-radius: 0.285714em;
     -fx-text-fill: -caml-accent-text;
 }
 
@@ -140,7 +146,7 @@
 
 .caml-button-text {
     -fx-background-color: transparent;
-    -fx-padding: 10 12;
+    -fx-padding: 0.714286em 0.857143em;
     -fx-text-fill: -caml-accent-text;
 }
 
@@ -165,8 +171,8 @@
 /* Cards. */
 .caml-card {
     -fx-background-color: -caml-surface-container;
-    -fx-background-radius: 8;
-    -fx-padding: 24;
+    -fx-background-radius: 0.5em;
+    -fx-padding: 1.5em;
 }
 
 .caml-card-elevated {
@@ -181,32 +187,32 @@
     -fx-background-color: transparent;
     -fx-border-color: -caml-border-subtle;
     -fx-border-width: 1;
-    -fx-border-radius: 8;
+    -fx-border-radius: 0.5em;
 }
 
-/* Chips. */
+/* Chips（设计字号 12px）。 */
 .caml-chip {
     -fx-background-color: -caml-accent-container;
     -fx-text-fill: -caml-on-accent-container;
-    -fx-background-radius: 4;
-    -fx-padding: 6 12;
-    -fx-font-size: 12px;
+    -fx-background-radius: 0.333333em;
+    -fx-padding: 0.5em 1em;
+    -fx-font-size: 0.75em;
     -fx-font-weight: bold;
 }
 
-/* Text field. */
+/* Text field（设计字号 14px）。 */
 .caml-text-field {
-    -fx-min-height: 40;
+    -fx-min-height: 2.857143em;
     -fx-background-color: -caml-surface-highest;
-    -fx-background-radius: 4 4 0 0;
+    -fx-background-radius: 0.285714em 0.285714em 0 0;
     -fx-border-color: transparent transparent -caml-on-surface-muted transparent;
     -fx-border-width: 0 0 1 0;
     -fx-text-fill: -caml-on-surface;
     -fx-prompt-text-fill: -caml-on-surface-muted;
     -fx-highlight-fill: -caml-accent;
     -fx-highlight-text-fill: -caml-on-accent;
-    -fx-padding: 12 16;
-    -fx-font-size: 14px;
+    -fx-padding: 0.857143em 1.142857em;
+    -fx-font-size: 0.875em;
 }
 
 .caml-text-field:focused {
@@ -214,15 +220,15 @@
     -fx-border-width: 0 0 2 0;
 }
 
-/* Combo box. */
+/* Combo box（不单独设字号，沿用根字号 16px）。 */
 .caml-combo-box {
-    -fx-min-height: 40;
+    -fx-min-height: 2.5em;
     -fx-background-color: -caml-surface-highest;
-    -fx-background-radius: 4;
+    -fx-background-radius: 0.25em;
     -fx-border-color: -caml-border-subtle;
     -fx-border-width: 1;
-    -fx-border-radius: 4;
-    -fx-padding: 2 4;
+    -fx-border-radius: 0.25em;
+    -fx-padding: 0.125em 0.25em;
 }
 
 .caml-combo-box:focused {
@@ -233,7 +239,7 @@
 .caml-combo-box .list-cell {
     -fx-background-color: transparent;
     -fx-text-fill: -caml-on-surface;
-    -fx-padding: 8 12;
+    -fx-padding: 0.5em 0.75em;
 }
 
 .caml-combo-box .arrow-button {
@@ -248,20 +254,20 @@
     -fx-background-color: transparent;
     -fx-border-color: transparent;
     -fx-text-fill: -caml-on-surface;
-    -fx-padding: 6 8;
+    -fx-padding: 0.375em 0.5em;
 }
 
 /* Combo box popup. */
 .combo-box-popup .list-view {
     -fx-background-color: -caml-surface-container;
-    -fx-background-radius: 6;
+    -fx-background-radius: 0.375em;
     -fx-effect: dropshadow(gaussian, -caml-shadow-color, 12, 0, 0, 3);
 }
 
 .combo-box-popup .list-cell {
     -fx-background-color: transparent;
     -fx-text-fill: -caml-on-surface;
-    -fx-padding: 10 16;
+    -fx-padding: 0.625em 1em;
 }
 
 .combo-box-popup .list-cell:hover {
@@ -275,11 +281,11 @@
 
 /* Spinner. */
 .caml-spinner {
-    -fx-min-height: 40;
+    -fx-min-height: 2.5em;
     -fx-background-color: -caml-surface-highest;
-    -fx-background-radius: 4;
+    -fx-background-radius: 0.25em;
     -fx-border-color: -caml-border-subtle;
-    -fx-border-radius: 4;
+    -fx-border-radius: 0.25em;
 }
 
 .caml-spinner:focused {
@@ -290,7 +296,7 @@
     -fx-background-color: transparent;
     -fx-border-color: transparent;
     -fx-text-fill: -caml-on-surface;
-    -fx-padding: 8 12;
+    -fx-padding: 0.5em 0.75em;
 }
 
 .caml-spinner .increment-arrow-button,
@@ -303,19 +309,19 @@
     -fx-background-color: -caml-on-surface-muted;
 }
 
-/* Text area. */
+/* Text area（设计字号 12px）。 */
 .caml-text-area {
-    -fx-min-height: 160;
+    -fx-min-height: 13.333333em;
     -fx-background-color: -caml-surface-lowest;
-    -fx-background-radius: 4;
+    -fx-background-radius: 0.333333em;
     -fx-border-color: -caml-border-subtle;
     -fx-border-width: 1;
-    -fx-border-radius: 4;
+    -fx-border-radius: 0.333333em;
     -fx-text-fill: -caml-on-surface;
     -fx-highlight-fill: -caml-accent;
     -fx-highlight-text-fill: -caml-on-accent;
     -fx-font-family: "Monospaced";
-    -fx-font-size: 12px;
+    -fx-font-size: 0.75em;
 }
 
 .caml-text-area .content {
@@ -361,15 +367,15 @@
 /* Check box. */
 .caml-check-box {
     -fx-text-fill: -caml-on-surface;
-    -fx-font-size: 14px;
+    -fx-font-size: 0.875em;
 }
 
 .caml-check-box .box {
     -fx-background-color: transparent;
     -fx-border-color: -caml-border;
     -fx-border-width: 2;
-    -fx-border-radius: 2;
-    -fx-background-radius: 2;
+    -fx-border-radius: 0.142857em;
+    -fx-background-radius: 0.142857em;
 }
 
 .caml-check-box:selected .box {
@@ -384,7 +390,7 @@
 /* Radio button. */
 .caml-radio-button {
     -fx-text-fill: -caml-on-surface;
-    -fx-font-size: 14px;
+    -fx-font-size: 0.875em;
     -fx-cursor: hand;
 }
 
@@ -416,9 +422,11 @@
     -fx-background-color: -caml-accent;
 }
 
-/* Integer slider. */
+/* Integer slider（设计高度 28px）。 */
 .caml-slider {
     -fx-cursor: hand;
+    -fx-min-height: 1.75em;
+    -fx-pref-height: 1.75em;
 }
 
 .caml-slider .caml-slider-track {
@@ -440,9 +448,11 @@
     -fx-effect: dropshadow(gaussian, -caml-accent, 6, 0.4, 0, 0);
 }
 
-/* Memory slider: two-tone bold track. */
+/* Memory slider: two-tone bold track（设计高度 28px）。 */
 .caml-memory-slider {
-    -fx-padding: 4 0;
+    -fx-padding: 0.25em 0;
+    -fx-min-height: 1.75em;
+    -fx-pref-height: 1.75em;
     -fx-cursor: hand;
 }
 
@@ -486,11 +496,12 @@
     -fx-background-insets: 0;
 }
 
-/* Side navigation. */
+/* Side navigation（设计宽度 88px）。 */
 .caml-side-nav {
     -fx-background-color: -caml-surface-low;
-    -fx-min-width: 88;
-    -fx-pref-width: 88;
+    -fx-min-width: 5.5em;
+    -fx-pref-width: 5.5em;
+    -fx-padding: 0.75em 0.5em;
 }
 
 .caml-side-nav-item {
@@ -500,10 +511,10 @@
     -fx-border-width: 2;
     -fx-border-radius: 100;
     -fx-text-fill: -caml-accent;
-    -fx-font-size: 16px;
+    -fx-font-size: 1em;
     -fx-font-weight: bold;
-    -fx-padding: 10 16;
-    -fx-min-height: 40;
+    -fx-padding: 0.625em 1em;
+    -fx-min-height: 2.5em;
     -fx-cursor: hand;
     -fx-focus-color: transparent;
     -fx-faint-focus-color: transparent;
@@ -525,7 +536,7 @@
 
 /* Top navigation. */
 .caml-top-nav {
-    -fx-spacing: 4;
+    -fx-spacing: 0.25em;
     -fx-alignment: center-left;
 }
 
@@ -536,11 +547,11 @@
     -fx-border-width: 2;
     -fx-border-radius: 100;
     -fx-text-fill: -caml-accent;
-    -fx-font-size: 16px;
+    -fx-font-size: 1em;
     -fx-font-weight: bold;
-    -fx-padding: 10 24;
-    -fx-min-width: 92;
-    -fx-min-height: 44;
+    -fx-padding: 0.625em 1.5em;
+    -fx-min-width: 5.75em;
+    -fx-min-height: 2.75em;
     -fx-cursor: hand;
     -fx-focus-color: transparent;
     -fx-faint-focus-color: transparent;
@@ -567,7 +578,7 @@
 /* Top bar. */
 .caml-top-bar {
     -fx-background-color: transparent;
-    -fx-padding: 16 24;
+    -fx-padding: 1em 1.5em;
     -fx-border-color: transparent transparent -caml-border-subtle transparent;
     -fx-border-width: 0 0 1 0;
 }
@@ -595,11 +606,12 @@
     -fx-background-color: transparent;
 }
 
-/* Tooltip uses theme-provided inverse colors. */
+/* Tooltip uses theme-provided inverse colors（设计字号 12px）。 */
 .tooltip {
     -fx-background-color: -caml-inverse-surface;
     -fx-text-fill: -caml-inverse-on-surface;
-    -fx-background-radius: 4;
-    -fx-padding: 6 10;
-    -fx-font-size: 12px;
+    -fx-background-radius: 0.333333em;
+    -fx-padding: 0.5em 0.833333em;
+    -fx-font-size: 0.75em;
 }
+

@@ -3,7 +3,6 @@ package org.chs.camlauncher.front.view;
 import javafx.animation.Animation;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
-import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.Label;
 import javafx.scene.control.ProgressBar;
@@ -36,7 +35,7 @@ final class DownloadProgressView extends VBox implements PageLifecycle {
     private final Label currentFileLabel = new Label(UiText.tr("download.progress.waiting"));
     private final Label progressDetail = new Label();
     private final CamlProgressBar progressBar = new CamlProgressBar();
-    private final VBox stageList = new VBox(8);
+    private final VBox stageList = new VBox();
     private final List<HBox> stageRows = new ArrayList<>();
     private final List<Label> stageMarkers = new ArrayList<>();
     private final List<Label> stageTitles = new ArrayList<>();
@@ -45,9 +44,8 @@ final class DownloadProgressView extends VBox implements PageLifecycle {
 
     DownloadProgressView(DownloadRequest request, DownloadTelemetry telemetry, Runnable onBack) {
         this.telemetry = telemetry;
+        // 留白与间距来自 app.css 的 .app-download-progress-page（em），随根字号等比缩放。
         getStyleClass().add("app-download-progress-page");
-        setPadding(new Insets(32, 40, 32, 40));
-        setSpacing(20);
         setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
 
         Label title = new Label(UiText.tr("download.progress.title", request.instanceId()));
@@ -57,7 +55,8 @@ final class DownloadProgressView extends VBox implements PageLifecycle {
                 request.description(), request.version().id()));
         subtitle.getStyleClass().addAll("caml-body-medium", "caml-on-surface-muted");
         subtitle.setWrapText(true);
-        VBox titleBlock = new VBox(4, title, subtitle);
+        VBox titleBlock = new VBox(title, subtitle);
+        titleBlock.getStyleClass().add("app-download-title-block");
 
         CamlButton back = CamlButton.outlined(UiText.tr("download.progress.back"));
         back.getStyleClass().add("app-pill-button");
@@ -65,7 +64,8 @@ final class DownloadProgressView extends VBox implements PageLifecycle {
 
         Region headerSpacer = new Region();
         HBox.setHgrow(headerSpacer, Priority.ALWAYS);
-        HBox header = new HBox(16, titleBlock, headerSpacer, back);
+        HBox header = new HBox(titleBlock, headerSpacer, back);
+        header.getStyleClass().add("app-download-header");
         header.setAlignment(Pos.CENTER_LEFT);
 
         Label speedTitle = new Label(UiText.tr("download.progress.speed"));
@@ -73,11 +73,8 @@ final class DownloadProgressView extends VBox implements PageLifecycle {
         speedLabel.getStyleClass().add("app-download-speed-value");
         totalsLabel.getStyleClass().addAll("caml-body-small", "caml-on-surface-muted");
         totalsLabel.setWrapText(true);
-        VBox speedCard = new VBox(12, speedTitle, speedLabel, totalsLabel);
+        VBox speedCard = new VBox(speedTitle, speedLabel, totalsLabel);
         speedCard.getStyleClass().addAll("app-download-card", "app-download-speed-card");
-        speedCard.setMinWidth(240);
-        speedCard.setPrefWidth(240);
-        speedCard.setMaxWidth(260);
         speedCard.setAlignment(Pos.TOP_LEFT);
 
         Label progressTitle = new Label(UiText.tr("download.progress.progress"));
@@ -91,13 +88,14 @@ final class DownloadProgressView extends VBox implements PageLifecycle {
         progressDetail.setWrapText(true);
         stageList.getStyleClass().add("app-download-stage-list");
 
-        VBox progressCard = new VBox(14,
+        VBox progressCard = new VBox(
                 progressTitle, progressBar, progressDetail, stageLabel, currentFileLabel, stageList);
-        progressCard.getStyleClass().add("app-download-card");
+        progressCard.getStyleClass().addAll("app-download-card", "app-download-progress-card");
         progressCard.setMaxWidth(Double.MAX_VALUE);
         HBox.setHgrow(progressCard, Priority.ALWAYS);
 
-        HBox body = new HBox(20, speedCard, progressCard);
+        HBox body = new HBox(speedCard, progressCard);
+        body.getStyleClass().add("app-download-progress-body");
         body.setAlignment(Pos.TOP_LEFT);
         body.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
         VBox.setVgrow(body, Priority.ALWAYS);
@@ -217,7 +215,7 @@ final class DownloadProgressView extends VBox implements PageLifecycle {
             Label title = new Label();
             title.getStyleClass().add("app-download-stage-title");
             title.setWrapText(true);
-            HBox row = new HBox(10, marker, title);
+            HBox row = new HBox(marker, title);
             row.setAlignment(Pos.CENTER_LEFT);
             row.getStyleClass().add("app-download-stage-row");
             HBox.setHgrow(title, Priority.ALWAYS);

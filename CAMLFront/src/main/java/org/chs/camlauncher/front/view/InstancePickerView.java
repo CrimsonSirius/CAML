@@ -1,6 +1,5 @@
 package org.chs.camlauncher.front.view;
 
-import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
@@ -25,8 +24,6 @@ final class InstancePickerView extends VBox implements PageLifecycle {
     InstancePickerView(HomeController controller, Path gameDirectory,
                        Consumer<String> onSelected, Runnable onBack) {
         getStyleClass().add("app-instance-picker");
-        setPadding(new Insets(32, 40, 32, 40));
-        setSpacing(20);
         setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
 
         CamlButton backButton = ViewSupport.backButton(onBack);
@@ -40,8 +37,10 @@ final class InstancePickerView extends VBox implements PageLifecycle {
         pathLabel.getStyleClass().addAll("caml-body-small", "caml-on-surface-muted");
         pathLabel.setWrapText(true);
 
-        VBox titles = new VBox(4, title, pathLabel);
-        HBox header = new HBox(12, backButton, titles);
+        VBox titles = new VBox(title, pathLabel);
+        titles.getStyleClass().add("app-instance-picker-titles");
+        HBox header = new HBox(backButton, titles);
+        header.getStyleClass().add("app-instance-picker-header");
         header.setAlignment(Pos.CENTER_LEFT);
 
         statusLabel.getStyleClass().addAll("caml-body-small", "field-hint");
@@ -73,8 +72,8 @@ final class InstancePickerView extends VBox implements PageLifecycle {
                 return;
             }
 
-            VBox list = new VBox(8);
-            list.setPadding(new Insets(4, 0, 4, 0));
+            VBox list = new VBox();
+            list.getStyleClass().add("app-instance-list");
             for (String version : info.installedVersions()) {
                 CamlButton item = CamlButton.outlined(version);
                 item.getStyleClass().add("app-instance-item");

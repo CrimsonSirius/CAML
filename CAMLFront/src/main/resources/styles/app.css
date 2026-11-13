@@ -1,4 +1,13 @@
-/* CAML 主界面布局。颜色与控件外观由外部 CAML 主题提供。 */
+/* CAML 主界面布局。颜色与控件外观由外部 CAML 主题提供。
+ *
+ * 尺寸纪律：除 1px 描边外，所有长度都用 em，不写固定 px。
+ *   - -fx-font-size 中的 em 相对父节点字号；
+ *   - 其余属性中的 em 相对本节点字号。
+ * 根节点字号由 MainView 按窗口尺寸写入（见 UiScale），因此窗口变化时字号、内边距、
+ * 圆角、最小尺寸一起等比缩放。1em = 16px 是设计基准。
+ * 需要按比例计算、无法用 CSS 表达的几何（模组页、工作区分栏、侧边栏宽度）由代码读取
+ * 同一个 UiScale 因子，二者结果一致。
+ */
 
 .app-root {
     -fx-background-color: -caml-background;
@@ -17,133 +26,163 @@
 }
 
 .app-download-content .caml-body-small {
-    -fx-font-size: 16px;
+    -fx-font-size: 1em;
+}
+
+.app-download-versions-page {
+    -fx-padding: 2em 2.5em;
+    -fx-spacing: 1em;
+}
+
+/* 版本列表页与结果列表：留白与行距都用 em，窗口缩放时整体等比变化。 */
+.app-download-list-page {
+    -fx-padding: 2em 2.5em;
+    -fx-spacing: 1em;
+}
+
+.app-version-list {
+    -fx-spacing: 0.5em;
+    -fx-padding: 0.25em 0;
 }
 
 .app-download-version-item {
     -fx-alignment: center-left;
-    -fx-font-size: 16px;
-    -fx-padding: 12 16;
-    -fx-background-radius: 10;
-    -fx-border-radius: 10;
+    -fx-font-size: 1em;
+    -fx-padding: 0.75em 1em;
+    -fx-background-radius: 0.625em;
+    -fx-border-radius: 0.625em;
 }
 
 .app-download-version-id {
-    -fx-font-size: 16px;
+    -fx-font-size: 1em;
     -fx-font-weight: bold;
     -fx-text-fill: -caml-on-surface;
 }
 
 .app-download-version-date {
-    -fx-font-size: 16px;
+    -fx-font-size: 1em;
     -fx-text-fill: -caml-on-surface-muted;
+    -fx-min-width: 6em;
+    -fx-alignment: center-right;
 }
 
 .app-download-setup-page {
     -fx-background-color: -caml-surface;
+    -fx-padding: 2em 2.5em;
+    -fx-spacing: 0.75em;
 }
 
 .app-download-setup-page .caml-text-field {
-    -fx-font-size: 16px;
+    -fx-font-size: 1em;
 }
 
 .app-download-option-bar {
     -fx-background-color: -caml-surface-low;
-    -fx-background-radius: 12;
+    -fx-background-radius: 0.75em;
     -fx-border-color: -caml-border-subtle;
     -fx-border-width: 1;
-    -fx-border-radius: 12;
-    -fx-padding: 16 20;
-    -fx-min-height: 64;
+    -fx-border-radius: 0.75em;
+    -fx-padding: 1em 1.25em;
+    -fx-min-height: 4em;
+    -fx-spacing: 1em;
 }
 
 .app-download-option-title {
-    -fx-font-size: 18px;
+    -fx-font-size: 1.125em;
     -fx-font-weight: bold;
     -fx-text-fill: -caml-on-surface;
 }
 
 .app-download-option-value {
-    -fx-font-size: 16px;
+    -fx-font-size: 1em;
     -fx-text-fill: -caml-on-surface-muted;
 }
 
 .app-download-option-bar .caml-combo-box {
-    -fx-font-size: 16px;
-    -fx-min-width: 280;
-    -fx-pref-width: 280;
+    -fx-font-size: 1em;
+    -fx-min-width: 17.5em;
+    -fx-pref-width: 17.5em;
 }
 
 .app-download-primary-button {
-    -fx-min-height: 52;
-    -fx-font-size: 18px;
+    -fx-min-height: 2.888889em;
+    -fx-font-size: 1.125em;
 }
 
 .app-download-concurrency-value {
-    -fx-font-size: 16px;
+    -fx-font-size: 1em;
     -fx-font-weight: bold;
     -fx-text-fill: -caml-accent-text;
-    -fx-padding: 0 0 4 0;
+    -fx-padding: 0 0 0.25em 0;
 }
 
 .app-download-progress-page {
     -fx-background-color: -caml-surface;
+    -fx-padding: 2em 2.5em;
+    -fx-spacing: 1.25em;
 }
 
 .app-download-progress-heading {
-    -fx-font-size: 30px;
+    -fx-font-size: 1.875em;
     -fx-font-weight: bold;
     -fx-text-fill: -caml-on-surface;
 }
 
+/* 模组页卡片的几何由 ModDownloadLayout 给出；这里的内边距与它的 CARD_PADDING 相同，
+   两者都以根字号为基准，因此缩放后仍保持一致。 */
 .app-download-card {
     -fx-background-color: -caml-surface-low;
-    -fx-background-radius: 16;
+    -fx-background-radius: 1em;
     -fx-border-color: -caml-border-subtle;
     -fx-border-width: 1;
-    -fx-border-radius: 16;
-    -fx-padding: 24;
+    -fx-border-radius: 1em;
+    -fx-padding: 1.5em;
 }
 
 .app-download-card-title {
-    -fx-font-size: 18px;
+    -fx-font-size: 1.125em;
     -fx-font-weight: bold;
     -fx-text-fill: -caml-on-surface;
 }
 
+.app-download-speed-card {
+    -fx-min-width: 15em;
+    -fx-pref-width: 15em;
+}
+
 .app-download-speed-value {
-    -fx-font-size: 40px;
+    -fx-font-size: 2.5em;
     -fx-font-weight: bold;
     -fx-text-fill: -caml-accent-text;
 }
 
 .app-download-progress-detail {
-    -fx-font-size: 16px;
+    -fx-font-size: 1em;
     -fx-text-fill: -caml-on-surface-muted;
 }
 
 .app-download-stage-current {
-    -fx-font-size: 18px;
+    -fx-font-size: 1.125em;
     -fx-font-weight: bold;
     -fx-text-fill: -caml-on-surface;
 }
 
 .app-download-stage-list {
-    -fx-padding: 6 0 0 0;
+    -fx-padding: 0.375em 0 0 0;
 }
 
 .app-download-stage-row {
-    -fx-padding: 6 0;
+    -fx-padding: 0.375em 0;
 }
 
 .app-download-stage-marker {
-    -fx-min-width: 22;
-    -fx-font-size: 16px;
+    -fx-min-width: 1.375em;
+    -fx-font-size: 1em;
     -fx-text-fill: -caml-on-surface-muted;
 }
 
 .app-download-stage-title {
-    -fx-font-size: 16px;
+    -fx-font-size: 1em;
     -fx-text-fill: -caml-on-surface-muted;
 }
 
@@ -181,104 +220,106 @@
     -fx-border-width: 0 1 0 0;
 }
 
-/* 下载页侧边栏宽度由 DownloadsView 按窗口宽度 1/6（Clamp 180–260）绑定，
-   空侧边栏宽度由 ViewSupport.emptySidebar() 直接设置；
-   这里不写 -fx-min/pref/max-width，避免 CSS 与代码争抢同一属性。 */
+/* 下载页侧边栏宽度由 DownloadsView 按窗口宽度 1/6（钳制范围随缩放移动）计算，
+   这里只负责内边距和子项间距，避免 CSS 与代码争抢宽度属性。 */
+.app-sidebar {
+    -fx-padding: 1em 1.25em;
+    -fx-spacing: 0.5em;
+}
 
 .app-settings-sidebar {
-    -fx-padding: 12 8;
+    -fx-padding: 0.75em 0.5em;
 }
 
 .app-settings-sidebar .caml-side-nav-item {
     -fx-alignment: center-left;
-    -fx-padding: 10 16;
+    -fx-padding: 0.625em 1em;
 }
 
 .app-settings-body {
     -fx-padding: 0;
+    -fx-spacing: 1.5em;
 }
 
+.app-settings-content-host {
+    -fx-padding: 2em 2.5em;
+}
+
+.app-settings-content {
+    -fx-max-width: 35em;
+    -fx-min-width: 0;
+    -fx-spacing: 1.25em;
+}
+
+/* 分组内部统一使用 1em 间距（设计值 16px），标题、说明、选项列表和辅助文字因此等比缩放。 */
 .app-settings-group {
     -fx-background-color: -caml-surface-low;
-    -fx-background-radius: 12;
+    -fx-background-radius: 0.75em;
     -fx-border-color: -caml-border-subtle;
     -fx-border-width: 1;
-    -fx-border-radius: 12;
-    -fx-padding: 24;
+    -fx-border-radius: 0.75em;
+    -fx-padding: 1.5em;
+    -fx-spacing: 1em;
 }
 
-.app-settings-group-title {
-    -fx-text-fill: -caml-on-surface;
-    -fx-font-size: 28px;
-    -fx-font-weight: bold;
+/* 分组内部的间距梯度：选项列表 12px、滑块块 10px、单选行 18px、工具按钮行与字段行 8~10px。 */
+.app-settings-options {
+    -fx-spacing: 0.75em;
 }
 
-.app-settings-group .caml-body-medium {
-    -fx-font-size: 16px;
+.app-settings-block {
+    -fx-spacing: 0.625em;
 }
 
-.app-settings-group .caml-body-small {
-    -fx-font-size: 16px;
+.app-settings-row {
+    -fx-spacing: 1.125em;
 }
 
-.app-settings-group .caml-label-medium {
-    -fx-font-size: 16px;
+.app-settings-inline {
+    -fx-spacing: 0.625em;
 }
 
-.app-settings-group .caml-text-field {
-    -fx-font-size: 16px;
+.app-settings-sublock {
+    -fx-spacing: 0.5em;
 }
 
-.app-settings-group .caml-radio-button {
-    -fx-font-size: 16px;
+.app-settings-field-row {
+    -fx-spacing: 0.5em;
 }
 
-.app-settings-group .caml-button {
-    -fx-font-size: 15px;
+.app-browse-button {
+    -fx-min-width: 4em;
 }
 
-.app-settings-group .app-memory-summary {
-    -fx-font-size: 17px;
-}
-
-.app-settings-scroll {
-    -fx-background-color: transparent;
-    -fx-background-insets: 0;
-    -fx-border-color: transparent;
-    -fx-padding: 0;
-}
-
-.app-settings-scroll > .viewport {
-    -fx-background-color: transparent;
-}
-
-.app-settings-group .caml-combo-box {
-    -fx-font-size: 16px;
-    -fx-min-height: 42;
+.app-save-button {
+    -fx-min-width: 4.5em;
 }
 
 .app-java-tool-button {
-    -fx-background-radius: 8;
-    -fx-min-height: 40;
+    -fx-background-radius: 0.571429em;
+    -fx-min-height: 2.857143em;
 }
 
 .app-java-detail {
-    -fx-font-size: 14px;
+    -fx-font-size: 0.875em;
     -fx-text-fill: -caml-on-surface-muted;
 }
 
 .app-instance-picker {
     -fx-background-color: -caml-surface;
+    -fx-padding: 2em 2.5em;
+    -fx-spacing: 1.25em;
 }
 
 .app-instance-picker .caml-body-small {
-    -fx-font-size: 16px;
+    -fx-font-size: 1em;
 }
 
 .app-pill-button {
     -fx-background-radius: 100;
     -fx-border-radius: 100;
-    -fx-padding: 8 20;
+    -fx-padding: 0.571429em 1.428571em;
+    -fx-min-width: 5.714286em;
 }
 
 .app-pill-button:focused {
@@ -311,45 +352,46 @@
 
 .app-instance-info-group {
     -fx-background-color: -caml-surface-low;
-    -fx-background-radius: 12;
+    -fx-background-radius: 0.75em;
     -fx-border-color: -caml-border-subtle;
     -fx-border-width: 1;
-    -fx-border-radius: 12;
-    -fx-padding: 20;
+    -fx-border-radius: 0.75em;
+    -fx-padding: 1.25em;
 }
 
 .app-instance-info-current {
     -fx-text-fill: -caml-on-surface;
-    -fx-font-size: 20px;
+    -fx-font-size: 1.25em;
     -fx-font-weight: bold;
 }
 
 .app-instance-info-detail {
     -fx-text-fill: -caml-on-surface-muted;
-    -fx-font-size: 16px;
+    -fx-font-size: 1em;
 }
 
 .app-instance-info-error {
     -fx-text-fill: -caml-danger;
-    -fx-font-size: 16px;
+    -fx-font-size: 1em;
 }
 
 .app-memory-summary {
     -fx-text-fill: -caml-accent-text;
     -fx-font-weight: bold;
-    -fx-padding: 0 0 4 0;
+    -fx-padding: 0 0 0.25em 0;
 }
 
 .app-form-pane {
     -fx-background-color: -caml-surface;
+    -fx-padding: 1.75em 2.5em;
 }
 
 .app-fields {
-    -fx-spacing: 16;
+    -fx-spacing: 1em;
 }
 
 .app-field {
-    -fx-spacing: 8;
+    -fx-spacing: 0.5em;
 }
 
 .app-field-scroll {
@@ -369,6 +411,8 @@
 
 .app-log-pane {
     -fx-background-color: -caml-surface-container;
+    -fx-padding: 2em;
+    -fx-spacing: 1em;
 }
 
 /* 日志文本区的高度由 MainView 按断点设置：CSS 声明会覆盖代码设置，因此此处不写 -fx-min-height / -fx-pref-height。 */
@@ -393,7 +437,7 @@
 .app-footer-bar {
     -fx-background-color: -caml-surface;
     -fx-text-fill: -caml-on-surface-muted;
-    -fx-padding: 10 24;
+    -fx-padding: 0.833333em 2em;
     -fx-border-color: -caml-border-subtle transparent transparent transparent;
     -fx-border-width: 1 0 0 0;
 }
@@ -414,12 +458,13 @@
     -fx-text-fill: -caml-danger;
 }
 
+/* 结果行是 caml-button（设计字号 14px），几何值按 14px 折算。 */
 .app-mod-item {
     -fx-background-color: -caml-surface-lowest;
-    -fx-background-radius: 12;
+    -fx-background-radius: 0.857143em;
     -fx-border-color: -caml-border-subtle;
     -fx-border-width: 1;
-    -fx-border-radius: 12;
+    -fx-border-radius: 0.857143em;
     -fx-alignment: center-left;
 }
 
@@ -433,7 +478,7 @@
 
 .app-mod-accent {
     -fx-background-color: -caml-accent;
-    -fx-background-radius: 12 0 0 12;
+    -fx-background-radius: 0.75em 0 0 0.75em;
 }
 
 .app-mod-icon-frame {
@@ -443,64 +488,64 @@
 
 .app-mod-icon-placeholder {
     -fx-background-color: -caml-accent-container;
-    -fx-background-radius: 12;
+    -fx-background-radius: 0.75em;
 }
 
 .app-mod-icon-text {
     -fx-alignment: center;
     -fx-text-fill: -caml-on-accent-container;
-    -fx-font-size: 30px;
+    -fx-font-size: 1.875em;
     -fx-font-weight: bold;
 }
 
 .app-mod-title,
 .app-mod-detail-title {
-    -fx-font-size: 20px;
+    -fx-font-size: 1.25em;
     -fx-font-weight: bold;
     -fx-text-fill: -caml-on-surface;
 }
 
 .app-mod-source {
-    -fx-font-size: 15px;
+    -fx-font-size: 0.9375em;
     -fx-text-fill: -caml-accent-text;
 }
 
 .app-mod-summary {
-    -fx-font-size: 16px;
+    -fx-font-size: 1em;
     -fx-text-fill: -caml-on-surface-muted;
     -fx-text-overrun: ellipsis;
 }
 
 .app-mod-meta,
 .app-mod-dependency {
-    -fx-font-size: 15px;
+    -fx-font-size: 0.9375em;
     -fx-text-fill: -caml-on-surface-muted;
     -fx-text-overrun: ellipsis;
 }
 
 .app-mod-pagination {
-    -fx-padding: 4 0 0 0;
+    -fx-padding: 0.25em 0 0 0;
 }
 
 .app-mod-page-info {
-    -fx-font-size: 16px;
+    -fx-font-size: 1em;
     -fx-text-fill: -caml-on-surface-muted;
 }
 
 .app-mod-group {
     -fx-background-color: -caml-surface-low;
-    -fx-background-radius: 12;
+    -fx-background-radius: 0.75em;
     -fx-border-color: -caml-border-subtle;
     -fx-border-width: 1;
-    -fx-border-radius: 12;
+    -fx-border-radius: 0.75em;
     -fx-padding: 0;
 }
 
 .app-mod-group-header {
-    -fx-min-height: 52;
+    -fx-min-height: 3.714286em;
     -fx-background-color: transparent;
     -fx-border-color: transparent;
-    -fx-padding: 12 18;
+    -fx-padding: 0.857143em 1.285714em;
     -fx-alignment: center-left;
 }
 
@@ -509,61 +554,177 @@
 }
 
 .app-mod-group-title {
-    -fx-font-size: 17px;
+    -fx-font-size: 1.0625em;
     -fx-font-weight: bold;
     -fx-text-fill: -caml-on-surface;
 }
 
 .app-mod-group-arrow {
-    -fx-font-size: 15px;
+    -fx-font-size: 0.9375em;
     -fx-text-fill: -caml-accent-text;
 }
 
 .app-mod-group-content {
-    -fx-padding: 0 12 12 12;
+    -fx-padding: 0 0.75em 0.75em 0.75em;
 }
 
 .app-mod-version-row {
     -fx-background-color: -caml-surface;
-    -fx-background-radius: 10;
+    -fx-background-radius: 0.625em;
     -fx-border-color: -caml-border-subtle;
     -fx-border-width: 1;
-    -fx-border-radius: 10;
-    -fx-padding: 14 16;
+    -fx-border-radius: 0.625em;
+    -fx-padding: 0.875em 1em;
 }
 
 .app-mod-version-title {
-    -fx-font-size: 16px;
+    -fx-font-size: 1em;
     -fx-font-weight: bold;
     -fx-text-fill: -caml-on-surface;
 }
 
-/* 模组页的尺寸全部来自 ModDownloadLayout，CSS 不写 -fx-padding / -fx-min-height，
-   否则会覆盖代码设置，导致布局常量与实际渲染不一致。 */
-
-/* 模组搜索卡：配色与排版；几何尺寸由 ModDownloadLayout 提供。 */
+/* 模组页的结果行、搜索卡与分页间距来自 ModDownloadLayout，CSS 只负责配色与字号。 */
 
 .app-mod-search-title {
     -fx-text-fill: -caml-on-surface;
-    -fx-font-size: 30px;
+    -fx-font-size: 1.875em;
     -fx-font-weight: bold;
 }
 
 .app-mod-search .caml-text-field,
 .app-mod-search .caml-combo-box {
-    -fx-font-size: 16px;
+    -fx-font-size: 1em;
 }
 
 .app-mod-field-label {
     -fx-text-fill: -caml-on-surface-muted;
-    -fx-font-size: 15px;
+    -fx-font-size: 0.9375em;
     -fx-font-weight: normal;
 }
 
 .app-mod-search-actions {
-    -fx-padding: 2 0 0 0;
+    -fx-padding: 0.125em 0 0 0;
 }
 
 .app-mod-status {
-    -fx-font-size: 16px;
+    -fx-font-size: 1em;
+}
+
+/* ---------------------------------------------------------------------------
+ * 间距与尺寸（em）
+ *
+ * 根字号由 MainView 按窗口尺寸写入（见 UiScale），因此下面这些间距、最小宽度和
+ * 最大宽度都会随窗口等比变化：大屏与小屏看到的界面比例与设计稿一致。
+ * 代码只负责结构（哪个节点放在哪），几何集中写在这里，避免代码与 CSS 同时赋值。
+ * ------------------------------------------------------------------------- */
+
+/* 主页 */
+.app-instance-info-group {
+    -fx-spacing: 0.625em;
+}
+
+.app-instance-actions {
+    -fx-hgap: 0.5em;
+}
+
+.app-actions {
+    -fx-spacing: 0.75em;
+    -fx-padding: 1.25em 0 0 0;
+}
+
+.app-log-pane {
+    -fx-min-width: 20em;
+}
+
+.app-log-heading {
+    -fx-spacing: 0.25em;
+}
+
+/* 实例列表页与管理页 */
+.app-instance-picker-header {
+    -fx-spacing: 0.75em;
+}
+
+.app-instance-picker-titles {
+    -fx-spacing: 0.25em;
+}
+
+.app-instance-list {
+    -fx-spacing: 0.5em;
+    -fx-padding: 0.25em 0;
+}
+
+/* 下载进度页 */
+.app-download-title-block {
+    -fx-spacing: 0.25em;
+}
+
+.app-download-header {
+    -fx-spacing: 1em;
+}
+
+.app-download-speed-card {
+    -fx-spacing: 0.75em;
+    -fx-max-width: 16.25em;
+}
+
+.app-download-progress-card {
+    -fx-spacing: 0.875em;
+}
+
+.app-download-progress-body {
+    -fx-spacing: 1.25em;
+}
+
+.app-download-stage-list {
+    -fx-spacing: 0.5em;
+}
+
+.app-download-stage-row {
+    -fx-spacing: 0.625em;
+}
+
+/* 模组页：行内间距用 em，行高与内边距仍由 ModDownloadLayout 按缩放因子给出。 */
+.app-mod-row-content {
+    -fx-spacing: 0.875em;
+}
+
+.app-mod-field {
+    -fx-spacing: 0.75em;
+}
+
+.app-mod-heading {
+    -fx-spacing: 0.75em;
+}
+
+.app-mod-text {
+    -fx-spacing: 0.5em;
+}
+
+.app-mod-title-row {
+    -fx-spacing: 0.75em;
+}
+
+.app-mod-search-actions {
+    -fx-spacing: 0.75em;
+}
+
+.app-mod-group-header-content {
+    -fx-spacing: 0.857143em;
+}
+
+.app-mod-group-content {
+    -fx-spacing: 0.625em;
+}
+
+.app-mod-version-row {
+    -fx-spacing: 0.5em;
+}
+
+.app-mod-version-top {
+    -fx-spacing: 0.75em;
+}
+
+.app-mod-version-actions {
+    -fx-spacing: 0.75em;
 }

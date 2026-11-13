@@ -1,6 +1,5 @@
 package org.chs.camlauncher.front.view;
 
-import javafx.geometry.Insets;
 import javafx.scene.control.Label;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
@@ -26,12 +25,12 @@ final class LogPaneView extends VBox {
         logArea.getStyleClass().add("app-log-area");
         VBox.setVgrow(logArea, Priority.ALWAYS);
 
-        setSpacing(16);
-        setMinWidth(320);
-        setMinHeight(220);
-        setPadding(new Insets(32));
+        // 内边距、间距和最小宽度来自 app.css 的 .app-log-pane / .app-log-heading（em），
+        // 随根字号等比缩放；高度由 HomeView 按断点设置。
         getStyleClass().add("app-log-pane");
-        getChildren().addAll(new VBox(4, heading, subheading), logArea);
+        VBox headingBlock = new VBox(heading, subheading);
+        headingBlock.getStyleClass().add("app-log-heading");
+        getChildren().addAll(headingBlock, logArea);
     }
 
     void append(String line) {

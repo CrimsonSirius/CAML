@@ -73,7 +73,8 @@ CAML/
 ├─ CAMLFront/                         JavaFX 界面（不直接读写文件/发 HTTP/启动进程）
 │  ├─ src/main/java/org/chs/camlauncher/front/
 │  │  ├─ CAMLApplication.java         应用入口
-│  │  ├─ WindowSizePlanner.java       窗口尺寸与居中计算
+│  │  ├─ UiScale.java                  界面缩放规则（设计基准 1440×900、根字号 16px）
+│  │  ├─ WindowSizePlanner.java       窗口尺寸与居中计算（上下限由 UiScale 推导）
 │  │  ├─ controller/
 │  │  │  ├─ MainController.java       页面控制器组合入口
 │  │  │  ├─ HomeController.java       启动、日志回调和实例扫描
@@ -255,7 +256,8 @@ statusLabel.setText(UiText.tr("home.instance.current", version));
 - 两个来源都不使用现有镜像下载源，搜索、详情、依赖和文件下载均直连官方地址。
 - 下载目标根据当前实例和版本隔离设置解析为 `<gameDirectory>/mods` 或
   `<gameDirectory>/versions/<instance>/mods`。
-- 模组页尺寸集中在 `ModDownloadLayout`：下载侧边栏取窗口宽度 `1/6` 并限制在 `180–260`，
+- 模组页尺寸集中在 `ModDownloadLayout`：所有常量都是设计基准 `1440×900` 下的像素值，
+  使用前统一乘以 `UiScale` 的缩放因子。下载侧边栏取窗口宽度 `1/6` 并限制在 `180–260`，
   内容区留白 `40/32`，卡片内边距 `24`、内部间距 `18`；搜索表单按内容区宽度（已扣除侧边栏）
   在三种方向间切换——`>= 660` 为两行两列且字段列与下拉列按 `2:1` 分配，`520–659` 为
   “标签在上”的两行两列，`< 520` 为单列纵向堆叠；切换时控件尺寸、行高和字号不变。
@@ -264,41 +266,19 @@ statusLabel.setText(UiText.tr("home.instance.current", version));
   （1080p 屏幕在 150% 缩放下的逻辑空间只有约 `1280×720`，因此断点按内容宽度判断，
   不假设存在 `1920×1080` 的逻辑像素。）
 
-### 主题系统
+### 界面缩放
 
-主题是普通的 JavaFX CSS 文件，放在 `~/.caml/themes/*.css`。启动器本体不定义
-任何固定主题；打包时只携带一个白底默认主题：
+字号、控件尺寸和窗口尺寸共用同一条缩放规则，大屏与小屏看到的比例都与设计稿一致：
 
-```text
-CAMLBackend/src/main/resources/themes/mango.css
-```
-
-首次启动时，后端把默认主题 mango 复制到 `~/.caml/themes/mango.css`。之后用户可以直接
-修改它，或新增其他 `.css` 文件。设置 → 外观中的“主题”下拉框会列出主题目录中的文件，
-当前选择记录在 `~/.caml/theme.txt`。
-
-主题文件只需要覆盖 `.caml-root` 下的颜色令牌，例如：
-
-```css
-.caml-root {
-    -caml-accent: #f99e1a;
-    -caml-background: #ffffff;
-    -caml-surface-container: #f0f0f0;
-    -caml-on-surface: #1a1a1a;
-}
-```
-
-### IDEA 运行配置
-
-项目根目录的 `.run/` 提供三个共享运行配置：
-
-| 配置 | 作用 |
-|---|---|
-| `runLauncher` | 执行 `:CAMLFront:run`，可直接使用 IDEA 调试 JavaFX 前端 |
-| `build` | 执行 Gradle `build`，构建后端、前端和测试 |
-| `generateTranslation` | 执行 `:CAMLLanguage:generateTranslation`，重新生成 `lang/*.json` |
-
-`build` 当前只生成 Gradle 构建产物，还不是单文件启动器。单文件打包需要先确定 Windows/Linux 目标，再接入 `jpackage`。
+- 设计基准是 `1440×900` 的逻辑窗口与 `16px` 根字号。
+- `UiScale.factor(宽, 高)` 取 `min(宽/1440, 高/900)`，量化到 `1/16`（根字号取整数像素），
+  钳制在 `0.6875–1.375`（根字号 `11–22px`）。
+- `MainView` 把因子换算成根字号写入根节点；`caml.css` 与 `app.css` 中除 `1px` 描边外的所有长度
+  都用 `em`，因此字号、控件尺寸、圆角与留白随窗口等比缩放。
+- 无法用 CSS 表达的几何（模组页、工作区分栏、侧边栏宽度）由 `ModDownloadLayout` /
+  `WorkspaceLayout` / `DownloadsView` 读取同一个因子换算。
+- `WindowSizePlanner` 的窗口上下限同样由 `UiScale` 推导：初始尺寸取屏幕可用区域的 `68%`/`74%`，
+  并限制在 `990×618`（因子下限）与 `1980×1237`（因子上限）之间。
 
 ---
 
