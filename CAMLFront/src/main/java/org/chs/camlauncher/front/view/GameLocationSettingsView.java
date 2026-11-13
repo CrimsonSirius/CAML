@@ -40,12 +40,12 @@ final class GameLocationSettingsView extends VBox {
         HBox.setHgrow(pathField, Priority.ALWAYS);
 
         browseButton = CamlButton.outlined(UiText.tr("settings.game.location.browse"));
-        browseButton.setMinWidth(64);
+        browseButton.getStyleClass().add("app-browse-button");
         browseButton.setMaxWidth(javafx.scene.layout.Region.USE_PREF_SIZE);
         browseButton.setOnAction(event -> chooseDirectory());
 
         saveButton = CamlButton.filled(UiText.tr("settings.game.location.save"));
-        saveButton.setMinWidth(72);
+        saveButton.getStyleClass().add("app-save-button");
         saveButton.setMaxWidth(javafx.scene.layout.Region.USE_PREF_SIZE);
         saveButton.setOnAction(event -> saveDirectory());
 
@@ -55,11 +55,10 @@ final class GameLocationSettingsView extends VBox {
         statusLabel.setVisible(false);
         statusLabel.setManaged(false);
 
-        HBox row = new HBox(8, pathField, browseButton, saveButton);
+        HBox row = new HBox(pathField, browseButton, saveButton);
+        row.getStyleClass().add("app-settings-field-row");
         row.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
 
-        setSpacing(16);
-        setPadding(new javafx.geometry.Insets(24));
         setMaxWidth(Double.MAX_VALUE);
         getStyleClass().add("app-settings-group");
         getChildren().addAll(heading, description, row, statusLabel);

@@ -1,6 +1,5 @@
 package org.chs.camlauncher.front.view;
 
-import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.Label;
 import javafx.scene.layout.HBox;
@@ -12,8 +11,6 @@ import org.chs.camlauncher.ui.control.CamlButton;
 final class ManageInstancesView extends VBox {
     ManageInstancesView(Runnable onBack) {
         getStyleClass().add("app-instance-picker");
-        setPadding(new Insets(32, 40, 32, 40));
-        setSpacing(20);
         setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
 
         CamlButton backButton = ViewSupport.backButton(onBack);
@@ -21,7 +18,8 @@ final class ManageInstancesView extends VBox {
         Label title = new Label(UiText.tr("instances.manage.title"));
         title.getStyleClass().add("caml-headline-small");
 
-        HBox header = new HBox(12, backButton, title);
+        HBox header = new HBox(backButton, title);
+        header.getStyleClass().add("app-instance-picker-header");
         header.setAlignment(Pos.CENTER_LEFT);
 
         getChildren().add(header);

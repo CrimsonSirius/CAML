@@ -37,16 +37,10 @@ final class HomeView extends StackPane implements PageLifecycle {
         pageHost.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
         getChildren().setAll(pageHost);
 
-        // 首帧宽度尚未确定，先按宽屏规则摆放；宽度可用后由 updateWorkspaceLayout 校正。
+        // 首帧宽度与缩放尚未确定，先按宽屏规则摆放；尺寸可用后由 updateWorkspaceLayout 校正。
         applyWorkspaceLayout(WorkspaceLayout.WIDE);
-        widthProperty().addListener((observable, oldValue, newValue) ->
-                updateWorkspaceLayout(newValue.doubleValue()));
-        // 从占位页切回主页或重新挂载场景时，按当前宽度重新确认布局。
-        sceneProperty().addListener((observable, oldValue, newValue) -> {
-            if (newValue != null) {
-                updateWorkspaceLayout(getWidth());
-            }
-        });
+        // 缩放因子同时取决于窗口宽高，因此监听组件尺寸与场景尺寸，而不是只监听宽度。
+        ViewSupport.onLayoutMetricsChanged(this, this::updateWorkspaceLayout);
 
         launchSettings.gameDirectoryProperty().addListener((observable, oldValue, newValue) -> {
             if (newValue != null) {
@@ -124,11 +118,12 @@ final class HomeView extends StackPane implements PageLifecycle {
         }
     }
 
-    private void updateWorkspaceLayout(double width) {
+    private void updateWorkspaceLayout() {
+        double width = getWidth();
         if (width <= 0) {
             return;
         }
-        applyWorkspaceLayout(WorkspaceLayout.plan(width));
+        applyWorkspaceLayout(WorkspaceLayout.plan(width, ViewSupport.uiFactor(this)));
     }
 
     private void applyWorkspaceLayout(WorkspaceLayout.Plan plan) {

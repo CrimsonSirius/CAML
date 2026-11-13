@@ -150,10 +150,9 @@ final class DownloadSettingsView extends VBox {
         sourceDescription.getStyleClass().addAll("caml-body-medium", "caml-on-surface-muted");
         sourceDescription.setWrapText(true);
 
-        VBox sourceOptions = new VBox(12, mirrorSource, officialSource, customSource);
-        VBox sourceGroup = new VBox(16, sourceHeading, sourceDescription, sourceOptions, customApiField);
-        sourceGroup.setSpacing(16);
-        sourceGroup.setPadding(new Insets(24));
+        VBox sourceOptions = new VBox(mirrorSource, officialSource, customSource);
+        sourceOptions.getStyleClass().add("app-settings-options");
+        VBox sourceGroup = new VBox(sourceHeading, sourceDescription, sourceOptions, customApiField);
         sourceGroup.setMaxWidth(Double.MAX_VALUE);
         sourceGroup.getStyleClass().add("app-settings-group");
 
@@ -168,17 +167,14 @@ final class DownloadSettingsView extends VBox {
         sliderLabel.getStyleClass().add("caml-label-medium");
         sliderLabel.setLabelFor(concurrencySlider);
 
-        VBox sliderBlock = new VBox(10, sliderLabel, concurrencyValue, concurrencySlider);
+        VBox sliderBlock = new VBox(sliderLabel, concurrencyValue, concurrencySlider);
+        sliderBlock.getStyleClass().add("app-settings-block");
 
-        VBox concurrencyGroup = new VBox(16, heading, description, sliderBlock);
-        concurrencyGroup.setPadding(new Insets(24));
+        VBox concurrencyGroup = new VBox(heading, description, sliderBlock);
         concurrencyGroup.getStyleClass().add("app-settings-group");
         concurrencyGroup.setMaxWidth(Double.MAX_VALUE);
 
-        setSpacing(20);
         setMinWidth(0);
-        setPrefWidth(560);
-        setMaxWidth(560);
         getStyleClass().add("app-settings-content");
         getChildren().addAll(sourceGroup, concurrencyGroup);
     }

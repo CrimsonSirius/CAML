@@ -1,7 +1,6 @@
 package org.chs.camlauncher.front.view;
 
 import javafx.animation.PauseTransition;
-import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.Label;
@@ -64,8 +63,6 @@ final class DownloadVersionSetupView extends VBox implements PageLifecycle {
         this.launchSettings = launchSettings;
         this.onStartDownload = onStartDownload;
         getStyleClass().add("app-download-setup-page");
-        setPadding(new Insets(32, 40, 32, 40));
-        setSpacing(12);
         setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
 
         CamlButton cancel = CamlButton.outlined(UiText.tr("common.cancel"));
@@ -80,9 +77,11 @@ final class DownloadVersionSetupView extends VBox implements PageLifecycle {
         instanceNameHint.setWrapText(true);
         instanceNameHint.setVisible(false);
         instanceNameHint.setManaged(false);
-        VBox nameInput = new VBox(6, instanceNameField, instanceNameHint);
+        VBox nameInput = new VBox(instanceNameField, instanceNameHint);
+        nameInput.getStyleClass().add("app-download-setup-name");
         HBox.setHgrow(nameInput, Priority.ALWAYS);
-        HBox nameRow = new HBox(12, cancel, nameLabel, nameInput);
+        HBox nameRow = new HBox(cancel, nameLabel, nameInput);
+        nameRow.getStyleClass().add("app-download-setup-name-row");
         nameRow.setAlignment(Pos.TOP_LEFT);
 
         gameVersion = version.id();
@@ -97,7 +96,7 @@ final class DownloadVersionSetupView extends VBox implements PageLifecycle {
                 : UiText.tr("download.setup.versionInfoWithDate",
                         version.id(), VersionCategory.labelOfType(version.type()), date);
 
-        VBox options = new VBox(12,
+        VBox options = new VBox(
                 optionBar(UiText.tr("download.setup.option.versionInfo"), valueLabel(versionInfo)),
                 optionBar(UiText.tr("download.setup.option.forge"), forgeSelector),
                 optionBar(UiText.tr("download.setup.option.optifine"), optiFineSelector),
@@ -105,6 +104,7 @@ final class DownloadVersionSetupView extends VBox implements PageLifecycle {
                 optionBar(UiText.tr("download.setup.option.fabricApi"), fabricApiSelector),
                 optionBar(UiText.tr("download.setup.option.neoforge"), neoForgeSelector)
         );
+        options.getStyleClass().add("app-download-setup-options");
 
         Region spacer = new Region();
         VBox.setVgrow(spacer, Priority.ALWAYS);
@@ -136,8 +136,6 @@ final class DownloadVersionSetupView extends VBox implements PageLifecycle {
     }
 
     private void configureFabricSelectors() {
-        fabricLoaderSelector.setPrefWidth(280);
-        fabricLoaderSelector.setMaxWidth(280);
         fabricLoaderSelector.setPromptText(UiText.tr("download.prompt.loading.fabric"));
         fabricLoaderSelector.setConverter(new StringConverter<>() {
             @Override
@@ -164,8 +162,6 @@ final class DownloadVersionSetupView extends VBox implements PageLifecycle {
             autoUpdateInstanceName("fabric-loader-" + loader.version() + "-" + gameVersion);
         });
 
-        fabricApiSelector.setPrefWidth(280);
-        fabricApiSelector.setMaxWidth(280);
         fabricApiSelector.setPromptText(UiText.tr("download.prompt.fabricFirst"));
         fabricApiSelector.setDisable(true);
         fabricApiSelector.setConverter(new StringConverter<>() {
@@ -182,8 +178,6 @@ final class DownloadVersionSetupView extends VBox implements PageLifecycle {
     }
 
     private void configureForgeSelector(VersionManifest.Version version) {
-        forgeSelector.setPrefWidth(280);
-        forgeSelector.setMaxWidth(280);
         forgeSelector.setPromptText(UiText.tr("download.prompt.loading.forge"));
         forgeSelector.setConverter(new StringConverter<>() {
             @Override
@@ -222,8 +216,6 @@ final class DownloadVersionSetupView extends VBox implements PageLifecycle {
     }
 
     private void configureOptiFineSelector() {
-        optiFineSelector.setPrefWidth(280);
-        optiFineSelector.setMaxWidth(280);
         optiFineSelector.setPromptText(UiText.tr("download.prompt.forgeFirst"));
         optiFineSelector.setDisable(true);
         optiFineSelector.setConverter(new StringConverter<>() {
@@ -267,8 +259,6 @@ final class DownloadVersionSetupView extends VBox implements PageLifecycle {
     }
 
     private void configureNeoForgeSelector(VersionManifest.Version version) {
-        neoForgeSelector.setPrefWidth(280);
-        neoForgeSelector.setMaxWidth(280);
         neoForgeSelector.setPromptText(UiText.tr("download.prompt.loading.neoforge"));
         neoForgeSelector.setConverter(new StringConverter<>() {
             @Override
@@ -616,7 +606,8 @@ final class DownloadVersionSetupView extends VBox implements PageLifecycle {
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
 
-        HBox bar = new HBox(16, titleLabel, spacer, control);
+        HBox bar = new HBox(titleLabel, spacer, control);
+
         bar.setAlignment(Pos.CENTER_LEFT);
         bar.setMaxWidth(Double.MAX_VALUE);
         bar.getStyleClass().add("app-download-option-bar");

@@ -1,28 +1,26 @@
 package org.chs.camlauncher.front.view;
 
+import org.chs.camlauncher.front.UiScale;
+
 /**
  * 模组下载页的布局规则。
  *
- * <p>尺寸来自 {@code design/ui.md} 的 1920×1080 设计基准：下载页左侧导航约占窗口宽度的
- * {@code 1/6}（限制在 {@code 180–260}），内容区左右留白 {@code 40}、上下 {@code 32}；
- * 搜索卡内边距 {@code 24}、内部间距 {@code 18}；结果行图标 {@code 88}、行高 {@code 112}，
- * 来源标签贴在行尾。</p>
+ * <p>所有常量都是设计稿像素（{@code 1440×900} 窗口下的取值），实际使用前统一乘以
+ * {@link UiScale} 给出的缩放因子，因此大屏和小屏上的模组页与设计稿保持同一套比例：
+ * 下载页左侧导航约占窗口宽度的 {@code 1/6}（限制在 {@code 180–260} 设计像素），
+ * 内容区左右留白 {@code 40}、上下 {@code 32}；搜索卡内边距 {@code 24}、内部间距 {@code 18}；
+ * 结果行图标 {@code 88}、行高 {@code 112}，来源标签贴在行尾。</p>
  *
- * <p>遵循 {@code design/ui.md} 的既有约定——缩放窗口时只切换布局方向，不改变控件尺寸、
- * 间距和字号——搜索表单在三种方向之间切换：页面宽度 {@code >= 660} 使用“标签在左”的
- * 两行两列，{@code >= 520} 使用“标签在上”的两行两列，更窄时改为单列纵向堆叠。</p>
+ * <p>搜索表单按缩放后的内容宽度在三种方向之间切换：{@code >= 660} 使用“标签在左”的
+ * 两行两列，{@code >= 520} 使用“标签在上”的两行两列，更窄时改为单列纵向堆叠。
+ * 断点同样乘以缩放因子——字号放大后字段需要更多空间，缩小后则更早进入两列布局。</p>
  *
  * <p>页面高度不足以同时容纳搜索卡、状态、结果和分页时，由整页纵向滚动接管；
- * 结果行因此不会被裁切，也不需要压缩行高和字号。该类只做纯计算，不依赖 JavaFX，
- * 便于单元测试。</p>
+ * 结果行因此不会被裁切。该类只做纯计算，不依赖 JavaFX，便于单元测试。</p>
  */
 final class ModDownloadLayout {
 
-    /** 1080p 设计基准，所有尺寸都以该分辨率推导。 */
-    static final double DESIGN_WIDTH = 1920;
-    static final double DESIGN_HEIGHT = 1080;
-
-    /** 搜索表单方向切换点，单位为页面内容宽度（已扣除左侧导航）。 */
+    /** 搜索表单方向切换点，单位为缩放后的页面内容宽度（已扣除左侧导航）。 */
     static final double INLINE_FORM_MIN_WIDTH = 660;
     static final double STACKED_FORM_MIN_WIDTH = 520;
 
@@ -37,8 +35,8 @@ final class ModDownloadLayout {
     /**
      * 搜索卡与详情卡的内边距。
      *
-     * <p>与 {@code app.css} 的 {@code .app-download-card} 保持一致：CSS 的
-     * {@code -fx-padding} 会覆盖代码设置，因此这里必须是同一个值。</p>
+     * <p>模组页的卡片不写 {@code -fx-padding}：几何由本类按缩放因子给出，
+     * 避免 CSS 与代码争抢同一属性。</p>
      */
     static final double CARD_PADDING = 24;
     static final double CARD_SPACING = 18;
@@ -80,83 +78,100 @@ final class ModDownloadLayout {
         STACKED
     }
 
-    /** 首帧宽度尚未确定时使用的方向。 */
-    static final Plan WIDE = create(FormMode.INLINE);
+    /**
+     * 首帧宽度和缩放因子尚未确定时使用的方向。
+     *
+     * <p>取设计基准因子，并假设内容宽度足够放两行两列，因此与宽屏结果一致，
+     * 不会在首帧与真实布局之间重建两次表单。</p>
+     */
+    static final Plan WIDE = create(FormMode.INLINE, UiScale.DEFAULT_FACTOR);
 
     private ModDownloadLayout() {
     }
 
     /**
-     * 该内容宽度下使用的搜索表单方向。
+     * 该内容宽度与缩放因子下使用的搜索表单方向。
      *
      * <p>阈值按控件可用宽度推导：{@code INLINE} 需要标签列 {@code 64}、列间距 {@code 16}
-     * 之后下拉框仍能显示“全部来源”之类的短文案，因此要求页面宽度不低于 {@code 660}
-     * （此时 2:1 权重下下拉框约 {@code 112–122}）；低于 {@code 520} 时两列会挤压标签，
-     * 改为单列堆叠。</p>
+     * 之后下拉框仍能显示“全部来源”之类的短文案，因此要求宽度不低于 {@code 660}；
+     * 低于 {@code 520} 时两列会挤压标签，改为单列堆叠。两个阈值都乘以缩放因子，
+     * 因为缩放同时作用于字号和控件尺寸。</p>
      *
-     * @param width 页面内容宽度（已扣除左侧导航）
-     * @throws IllegalArgumentException 宽度不是正数
+     * @param width  页面内容宽度（已扣除左侧导航）
+     * @param factor UI 缩放因子
+     * @throws IllegalArgumentException 宽度或因子不是正数
      */
-    static FormMode formMode(double width) {
-        if (width <= 0) {
-            throw new IllegalArgumentException("内容宽度必须为正数");
+    static FormMode formMode(double width, double factor) {
+        if (width <= 0 || factor <= 0) {
+            throw new IllegalArgumentException("内容宽度和缩放因子必须为正数");
         }
-        if (width >= INLINE_FORM_MIN_WIDTH) {
+        if (width >= UiScale.size(INLINE_FORM_MIN_WIDTH, factor)) {
             return FormMode.INLINE;
         }
-        return width >= STACKED_FORM_MIN_WIDTH ? FormMode.GRID : FormMode.STACKED;
+        return width >= UiScale.size(STACKED_FORM_MIN_WIDTH, factor)
+                ? FormMode.GRID
+                : FormMode.STACKED;
     }
 
     /**
-     * 计算某一内容宽度下的模组页布局。
+     * 计算某一内容宽度与缩放因子下的模组页布局。
      *
-     * @param width 页面内容宽度（已扣除左侧导航）
-     * @throws IllegalArgumentException 宽度不是正数
+     * @param width  页面内容宽度（已扣除左侧导航）
+     * @param factor UI 缩放因子
+     * @throws IllegalArgumentException 宽度或因子不是正数
      */
-    static Plan plan(double width) {
-        return create(formMode(width));
+    static Plan plan(double width, double factor) {
+        return create(formMode(width, factor), factor);
     }
 
     /**
      * 计算下载页侧边栏宽度。
      *
+     * <p>比例取窗口宽度的 {@code 1/6}，上下限同样随缩放因子移动，
+     * 避免小屏上侧边栏占比过大、大屏上占比过小。</p>
+     *
      * @param windowWidth 窗口宽度
-     * @throws IllegalArgumentException 宽度不是正数
+     * @param factor      UI 缩放因子
+     * @throws IllegalArgumentException 宽度或因子不是正数
      */
-    static double sidebarWidth(double windowWidth) {
-        if (windowWidth <= 0) {
-            throw new IllegalArgumentException("窗口宽度必须为正数");
+    static double sidebarWidth(double windowWidth, double factor) {
+        if (windowWidth <= 0 || factor <= 0) {
+            throw new IllegalArgumentException("窗口宽度和缩放因子必须为正数");
         }
-        return Math.clamp(windowWidth * SIDEBAR_RATIO, SIDEBAR_MIN_WIDTH, SIDEBAR_MAX_WIDTH);
+        return Math.clamp(windowWidth * SIDEBAR_RATIO,
+                UiScale.size(SIDEBAR_MIN_WIDTH, factor),
+                UiScale.size(SIDEBAR_MAX_WIDTH, factor));
     }
 
-    private static Plan create(FormMode mode) {
+    private static Plan create(FormMode mode, double factor) {
         return new Plan(
                 mode,
-                CONTENT_PADDING_HORIZONTAL,
-                CONTENT_PADDING_VERTICAL,
-                CARD_PADDING,
-                CARD_SPACING,
-                SECTION_SPACING,
-                FORM_GAP,
-                FIELD_LABEL_WIDTH,
+                factor,
+                UiScale.size(CONTENT_PADDING_HORIZONTAL, factor),
+                UiScale.size(CONTENT_PADDING_VERTICAL, factor),
+                UiScale.size(CARD_PADDING, factor),
+                UiScale.size(CARD_SPACING, factor),
+                UiScale.size(SECTION_SPACING, factor),
+                UiScale.size(FORM_GAP, factor),
+                UiScale.size(FIELD_LABEL_WIDTH, factor),
                 PRIMARY_FIELD_WEIGHT,
                 SECONDARY_FIELD_WEIGHT,
-                ICON_SIZE,
-                ROW_MIN_HEIGHT,
-                ROW_PADDING_VERTICAL,
-                ROW_PADDING_LEFT,
-                ROW_PADDING_RIGHT,
-                ACCENT_WIDTH,
-                LIST_SPACING,
-                PAGINATION_SPACING,
-                PAGINATION_BUTTON_WIDTH);
+                UiScale.size(ICON_SIZE, factor),
+                UiScale.size(ROW_MIN_HEIGHT, factor),
+                UiScale.size(ROW_PADDING_VERTICAL, factor),
+                UiScale.size(ROW_PADDING_LEFT, factor),
+                UiScale.size(ROW_PADDING_RIGHT, factor),
+                UiScale.size(ACCENT_WIDTH, factor),
+                UiScale.size(LIST_SPACING, factor),
+                UiScale.size(PAGINATION_SPACING, factor),
+                UiScale.size(PAGINATION_BUTTON_WIDTH, factor));
     }
 
     /**
      * 模组下载页布局参数。
      *
      * @param mode                     搜索表单方向
+     * @param factor                   UI 缩放因子
      * @param contentPaddingHorizontal 内容区左右留白
      * @param contentPaddingVertical   内容区上下留白
      * @param cardPadding              搜索卡与详情卡内边距
@@ -178,6 +193,7 @@ final class ModDownloadLayout {
      */
     record Plan(
             FormMode mode,
+            double factor,
             double contentPaddingHorizontal,
             double contentPaddingVertical,
             double cardPadding,

@@ -9,6 +9,7 @@ import org.chs.camlauncher.language.contract.LanguageSelectionMode;
 import org.chs.camlauncher.language.contract.LanguageFallbackMode;
 import org.chs.camlauncher.backend.system.SystemMemoryInfo;
 import org.chs.camlauncher.backend.theme.ThemeInfo;
+import org.chs.camlauncher.front.UiScale;
 import org.chs.camlauncher.front.controller.DownloadsController;
 import org.chs.camlauncher.front.controller.HomeController;
 import org.chs.camlauncher.front.controller.MainController;
@@ -48,6 +49,7 @@ public final class MainView extends BorderPane {
     private String language;
     private LanguageFallbackMode languageFallbackMode;
     private String languageFallbackLocale;
+    private double appliedFontPx = -1;
 
     public MainView(MainController controller, int initialMaxMemoryMb,
                     SystemMemoryInfo systemMemory, Path initialGameDirectory,
@@ -132,6 +134,10 @@ public final class MainView extends BorderPane {
         setTop(buildTopBar());
         setCenter(pageHost);
         setBottom(buildFooter());
+
+        // 根节点字号决定整个界面的缩放：CSS 中的 em 全部按根字号换算，
+        // 需要代码计算的几何（模组页、工作区分栏）读取同一个 UiScale 因子。
+        ViewSupport.onLayoutMetricsChanged(this, this::updateUiScale);
     }
 
     /** 使用当前共享状态重建视图，用于语言切换后立即刷新全部文案。 */
@@ -221,4 +227,24 @@ public final class MainView extends BorderPane {
         downloadsView.dispose();
         settingsView.dispose();
     }
+
+    /**
+     * 按窗口尺寸更新根字号。
+     *
+     * <p>只在字号真正变化时写入内联样式，避免每次窗口拖动都触发整棵场景的 CSS 重算。</p>
+     */
+    private void updateUiScale() {
+        double width = getWidth();
+        double height = getHeight();
+        if (width <= 0 || height <= 0) {
+            return;
+        }
+        double fontPx = UiScale.baseFontPx(UiScale.factor(width, height));
+        if (fontPx == appliedFontPx) {
+            return;
+        }
+        appliedFontPx = fontPx;
+        setStyle("-fx-font-size: " + (int) fontPx + "px;");
+    }
+
 }

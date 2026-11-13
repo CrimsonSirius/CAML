@@ -18,8 +18,13 @@ class WindowSizePlannerTest {
         assertTrue(window.height() <= 728, "高度不能超过屏幕");
         assertTrue(window.width() >= metrics.minWidth(), "预设宽度不能小于最小宽度");
         assertTrue(window.height() >= metrics.minHeight(), "预设高度不能小于最小高度");
+        assertTrue(metrics.minWidth() <= 1366, "最小宽度必须放得进屏幕");
         assertTrue(metrics.minHeight() <= 728, "最小高度必须放得进屏幕");
-        assertTrue(metrics.minHeight() < WindowSizePlanner.DESIGN_MIN_HEIGHT, "小屏上最小高度应随屏幕收缩");
+        assertTrue(metrics.minHeight() <= WindowSizePlanner.DESIGN_MIN_HEIGHT,
+                "屏幕比设计基准更矮时，最小高度应随屏幕收缩");
+        // 小屏窗口必须落在缩放因子覆盖的区间内，界面才能按比例完整显示。
+        assertTrue(UiScale.factor(window.width(), window.height()) >= UiScale.MIN_FACTOR,
+                "小屏窗口的缩放因子不应低于下限");
     }
 
     @Test
@@ -29,8 +34,11 @@ class WindowSizePlannerTest {
 
         assertTrue(window.width() >= 1100 && window.width() <= 1440, "初始宽度应在舒适区间内");
         assertTrue(window.height() >= 720 && window.height() <= 960, "初始高度应在舒适区间内");
-        assertEquals(720, metrics.minWidth());
-        assertEquals(700, metrics.minHeight());
+        // 全高清屏幕上窗口能容纳设计基准，因此最小尺寸就是设计基准缩小到因子下限的结果。
+        assertEquals(Math.floor(UiScale.DESIGN_WIDTH * UiScale.MIN_FACTOR), metrics.minWidth());
+        assertEquals(Math.floor(UiScale.DESIGN_HEIGHT * UiScale.MIN_FACTOR), metrics.minHeight());
+        assertEquals(1, UiScale.factor(window.width(), window.height()), 0.2,
+                "全高清屏幕上的初始窗口应接近设计基准的缩放因子 1");
     }
 
     @Test
@@ -40,6 +48,8 @@ class WindowSizePlannerTest {
 
         assertEquals(WindowSizePlanner.MAX_WIDTH, window.width());
         assertEquals(WindowSizePlanner.MAX_HEIGHT, window.height());
+        assertEquals(UiScale.MAX_FACTOR, UiScale.factor(window.width(), window.height()),
+                "上限窗口应对应最大缩放因子");
     }
 
     @Test

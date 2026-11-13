@@ -71,7 +71,8 @@ final class ModDetailView extends VBox implements PageLifecycle {
         Label source = new Label(ModViewSupport.sourceLabel(summary.source()));
         source.getStyleClass().add("app-mod-source");
         source.setMinWidth(Region.USE_PREF_SIZE);
-        HBox titleRow = new HBox(12, back, titleLabel, source);
+        HBox titleRow = new HBox(back, titleLabel, source);
+        titleRow.getStyleClass().add("app-mod-title-row");
         titleRow.setAlignment(Pos.CENTER_LEFT);
         HBox.setHgrow(titleLabel, Priority.ALWAYS);
 
@@ -103,30 +104,26 @@ final class ModDetailView extends VBox implements PageLifecycle {
 
         getChildren().addAll(headerCard, filterHost, statusLabel, scroll);
 
-        // 首帧宽度尚未确定，先按 1080p 宽屏规则摆放；宽度可用后按断点校正。
+        // 首帧宽度与缩放尚未确定，先按宽屏规则摆放；尺寸可用后按断点与缩放校正。
         applyPlan(ModDownloadLayout.WIDE);
-        widthProperty().addListener((observable, oldValue, newValue) ->
-                updateLayout(newValue.doubleValue()));
-        sceneProperty().addListener((observable, oldValue, newValue) -> {
-            if (newValue != null) {
-                updateLayout(getWidth());
-            }
-        });
+        ViewSupport.onLayoutMetricsChanged(this, this::updateLayout);
 
         loadProject();
     }
 
-    private void updateLayout(double width) {
+    private void updateLayout() {
+        double width = getWidth();
         if (width <= 0) {
             return;
         }
-        applyPlan(ModDownloadLayout.plan(width));
+        applyPlan(ModDownloadLayout.plan(width, ViewSupport.uiFactor(this)));
     }
 
     private void applyPlan(ModDownloadLayout.Plan plan) {
         if (plan.equals(appliedPlan)) {
             return;
         }
+        boolean scaleChanged = appliedPlan != null && appliedPlan.factor() != plan.factor();
         appliedPlan = plan;
 
         setPadding(new Insets(plan.contentPaddingVertical(), plan.contentPaddingHorizontal(),
@@ -137,6 +134,11 @@ final class ModDetailView extends VBox implements PageLifecycle {
         filterHost.setSpacing(plan.formGap());
         filterHost.getChildren().setAll(buildFilterLayout(plan));
         groupsBox.setSpacing(plan.listSpacing());
+
+        if (scaleChanged) {
+            // 版本组标题的图标、箭头间距和下载按钮宽度在创建时就写进了节点，需要一并重建。
+            rebuildGroups();
+        }
     }
 
     private Pane buildFilterLayout(ModDownloadLayout.Plan plan) {
@@ -240,17 +242,21 @@ final class ModDetailView extends VBox implements PageLifecycle {
         HBox.setHgrow(spacer, Priority.ALWAYS);
         Label arrow = new Label("▶");
         arrow.getStyleClass().add("app-mod-group-arrow");
-        HBox headerGraphic = new HBox(12, titleLabel, spacer, arrow);
+        HBox headerGraphic = new HBox(titleLabel, spacer, arrow);
+        headerGraphic.getStyleClass().add("app-mod-group-header-content");
         headerGraphic.setAlignment(Pos.CENTER_LEFT);
 
         CamlButton header = CamlButton.outlined("");
         header.getStyleClass().add("app-mod-group-header");
         header.setMaxWidth(Double.MAX_VALUE);
         header.setContentDisplay(javafx.scene.control.ContentDisplay.GRAPHIC_ONLY);
-        headerGraphic.prefWidthProperty().bind(
-                Bindings.max(0, header.widthProperty().subtract(52)));
+        // 图形宽度 = 按钮宽度 - 按钮左右内边距；内边距来自 CSS 的 em，缩放后自动跟上。
+        headerGraphic.prefWidthProperty().bind(Bindings.createDoubleBinding(() -> {
+            Insets padding = header.getPadding();
+            return Math.max(0, header.getWidth() - padding.getLeft() - padding.getRight());
+        }, header.widthProperty(), header.paddingProperty()));
 
-        VBox content = new VBox(10);
+        VBox content = new VBox();
         content.getStyleClass().add("app-mod-group-content");
         content.setVisible(false);
         content.setManaged(false);
@@ -292,7 +298,8 @@ final class ModDetailView extends VBox implements PageLifecycle {
         Label dependencies = new Label(dependencyText(file.dependencies()));
         dependencies.getStyleClass().add("app-mod-dependency");
         dependencies.setWrapText(true);
-        HBox top = new HBox(12, title, meta);
+        HBox top = new HBox(title, meta);
+        top.getStyleClass().add("app-mod-version-top");
         top.setAlignment(Pos.CENTER_LEFT);
         HBox.setHgrow(title, Priority.ALWAYS);
 
@@ -300,11 +307,12 @@ final class ModDetailView extends VBox implements PageLifecycle {
         download.setMinWidth(plan().paginationButtonWidth());
         download.setDisable(file.downloadUri() == null);
         download.setOnAction(event -> startDownload(file, download));
-        HBox actions = new HBox(12, dependencies, download);
+        HBox actions = new HBox(dependencies, download);
+        actions.getStyleClass().add("app-mod-version-actions");
         actions.setAlignment(Pos.CENTER_LEFT);
         HBox.setHgrow(dependencies, Priority.ALWAYS);
 
-        VBox row = new VBox(8, top, actions);
+        VBox row = new VBox(top, actions);
         row.getStyleClass().add("app-mod-version-row");
         return row;
     }

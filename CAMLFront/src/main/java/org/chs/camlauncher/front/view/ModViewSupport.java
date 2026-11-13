@@ -75,7 +75,7 @@ final class ModViewSupport {
         label.setAlignment(Pos.CENTER_LEFT);
         control.setMaxWidth(Double.MAX_VALUE);
 
-        HBox field = new HBox(12, label, control);
+        HBox field = new HBox(label, control);
         field.getStyleClass().add("app-mod-field");
         field.setAlignment(Pos.CENTER_LEFT);
         field.setMaxWidth(Double.MAX_VALUE);
@@ -122,7 +122,8 @@ final class ModViewSupport {
      */
     static StackPane resultRow(ModDownloadLayout.Plan plan, Region icon, Node text,
                                String accessibleText, Runnable onActivate) {
-        HBox content = new HBox(14, icon, text);
+        HBox content = new HBox(icon, text);
+        content.getStyleClass().add("app-mod-row-content");
         content.setAlignment(Pos.CENTER_LEFT);
         content.setMinWidth(0);
         content.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);

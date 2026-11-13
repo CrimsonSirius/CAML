@@ -2,7 +2,6 @@ package org.chs.camlauncher.front.view;
 
 import javafx.beans.binding.Bindings;
 import javafx.geometry.Insets;
-import javafx.geometry.Pos;
 import javafx.scene.control.ContentDisplay;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
@@ -32,9 +31,7 @@ final class DownloadVersionsView extends VBox implements PageLifecycle {
         this.category = category;
         statusLabel = new Label(UiText.tr("download.versions.loading",
                 controller.downloadSourceLabel(), category.label()));
-        getStyleClass().add("app-download-content");
-        setPadding(new Insets(32, 40, 32, 40));
-        setSpacing(16);
+        getStyleClass().addAll("app-download-content", "app-download-list-page");
         setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
 
         statusLabel.getStyleClass().addAll("caml-body-small", "field-hint");
@@ -66,8 +63,8 @@ final class DownloadVersionsView extends VBox implements PageLifecycle {
             return;
         }
 
-        VBox list = new VBox(8);
-        list.setPadding(new Insets(4, 0, 4, 0));
+        VBox list = new VBox();
+        list.getStyleClass().add("app-version-list");
         for (VersionManifest.Version version : versions) {
             String date = ViewSupport.releaseDate(version.releaseTime());
             CamlButton item = CamlButton.outlined("");
@@ -78,13 +75,15 @@ final class DownloadVersionsView extends VBox implements PageLifecycle {
             idLabel.getStyleClass().add("app-download-version-id");
             Label dateLabel = new Label(date);
             dateLabel.getStyleClass().add("app-download-version-date");
-            dateLabel.setMinWidth(96);
-            dateLabel.setAlignment(Pos.CENTER_RIGHT);
 
             BorderPane row = new BorderPane();
             row.setLeft(idLabel);
             row.setRight(dateLabel);
-            row.prefWidthProperty().bind(Bindings.max(0, item.widthProperty().subtract(48)));
+            // 行宽 = 按钮宽度 - 按钮的左右内边距；内边距来自 CSS 的 em，缩放后自动跟上。
+            row.prefWidthProperty().bind(Bindings.createDoubleBinding(() -> {
+                Insets padding = item.getPadding();
+                return Math.max(0, item.getWidth() - padding.getLeft() - padding.getRight());
+            }, item.widthProperty(), item.paddingProperty()));
             item.setGraphic(row);
             item.setContentDisplay(ContentDisplay.GRAPHIC_ONLY);
             item.setAccessibleText(date.isBlank()

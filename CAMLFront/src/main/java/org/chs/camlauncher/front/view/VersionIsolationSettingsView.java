@@ -38,10 +38,9 @@ final class VersionIsolationSettingsView extends VBox {
             }
         });
 
-        VBox options = new VBox(12, fullyIsolated, notIsolated);
+        VBox options = new VBox(fullyIsolated, notIsolated);
+        options.getStyleClass().add("app-settings-options");
 
-        setSpacing(16);
-        setPadding(new javafx.geometry.Insets(24));
         setMaxWidth(Double.MAX_VALUE);
         getStyleClass().add("app-settings-group");
         getChildren().addAll(heading, options);

@@ -1,7 +1,6 @@
 package org.chs.camlauncher.front.view;
 
 import javafx.animation.FadeTransition;
-import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.Label;
@@ -82,18 +81,17 @@ final class SettingsView extends VBox implements SidebarPage, PageLifecycle {
         currentContent = gameSettings;
 
         contentHost = new StackPane(contentScroll);
+        contentHost.getStyleClass().add("app-settings-content-host");
         contentHost.setAlignment(Pos.TOP_LEFT);
         contentHost.setMaxHeight(Double.MAX_VALUE);
-        contentHost.setPadding(new Insets(32, 40, 32, 40));
         HBox.setHgrow(contentHost, Priority.ALWAYS);
+        // 内容列宽度跟随滚动视口，上限由 app.css 的 .app-settings-content（em）限制；
+        // 这里只给首选宽度，最大值交给 CSS，避免代码与样式争抢同一属性。
         contentScroll.viewportBoundsProperty().addListener((observable, oldValue, newValue) -> {
             double innerWidth = Math.max(0, newValue.getWidth());
             gameSettings.setPrefWidth(innerWidth);
-            gameSettings.setMaxWidth(innerWidth);
             downloadSettings.setPrefWidth(innerWidth);
-            downloadSettings.setMaxWidth(innerWidth);
             launcherSettings.setPrefWidth(innerWidth);
-            launcherSettings.setMaxWidth(innerWidth);
         });
         sideNav.selectedItemProperty().addListener((observable, oldValue, selected) -> {
             if (selected == launcherItem) {
@@ -105,13 +103,10 @@ final class SettingsView extends VBox implements SidebarPage, PageLifecycle {
             }
         });
 
-        HBox body = new HBox(24, sideNav, contentHost);
-        body.setAlignment(Pos.TOP_LEFT);
-        body.setMaxHeight(Double.MAX_VALUE);
+        HBox body = new HBox(sideNav, contentHost);
         body.getStyleClass().add("app-settings-body");
-        VBox.setVgrow(body, Priority.ALWAYS);
+        body.setAlignment(Pos.TOP_LEFT);
 
-        setPadding(Insets.EMPTY);
         setAlignment(Pos.TOP_LEFT);
         setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
         getStyleClass().add("app-settings-page");

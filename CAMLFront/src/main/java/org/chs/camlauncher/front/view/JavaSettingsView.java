@@ -1,6 +1,5 @@
 package org.chs.camlauncher.front.view;
 
-import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.Label;
 import javafx.scene.control.ToggleGroup;
@@ -50,14 +49,16 @@ final class JavaSettingsView extends VBox {
         manual.setToggleGroup(modeGroup);
         automatic.setSelected(launchSettings.javaSelectionMode() != JavaSelectionMode.MANUAL);
         manual.setSelected(launchSettings.javaSelectionMode() == JavaSelectionMode.MANUAL);
-        HBox modeRow = new HBox(18, automatic, manual);
+        HBox modeRow = new HBox(automatic, manual);
+        modeRow.getStyleClass().add("app-settings-row");
         modeRow.setAlignment(Pos.CENTER_LEFT);
 
         rescanButton.getStyleClass().add("app-java-tool-button");
         addButton.getStyleClass().add("app-java-tool-button");
         rescanButton.setOnAction(event -> scanJava());
         addButton.setOnAction(event -> chooseJavaFile());
-        HBox tools = new HBox(10, rescanButton, addButton);
+        HBox tools = new HBox(rescanButton, addButton);
+        tools.getStyleClass().add("app-settings-inline");
         tools.setAlignment(Pos.CENTER_LEFT);
 
         javaBox.setMaxWidth(Double.MAX_VALUE);
@@ -94,7 +95,8 @@ final class JavaSettingsView extends VBox {
         detailLabel.getStyleClass().addAll("caml-body-small", "field-hint");
         detailLabel.setWrapText(true);
 
-        VBox manualBlock = new VBox(8, tools, javaBox, detailLabel);
+        VBox manualBlock = new VBox(tools, javaBox, detailLabel);
+        manualBlock.getStyleClass().add("app-settings-sublock");
         manualBlock.setMaxWidth(Double.MAX_VALUE);
 
         modeGroup.selectedToggleProperty().addListener((observable, oldValue, selected) -> {
@@ -104,8 +106,6 @@ final class JavaSettingsView extends VBox {
             applyMode(selected == manual, true);
         });
 
-        setSpacing(16);
-        setPadding(new Insets(24));
         setMaxWidth(Double.MAX_VALUE);
         getStyleClass().add("app-settings-group");
         getChildren().addAll(heading, description, modeRow, manualBlock);
