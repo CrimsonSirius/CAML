@@ -63,10 +63,12 @@ class GameLaunchServiceTest {
                   ]
                 }
                 """.formatted(baseUrl);
+        // 假客户端用 Java 25 编译，必须显式要求 Java 25，避免 CI 上选中旧 JDK。
         String versionJson = """
                 {
                   "id": "test-version",
                   "type": "release",
+                  "javaVersion": {"component": "jdk", "majorVersion": 25},
                   "mainClass": "org.chs.camlauncher.backend.launch.FakeGameMain",
                   "downloads": {
                     "client": {

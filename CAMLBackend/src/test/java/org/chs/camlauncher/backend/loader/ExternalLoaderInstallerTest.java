@@ -41,11 +41,12 @@ class ExternalLoaderInstallerTest {
     void installsThroughExternalInstallerAndRenamesInstance(String instanceId) throws Exception {
         Path baseDirectory = gameDirectory.resolve("versions/1.20.1");
         Files.createDirectories(baseDirectory);
+        // 假安装器用 Java 25 编译，必须显式要求 Java 25，避免 CI 上选中旧 JDK。
         Files.writeString(baseDirectory.resolve("1.20.1.json"), """
                 {
                   "id": "1.20.1",
                   "mainClass": "base.Main",
-                  "javaVersion": {"component": "test", "majorVersion": 21}
+                  "javaVersion": {"component": "test", "majorVersion": 25}
                 }
                 """, StandardCharsets.UTF_8);
         Files.write(baseDirectory.resolve("1.20.1.jar"), new byte[]{1});
@@ -141,11 +142,12 @@ class ExternalLoaderInstallerTest {
     void predownloadsInstallerLibrariesFromConfiguredSources() throws Exception {
         Path baseDirectory = gameDirectory.resolve("versions/1.20.1");
         Files.createDirectories(baseDirectory);
+        // 假安装器用 Java 25 编译，必须显式要求 Java 25，避免 CI 上选中旧 JDK。
         Files.writeString(baseDirectory.resolve("1.20.1.json"), """
                 {
                   "id": "1.20.1",
                   "mainClass": "base.Main",
-                  "javaVersion": {"component": "test", "majorVersion": 21}
+                  "javaVersion": {"component": "test", "majorVersion": 25}
                 }
                 """, StandardCharsets.UTF_8);
         Files.write(baseDirectory.resolve("1.20.1.jar"), new byte[]{1});

@@ -24,6 +24,14 @@ jobs:
         env:
           CURSEFORGE_API_KEY: ${{ secrets.CURSEFORGE_API_KEY }}
         run: ./gradlew :CAMLBackend:test :CAMLFront:assemble --no-daemon --stacktrace
+      - name: Upload test reports
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports
+          path: |
+            CAMLBackend/build/reports/tests/test
+            CAMLBackend/build/test-results/test
       - uses: actions/upload-artifact@v4
         with:
           name: CAMLFront
