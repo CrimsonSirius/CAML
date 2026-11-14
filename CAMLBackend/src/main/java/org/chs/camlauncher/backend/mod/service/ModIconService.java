@@ -4,6 +4,10 @@ import org.chs.camlauncher.backend.download.hash.HashVerifier;
 import org.chs.camlauncher.backend.error.BackendError;
 import org.chs.camlauncher.backend.error.BackendException;
 
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -58,7 +62,13 @@ public final class ModIconService {
         Path cached = cacheDirectory.resolve(key + ".img");
         if (Files.isRegularFile(cached)) {
             if (Files.size(cached) > 0) {
-                return Files.readAllBytes(cached);
+                byte[] cachedBytes = Files.readAllBytes(cached);
+                if (isWebp(cachedBytes)) {
+                    byte[] png = toPng(cachedBytes);
+                    writeCache(cached, png);
+                    return png;
+                }
+                return cachedBytes;
             }
             Files.deleteIfExists(cached);
         }
@@ -84,8 +94,29 @@ public final class ModIconService {
             throw new IOException("Incomplete icon response for " + iconUrl
                     + ": expected " + contentLength + " bytes, got " + bytes.length);
         }
-        writeCache(cached, bytes);
-        return bytes;
+        byte[] normalized = isWebp(bytes) ? toPng(bytes) : bytes;
+        writeCache(cached, normalized);
+        return normalized;
+    }
+
+    private static boolean isWebp(byte[] bytes) {
+        return bytes != null
+                && bytes.length >= 12
+                && bytes[0] == 'R' && bytes[1] == 'I' && bytes[2] == 'F' && bytes[3] == 'F'
+                && bytes[8] == 'W' && bytes[9] == 'E' && bytes[10] == 'B' && bytes[11] == 'P';
+    }
+
+    /** Modrinth 图标常为 WebP；JavaFX Image 不支持，统一转成带 alpha 的 PNG。 */
+    private static byte[] toPng(byte[] webp) throws IOException {
+        BufferedImage image = ImageIO.read(new ByteArrayInputStream(webp));
+        if (image == null) {
+            throw new IOException("无法解码 WebP 图标");
+        }
+        ByteArrayOutputStream output = new ByteArrayOutputStream();
+        if (!ImageIO.write(image, "png", output)) {
+            throw new IOException("没有可用的 PNG 编码器");
+        }
+        return output.toByteArray();
     }
 
     private void writeCache(Path cached, byte[] bytes) throws IOException {
