@@ -222,7 +222,7 @@
 
 /* Combo box（不单独设字号，沿用根字号 16px）。 */
 .caml-combo-box {
-    -fx-min-height: 2.5em;
+    -fx-min-height: 2.75em;
     -fx-background-color: -caml-surface-highest;
     -fx-background-radius: 0.25em;
     -fx-border-color: -caml-border-subtle;
@@ -236,10 +236,11 @@
     -fx-border-width: 2;
 }
 
+/* 纵向内边距保持较小，给 CJK 字形底部留出空间；外框高度由 min-height 保证。 */
 .caml-combo-box .list-cell {
     -fx-background-color: transparent;
     -fx-text-fill: -caml-on-surface;
-    -fx-padding: 0.5em 0.75em;
+    -fx-padding: 0.25em 0.75em;
 }
 
 .caml-combo-box .arrow-button {
