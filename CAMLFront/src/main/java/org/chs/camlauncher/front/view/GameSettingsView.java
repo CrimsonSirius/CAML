@@ -115,6 +115,7 @@ final class GameSettingsView extends VBox {
         // 间距、宽度与内边距由 app.css 的 .app-settings-content / .app-settings-group 控制；
         // 内容宽度在 SettingsView 中按滚动视口重新设置。
         setMinWidth(0);
+        setMaxWidth(Double.MAX_VALUE);
         getStyleClass().add("app-settings-content");
         getChildren().addAll(
                 new GameLocationSettingsView(launchSettings, controller),

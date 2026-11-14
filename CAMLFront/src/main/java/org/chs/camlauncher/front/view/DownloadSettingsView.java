@@ -175,6 +175,7 @@ final class DownloadSettingsView extends VBox {
         concurrencyGroup.setMaxWidth(Double.MAX_VALUE);
 
         setMinWidth(0);
+        setMaxWidth(Double.MAX_VALUE);
         getStyleClass().add("app-settings-content");
         getChildren().addAll(sourceGroup, concurrencyGroup);
     }

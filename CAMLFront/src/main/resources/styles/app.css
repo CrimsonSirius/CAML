@@ -229,8 +229,6 @@
 
 .app-settings-sidebar {
     -fx-padding: 0.75em 0.5em;
-    -fx-min-width: 5.5em;
-    -fx-pref-width: 5.5em;
 }
 
 .app-settings-sidebar .caml-side-nav-item {
@@ -248,7 +246,6 @@
 }
 
 .app-settings-content {
-    -fx-max-width: 35em;
     -fx-min-width: 0;
     -fx-spacing: 1.25em;
 }

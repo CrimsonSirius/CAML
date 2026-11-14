@@ -85,8 +85,7 @@ final class SettingsView extends VBox implements SidebarPage, PageLifecycle {
         contentHost.setAlignment(Pos.TOP_LEFT);
         contentHost.setMaxHeight(Double.MAX_VALUE);
         HBox.setHgrow(contentHost, Priority.ALWAYS);
-        // 内容列宽度跟随滚动视口，上限由 app.css 的 .app-settings-content（em）限制；
-        // 这里只给首选宽度，最大值交给 CSS，避免代码与样式争抢同一属性。
+        // 内容列宽度跟随滚动视口并铺满可用宽度；各设置视图显式允许横向拉伸。
         contentScroll.viewportBoundsProperty().addListener((observable, oldValue, newValue) -> {
             double innerWidth = Math.max(0, newValue.getWidth());
             gameSettings.setPrefWidth(innerWidth);

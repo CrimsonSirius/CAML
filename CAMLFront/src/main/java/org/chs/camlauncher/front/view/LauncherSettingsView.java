@@ -242,6 +242,7 @@ final class LauncherSettingsView extends VBox {
         });
 
         setMinWidth(0);
+        setMaxWidth(Double.MAX_VALUE);
         getStyleClass().add("app-settings-content");
         getChildren().addAll(languageGroupBox, fallbackGroupBox, appearanceGroup);
     }
