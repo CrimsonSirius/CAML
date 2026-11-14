@@ -16,6 +16,7 @@ import javafx.util.Duration;
 import org.chs.camlauncher.backend.download.DownloadListener;
 import org.chs.camlauncher.backend.mod.model.ModDependency;
 import org.chs.camlauncher.backend.mod.model.ModFile;
+import org.chs.camlauncher.backend.mod.model.ModLoader;
 import org.chs.camlauncher.backend.mod.model.ModProjectDetail;
 import org.chs.camlauncher.backend.mod.model.ModProjectSummary;
 import org.chs.camlauncher.front.controller.DownloadsController;
@@ -202,6 +203,7 @@ final class ModDetailView extends VBox implements PageLifecycle {
         }
         String versionFilter = selectedValue(versionBox);
         String loaderFilter = selectedValue(loaderBox);
+        boolean showQuilt = shouldShowQuilt(loaderFilter, files);
         Map<String, List<ModFile>> groups = new LinkedHashMap<>();
         for (ModFile file : files) {
             List<String> versions = file.gameVersions().isEmpty()
@@ -216,6 +218,9 @@ final class ModDetailView extends VBox implements PageLifecycle {
                 }
                 for (String loader : loaders) {
                     if (loaderFilter != null && !loaderFilter.equals(loader)) {
+                        continue;
+                    }
+                    if (ModLoader.QUILT.apiName().equalsIgnoreCase(loader) && !showQuilt) {
                         continue;
                     }
                     String key = ModViewSupport.loaderLabel(loader) + " " + version;
@@ -233,6 +238,29 @@ final class ModDetailView extends VBox implements PageLifecycle {
                 .forEach(entry -> {
                     groupsBox.getChildren().add(groupCard(entry.getKey(), entry.getValue()));
                 });
+    }
+
+    /**
+     * Quilt 版本默认不参与“全部加载器”列表。
+     *
+     * <p>只有用户明确筛选 Quilt，或该 Mod 完全没有任何非 Quilt 版本时，才显示
+     * Quilt 分组。一个文件同时声明 Fabric + Quilt 时仍视为存在非 Quilt 版本。</p>
+     */
+    static boolean shouldShowQuilt(String loaderFilter, List<ModFile> files) {
+        if (ModLoader.QUILT.apiName().equalsIgnoreCase(loaderFilter)) {
+            return true;
+        }
+        for (ModFile file : files) {
+            if (file.loaders().isEmpty()) {
+                return false;
+            }
+            for (String loader : file.loaders()) {
+                if (!ModLoader.QUILT.apiName().equalsIgnoreCase(loader)) {
+                    return false;
+                }
+            }
+        }
+        return true;
     }
 
     private VBox groupCard(String title, List<ModFile> groupFiles) {
