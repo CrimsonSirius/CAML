@@ -246,7 +246,6 @@
 }
 
 .app-settings-content {
-    -fx-max-width: 35em;
     -fx-min-width: 0;
     -fx-spacing: 1.25em;
 }

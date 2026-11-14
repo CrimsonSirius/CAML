@@ -31,10 +31,12 @@ class AppCssScaleTest {
     void typographyAndGeometryScaleWithRootFont() throws Exception {
         Metrics base = onFxThread(() -> measure(UiScale.DEFAULT_FACTOR));
 
-        // 设计基准：1em = 16px，标题 1.875em，分组内边距 1.5em，内容列上限 35em。
+        // 设计基准：1em = 16px，标题 1.875em，分组内边距 1.5em，内容列不再有固定上限。
         assertEquals(30, base.headingFontPx(), 0.5, "标题字号应为 1.875em");
         assertEquals(24, base.groupPadding(), 0.5, "分组内边距应为 1.5em");
-        assertEquals(560, base.contentMaxWidth(), 0.5, "内容列上限应为 35em");
+        assertEquals(Double.MAX_VALUE, base.contentMaxWidth(), 0.0,
+                "设置内容列应允许横向铺满，不能再有 35em 上限");
+        assertEquals(900, base.contentWidth(), 0.5, "设置分组应铺满可用内容宽度");
     }
 
     @Test
@@ -46,8 +48,9 @@ class AppCssScaleTest {
                 "字体应按因子等比放大");
         assertEquals(UiScale.MAX_FACTOR, scaled.groupPadding() / base.groupPadding(), 0.01,
                 "内边距应按因子等比放大");
-        assertEquals(UiScale.MAX_FACTOR, scaled.contentMaxWidth() / base.contentMaxWidth(), 0.01,
-                "最大宽度应按因子等比放大");
+        assertEquals(Double.MAX_VALUE, scaled.contentMaxWidth(), 0.0,
+                "放大后内容列仍应允许铺满可用宽度");
+        assertEquals(900, scaled.contentWidth(), 0.5, "放大后设置分组仍应铺满内容宽度");
         assertEquals(UiScale.MAX_FACTOR, scaled.rowMinHeight() / base.rowMinHeight(), 0.01,
                 "控件最小高度应按因子等比放大");
     }
@@ -59,7 +62,8 @@ class AppCssScaleTest {
 
         assertEquals(UiScale.MIN_FACTOR, scaled.headingFontPx() / base.headingFontPx(), 0.01);
         assertEquals(UiScale.MIN_FACTOR, scaled.groupPadding() / base.groupPadding(), 0.01);
-        assertEquals(UiScale.MIN_FACTOR, scaled.contentMaxWidth() / base.contentMaxWidth(), 0.01);
+        assertEquals(Double.MAX_VALUE, scaled.contentMaxWidth(), 0.0);
+        assertEquals(900, scaled.contentWidth(), 0.5);
         assertEquals(UiScale.MIN_FACTOR, scaled.rowMinHeight() / base.rowMinHeight(), 0.01);
     }
 
@@ -67,6 +71,7 @@ class AppCssScaleTest {
             double headingFontPx,
             double groupPadding,
             double contentMaxWidth,
+            double contentWidth,
             double rowMinHeight) {
     }
 
@@ -97,6 +102,7 @@ class AppCssScaleTest {
                 heading.getFont().getSize(),
                 group.getPadding().getTop(),
                 group.maxWidth(-1),
+                group.getWidth(),
                 buttonLike.minHeight(-1));
     }
 }
