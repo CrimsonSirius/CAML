@@ -49,3 +49,6 @@ HANDOFF.md
 
 ### Mac OS ###
 .DS_Store
+
+### Local run configurations ###
+/.run/runwithkey.run.xml
