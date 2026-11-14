@@ -16,6 +16,7 @@ final class LanguageLocales {
     private static final Set<String> TRADITIONAL_REGIONS = Set.of("TW", "HK", "MO");
     private static final Map<String, String> NATIVE_NAMES = Map.of(
             "zh_cn", "简体中文",
+            "zh_tw", "繁體中文",
             "en_us", "English",
             "fn_cn", "地道中国话"
     );
@@ -56,16 +57,24 @@ final class LanguageLocales {
         return detectSystemLocale(Locale.getDefault());
     }
 
+    /**
+     * 只区分中文系统的简繁：简体中文系统使用 {@code zh_cn}，繁体中文系统（脚本 {@code Hant} 或地区
+     * {@code TW}/{@code HK}/{@code MO}）使用 {@code zh_tw}；其他语言（含英语）一律使用默认语言。
+     */
     static String detectSystemLocale(Locale systemLocale) {
         if (systemLocale == null || !CHINESE_LANGUAGE.equalsIgnoreCase(systemLocale.getLanguage())) {
             return LanguageConstants.DEFAULT_LOCALE;
         }
+        return isTraditionalChinese(systemLocale)
+                ? LanguageConstants.TRADITIONAL_CHINESE_LOCALE
+                : LanguageConstants.SIMPLIFIED_CHINESE_LOCALE;
+    }
+
+    private static boolean isTraditionalChinese(Locale systemLocale) {
         if (TRADITIONAL_SCRIPT.equalsIgnoreCase(systemLocale.getScript())) {
-            return LanguageConstants.DEFAULT_LOCALE;
+            return true;
         }
         String country = systemLocale.getCountry().toUpperCase(Locale.ROOT);
-        return TRADITIONAL_REGIONS.contains(country)
-                ? LanguageConstants.DEFAULT_LOCALE
-                : LanguageConstants.SIMPLIFIED_CHINESE_LOCALE;
+        return TRADITIONAL_REGIONS.contains(country);
     }
 }

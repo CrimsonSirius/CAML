@@ -43,8 +43,11 @@ class LanguageServiceTest {
         assertEquals("Launch game", service.text("home.launch"));
         assertTrue(Files.isRegularFile(dataDirectory.resolve("lang/en_us.json")));
         assertTrue(Files.isRegularFile(dataDirectory.resolve("lang/zh_cn.json")));
+        assertTrue(Files.isRegularFile(dataDirectory.resolve("lang/zh_tw.json")));
         assertTrue(Files.isRegularFile(dataDirectory.resolve("lang/fn_cn.json")));
-        assertEquals(List.of("zh_cn", "en_us", "fn_cn"), service.availableLocales());
+        assertEquals(List.of("zh_cn", "zh_tw", "en_us", "fn_cn"), service.availableLocales());
+        assertEquals("简体中文", service.displayName("zh_cn"));
+        assertEquals("繁體中文", service.displayName("zh_tw"));
     }
 
     @Test
@@ -56,6 +59,17 @@ class LanguageServiceTest {
         assertEquals("zh_cn", snapshot.activeLocale());
         assertEquals("启动游戏", service.text("home.launch"));
         assertEquals("当前实例：1.21.5", service.text("home.instance.current", "1.21.5"));
+    }
+
+    @Test
+    void switchesToTraditionalChinese() throws Exception {
+        LanguageService service = service();
+        service.initialize();
+        LanguageSnapshot snapshot = service.switchLanguage(LanguageSelectionMode.MANUAL, "zh_tw");
+
+        assertEquals("zh_tw", snapshot.activeLocale());
+        assertEquals("啟動遊戲", service.text("home.launch"));
+        assertEquals("目前實例：1.21.5", service.text("home.instance.current", "1.21.5"));
     }
 
     @Test
@@ -223,13 +237,18 @@ class LanguageServiceTest {
     }
 
     @Test
-    void detectsOnlySimplifiedChineseSystemLocale() {
+    void detectsChineseSystemLocalesAndDefaultsOtherwise() {
         assertEquals("zh_cn", LanguageService.detectSystemLocale(Locale.forLanguageTag("zh-CN")));
         assertEquals("zh_cn", LanguageService.detectSystemLocale(Locale.forLanguageTag("zh-SG")));
         assertEquals("zh_cn", LanguageService.detectSystemLocale(Locale.forLanguageTag("zh-Hans")));
+        assertEquals("zh_tw", LanguageService.detectSystemLocale(Locale.forLanguageTag("zh-TW")));
+        assertEquals("zh_tw", LanguageService.detectSystemLocale(Locale.TRADITIONAL_CHINESE));
+        assertEquals("zh_tw", LanguageService.detectSystemLocale(Locale.forLanguageTag("zh-HK")));
+        assertEquals("zh_tw", LanguageService.detectSystemLocale(Locale.forLanguageTag("zh-MO")));
+        assertEquals("zh_tw", LanguageService.detectSystemLocale(Locale.forLanguageTag("zh-Hant")));
         assertEquals("en_us", LanguageService.detectSystemLocale(Locale.US));
-        assertEquals("en_us", LanguageService.detectSystemLocale(Locale.TRADITIONAL_CHINESE));
-        assertEquals("en_us", LanguageService.detectSystemLocale(Locale.forLanguageTag("zh-Hant")));
+        assertEquals("en_us", LanguageService.detectSystemLocale(Locale.UK));
+        assertEquals("en_us", LanguageService.detectSystemLocale(Locale.JAPAN));
         assertEquals("en_us", LanguageService.detectSystemLocale(null));
     }
 

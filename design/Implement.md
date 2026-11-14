@@ -311,23 +311,25 @@ CAML
   加载、逐键回退、占位符格式化、不可变快照、事件和日志。
 - 前端通过 `org.chs.camlauncher.front.text.UiText` 显示后端 `LanguageTextProvider` 提供的最终文本，
   不读取语言文件、不执行回退或格式化。
-- 内置翻译键与文案放在 `CAMLLanguage/src/main/resources/lang/zh_cn.json`、`en_us.json` 和 `fn_cn.json`；
-  每次启动与内置资源按键值比对，不一致（含 JSON 损坏）就按内置文件重写；非内置语言文件原样保留，之后从该目录读取。
-  结构参考 Minecraft 的 `lang` 文件（扁平键 + `%s`/`%d` 占位符）。
+- 内置翻译键与文案放在 `CAMLLanguage/src/main/resources/lang/zh_cn.json`、`zh_tw.json`、`en_us.json`
+  和 `fn_cn.json`；每次启动与内置资源按键值比对，不一致（含 JSON 损坏）就按内置文件重写；
+  非内置语言文件原样保留，之后从该目录读取。结构参考 Minecraft 的 `lang` 文件（扁平键 + `%s`/`%d` 占位符）。
 - 后端在初始化时按 `-Dcaml.language`、系统语言顺序选择语言：默认语言为 `en_us`，
-  因此无需检测英语系统，只在检测到简体中文系统时使用 `zh_cn`，其余系统（含繁体中文，待做）
-  使用默认语言；缺失文件按回退策略处理；键缺失时根据回退策略补齐或返回键名。
+  因此无需检测英语系统，只区分中文系统：简体中文系统（`zh_CN`、`zh_SG`、脚本 `Hans`）使用 `zh_cn`，
+  繁体中文系统（`zh_TW`、`zh_HK`、`zh_MO`、脚本 `Hant`）使用 `zh_tw`，其余系统使用默认语言；
+  缺失文件按回退策略处理；键缺失时根据回退策略补齐或返回键名。
 - 语言回退设置通过 `LanguageFallbackMode` 持久化：系统语言、默认语言、裸键、自定义语言；自定义
   locale 保存在 `languageFallbackLocale`。只有默认语言模式使用 `en_us` 补齐，其余模式缺失
   内容直接返回裸键；后端按该策略重新合并语言词典并发布新快照。
 - 语言下拉框中的语言名不参与翻译：`LanguageService.displayName(locale)` 直接读取后端名称表，
-  所以 `zh_cn` 恒为“简体中文”、`en_us` 恒为“English”、
+  所以 `zh_cn` 恒为“简体中文”、`zh_tw` 恒为“繁體中文”、`en_us` 恒为“English”、
   `fn_cn` 恒为“地道中国话”，切换界面语言或翻译文件写错名称都不会改变列表内容；
   没有登记名称的自定义语言显示 locale 标识。新增内置语言时在后端名称表登记自称。
 - `LanguageTranslationGenerator` 负责写 JSON；`TranslationTable` 按键排序保存文案，
   子类以实例方法 `t.put(key, value)` 登记，重复键直接失败。
 - `language/generator` 存放生成器基类、`TranslationTable` 和 `TranslationGeneratorRunner`；
-  具体语言生成器 `ZHCNGenerator`、`ENUSGenerator`、`FNCNGenerator` 位于 `generator.lang` 子包，只用于开发期生成 JSON。
+  具体语言生成器 `ZHCNGenerator`、`ZHTWGenerator`、`ENUSGenerator`、`FNCNGenerator`
+  位于 `generator.lang` 子包，只用于开发期生成 JSON。
 - Gradle 任务 `:CAMLLanguage:generateTranslation`（`.run/generateTranslation`）先编译再生成，
   输出到 `CAMLLanguage/src/main/resources/lang`。
 - `LanguageTest` 只校验生成器与已提交 JSON 的一致性、各语言键集合一致性及重复键保护；
@@ -386,7 +388,7 @@ PATH=/usr/lib/jvm/zulu-25/bin:$PATH \
 
 - 后端编译通过。
 - JavaFX 启动冒烟测试通过。
-- 162 个后端测试、24 个前端测试；前端测试全部通过（含 `LanguageTest`）。
+- 218 个后端测试、57 个前端测试；前端测试全部通过（含 `LanguageTest`）。
 - 后端测试在当前 Windows 环境有 7 个既有失败，与前端和翻译无关：
   - `LaunchCommandBuilderTest#placesMainClassBetweenJvmAndGameArguments`
   - `LaunchArgumentsBuilderTest#buildsJvmArgumentsWithMemoryDefaultsAndClasspath`
