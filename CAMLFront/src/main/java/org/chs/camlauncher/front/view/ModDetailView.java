@@ -250,6 +250,8 @@ final class ModDetailView extends VBox implements PageLifecycle {
         header.getStyleClass().add("app-mod-group-header");
         header.setMaxWidth(Double.MAX_VALUE);
         header.setContentDisplay(javafx.scene.control.ContentDisplay.GRAPHIC_ONLY);
+        header.setGraphic(headerGraphic);
+        header.setAccessibleText(title);
         // 图形宽度 = 按钮宽度 - 按钮左右内边距；内边距来自 CSS 的 em，缩放后自动跟上。
         headerGraphic.prefWidthProperty().bind(Bindings.createDoubleBinding(() -> {
             Insets padding = header.getPadding();

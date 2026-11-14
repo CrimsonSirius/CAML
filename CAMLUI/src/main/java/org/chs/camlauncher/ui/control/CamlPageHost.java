@@ -34,6 +34,7 @@ public final class CamlPageHost extends StackPane {
 
     public CamlPageHost(Node initialPage) {
         getStyleClass().add("caml-page-host");
+        setFocusTraversable(true);
         setPageImmediately(Objects.requireNonNull(initialPage, "initialPage"), null);
     }
 
@@ -76,6 +77,7 @@ public final class CamlPageHost extends StackPane {
         Node previous = currentPage;
         Node previousSidebar = currentSidebar;
         previous.setMouseTransparent(true);
+        requestFocus();
 
         page.setOpacity(0);
         page.setTranslateY(ENTER_OFFSET_Y);
@@ -146,6 +148,7 @@ public final class CamlPageHost extends StackPane {
             currentPage = page;
             currentSidebar = sidebar;
             running = null;
+            requestFocus();
         });
         running.play();
     }
@@ -156,6 +159,7 @@ public final class CamlPageHost extends StackPane {
         getChildren().setAll(page);
         reset(page);
         resetSidebar(sidebar);
+        requestFocus();
     }
 
     private static void reset(Node page) {
