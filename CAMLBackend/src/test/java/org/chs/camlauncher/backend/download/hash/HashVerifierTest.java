@@ -29,4 +29,15 @@ class HashVerifierTest {
         assertFalse(HashVerifier.matches(file, ""));
         assertFalse(HashVerifier.matches(file, "   "));
     }
+
+    @Test
+    void calculatesAndMatchesMd5() throws Exception {
+        Path file = tempDirectory.resolve("hello-md5.txt");
+        Files.writeString(file, "hello");
+
+        assertEquals("5d41402abc4b2a76b9719d911017c592", HashVerifier.md5(file));
+        assertTrue(HashVerifier.matchesMd5(file, "5d41402abc4b2a76b9719d911017c592"));
+        assertFalse(HashVerifier.matchesMd5(file, "00000000000000000000000000000000"));
+        assertFalse(HashVerifier.matchesMd5(file, null));
+    }
 }

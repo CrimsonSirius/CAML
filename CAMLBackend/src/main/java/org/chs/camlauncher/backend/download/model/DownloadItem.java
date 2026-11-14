@@ -7,6 +7,7 @@ import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 public record DownloadItem(
@@ -14,13 +15,19 @@ public record DownloadItem(
         List<URI> candidates,
         Path destination,
         String sha1,
-        long size
+        long size,
+        Map<String, String> headers
 ) {
+    public DownloadItem(String label, List<URI> candidates, Path destination, String sha1, long size) {
+        this(label, candidates, destination, sha1, size, Map.of());
+    }
+
     public DownloadItem {
         Objects.requireNonNull(label, "label");
         Objects.requireNonNull(candidates, "candidates");
         Objects.requireNonNull(destination, "destination");
         candidates = List.copyOf(candidates);
+        headers = headers == null ? Map.of() : Map.copyOf(headers);
         if (candidates.isEmpty()) {
             throw new IllegalArgumentException("candidates must not be empty");
         }

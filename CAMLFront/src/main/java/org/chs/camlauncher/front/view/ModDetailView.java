@@ -335,7 +335,7 @@ final class ModDetailView extends VBox implements PageLifecycle {
 
         CamlButton download = CamlButton.filled(UiText.tr("mods.detail.download"));
         download.setMinWidth(plan().paginationButtonWidth());
-        download.setDisable(file.downloadUri() == null);
+        download.setDisable(!file.hasDownloadUri());
         download.setOnAction(event -> startDownload(file, download));
         HBox actions = new HBox(dependencies, download);
         actions.getStyleClass().add("app-mod-version-actions");
