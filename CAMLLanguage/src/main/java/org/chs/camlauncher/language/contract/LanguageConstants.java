@@ -6,8 +6,9 @@ import java.util.List;
 public final class LanguageConstants {
     public static final String DEFAULT_LOCALE = "en_us";
     public static final String SIMPLIFIED_CHINESE_LOCALE = "zh_cn";
+    public static final String TRADITIONAL_CHINESE_LOCALE = "zh_tw";
     public static final String LANGUAGE_OVERRIDE_PROPERTY = "caml.language";
-    public static final List<String> BUNDLED_LOCALES = List.of("zh_cn", "en_us", "fn_cn");
+    public static final List<String> BUNDLED_LOCALES = List.of("zh_cn", "zh_tw", "en_us", "fn_cn");
 
     private LanguageConstants() {
     }

@@ -3,6 +3,7 @@ package org.chs.camlauncher.language.generator;
 import org.chs.camlauncher.language.generator.lang.ENUSGenerator;
 import org.chs.camlauncher.language.generator.lang.FNCNGenerator;
 import org.chs.camlauncher.language.generator.lang.ZHCNGenerator;
+import org.chs.camlauncher.language.generator.lang.ZHTWGenerator;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -25,7 +26,8 @@ public final class TranslationGeneratorRunner {
         List<LanguageTranslationGenerator> generators = List.of(
                 new ZHCNGenerator(),
                 new ENUSGenerator(),
-                new FNCNGenerator()
+                new FNCNGenerator(),
+                new ZHTWGenerator()
         );
         for (LanguageTranslationGenerator generator : generators) {
             Path file = generator.generate(output);
