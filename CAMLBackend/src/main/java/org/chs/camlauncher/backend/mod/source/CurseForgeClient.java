@@ -16,6 +16,8 @@ import org.chs.camlauncher.backend.mod.model.ModSearchQuery;
 import org.chs.camlauncher.backend.mod.model.ModSource;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.net.URI;
 import java.net.URLEncoder;
 import java.net.http.HttpClient;
@@ -25,6 +27,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Properties;
 import java.util.Set;
 
 /** CurseForge 官方 v1 API；需要 API Key。 */
@@ -325,7 +328,26 @@ public final class CurseForgeClient {
             return property.trim();
         }
         String environment = System.getenv("CURSEFORGE_API_KEY");
-        return environment == null ? "" : environment.trim();
+        if (environment != null && !environment.isBlank()) {
+            return environment.trim();
+        }
+        return bundledApiKey();
+    }
+
+    /** 读取构建时由 CI 写入 jar 的 Key；不记录、不输出。 */
+    private static String bundledApiKey() {
+        InputStream input = CurseForgeClient.class.getResourceAsStream("/caml.properties");
+        if (input == null) {
+            return "";
+        }
+        try (InputStream stream = input;
+             InputStreamReader reader = new InputStreamReader(stream, StandardCharsets.UTF_8)) {
+            Properties properties = new Properties();
+            properties.load(reader);
+            return properties.getProperty("caml.curseforge.apikey", "").trim();
+        } catch (IOException e) {
+            return "";
+        }
     }
 
     private static String firstAuthor(JsonObject object) {

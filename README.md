@@ -251,9 +251,41 @@ statusLabel.setText(UiText.tr("home.instance.current", version));
 ### Mod 下载
 
 - Modrinth 使用 `https://api.modrinth.com/v2` 官方 API，无需额外配置。
-- CurseForge 使用 `https://api.curseforge.com/v1` 官方 API，必须配置 API Key：
-  环境变量 `CURSEFORGE_API_KEY`，或 JVM 参数 `-Dcaml.curseforge.apiKey=...`。
+- CurseForge 使用 `https://api.curseforge.com/v1` 官方 API，必须配置 API Key。
+  运行时读取优先级：JVM 参数 `-Dcaml.curseforge.apiKey=...` → 环境变量
+  `CURSEFORGE_API_KEY` → 构建时写入 jar 的 `caml.properties`。
+- 本地开发可以直接设置环境变量：
+  ```bash
+  CURSEFORGE_API_KEY='你的Key' ./gradlew :CAMLFront:run
+  ```
+- CI 发布时不要把 Key 写进仓库。`CAMLBackend` 的 `generateBuildProperties` 会在构建期读取
+  `CURSEFORGE_API_KEY`，生成 `caml.properties` 并打进 jar；发布包即可开箱使用。
   未配置时选择 CurseForge 会显示明确错误；“全部来源”仍会返回 Modrinth 结果。
+- GitHub Actions 示例（在仓库 Settings → Secrets and variables → Actions 新建
+  `CURSEFORGE_API_KEY`）：
+  ```yaml
+  name: Build
+  on: [push, pull_request, workflow_dispatch]
+  jobs:
+    build:
+      runs-on: ubuntu-latest
+      steps:
+        - uses: actions/checkout@v4
+        - uses: actions/setup-java@v4
+          with:
+            distribution: temurin
+            java-version: '25'
+        - name: Build
+          env:
+            CURSEFORGE_API_KEY: ${{ secrets.CURSEFORGE_API_KEY }}
+          run: ./gradlew :CAMLBackend:test :CAMLFront:assemble --no-daemon
+        - uses: actions/upload-artifact@v4
+          with:
+            name: CAMLFront
+            path: CAMLFront/build/distributions/*.zip
+  ```
+  Key 会嵌入客户端 jar，和 HMCL/PCL 的做法相同；请使用专用 Key，泄露后及时在
+  CurseForge 控制台重新生成。
 - 两个来源都不使用现有镜像下载源，搜索、详情、依赖和文件下载均直连官方地址。
 - 下载目标根据当前实例和版本隔离设置解析为 `<gameDirectory>/mods` 或
   `<gameDirectory>/versions/<instance>/mods`。
