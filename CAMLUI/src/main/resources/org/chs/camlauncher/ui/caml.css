@@ -496,11 +496,9 @@
     -fx-background-insets: 0;
 }
 
-/* Side navigation（设计宽度 88px）。 */
+/* Side navigation；宽度由使用方决定，避免覆盖下载页按窗口计算出的动态宽度。 */
 .caml-side-nav {
     -fx-background-color: -caml-surface-low;
-    -fx-min-width: 5.5em;
-    -fx-pref-width: 5.5em;
     -fx-padding: 0.75em 0.5em;
 }
 
