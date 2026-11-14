@@ -52,6 +52,11 @@ public final class CurseForgeClient {
         return !apiKey.isBlank();
     }
 
+    /** CurseForge 文件 CDN 请求也需要 API Key。 */
+    public Map<String, String> downloadHeaders() {
+        return apiKey.isBlank() ? Map.of() : Map.of("x-api-key", apiKey);
+    }
+
     public ModSearchPage search(ModSearchQuery query) throws IOException, InterruptedException {
         requireApiKey();
         int limit = Math.max(1, Math.min(50, query.pageSize()));
@@ -125,6 +130,7 @@ public final class CurseForgeClient {
     private List<JsonObject> fetchAllFiles(String projectId)
             throws IOException, InterruptedException {
         List<JsonObject> result = new ArrayList<>();
+        Set<Long> seenFileIds = new LinkedHashSet<>();
         int index = 0;
         int total;
         do {
@@ -135,7 +141,11 @@ public final class CurseForgeClient {
             if (data != null) {
                 for (JsonElement element : data) {
                     if (element.isJsonObject()) {
-                        result.add(element.getAsJsonObject());
+                        JsonObject file = element.getAsJsonObject();
+                        long fileId = longValue(file, "id");
+                        if (fileId <= 0 || seenFileIds.add(fileId)) {
+                            result.add(file);
+                        }
                     }
                 }
             }
@@ -201,8 +211,9 @@ public final class CurseForgeClient {
     }
 
     private ModFile parseFile(JsonObject object, Map<Long, String> dependencyNames) {
-        String download = string(object, "downloadUrl");
-        URI downloadUri = download == null || download.isBlank() ? null : URI.create(download);
+        String fileName = string(object, "fileName");
+        long fileId = longValue(object, "id");
+        List<URI> downloadUris = downloadUris(fileId, fileName, string(object, "downloadUrl"));
         List<String> gameVersions = stringArray(object, "gameVersions");
         List<String> loaders = new ArrayList<>();
         List<String> versions = new ArrayList<>();
@@ -214,22 +225,62 @@ public final class CurseForgeClient {
                 loaders.add(loader.apiName());
             }
         }
+        long size = longValue(object, "fileLength");
+        if (size <= 0) {
+            size = -1;
+        }
         return new ModFile(
                 ModSource.CURSEFORGE,
                 string(object, "modId"),
                 string(object, "id"),
                 string(object, "displayName"),
                 string(object, "displayName"),
-                string(object, "fileName"),
-                downloadUri,
-                sha1(object),
-                longValue(object, "fileLength"),
+                fileName,
+                downloadUris,
+                hash(object, 1),
+                hash(object, 2),
+                size,
                 List.copyOf(versions),
                 List.copyOf(loaders),
                 dependencies(object, dependencyNames),
                 string(object, "fileDate"),
                 longValue(object, "downloadCount")
         );
+    }
+
+    private static List<URI> downloadUris(long fileId, String fileName, String downloadUrl) {
+        if (fileName == null || fileName.isBlank()) {
+            return List.of();
+        }
+        String encodedName = encodePathSegment(fileName);
+        Set<String> urls = new LinkedHashSet<>();
+        if (downloadUrl != null && !downloadUrl.isBlank()) {
+            addDownloadUrlVariants(downloadUrl.replace(fileName, encodedName), urls);
+        } else if (fileId > 0) {
+            addDownloadUrlVariants("https://edge.forgecdn.net/files/"
+                    + (fileId / 1000) + "/" + (fileId % 1000) + "/" + encodedName, urls);
+        }
+
+        List<URI> result = new ArrayList<>();
+        for (String candidate : urls) {
+            try {
+                result.add(URI.create(candidate));
+            } catch (IllegalArgumentException ignored) {
+                // 跳过无法解析的历史地址，继续尝试其它 CDN 变体。
+            }
+        }
+        return List.copyOf(result);
+    }
+
+    private static void addDownloadUrlVariants(String url, Set<String> urls) {
+        String overwolfNormalized = url.replace("-service.overwolf.wtf", ".forgecdn.net");
+        for (String base : List.of(url, overwolfNormalized)) {
+            urls.add(base);
+            urls.add(base.replace("://edge.", "://mediafilez."));
+            urls.add(base.replace("://media.", "://mediafilez."));
+            urls.add(base.replace("://media.", "://edge."));
+            urls.add(base.replace("://mediafilez.", "://edge."));
+        }
     }
 
     private List<ModDependency> dependencies(JsonObject file, Map<Long, String> names) {
@@ -344,7 +395,7 @@ public final class CurseForgeClient {
         return List.copyOf(result);
     }
 
-    private static String sha1(JsonObject file) {
+    private static String hash(JsonObject file, int algorithm) {
         JsonArray hashes = file.getAsJsonArray("hashes");
         if (hashes == null) {
             return null;
@@ -354,7 +405,7 @@ public final class CurseForgeClient {
                 continue;
             }
             JsonObject hash = element.getAsJsonObject();
-            if (intValue(hash, "algo") == 1) {
+            if (intValue(hash, "algo") == algorithm) {
                 return string(hash, "value");
             }
         }
@@ -411,6 +462,10 @@ public final class CurseForgeClient {
 
     private static String encodePath(String value) {
         return encode(Objects.requireNonNull(value, "value"));
+    }
+
+    private static String encodePathSegment(String value) {
+        return encode(value);
     }
 
     private static HttpClient defaultClient() {

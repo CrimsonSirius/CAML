@@ -137,6 +137,130 @@ class ModServiceTest {
     }
 
     @Test
+    void generatesCurseForgeFallbackUrlsAndDeduplicatesFiles() throws Exception {
+        HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        server.createContext("/v1/mods/789", exchange -> respond(exchange, """
+                {"data":{"id":789,"name":"Fallback","slug":"fallback","summary":"",
+                "downloadCount":0,"dateModified":"2026-01-01T00:00:00Z",
+                "links":{},"authors":[],"categories":[],"latestFilesIndexes":[]}}
+                """));
+        server.createContext("/v1/mods/789/files", exchange -> respond(exchange, """
+                {"data":[
+                {"id":1234567,"modId":789,"displayName":"Fallback 1","fileName":"fallback mod.jar",
+                "fileDate":"2026-01-01T00:00:00Z","fileLength":0,"downloadCount":0,"downloadUrl":"",
+                "gameVersions":["1.20.1","Fabric"],"dependencies":[],
+                "hashes":[{"value":"sha1-value","algo":1},{"value":"md5-value","algo":2}]},
+                {"id":1234567,"modId":789,"displayName":"Fallback 1","fileName":"fallback mod.jar",
+                "fileDate":"2026-01-01T00:00:00Z","fileLength":0,"downloadCount":0,"downloadUrl":"",
+                "gameVersions":["1.20.1","Fabric"],"dependencies":[],
+                "hashes":[{"value":"sha1-value","algo":1},{"value":"md5-value","algo":2}]},
+                {"id":7654321,"modId":789,"displayName":"Legacy","fileName":"legacy.jar",
+                "fileDate":"2026-01-01T00:00:00Z","fileLength":123,"downloadCount":0,
+                "downloadUrl":"https://edge-service.overwolf.wtf/files/7654/321/legacy.jar",
+                "gameVersions":["1.20.1","Fabric"],"dependencies":[],
+                "hashes":[{"value":"sha1-legacy","algo":1}]}
+                ],"pagination":{"index":0,"pageSize":50,"resultCount":3,"totalCount":3}}
+                """));
+        server.start();
+
+        try {
+            String base = serverRoot(server) + "v1/";
+            ModProjectDetail detail = service(base, base, "test-key")
+                    .project(ModSource.CURSEFORGE, "789");
+
+            assertEquals(2, detail.files().size(), "重复文件 ID 应只保留一项");
+            ModFile fallback = detail.files().get(0);
+            assertEquals("https://edge.forgecdn.net/files/1234/567/fallback%20mod.jar",
+                    fallback.downloadUris().getFirst().toString());
+            assertTrue(fallback.downloadUris().stream().anyMatch(uri ->
+                    uri.toString().contains("mediafilez.forgecdn.net")));
+            assertEquals("sha1-value", fallback.sha1());
+            assertEquals("md5-value", fallback.md5());
+            assertEquals(-1, fallback.size(), "fileLength=0 应视为未知大小");
+
+            ModFile legacy = detail.files().get(1);
+            assertTrue(legacy.downloadUris().stream().anyMatch(uri -> uri.toString().equals(
+                    "https://mediafilez.forgecdn.net/files/7654/321/legacy.jar")));
+        } finally {
+            server.stop(0);
+        }
+    }
+
+    @Test
+    void downloadsCurseForgeFileWithApiKeyAndMd5() throws Exception {
+        byte[] content = "curse-forge-file".getBytes(StandardCharsets.UTF_8);
+        HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        server.createContext("/secured.jar", exchange -> {
+            assertEquals("test-key", exchange.getRequestHeaders().getFirst("x-api-key"));
+            exchange.sendResponseHeaders(200, content.length);
+            try (var output = exchange.getResponseBody()) {
+                output.write(content);
+            }
+        });
+        server.start();
+
+        try {
+            Path gameDirectory = tempDirectory.resolve("secure-game");
+            ModFile file = new ModFile(
+                    ModSource.CURSEFORGE, "project", "version", "Secure Mod", "1.0",
+                    "secured.jar", List.of(URI.create(serverRoot(server) + "secured.jar")),
+                    null, HashVerifier.md5(content), content.length,
+                    List.of("1.20.1"), List.of("fabric"), List.of(), "", 1
+            );
+            ModService service = service("https://example.invalid/v2/",
+                    "https://example.invalid/v1/", "test-key");
+
+            var result = service.download(
+                    file, gameDirectory, "instance", VersionIsolationMode.NONE,
+                    DownloadListener.NONE);
+
+            assertArrayEquals(content, Files.readAllBytes(result.path()));
+        } finally {
+            server.stop(0);
+        }
+    }
+
+    @Test
+    void rejectsCurseForgeFileWithWrongMd5() throws Exception {
+        byte[] content = "bad-md5".getBytes(StandardCharsets.UTF_8);
+        HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        server.createContext("/bad-md5.jar", exchange -> {
+            assertEquals("test-key", exchange.getRequestHeaders().getFirst("x-api-key"));
+            exchange.sendResponseHeaders(200, content.length);
+            try (var output = exchange.getResponseBody()) {
+                output.write(content);
+            }
+        });
+        server.start();
+
+        try {
+            Path gameDirectory = tempDirectory.resolve("bad-md5-game");
+            ModFile file = new ModFile(
+                    ModSource.CURSEFORGE, "project", "version", "Bad MD5", "1.0",
+                    "bad-md5.jar", List.of(URI.create(serverRoot(server) + "bad-md5.jar")),
+                    null, HashVerifier.md5("different".getBytes(StandardCharsets.UTF_8)),
+                    content.length, List.of("1.20.1"), List.of("fabric"), List.of(), "", 1
+            );
+            HttpClient client = HttpClient.newBuilder()
+                    .followRedirects(HttpClient.Redirect.NORMAL)
+                    .build();
+            ModService service = new ModService(
+                    new ModrinthClient(client, URI.create("https://example.invalid/v2/")),
+                    new CurseForgeClient(client, URI.create("https://example.invalid/v1/"),
+                            "test-key"),
+                    new FileDownloader(client, 1)
+            );
+
+            assertThrows(BackendException.class, () -> service.download(
+                    file, gameDirectory, "instance", VersionIsolationMode.NONE,
+                    DownloadListener.NONE));
+            assertFalse(Files.exists(gameDirectory.resolve("mods/bad-md5.jar")));
+        } finally {
+            server.stop(0);
+        }
+    }
+
+    @Test
     void curseForgeRequiresApiKey() throws Exception {
         ModService service = service("https://example.invalid/v2/",
                 "https://example.invalid/v1/", "");
@@ -164,8 +288,8 @@ class ModServiceTest {
             String sha1 = HashVerifier.sha1(content);
             ModFile file = new ModFile(
                     ModSource.MODRINTH, "project", "version", "Test Mod", "1.0",
-                    "test.jar", URI.create(serverRoot(server) + "mods/test.jar"),
-                    sha1, content.length, List.of("1.20.1"), List.of("fabric"),
+                    "test.jar", List.of(URI.create(serverRoot(server) + "mods/test.jar")),
+                    sha1, null, content.length, List.of("1.20.1"), List.of("fabric"),
                     List.of(), "", 1
             );
             ModService service = service("https://example.invalid/v2/",

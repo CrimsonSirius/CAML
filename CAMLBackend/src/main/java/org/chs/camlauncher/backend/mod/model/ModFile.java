@@ -11,8 +11,9 @@ public record ModFile(
         String name,
         String versionNumber,
         String fileName,
-        URI downloadUri,
+        List<URI> downloadUris,
         String sha1,
+        String md5,
         long size,
         List<String> gameVersions,
         List<String> loaders,
@@ -20,4 +21,16 @@ public record ModFile(
         String publishedAt,
         long downloads
 ) {
+    public ModFile {
+        downloadUris = downloadUris == null ? List.of() : List.copyOf(downloadUris);
+    }
+
+    public boolean hasDownloadUri() {
+        return !downloadUris.isEmpty();
+    }
+
+    /** 首个候选地址；仅为兼容现有调用方，下载时优先使用完整候选列表。 */
+    public URI downloadUri() {
+        return downloadUris.isEmpty() ? null : downloadUris.getFirst();
+    }
 }

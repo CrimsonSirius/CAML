@@ -16,6 +16,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -609,6 +610,43 @@ class FileDownloaderTest {
             assertThrows(IOException.class,
                     () -> downloader.download(item, DownloadListener.NONE));
             assertFalse(Files.exists(item.destination()));
+        } finally {
+            server.stop(0);
+        }
+    }
+
+    @Test
+    void sendsCustomHeadersWithDownloadRequests() throws Exception {
+        byte[] content = "header-content".getBytes(StandardCharsets.UTF_8);
+        AtomicReference<String> observedApiKey = new AtomicReference<>();
+        HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        server.createContext("/secure.bin", exchange -> {
+            observedApiKey.set(exchange.getRequestHeaders().getFirst("x-api-key"));
+            exchange.sendResponseHeaders(200, content.length);
+            try (OutputStream output = exchange.getResponseBody()) {
+                output.write(content);
+            }
+        });
+        server.start();
+
+        try {
+            DownloadItem item = new DownloadItem(
+                    "secure",
+                    List.of(URI.create("http://127.0.0.1:" + server.getAddress().getPort()
+                            + "/secure.bin")),
+                    tempDirectory.resolve("secure.bin"),
+                    null,
+                    content.length,
+                    Map.of("x-api-key", "test-key")
+            );
+            FileDownloader downloader = new FileDownloader(HttpClient.newBuilder()
+                    .version(HttpClient.Version.HTTP_1_1)
+                    .build(), 1);
+
+            downloader.download(item, DownloadListener.NONE);
+
+            assertEquals("test-key", observedApiKey.get());
+            assertArrayEquals(content, Files.readAllBytes(item.destination()));
         } finally {
             server.stop(0);
         }

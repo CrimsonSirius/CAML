@@ -4,7 +4,9 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.chs.camlauncher.backend.download.DownloadCancellationToken;
 import org.chs.camlauncher.backend.download.DownloadListener;
+import org.chs.camlauncher.backend.download.DownloadValidator;
 import org.chs.camlauncher.backend.download.FileDownloader;
+import org.chs.camlauncher.backend.download.hash.HashVerifier;
 import org.chs.camlauncher.backend.download.model.DownloadItem;
 import org.chs.camlauncher.backend.error.BackendError;
 import org.chs.camlauncher.backend.error.BackendException;
@@ -27,6 +29,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 /** 聚合 Modrinth 与 CurseForge 的搜索、详情和文件下载。 */
@@ -76,22 +79,42 @@ public final class ModService {
     ) throws IOException, InterruptedException {
         Objects.requireNonNull(file, "file");
         Objects.requireNonNull(isolationMode, "isolationMode");
-        if (file.downloadUri() == null) {
+        if (!file.hasDownloadUri()) {
             throw new BackendException(BackendError.of("mod.error.downloadUrlMissing", file.name()));
         }
         String instance = InstanceNameRules.validate(instanceId);
         Path mods = modsDirectory(gameDirectory, instance, isolationMode);
         Path destination = SafePaths.resolveChild(mods, file.fileName(), "mod file");
+        Map<String, String> headers = file.source() == ModSource.CURSEFORGE
+                ? curseForge.downloadHeaders()
+                : Map.of();
         DownloadItem item = new DownloadItem(
                 file.name(),
-                List.of(file.downloadUri()),
+                file.downloadUris(),
                 destination,
                 file.sha1(),
-                file.size()
+                file.size(),
+                headers
         );
-        fileDownloader.download(item, listener, null, new DownloadCancellationToken());
+        DownloadValidator validator = md5Validator(file);
+        fileDownloader.download(item, listener, validator, new DownloadCancellationToken());
         LOGGER.info("Mod 下载完成: {} -> {}", file.name(), destination);
         return new ModDownloadResult(destination, file);
+    }
+
+    private static DownloadValidator md5Validator(ModFile file) {
+        if (hasText(file.sha1()) || !hasText(file.md5())) {
+            return null;
+        }
+        return path -> {
+            if (!HashVerifier.matchesMd5(path, file.md5())) {
+                throw new IOException("MD5 mismatch for " + file.name());
+            }
+        };
+    }
+
+    private static boolean hasText(String value) {
+        return value != null && !value.isBlank();
     }
 
     public Path modsDirectory(Path gameDirectory, String instanceId,

@@ -24,6 +24,7 @@ import java.nio.file.StandardOpenOption;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
@@ -143,7 +144,7 @@ public final class FileDownloader {
         token.throwIfCancelled();
         long expectedSize = item.size();
         if (expectedSize >= MIN_SEGMENT_SIZE) {
-            RangeProbe probe = probeRange(uri, token);
+            RangeProbe probe = probeRange(uri, item, token);
             if (probe.ranged()) {
                 if (probe.totalSize() <= 0
                         || (expectedSize > 0 && expectedSize != probe.totalSize())) {
@@ -175,7 +176,7 @@ public final class FileDownloader {
         Path part = partialPath(destination);
         boolean moved = false;
         try {
-            HttpRequest request = HttpRequest.newBuilder(uri)
+            HttpRequest request = requestBuilder(uri, item)
                     .timeout(Duration.ofMinutes(2))
                     .GET()
                     .build();
@@ -286,7 +287,7 @@ public final class FileDownloader {
                         token.throwIfCancelled();
                     }
                     try {
-                        downloadSegment(uri, part, metaPath, activeMeta, segment, reporter, token);
+                        downloadSegment(uri, item, part, metaPath, activeMeta, segment, reporter, token);
                     } finally {
                         SEGMENT_SLOTS.release();
                     }
@@ -327,7 +328,7 @@ public final class FileDownloader {
         }
     }
 
-    private void downloadSegment(URI uri, Path part, Path metaPath,
+    private void downloadSegment(URI uri, DownloadItem item, Path part, Path metaPath,
                                  ResumeMeta meta, SegmentState segment,
                                  ProgressReporter reporter,
                                  DownloadCancellationToken token)
@@ -340,7 +341,7 @@ public final class FileDownloader {
         }
 
         try {
-            HttpRequest.Builder request = HttpRequest.newBuilder(uri)
+            HttpRequest.Builder request = requestBuilder(uri, item)
                     .timeout(Duration.ofMinutes(2))
                     .header("Range", "bytes=" + start + "-" + end);
             if (meta.ifRange() != null) {
@@ -413,10 +414,10 @@ public final class FileDownloader {
         }
     }
 
-    private RangeProbe probeRange(URI uri, DownloadCancellationToken token)
+    private RangeProbe probeRange(URI uri, DownloadItem item, DownloadCancellationToken token)
             throws IOException, InterruptedException {
         token.throwIfCancelled();
-        HttpRequest request = HttpRequest.newBuilder(uri)
+        HttpRequest request = requestBuilder(uri, item)
                 .timeout(Duration.ofMinutes(2))
                 .header("Range", "bytes=0-0")
                 .GET()
@@ -447,6 +448,17 @@ public final class FileDownloader {
             }
             throw new IOException("HTTP " + status + " for " + uri);
         }
+    }
+
+    private static HttpRequest.Builder requestBuilder(URI uri, DownloadItem item) {
+        HttpRequest.Builder builder = HttpRequest.newBuilder(uri);
+        for (Map.Entry<String, String> header : item.headers().entrySet()) {
+            if (header.getKey() != null && !header.getKey().isBlank()
+                    && header.getValue() != null && !header.getValue().isBlank()) {
+                builder.header(header.getKey(), header.getValue());
+            }
+        }
+        return builder;
     }
 
     private ResumeMeta loadResumeMeta(DownloadItem item, Path part, Path metaPathForRead,

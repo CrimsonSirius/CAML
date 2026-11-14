@@ -110,7 +110,8 @@ public final class ModrinthClient {
         JsonArray fileArray = object.getAsJsonArray("files");
         if (fileArray == null || fileArray.isEmpty()) {
             return new ModFile(ModSource.MODRINTH, projectId, string(object, "id"),
-                    string(object, "name"), string(object, "version_number"), "", null, null, -1,
+                    string(object, "name"), string(object, "version_number"), "", List.of(),
+                    null, null, -1,
                     strings(object, "game_versions"),
                     loaders(strings(object, "loaders")), dependencies,
                     string(object, "date_published"), longValue(object, "downloads"));
@@ -126,8 +127,9 @@ public final class ModrinthClient {
                 string(object, "name"),
                 string(object, "version_number"),
                 string(file, "filename"),
-                download,
+                List.of(download),
                 string(hashes, "sha1"),
+                string(hashes, "md5"),
                 longValue(file, "size"),
                 strings(object, "game_versions"),
                 loaders(strings(object, "loaders")),
