@@ -259,7 +259,8 @@ public final class ENUSGenerator extends LanguageTranslationGenerator {
         // Game language
         t.put("settings.game.language.title", "Game language");
         t.put("settings.game.language.description", "Automatically set the game language to the launcher language when an instance is launched for the first time.");
-        t.put("settings.game.language.auto", "Switch game language on first launch");
+        t.put("settings.game.language.enabled", "Auto switch");
+        t.put("settings.game.language.disabled", "Off");
         t.put("settings.game.language.hint", "Only applies when the instance has no language configured yet; an existing language in options.txt is preserved. The custom Chinese locale maps to Simplified Chinese.");
 
         // Java

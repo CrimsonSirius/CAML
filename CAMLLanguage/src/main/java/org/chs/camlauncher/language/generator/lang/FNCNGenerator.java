@@ -259,7 +259,8 @@ public final class FNCNGenerator extends LanguageTranslationGenerator {
         // Game language
         t.put("settings.game.language.title", "比赛腔调");
         t.put("settings.game.language.description", "头一回发射新译本时，把比赛腔调掰成发射器现在用的腔调。");
-        t.put("settings.game.language.auto", "头一回发射自动换腔调");
+        t.put("settings.game.language.enabled", "自动掰");
+        t.put("settings.game.language.disabled", "不作声");
         t.put("settings.game.language.hint", "只在译本还没定过腔调时动手；options.txt 里已经定好的腔调不动。地道中国话会掰成简体中文。");
 
         // Java

@@ -3,13 +3,15 @@ package org.chs.camlauncher.front.view;
 import javafx.animation.PauseTransition;
 import javafx.geometry.Pos;
 import javafx.scene.control.Label;
+import javafx.scene.control.ToggleGroup;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.util.Duration;
 import org.chs.camlauncher.backend.system.SystemMemoryInfo;
 import org.chs.camlauncher.front.controller.SettingsController;
 import org.chs.camlauncher.front.text.UiText;
-import org.chs.camlauncher.ui.control.CamlCheckBox;
 import org.chs.camlauncher.ui.control.CamlMemorySlider;
+import org.chs.camlauncher.ui.control.CamlRadioButton;
 
 import java.util.function.IntConsumer;
 import java.util.function.Consumer;
@@ -119,10 +121,23 @@ final class GameSettingsView extends VBox {
                 UiText.tr("settings.game.language.description"));
         languageDescription.getStyleClass().addAll("caml-body-medium", "caml-on-surface-muted");
         languageDescription.setWrapText(true);
-        CamlCheckBox autoGameLanguage = new CamlCheckBox(
-                UiText.tr("settings.game.language.auto"));
-        autoGameLanguage.setSelected(launchSettings.autoGameLanguage());
-        autoGameLanguage.selectedProperty().addListener((observable, oldValue, enabled) -> {
+        CamlRadioButton languageEnabled = new CamlRadioButton(
+                UiText.tr("settings.game.language.enabled"));
+        CamlRadioButton languageDisabled = new CamlRadioButton(
+                UiText.tr("settings.game.language.disabled"));
+        ToggleGroup languageToggle = new ToggleGroup();
+        languageEnabled.setToggleGroup(languageToggle);
+        languageDisabled.setToggleGroup(languageToggle);
+        languageEnabled.setSelected(launchSettings.autoGameLanguage());
+        languageDisabled.setSelected(!launchSettings.autoGameLanguage());
+        HBox languageModes = new HBox(languageEnabled, languageDisabled);
+        languageModes.getStyleClass().add("app-settings-row");
+        languageModes.setAlignment(Pos.CENTER_LEFT);
+        languageToggle.selectedToggleProperty().addListener((observable, oldValue, selected) -> {
+            if (selected == null) {
+                return;
+            }
+            boolean enabled = selected == languageEnabled;
             launchSettings.setAutoGameLanguage(enabled);
             controller.saveAutoGameLanguageAsync(enabled);
         });
@@ -130,7 +145,7 @@ final class GameSettingsView extends VBox {
         languageHint.getStyleClass().addAll("caml-body-small", "field-hint");
         languageHint.setWrapText(true);
         VBox languageGroup = new VBox(
-                languageHeading, languageDescription, autoGameLanguage, languageHint);
+                languageHeading, languageDescription, languageModes, languageHint);
         languageGroup.getStyleClass().add("app-settings-group");
         languageGroup.setMaxWidth(Double.MAX_VALUE);
 

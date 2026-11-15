@@ -256,6 +256,13 @@ public final class ZHTWGenerator extends LanguageTranslationGenerator {
         t.put("settings.game.isolation.full", "完全版本隔離");
         t.put("settings.game.isolation.none", "不進行版本隔離");
 
+        // 遊戲語言
+        t.put("settings.game.language.title", "遊戲語言");
+        t.put("settings.game.language.description", "首次啟動新實例時，自動把遊戲語言設定為啟動器目前語言。");
+        t.put("settings.game.language.enabled", "自動切換");
+        t.put("settings.game.language.disabled", "關閉");
+        t.put("settings.game.language.hint", "僅在實例尚未設定語言時生效；已經設定過語言的 options.txt 不會被覆寫。地道中國話映射為簡體中文。");
+
         // Java
         t.put("settings.game.java.title", "Java");
         t.put("settings.game.java.description", "選擇遊戲啟動時使用的 Java 執行環境。自動選擇會依遊戲版本需求挑選可用的 Java。");
@@ -388,6 +395,7 @@ public final class ZHTWGenerator extends LanguageTranslationGenerator {
         t.put("operation.saveMaxMemory", "儲存最大記憶體設定");
         t.put("operation.saveGameDirectory", "儲存遊戲位置");
         t.put("operation.saveVersionIsolation", "儲存版本隔離設定");
+        t.put("operation.saveAutoGameLanguage", "儲存自動遊戲語言設定");
         t.put("operation.saveDownloadConcurrency", "儲存下載並行數");
         t.put("operation.saveDownloadSource", "儲存下載來源設定");
         t.put("operation.saveTheme", "儲存主題選擇");

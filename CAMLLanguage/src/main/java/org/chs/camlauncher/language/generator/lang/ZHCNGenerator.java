@@ -259,7 +259,8 @@ public final class ZHCNGenerator extends LanguageTranslationGenerator {
         // Game language
         t.put("settings.game.language.title", "游戏语言");
         t.put("settings.game.language.description", "首次启动新实例时，自动把游戏语言设置为启动器当前语言。");
-        t.put("settings.game.language.auto", "首次启动自动切换游戏语言");
+        t.put("settings.game.language.enabled", "自动切换");
+        t.put("settings.game.language.disabled", "关闭");
         t.put("settings.game.language.hint", "仅在实例尚未设置语言时生效；已经设置过语言的 options.txt 不会被覆盖。地道中国话映射为简体中文。");
 
         // Java
