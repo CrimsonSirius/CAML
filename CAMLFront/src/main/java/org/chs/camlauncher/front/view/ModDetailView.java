@@ -223,7 +223,8 @@ final class ModDetailView extends VBox implements PageLifecycle {
                     if (ModLoader.QUILT.apiName().equalsIgnoreCase(loader) && !showQuilt) {
                         continue;
                     }
-                    String key = ModViewSupport.loaderLabel(loader) + " " + version;
+                    // 分组标题和排序都以游戏版本为主、加载器为辅。
+                    String key = version + " " + ModViewSupport.loaderLabel(loader);
                     groups.computeIfAbsent(key, ignored -> new ArrayList<>()).add(file);
                 }
             }
