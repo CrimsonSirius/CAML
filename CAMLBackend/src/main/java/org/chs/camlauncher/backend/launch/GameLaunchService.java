@@ -19,6 +19,7 @@ import org.chs.camlauncher.backend.runtime.JavaLocator;
 import org.chs.camlauncher.backend.runtime.JavaRequirement;
 import org.chs.camlauncher.backend.runtime.JavaRuntime;
 import org.chs.camlauncher.backend.runtime.JavaSelectionMode;
+import org.chs.camlauncher.language.contract.LanguageConstants;
 
 import java.io.IOException;
 import java.net.URI;
@@ -40,6 +41,8 @@ public final class GameLaunchService {
     private final ProcessLauncher processLauncher;
     private volatile JavaSelectionMode javaSelectionMode = JavaSelectionMode.AUTO;
     private volatile Path selectedJavaPath;
+    private volatile boolean autoGameLanguage;
+    private volatile String launcherLocale = LanguageConstants.DEFAULT_LOCALE;
 
     public GameLaunchService(
             Path gameDirectory,
@@ -70,6 +73,13 @@ public final class GameLaunchService {
         this.selectedJavaPath = selectedJavaPath == null
                 ? null
                 : selectedJavaPath.toAbsolutePath().normalize();
+    }
+
+    public void configureGameLanguage(boolean autoGameLanguage, String launcherLocale) {
+        this.autoGameLanguage = autoGameLanguage;
+        this.launcherLocale = launcherLocale == null || launcherLocale.isBlank()
+                ? LanguageConstants.DEFAULT_LOCALE
+                : launcherLocale;
     }
 
     /**
@@ -147,6 +157,9 @@ public final class GameLaunchService {
                 installed.versionDirectory(),
                 isolationMode
         );
+        if (autoGameLanguage) {
+            GameLanguageInitializer.apply(gameDataDirectory, launcherLocale);
+        }
         NeoForge262VulkanFix.apply(installed.manifest(), gameDataDirectory);
 
         LaunchPlan plan = launchPlanner.create(

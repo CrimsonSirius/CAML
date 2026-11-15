@@ -122,6 +122,7 @@ class GameLaunchServiceTest {
                     new VirtualAssetInstaller(),
                     new ProcessLauncher()
             );
+            service.configureGameLanguage(true, "fn_cn");
 
             GameLaunch launch = service.launch(
                     "test-version",
@@ -143,6 +144,8 @@ class GameLaunchServiceTest {
                     "fake-game-user-dir=" + gameDirectory.resolve("versions/test-version")));
             assertTrue(exited.await(5, TimeUnit.SECONDS));
             assertTrue(output.toString().contains("fake-game-hello"));
+            assertEquals("lang:zh_cn", Files.readString(
+                    gameDirectory.resolve("versions/test-version/options.txt")).trim());
             launch.process().close();
         } finally {
             server.stop(0);

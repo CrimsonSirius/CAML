@@ -20,11 +20,13 @@ final class LaunchSettings {
             new SimpleObjectProperty<>(this, "javaSelectionMode");
     private final ObjectProperty<Path> selectedJavaPath =
             new SimpleObjectProperty<>(this, "selectedJavaPath");
+    private final BooleanProperty autoGameLanguage =
+            new SimpleBooleanProperty(this, "autoGameLanguage");
     private int maxMemoryMb;
 
     LaunchSettings(int maxMemoryMb, Path gameDirectory, boolean fullVersionIsolation,
                    String selectedVersion, JavaSelectionMode javaSelectionMode,
-                   Path selectedJavaPath) {
+                   Path selectedJavaPath, boolean autoGameLanguage) {
         this.maxMemoryMb = maxMemoryMb;
         this.gameDirectory.set(gameDirectory);
         this.fullVersionIsolation.set(fullVersionIsolation);
@@ -32,6 +34,7 @@ final class LaunchSettings {
                 ? JavaSelectionMode.AUTO
                 : javaSelectionMode);
         this.selectedJavaPath.set(selectedJavaPath);
+        this.autoGameLanguage.set(autoGameLanguage);
         this.selectedVersion.set(selectedVersion == null || selectedVersion.isBlank()
                 ? "1.21.4"
                 : selectedVersion);
@@ -103,5 +106,17 @@ final class LaunchSettings {
 
     ObjectProperty<Path> selectedJavaPathProperty() {
         return selectedJavaPath;
+    }
+
+    boolean autoGameLanguage() {
+        return autoGameLanguage.get();
+    }
+
+    void setAutoGameLanguage(boolean enabled) {
+        autoGameLanguage.set(enabled);
+    }
+
+    BooleanProperty autoGameLanguageProperty() {
+        return autoGameLanguage;
     }
 }

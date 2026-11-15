@@ -47,6 +47,7 @@ public final class SettingsService {
     private static final String LANGUAGE_KEY = "language";
     private static final String LANGUAGE_FALLBACK_MODE_KEY = "languageFallbackMode";
     private static final String LANGUAGE_FALLBACK_LOCALE_KEY = "languageFallbackLocale";
+    private static final String AUTO_GAME_LANGUAGE_KEY = "autoGameLanguage";
 
     private final Path settingsFile;
     private final Object writeLock = new Object();
@@ -288,6 +289,16 @@ public final class SettingsService {
                 properties.setProperty(LANGUAGE_FALLBACK_LOCALE_KEY, value);
             }
         });
+    }
+
+    public boolean autoGameLanguage() throws IOException {
+        String raw = load().getProperty(AUTO_GAME_LANGUAGE_KEY);
+        return raw == null || !"false".equalsIgnoreCase(raw.trim());
+    }
+
+    public void setAutoGameLanguage(boolean enabled) throws IOException {
+        update(properties -> properties.setProperty(
+                AUTO_GAME_LANGUAGE_KEY, Boolean.toString(enabled)));
     }
 
     private Properties load() throws IOException {

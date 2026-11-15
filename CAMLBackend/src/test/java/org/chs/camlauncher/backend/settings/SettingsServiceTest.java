@@ -18,6 +18,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -291,5 +292,14 @@ class SettingsServiceTest {
 
         assertEquals(LanguageFallbackMode.SYSTEM,
                 new SettingsService(dataDirectory).languageFallbackMode());
+    }
+
+    @Test
+    void autoGameLanguageDefaultsTrueAndPersists() throws Exception {
+        SettingsService service = new SettingsService(dataDirectory);
+
+        assertTrue(service.autoGameLanguage());
+        service.setAutoGameLanguage(false);
+        assertFalse(new SettingsService(dataDirectory).autoGameLanguage());
     }
 }

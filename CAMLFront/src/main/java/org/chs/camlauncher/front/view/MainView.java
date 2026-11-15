@@ -55,6 +55,7 @@ public final class MainView extends BorderPane {
                     SystemMemoryInfo systemMemory, Path initialGameDirectory,
                     boolean fullVersionIsolation, String initialSelectedInstance,
                     JavaSelectionMode initialJavaSelectionMode, Path initialJavaPath,
+                    boolean initialAutoGameLanguage,
                     LanguageSelectionMode initialLanguageMode, String initialLanguage,
                     LanguageFallbackMode initialLanguageFallbackMode,
                     String initialLanguageFallbackLocale,
@@ -66,7 +67,8 @@ public final class MainView extends BorderPane {
                 fullVersionIsolation,
                 initialSelectedInstance,
                 initialJavaSelectionMode,
-                initialJavaPath
+                initialJavaPath,
+                initialAutoGameLanguage
         ), systemMemory, initialLanguageMode, initialLanguage,
                 initialLanguageFallbackMode, initialLanguageFallbackLocale,
                 onLanguageChanged, onLanguageFallbackChanged);
@@ -148,7 +150,8 @@ public final class MainView extends BorderPane {
                 launchSettings.fullVersionIsolation(),
                 launchSettings.selectedVersion(),
                 launchSettings.javaSelectionMode(),
-                launchSettings.selectedJavaPath()
+                launchSettings.selectedJavaPath(),
+                launchSettings.autoGameLanguage()
         );
         return new MainView(controller, copiedSettings, systemMemory,
                 languageMode, language, languageFallbackMode, languageFallbackLocale,

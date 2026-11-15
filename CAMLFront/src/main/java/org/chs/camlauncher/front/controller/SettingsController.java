@@ -107,6 +107,11 @@ public final class SettingsController {
                         : VersionIsolationMode.NONE));
     }
 
+    public void saveAutoGameLanguageAsync(boolean enabled) {
+        context.executeSettings(UiText.tr("operation.saveAutoGameLanguage"),
+                () -> context.backend().setAutoGameLanguage(enabled));
+    }
+
     /** 异步保存下载并发数，并立即更新后端下载器。 */
     public void saveDownloadConcurrencyAsync(int downloadConcurrency) {
         context.executeSettings(UiText.tr("operation.saveDownloadConcurrency"),
