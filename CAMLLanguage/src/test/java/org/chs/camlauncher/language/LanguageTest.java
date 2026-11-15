@@ -3,8 +3,15 @@ package org.chs.camlauncher.language;
 import org.chs.camlauncher.language.contract.LanguageConstants;
 import org.chs.camlauncher.language.generator.LanguageTranslationGenerator;
 import org.chs.camlauncher.language.generator.TranslationTable;
+import org.chs.camlauncher.language.generator.lang.BOCNGenerator;
+import org.chs.camlauncher.language.generator.lang.DEDEGenerator;
 import org.chs.camlauncher.language.generator.lang.ENUSGenerator;
 import org.chs.camlauncher.language.generator.lang.FNCNGenerator;
+import org.chs.camlauncher.language.generator.lang.FRFRGenerator;
+import org.chs.camlauncher.language.generator.lang.JAJPGenerator;
+import org.chs.camlauncher.language.generator.lang.KOKRGenerator;
+import org.chs.camlauncher.language.generator.lang.LALAGenerator;
+import org.chs.camlauncher.language.generator.lang.RURUGenerator;
 import org.chs.camlauncher.language.generator.lang.ZHCNGenerator;
 import org.chs.camlauncher.language.generator.lang.ZHTWGenerator;
 import org.junit.jupiter.api.Test;
@@ -30,23 +37,28 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 class LanguageTest {
     private static final List<LanguageTranslationGenerator> GENERATORS = List.of(
             new ZHCNGenerator(),
+            new ZHTWGenerator(),
             new ENUSGenerator(),
             new FNCNGenerator(),
-            new ZHTWGenerator()
+            new JAJPGenerator(),
+            new KOKRGenerator(),
+            new FRFRGenerator(),
+            new DEDEGenerator(),
+            new RURUGenerator(),
+            new LALAGenerator(),
+            new BOCNGenerator()
     );
 
     @Test
     void generatedFilesMatchEachOther(@TempDir Path directory) throws Exception {
         Map<String, Map<String, String>> generated = generated(directory);
-        Map<String, String> zhcn = generated.get("zh_cn");
+        Map<String, String> enus = generated.get("en_us");
 
-        assertFalse(zhcn.isEmpty(), "中文翻译不能为空");
-        assertEquals(new TreeMap<>(zhcn).keySet(), new TreeMap<>(generated.get("en_us")).keySet(),
-                "中文与英文翻译键必须一致");
-        for (String locale : List.of("zh_tw", "fn_cn")) {
-            assertEquals(new TreeMap<>(zhcn).keySet(),
+        assertFalse(enus.isEmpty(), "英文翻译不能为空");
+        for (String locale : generated.keySet()) {
+            assertEquals(new TreeMap<>(enus).keySet(),
                     new TreeMap<>(generated.get(locale)).keySet(),
-                    locale + " 与中文翻译键必须一致");
+                    locale + " 与英文翻译键必须一致");
         }
     }
 

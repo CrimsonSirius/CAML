@@ -311,29 +311,40 @@ CAML
   加载、逐键回退、占位符格式化、不可变快照、事件和日志。
 - 前端通过 `org.chs.camlauncher.front.text.UiText` 显示后端 `LanguageTextProvider` 提供的最终文本，
   不读取语言文件、不执行回退或格式化。
-- 内置翻译键与文案放在 `CAMLLanguage/src/main/resources/lang/zh_cn.json`、`zh_tw.json`、`en_us.json`
-  和 `fn_cn.json`；每次启动与内置资源按键值比对，不一致（含 JSON 损坏）就按内置文件重写；
-  非内置语言文件原样保留，之后从该目录读取。结构参考 Minecraft 的 `lang` 文件（扁平键 + `%s`/`%d` 占位符）。
+- 内置翻译键与文案放在 `CAMLLanguage/src/main/resources/lang/` 下的 11 个文件：`zh_cn.json`、
+  `zh_tw.json`、`en_us.json`、`fn_cn.json`、`ja_jp.json`、`ko_kr.json`、`fr_fr.json`、
+  `de_de.json`、`ru_ru.json`、`la_la.json`、`bo_cn.json`；每次启动与内置资源按键值比对，
+  不一致（含 JSON 损坏）就按内置文件重写；非内置语言文件原样保留，之后从该目录读取。
+  结构参考 Minecraft 的 `lang` 文件（扁平键 + `%s`/`%d` 占位符）。
 - 后端在初始化时按 `-Dcaml.language`、系统语言顺序选择语言：默认语言为 `en_us`，
-  因此无需检测英语系统，只区分中文系统：简体中文系统（`zh_CN`、`zh_SG`、脚本 `Hans`）使用 `zh_cn`，
-  繁体中文系统（`zh_TW`、`zh_HK`、`zh_MO`、脚本 `Hant`）使用 `zh_tw`，其余系统使用默认语言；
+  因此无需检测英语系统，只检测已内置且允许自动切换的语言：简体中文系统（`zh_CN`、`zh_SG`、
+  脚本 `Hans`）使用 `zh_cn`，繁体中文系统（`zh_TW`、`zh_HK`、`zh_MO`、脚本 `Hant`）使用 `zh_tw`，
+  日语、韩语、法语、德语、俄语系统分别使用 `ja_jp`、`ko_kr`、`fr_fr`、`de_de`、`ru_ru`，
+  其余系统使用默认语言；拉丁文 `la_la` 与藏文 `bo_cn` 不参与检测。
   缺失文件按回退策略处理；键缺失时根据回退策略补齐或返回键名。
+- 首次启动实例时 `GameLanguageInitializer` 把启动器语言写入 `options.txt` 的 `lang:`：`fn_cn` 映射为
+  `zh_cn`，拉丁文 `la_la` 与藏文 `bo_cn` 因 Minecraft 没有对应语言文件而映射为 `en_us`，
+  其余合法 locale 原样写入；`options.txt` 中已有 `lang:` 时不会被覆盖。
 - 语言回退设置通过 `LanguageFallbackMode` 持久化：系统语言、默认语言、裸键、自定义语言；自定义
   locale 保存在 `languageFallbackLocale`。只有默认语言模式使用 `en_us` 补齐，其余模式缺失
   内容直接返回裸键；后端按该策略重新合并语言词典并发布新快照。
-- 语言下拉框中的语言名不参与翻译：`LanguageService.displayName(locale)` 直接读取后端名称表，
-  所以 `zh_cn` 恒为“简体中文”、`zh_tw` 恒为“繁體中文”、`en_us` 恒为“English”、
-  `fn_cn` 恒为“地道中国话”，切换界面语言或翻译文件写错名称都不会改变列表内容；
-  没有登记名称的自定义语言显示 locale 标识。新增内置语言时在后端名称表登记自称。
+- 语言下拉框中的语言名不参与翻译：`LanguageService.displayName(locale)` 直接读取后端
+  `LanguageLocales` 的名称表，所以 `zh_cn` 恒为“简体中文”、`zh_tw` 恒为“繁體中文”、
+  `en_us` 恒为“English”、`fn_cn` 恒为“地道中国话”、`ja_jp` 恒为“日本語”、`ko_kr` 恒为“한국어”、
+  `fr_fr` 恒为“Français”、`de_de` 恒为“Deutsch”、`ru_ru` 恒为“Русский”、`la_la` 恒为“Latina”、
+  `bo_cn` 恒为“བོད་ཡིག”，切换界面语言或翻译文件写错名称都不会改变列表内容；
+  没有登记名称的自定义语言显示 locale 标识。
 - `LanguageTranslationGenerator` 负责写 JSON；`TranslationTable` 按键排序保存文案，
   子类以实例方法 `t.put(key, value)` 登记，重复键直接失败。
 - `language/generator` 存放生成器基类、`TranslationTable` 和 `TranslationGeneratorRunner`；
-  具体语言生成器 `ZHCNGenerator`、`ZHTWGenerator`、`ENUSGenerator`、`FNCNGenerator`
-  位于 `generator.lang` 子包，只用于开发期生成 JSON。
+  具体语言生成器 `ZHCNGenerator`、`ZHTWGenerator`、`ENUSGenerator`、`FNCNGenerator`、
+  `JAJPGenerator`、`KOKRGenerator`、`FRFRGenerator`、`DEDEGenerator`、`RURUGenerator`、
+  `LALAGenerator`、`BOCNGenerator` 位于 `generator.lang` 子包，只用于开发期生成 JSON。
 - Gradle 任务 `:CAMLLanguage:generateTranslation`（`.run/generateTranslation`）先编译再生成，
   输出到 `CAMLLanguage/src/main/resources/lang`。
-- `LanguageTest` 只校验生成器与已提交 JSON 的一致性、各语言键集合一致性及重复键保护；
-  后端 `LanguageServiceTest` 覆盖安装修复、检测、逐键回退、缺键诊断、自定义语言和损坏文件。
+- `LanguageTest` 只校验生成器与已提交 JSON 的一致性、`BUNDLED_LOCALES` 与生成器一一对应、
+  各语言键集合一致性及重复键保护；后端 `LanguageServiceTest` 覆盖安装修复、检测、逐键回退、
+  缺键诊断、自定义语言和损坏文件。
 - 下载阶段使用 `DownloadStage` 稳定键，由后端根据当前语言快照翻译；前端只显示最终文本。
 
 ## 4. 对外 API
@@ -388,13 +399,13 @@ PATH=/usr/lib/jvm/zulu-25/bin:$PATH \
 
 - 后端编译通过。
 - JavaFX 启动冒烟测试通过。
-- 218 个后端测试、57 个前端测试；前端测试全部通过（含 `LanguageTest`）。
-- 后端测试在当前 Windows 环境有 7 个既有失败，与前端和翻译无关：
-  - `LaunchCommandBuilderTest#placesMainClassBetweenJvmAndGameArguments`
-  - `LaunchArgumentsBuilderTest#buildsJvmArgumentsWithMemoryDefaultsAndClasspath`
-  - `ExternalLoaderInstallerTest`（3 个用例，子进程 `LinkageError`）
-  - `GameLaunchServiceTest#installsAndLaunchesFakeClientEndToEnd`
-  - `NeoForge262VulkanFixTest#createsFmlConfigWhenMissing`
+- 225 个后端测试、57 个前端测试；前端测试全部通过（含 `LanguageTest`）。
+- 后端测试在当前 Windows 环境有 3 个既有失败，与前端和翻译无关：
+  - `LaunchCommandBuilderTest#placesMainClassBetweenJvmAndGameArguments`（POSIX 路径断言）
+  - `LaunchArgumentsBuilderTest#buildsJvmArgumentsWithMemoryDefaultsAndClasspath`（同上）
+  - `NeoForge262VulkanFixTest#createsFmlConfigWhenMissing`（换行符未归一化）
+- `ExternalLoaderInstallerTest`（3 个用例）与 `GameLaunchServiceTest#installsAndLaunchesFakeClientEndToEnd`
+  依赖子进程，JDK 25 下偶发 `LinkageError`，重跑通常可以通过。
 - 集成测试覆盖：
   - 版本清单获取与缓存。
   - 版本 JSON 获取。

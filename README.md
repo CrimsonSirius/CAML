@@ -67,8 +67,8 @@ CAML/
 ├─ CAMLLanguage/                      纯 Java 语言契约、生成器与语言资源
 │  ├─ src/main/java/org/chs/camlauncher/language/
 │  │  ├─ contract/                    事件、错误码、任务类型、DTO、选择枚举
-│  │  └─ generator/                   生成器抽象类、TranslationTable、Runner 和四种语言
-│  ├─ src/main/resources/lang/        zh_cn.json、zh_tw.json、en_us.json、fn_cn.json
+│  │  └─ generator/                   生成器抽象类、TranslationTable、Runner 和十一种语言
+│  ├─ src/main/resources/lang/        内置语言 JSON（zh_cn、zh_tw、en_us、fn_cn、ja_jp、ko_kr、fr_fr、de_de、ru_ru、la_la、bo_cn）
 │  └─ src/test/java/                  LanguageTest
 ├─ CAMLFront/                         JavaFX 界面（不直接读写文件/发 HTTP/启动进程）
 │  ├─ src/main/java/org/chs/camlauncher/front/
@@ -201,10 +201,14 @@ CAMLLanguage/src/main/resources/lang/zh_cn.json
 CAMLLanguage/src/main/resources/lang/zh_tw.json
 CAMLLanguage/src/main/resources/lang/en_us.json
 CAMLLanguage/src/main/resources/lang/fn_cn.json
-~/.caml/lang/zh_cn.json
-~/.caml/lang/zh_tw.json
-~/.caml/lang/en_us.json
-~/.caml/lang/fn_cn.json
+CAMLLanguage/src/main/resources/lang/ja_jp.json
+CAMLLanguage/src/main/resources/lang/ko_kr.json
+CAMLLanguage/src/main/resources/lang/fr_fr.json
+CAMLLanguage/src/main/resources/lang/de_de.json
+CAMLLanguage/src/main/resources/lang/ru_ru.json
+CAMLLanguage/src/main/resources/lang/la_la.json
+CAMLLanguage/src/main/resources/lang/bo_cn.json
+~/.caml/lang/<locale>.json
 ```
 
 每次启动时，后端 `LanguageService` 都会把内置语言文件与 `~/.caml/lang` 中的同名文件按翻译键值比对：
@@ -222,24 +226,31 @@ statusLabel.setText(UiText.tr("home.instance.current", version));
 
 - 运行时文本查询由后端 `LanguageService.text(key, args...)` 完成，支持逐键回退、`%s` / `%d` 等占位符，并记录缺失键与格式化诊断。
 - 当前语言按顺序取 `-Dcaml.language`、系统语言。默认语言是 `en_us`，因此不检测英语系统，
-  只区分中文系统：`zh_CN` / `zh_SG`（含脚本 `Hans`）等简体中文系统使用 `zh_cn`，
-  `zh_TW` / `zh_HK` / `zh_MO`（含脚本 `Hant`）等繁体中文系统使用 `zh_tw`，
-  其余系统（含英语系统）一律使用 `en_us`。
+  只检测有内置翻译且允许自动切换的系统语言：`zh_CN` / `zh_SG`（含脚本 `Hans`）等简体中文系统使用
+  `zh_cn`，`zh_TW` / `zh_HK` / `zh_MO`（含脚本 `Hant`）等繁体中文系统使用 `zh_tw`，
+  日语系统使用 `ja_jp`，韩语系统使用 `ko_kr`，法语系统使用 `fr_fr`，德语系统使用 `de_de`，
+  俄语系统使用 `ru_ru`；其余系统（含英语）一律使用 `en_us`。拉丁文（`la_la`）与藏文（`bo_cn`）
+  不参与系统检测，只能在手动模式中选择。
 - 每次启动时后端把内置 `lang/*.json` 与 `~/.caml/lang` 的同名文件按键值比对，
   不一致（含 JSON 损坏）就按内置文件重写；非内置语言文件始终原样保留。
 - 设置 → 外观 → 语言提供“自动 / 手动”两种模式；手动模式可从语言下拉框选择
-  `zh_cn`、`zh_tw`、`en_us` 或 `fn_cn`。模式与手动语言分别保存在 `settings.properties` 的
+  `zh_cn`、`zh_tw`、`en_us`、`fn_cn`、`ja_jp`、`ko_kr`、`fr_fr`、`de_de`、`ru_ru`、`la_la`
+  或 `bo_cn`。模式与手动语言分别保存在 `settings.properties` 的
   `languageMode` 和 `language`，切换后立即重建主视图刷新界面文案。
 - 外观页同时提供语言回退策略：`系统语言`、`默认语言`（固定英语）、
   `裸键`（不回退）和`自定义语言`（仅下拉选择的 locale）。除默认语言外，缺失内容显示裸键。模式与自定义 locale
   持久化为 `languageFallbackMode` 和 `languageFallbackLocale`。
 - 语言下拉框中的语言名不参与翻译，始终使用该语言自己的写法：`zh_cn` → `简体中文`、
-  `zh_tw` → `繁體中文`、`en_us` → `English`、`fn_cn` → `地道中国话`。名称**硬编码**在后端
-  `LanguageService`，不写入也不读取翻译文件，因此切换界面语言、或翻译文件写错名称都不会改变下拉框内容；
+  `zh_tw` → `繁體中文`、`en_us` → `English`、`fn_cn` → `地道中国话`、`ja_jp` → `日本語`、
+  `ko_kr` → `한국어`、`fr_fr` → `Français`、`de_de` → `Deutsch`、`ru_ru` → `Русский`、
+  `la_la` → `Latina`、`bo_cn` → `བོད་ཡིག`。名称**硬编码**在后端
+  `LanguageLocales` 的名称表，不写入也不读取翻译文件，因此切换界面语言、或翻译文件写错名称都不会改变下拉框内容；
   未登记的 locale 回退显示 locale 标识。新增内置语言时在后端语言名称表中登记自称。
 - 语言文件**由代码生成**，不要手工编辑：每种语言实现一个继承
   `LanguageTranslationGenerator` 的生成器（`CAMLLanguage` 的 `generator.lang` 包下：
-  `ZHCNGenerator`、`ZHTWGenerator`、`ENUSGenerator`、`FNCNGenerator`），
+  `ZHCNGenerator`、`ZHTWGenerator`、`ENUSGenerator`、`FNCNGenerator`、`JAJPGenerator`、
+  `KOKRGenerator`、`FRFRGenerator`、`DEDEGenerator`、`RURUGenerator`、`LALAGenerator`、
+  `BOCNGenerator`），
   在 `populate(TranslationTable)` 中用实例方法登记键和文案：
 
   ```java
@@ -250,8 +261,12 @@ statusLabel.setText(UiText.tr("home.instance.current", version));
   }
   ```
 
-- 新增语言只需在 `generator` 下添加一个生成器、在 `TranslationGeneratorRunner` 中登记，
-  并在后端 `LanguageService` 的语言名称表中补充该语言的自称（语言名不写进翻译文件）。
+- 新增语言需要四处登记：在 `generator.lang` 下添加生成器（`locale()` 返回新标识）、在
+  `TranslationGeneratorRunner` 的生成器列表中登记、把 locale 加入
+  `LanguageConstants.BUNDLED_LOCALES`（决定安装、同步与下拉框顺序）、并在后端
+  `LanguageLocales` 的名称表补充自称（语言名不写进翻译文件）。若该语言需要参与自动检测，
+  还要在 `LanguageLocales.DETECTED_LANGUAGE_LOCALES` 中登记语言代码；拉丁文与藏文不参与检测。
+  `LanguageTest` 会校验 `BUNDLED_LOCALES`、生成器与已提交 JSON 三者一一对应。
 
 ### Mod 下载
 
