@@ -407,6 +407,28 @@ public final class RURUGenerator extends LanguageTranslationGenerator {
         t.put("operation.loadModIcon", "Загрузка значка мода");
         t.put("operation.saveLastInstance", "Сохранение последней запущенной сборки");
         t.put("operation.launchGame", "Запуск игры %s");
+
+        // Загрузчик Quilt
+        t.put("download.description.quilt", "Quilt Loader %s");
+        t.put("download.description.quiltWithApi", "Quilt Loader %s + Quilted Fabric API %s");
+        t.put("download.setup.option.quilt", "Выбрать версию Quilt");
+        t.put("download.setup.option.quiltApi", "Выбрать версию Quilted Fabric API");
+        t.put("download.prompt.loading.quilt", "Загрузка версий Quilt...");
+        t.put("download.prompt.quiltFirst", "Сначала выберите версию Quilt");
+        t.put("download.prompt.select.quilt", "Выберите версию Quilt");
+        t.put("download.prompt.select.quiltApi", "Выберите версию Quilted Fabric API");
+        t.put("download.prompt.empty.quilt", "Нет доступных версий Quilt");
+        t.put("download.prompt.empty.quiltApi", "Нет доступных версий Quilted Fabric API");
+        t.put("download.prompt.error.quilt", "Не удалось загрузить версии Quilt");
+        t.put("download.prompt.error.quiltApi", "Не удалось загрузить версии Quilted Fabric API");
+        t.put("download.stage.quilt.config.fetch", "Получение конфигурации Quilt");
+        t.put("download.stage.quilt.loader.install", "Установка Quilt Loader");
+        t.put("download.stage.quilt.api.download", "Загрузка Quilted Fabric API");
+        t.put("download.stage.quilt.verify", "Проверка установки Quilt");
+        t.put("log.download.installed.quilt", "[Загрузка] Сборка Quilt %s установлена (Loader %s)");
+        t.put("operation.fetchQuiltLoader", "Получить версии Quilt Loader");
+        t.put("operation.fetchQuiltApi", "Получить версии Quilted Fabric API");
+        t.put("operation.installQuilt", "Установить сборку Quilt %s");
     }
 }
 

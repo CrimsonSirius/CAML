@@ -17,6 +17,8 @@ import org.chs.camlauncher.backend.loader.forge.ForgeVersion;
 import org.chs.camlauncher.backend.loader.neoforge.NeoForgeVersion;
 import org.chs.camlauncher.backend.loader.optifine.OptiFineVersion;
 import org.chs.camlauncher.backend.loader.optifine.OptiFineCompatibility;
+import org.chs.camlauncher.backend.loader.quilt.QuiltApiVersion;
+import org.chs.camlauncher.backend.loader.quilt.QuiltLoaderVersion;
 import org.chs.camlauncher.backend.metadata.model.VersionManifest;
 import org.chs.camlauncher.front.controller.DownloadsController;
 import org.chs.camlauncher.front.controller.FrontTask;
@@ -42,6 +44,8 @@ final class DownloadVersionSetupView extends VBox implements PageLifecycle {
     private final CamlComboBox<ForgeVersion> forgeSelector = new CamlComboBox<>();
     private final CamlComboBox<OptiFineVersion> optiFineSelector = new CamlComboBox<>();
     private final CamlComboBox<NeoForgeVersion> neoForgeSelector = new CamlComboBox<>();
+    private final CamlComboBox<QuiltLoaderVersion> quiltLoaderSelector = new CamlComboBox<>();
+    private final CamlComboBox<QuiltApiVersion> quiltApiSelector = new CamlComboBox<>();
     private final VersionManifest.Version version;
     private final String gameVersion;
     private final DownloadsController controller;
@@ -102,6 +106,8 @@ final class DownloadVersionSetupView extends VBox implements PageLifecycle {
                 optionBar(UiText.tr("download.setup.option.optifine"), optiFineSelector),
                 optionBar(UiText.tr("download.setup.option.fabric"), fabricLoaderSelector),
                 optionBar(UiText.tr("download.setup.option.fabricApi"), fabricApiSelector),
+                optionBar(UiText.tr("download.setup.option.quilt"), quiltLoaderSelector),
+                optionBar(UiText.tr("download.setup.option.quiltApi"), quiltApiSelector),
                 optionBar(UiText.tr("download.setup.option.neoforge"), neoForgeSelector)
         );
         options.getStyleClass().add("app-download-setup-options");
@@ -133,6 +139,7 @@ final class DownloadVersionSetupView extends VBox implements PageLifecycle {
         configureForgeSelector(version);
         configureOptiFineSelector();
         configureNeoForgeSelector(version);
+        configureQuiltSelectors();
     }
 
     private void configureFabricSelectors() {
@@ -207,9 +214,12 @@ final class DownloadVersionSetupView extends VBox implements PageLifecycle {
             clearSelection(fabricLoaderSelector, UiText.tr("download.prompt.select.fabric"));
             clearSelection(fabricApiSelector, UiText.tr("download.prompt.fabricFirst"));
             clearSelection(neoForgeSelector, UiText.tr("download.prompt.select.neoforge"));
+            clearSelection(quiltLoaderSelector, UiText.tr("download.prompt.select.quilt"));
+            clearSelection(quiltApiSelector, UiText.tr("download.prompt.quiltFirst"));
             updatingLoaders = false;
             updateFabricApiState();
             updateOptiFineState();
+            updateQuiltApiState();
             autoUpdateInstanceName(forge.versionId()
                     + (optiFine == null ? "" : "-optifine-" + optiFine.version()));
         });
@@ -281,10 +291,56 @@ final class DownloadVersionSetupView extends VBox implements PageLifecycle {
             clearSelection(fabricLoaderSelector, UiText.tr("download.prompt.select.fabric"));
             clearSelection(fabricApiSelector, UiText.tr("download.prompt.fabricFirst"));
             clearSelection(optiFineSelector, UiText.tr("download.prompt.forgeFirst"));
+            clearSelection(quiltLoaderSelector, UiText.tr("download.prompt.select.quilt"));
+            clearSelection(quiltApiSelector, UiText.tr("download.prompt.quiltFirst"));
             updatingLoaders = false;
             updateFabricApiState();
             updateOptiFineState();
+            updateQuiltApiState();
             autoUpdateInstanceName(neoForge.versionId());
+        });
+    }
+
+    private void configureQuiltSelectors() {
+        quiltLoaderSelector.setPromptText(UiText.tr("download.prompt.loading.quilt"));
+        quiltLoaderSelector.setConverter(new StringConverter<>() {
+            @Override
+            public String toString(QuiltLoaderVersion loader) {
+                return loader == null ? null : loader.version();
+            }
+
+            @Override
+            public QuiltLoaderVersion fromString(String value) {
+                return findByLabel(quiltLoaderSelector.getItems(), value, QuiltLoaderVersion::version);
+            }
+        });
+        quiltLoaderSelector.valueProperty().addListener((observable, oldValue, loader) -> {
+            if (updatingLoaders) {
+                return;
+            }
+            scheduleInstanceNameCheck();
+            if (loader == null) {
+                updateQuiltApiState();
+                return;
+            }
+            clearOtherLoaders(quiltLoaderSelector);
+            updateFabricApiState();
+            updateQuiltApiState();
+            autoUpdateInstanceName("quilt-loader-" + loader.version() + "-" + gameVersion);
+        });
+
+        quiltApiSelector.setPromptText(UiText.tr("download.prompt.quiltFirst"));
+        quiltApiSelector.setDisable(true);
+        quiltApiSelector.setConverter(new StringConverter<>() {
+            @Override
+            public String toString(QuiltApiVersion api) {
+                return api == null ? null : api.versionNumber();
+            }
+
+            @Override
+            public QuiltApiVersion fromString(String value) {
+                return findByLabel(quiltApiSelector.getItems(), value, QuiltApiVersion::versionNumber);
+            }
         });
     }
 
@@ -367,7 +423,8 @@ final class DownloadVersionSetupView extends VBox implements PageLifecycle {
     private boolean hasLoaderSelected() {
         return forgeSelector.getValue() != null
                 || fabricLoaderSelector.getValue() != null
-                || neoForgeSelector.getValue() != null;
+                || neoForgeSelector.getValue() != null
+                || quiltLoaderSelector.getValue() != null;
     }
 
     private void clearOtherLoaders(CamlComboBox<?> selected) {
@@ -385,8 +442,13 @@ final class DownloadVersionSetupView extends VBox implements PageLifecycle {
         if (selected != forgeSelector) {
             clearSelection(optiFineSelector, UiText.tr("download.prompt.forgeFirst"));
         }
+        if (selected != quiltLoaderSelector) {
+            clearSelection(quiltLoaderSelector, UiText.tr("download.prompt.select.quilt"));
+            clearSelection(quiltApiSelector, UiText.tr("download.prompt.quiltFirst"));
+        }
         updatingLoaders = false;
         updateOptiFineState();
+        updateQuiltApiState();
     }
 
     private static void clearSelection(CamlComboBox<?> selector, String prompt) {
@@ -426,6 +488,10 @@ final class DownloadVersionSetupView extends VBox implements PageLifecycle {
                     optiFineSelector.setPromptText(UiText.tr("download.prompt.error.optifine"));
                     optiFineSelector.setDisable(true);
                 }));
+        loaderTasks.add(controller.fetchQuiltLoaderVersions(gameVersion, this::showQuiltLoaders,
+                message -> quiltLoaderSelector.setPromptText(UiText.tr("download.prompt.error.quilt"))));
+        loaderTasks.add(controller.fetchQuiltApiVersions(gameVersion, this::showQuiltApiVersions,
+                message -> quiltApiSelector.setPromptText(UiText.tr("download.prompt.error.quiltApi"))));
     }
 
     void refreshLoaderVersions() {
@@ -439,9 +505,12 @@ final class DownloadVersionSetupView extends VBox implements PageLifecycle {
         resetSelector(forgeSelector, UiText.tr("download.prompt.loading.forge"));
         resetSelector(optiFineSelector, UiText.tr("download.prompt.forgeFirst"));
         resetSelector(neoForgeSelector, UiText.tr("download.prompt.loading.neoforge"));
+        resetSelector(quiltLoaderSelector, UiText.tr("download.prompt.loading.quilt"));
+        resetSelector(quiltApiSelector, UiText.tr("download.prompt.quiltFirst"));
         updatingLoaders = false;
         updateFabricApiState();
         updateOptiFineState();
+        updateQuiltApiState();
         loadLoaderVersions(gameVersion, controller);
     }
 
@@ -513,6 +582,28 @@ final class DownloadVersionSetupView extends VBox implements PageLifecycle {
         updateOptiFineState();
     }
 
+    private void showQuiltLoaders(List<QuiltLoaderVersion> loaders) {
+        if (disposed) {
+            return;
+        }
+        quiltLoaderSelector.getItems().setAll(loaders);
+        quiltLoaderSelector.setPromptText(loaders.isEmpty()
+                ? UiText.tr("download.prompt.empty.quilt")
+                : UiText.tr("download.prompt.select.quilt"));
+        updateQuiltApiState();
+    }
+
+    private void showQuiltApiVersions(List<QuiltApiVersion> versions) {
+        if (disposed) {
+            return;
+        }
+        quiltApiSelector.getItems().setAll(versions);
+        quiltApiSelector.setPromptText(versions.isEmpty()
+                ? UiText.tr("download.prompt.empty.quiltApi")
+                : UiText.tr("download.prompt.quiltFirst"));
+        updateQuiltApiState();
+    }
+
     @Override
     public void dispose() {
         disposed = true;
@@ -527,7 +618,8 @@ final class DownloadVersionSetupView extends VBox implements PageLifecycle {
     private void updateOptiFineState() {
         boolean hasForge = forgeSelector.getValue() != null
                 && fabricLoaderSelector.getValue() == null
-                && neoForgeSelector.getValue() == null;
+                && neoForgeSelector.getValue() == null
+                && quiltLoaderSelector.getValue() == null;
         if (!hasForge) {
             clearSelection(optiFineSelector, UiText.tr("download.prompt.forgeFirst"));
             optiFineSelector.setDisable(true);
@@ -543,13 +635,27 @@ final class DownloadVersionSetupView extends VBox implements PageLifecycle {
     private void updateFabricApiState() {
         boolean hasFabric = fabricLoaderSelector.getValue() != null
                 && forgeSelector.getValue() == null
-                && neoForgeSelector.getValue() == null;
+                && neoForgeSelector.getValue() == null
+                && quiltLoaderSelector.getValue() == null;
         if (!hasFabric) {
             clearSelection(fabricApiSelector, UiText.tr("download.prompt.fabricFirst"));
         } else if (fabricApiSelector.getValue() == null && !fabricApiSelector.getItems().isEmpty()) {
             fabricApiSelector.setPromptText(UiText.tr("download.prompt.select.fabricApi"));
         }
         fabricApiSelector.setDisable(!hasFabric || fabricApiSelector.getItems().isEmpty());
+    }
+
+    private void updateQuiltApiState() {
+        boolean hasQuilt = quiltLoaderSelector.getValue() != null
+                && forgeSelector.getValue() == null
+                && neoForgeSelector.getValue() == null
+                && fabricLoaderSelector.getValue() == null;
+        if (!hasQuilt) {
+            clearSelection(quiltApiSelector, UiText.tr("download.prompt.quiltFirst"));
+        } else if (quiltApiSelector.getValue() == null && !quiltApiSelector.getItems().isEmpty()) {
+            quiltApiSelector.setPromptText(UiText.tr("download.prompt.select.quiltApi"));
+        }
+        quiltApiSelector.setDisable(!hasQuilt || quiltApiSelector.getItems().isEmpty());
     }
 
     private void startDownload() {
@@ -569,6 +675,8 @@ final class DownloadVersionSetupView extends VBox implements PageLifecycle {
         FabricApiVersion fabricApi = fabricLoader == null ? null : fabricApiSelector.getValue();
         OptiFineVersion optiFine = optiFineSelector.getValue();
         NeoForgeVersion neoForge = neoForgeSelector.getValue();
+        QuiltLoaderVersion quiltLoader = quiltLoaderSelector.getValue();
+        QuiltApiVersion quiltApi = quiltLoader == null ? null : quiltApiSelector.getValue();
         if (optiFine != null && forge == null) {
             showStatus(UiText.tr("download.setup.optifineRequiresForge"), true);
             return;
@@ -584,7 +692,7 @@ final class DownloadVersionSetupView extends VBox implements PageLifecycle {
 
         onStartDownload.accept(new DownloadRequest(
                 version, instanceId, gameDirectory, forge, fabricLoader, fabricApi,
-                optiFine, neoForge));
+                optiFine, neoForge, quiltLoader, quiltApi));
     }
 
     private void showStatus(String text, boolean error) {

@@ -5,6 +5,8 @@ import org.chs.camlauncher.backend.loader.fabric.FabricLoaderVersion;
 import org.chs.camlauncher.backend.loader.forge.ForgeVersion;
 import org.chs.camlauncher.backend.loader.neoforge.NeoForgeVersion;
 import org.chs.camlauncher.backend.loader.optifine.OptiFineVersion;
+import org.chs.camlauncher.backend.loader.quilt.QuiltApiVersion;
+import org.chs.camlauncher.backend.loader.quilt.QuiltLoaderVersion;
 import org.chs.camlauncher.backend.metadata.model.VersionManifest;
 import org.chs.camlauncher.front.text.UiText;
 
@@ -19,7 +21,9 @@ record DownloadRequest(
         FabricLoaderVersion fabricLoader,
         FabricApiVersion fabricApi,
         OptiFineVersion optiFine,
-        NeoForgeVersion neoForge
+        NeoForgeVersion neoForge,
+        QuiltLoaderVersion quiltLoader,
+        QuiltApiVersion quiltApi
 ) {
     String description() {
         if (optiFine != null) {
@@ -33,6 +37,12 @@ record DownloadRequest(
                     ? UiText.tr("download.description.fabric", fabricLoader.version())
                     : UiText.tr("download.description.fabricWithApi",
                             fabricLoader.version(), fabricApi.versionNumber());
+        }
+        if (quiltLoader != null) {
+            return quiltApi == null
+                    ? UiText.tr("download.description.quilt", quiltLoader.version())
+                    : UiText.tr("download.description.quiltWithApi",
+                            quiltLoader.version(), quiltApi.versionNumber());
         }
         if (neoForge != null) {
             return UiText.tr("download.description.neoforge", neoForge.version());

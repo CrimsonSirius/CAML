@@ -407,6 +407,28 @@ public final class FRFRGenerator extends LanguageTranslationGenerator {
         t.put("operation.loadModIcon", "Charger l’icône du mod");
         t.put("operation.saveLastInstance", "Enregistrer la dernière instance lancée");
         t.put("operation.launchGame", "Lancer le jeu %s");
+
+        // Chargeur Quilt
+        t.put("download.description.quilt", "Quilt Loader %s");
+        t.put("download.description.quiltWithApi", "Quilt Loader %s + Quilted Fabric API %s");
+        t.put("download.setup.option.quilt", "Sélectionner une version de Quilt");
+        t.put("download.setup.option.quiltApi", "Sélectionner une version de Quilted Fabric API");
+        t.put("download.prompt.loading.quilt", "Chargement des versions de Quilt...");
+        t.put("download.prompt.quiltFirst", "Sélectionnez d’abord une version de Quilt");
+        t.put("download.prompt.select.quilt", "Sélectionner une version de Quilt");
+        t.put("download.prompt.select.quiltApi", "Sélectionner une version de Quilted Fabric API");
+        t.put("download.prompt.empty.quilt", "Aucune version de Quilt disponible");
+        t.put("download.prompt.empty.quiltApi", "Aucune version de Quilted Fabric API disponible");
+        t.put("download.prompt.error.quilt", "Échec du chargement des versions de Quilt");
+        t.put("download.prompt.error.quiltApi", "Échec du chargement des versions de Quilted Fabric API");
+        t.put("download.stage.quilt.config.fetch", "Récupération de la configuration Quilt");
+        t.put("download.stage.quilt.loader.install", "Installation de Quilt Loader");
+        t.put("download.stage.quilt.api.download", "Téléchargement de Quilted Fabric API");
+        t.put("download.stage.quilt.verify", "Vérification de l’installation de Quilt");
+        t.put("log.download.installed.quilt", "[Téléchargement] Instance Quilt %s installée (Loader %s)");
+        t.put("operation.fetchQuiltLoader", "Récupérer les versions de Quilt Loader");
+        t.put("operation.fetchQuiltApi", "Récupérer les versions de Quilted Fabric API");
+        t.put("operation.installQuilt", "Installer l’instance Quilt %s");
     }
 }
 

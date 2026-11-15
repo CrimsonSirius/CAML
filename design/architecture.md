@@ -43,7 +43,7 @@ CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
 | `theme` | 主题目录、默认主题复制和当前主题配置 | 已有 |
 | `settings` | 启动器设置持久化（游戏位置、最大内存、版本隔离、下载源、下载并发数） | 已有 |
 | `system` | 物理内存与可用内存读取 | 已有 |
-| `loader` | Fabric Loader/Fabric API、Forge、NeoForge、OptiFine（仅 Forge）安装；Quilt 待实现 | 已有 |
+| `loader` | Fabric Loader/Fabric API、Quilt Loader/Quilted Fabric API、Forge、NeoForge、OptiFine（仅 Forge）安装 | 已有 |
 | `json` | 通用 JSON 文件读写 | 已有 |
 
 ## 3. 当前已实现能力
@@ -84,9 +84,9 @@ CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
   已知总字节、已完成文件数和总文件数，供进度页计算总进度。
 - 下载源支持“尽可能使用镜像源”“尽可能使用官方源”和“自定义镜像根地址”三种模式；
   默认镜像源，镜像失败时回退原始官方地址；覆盖版本清单、版本 JSON、版本文件、库、资源、
-  Fabric/Forge/NeoForge/OptiFine 元数据、Fabric Maven 依赖和加载器 installer/API。
-- Fabric Loader/API、Forge、NeoForge、OptiFine 的版本列表按“加载器类型 + 游戏版本”
-  在内存中缓存 5 分钟；下载源变化时缓存整体失效，避免切换源后继续显示旧列表。
+  Fabric/Quilt/Forge/NeoForge/OptiFine 元数据、Fabric/Quilt Maven 依赖和加载器 installer/API。
+- Fabric Loader/API、Quilt Loader/Quilted Fabric API、Forge、NeoForge、OptiFine 的版本列表
+  按“加载器类型 + 游戏版本”在内存中缓存 5 分钟；下载源变化时缓存整体失效，避免切换源后继续显示旧列表。
 - 已有有效文件时跳过。
 
 ### 3.3 实例安装
@@ -103,6 +103,8 @@ CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
 - 基础文件下载完成后才写入版本 JSON。
 - 返回 `InstalledVersion`，包含后续启动需要的路径。
 - Fabric 安装先确保原版父版本存在，再写入 Fabric Meta profile JSON，并把可选 Fabric API jar 放入实际游戏目录的 `mods`。
+- Quilt 安装复用同一套 profile 流程：先确保原版父版本存在，再写入 Quilt Meta
+  `v3/versions/loader/<game>/<loader>/profile/json` 的 profile JSON，并把可选 Quilted Fabric API jar 放入实际游戏目录的 `mods`。
 - Forge/NeoForge 先按当前下载源把 installer 的 `version.json` / `install_profile.json` 依赖预下载到 staging，
   再通过官方 installer 的 `--installClient` 执行 processor，避免 installer 绕过镜像直连官方 Maven。
 - Forge/NeoForge 版本列表在镜像源下优先读取 BMCLAPI 的按 Minecraft 版本 JSON 接口；
@@ -344,7 +346,6 @@ CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
 - 启动脚本导出。
 - 微软账号登录。
 - token 刷新和安全存储。
-- Quilt 加载器安装。
 - 下载取消和内容寻址缓存。
 - 整合包和模组管理。
 

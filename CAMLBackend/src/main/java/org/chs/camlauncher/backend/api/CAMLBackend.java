@@ -36,6 +36,10 @@ import org.chs.camlauncher.backend.loader.neoforge.NeoForgeVersion;
 import org.chs.camlauncher.backend.loader.optifine.OptiFineInstaller;
 import org.chs.camlauncher.backend.loader.optifine.OptiFineService;
 import org.chs.camlauncher.backend.loader.optifine.OptiFineVersion;
+import org.chs.camlauncher.backend.loader.quilt.QuiltApiVersion;
+import org.chs.camlauncher.backend.loader.quilt.QuiltInstaller;
+import org.chs.camlauncher.backend.loader.quilt.QuiltLoaderVersion;
+import org.chs.camlauncher.backend.loader.quilt.QuiltService;
 import org.chs.camlauncher.backend.launch.GameLaunch;
 import org.chs.camlauncher.backend.launch.GameLaunchService;
 import org.chs.camlauncher.backend.launch.LaunchOptions;
@@ -112,6 +116,8 @@ public final class CAMLBackend implements AutoCloseable {
     private final FabricInstaller fabricInstaller;
     private final ForgeService forgeService;
     private final NeoForgeService neoForgeService;
+    private final QuiltService quiltService;
+    private final QuiltInstaller quiltInstaller;
     private final OptiFineService optiFineService;
     private final OptiFineInstaller optiFineInstaller;
     private final ExternalLoaderInstaller externalLoaderInstaller;
@@ -165,6 +171,14 @@ public final class CAMLBackend implements AutoCloseable {
         );
         this.forgeService = new ForgeService();
         this.neoForgeService = new NeoForgeService();
+        this.quiltService = new QuiltService();
+        this.quiltInstaller = new QuiltInstaller(
+                versionInstaller,
+                quiltService,
+                fileDownloader,
+                VersionManifestService.DEFAULT_MANIFEST_URI,
+                config.dataDirectory().resolve("cache").resolve("version_manifest_v2.json")
+        );
         this.optiFineService = new OptiFineService();
         this.externalLoaderInstaller = new ExternalLoaderInstaller(
                 versionInstaller,
@@ -375,6 +389,8 @@ public final class CAMLBackend implements AutoCloseable {
         forgeService.setSourceMode(downloadSourceMode, customDownloadApi);
         neoForgeService.setSources(sources);
         neoForgeService.setSourceMode(downloadSourceMode, customDownloadApi);
+        quiltInstaller.setSources(sources);
+        quiltService.setSources(sources);
         optiFineService.setSources(sources);
         optiFineService.setSourceMode(downloadSourceMode, customDownloadApi);
         optiFineInstaller.setSources(sources);
@@ -720,6 +736,50 @@ public final class CAMLBackend implements AutoCloseable {
             throws IOException, InterruptedException {
         return loaderVersionCache.get(LoaderVersionCache.Kind.OPTIFINE, gameVersion,
                 () -> optiFineService.fetchVersions(gameVersion));
+    }
+
+    public List<QuiltLoaderVersion> fetchQuiltLoaderVersions(String gameVersion)
+            throws IOException, InterruptedException {
+        return loaderVersionCache.get(LoaderVersionCache.Kind.QUILT_LOADER, gameVersion,
+                () -> quiltService.fetchLoaderVersions(gameVersion));
+    }
+
+    public List<QuiltApiVersion> fetchQuiltApiVersions(String gameVersion)
+            throws IOException, InterruptedException {
+        return loaderVersionCache.get(LoaderVersionCache.Kind.QUILT_API, gameVersion,
+                () -> quiltService.fetchApiVersions(gameVersion));
+    }
+
+    public InstalledVersion installQuiltVersion(
+            String gameVersion,
+            String instanceId,
+            String loaderVersion,
+            QuiltApiVersion apiVersion,
+            Path gameDirectory,
+            DownloadListener listener
+    ) throws IOException, InterruptedException {
+        return installQuiltVersion(gameVersion, instanceId, loaderVersion, apiVersion,
+                gameDirectory, listener, new DownloadCancellationToken());
+    }
+
+    public InstalledVersion installQuiltVersion(
+            String gameVersion,
+            String instanceId,
+            String loaderVersion,
+            QuiltApiVersion apiVersion,
+            Path gameDirectory,
+            DownloadListener listener,
+            DownloadCancellationToken token
+    ) throws IOException, InterruptedException {
+        return quiltInstaller.install(
+                gameVersion,
+                instanceId,
+                loaderVersion,
+                apiVersion,
+                gameDirectory,
+                listener,
+                token
+        );
     }
 
     /**

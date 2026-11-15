@@ -407,6 +407,28 @@ public final class JAJPGenerator extends LanguageTranslationGenerator {
         t.put("operation.loadModIcon", "MOD アイコンを読み込む");
         t.put("operation.saveLastInstance", "最後に起動したインスタンスを保存");
         t.put("operation.launchGame", "ゲーム %s を起動");
+
+        // Quilt ローダー
+        t.put("download.description.quilt", "Quilt Loader %s");
+        t.put("download.description.quiltWithApi", "Quilt Loader %s + Quilted Fabric API %s");
+        t.put("download.setup.option.quilt", "Quilt バージョンを選択");
+        t.put("download.setup.option.quiltApi", "Quilted Fabric API バージョンを選択");
+        t.put("download.prompt.loading.quilt", "Quilt バージョンを取得しています...");
+        t.put("download.prompt.quiltFirst", "先に Quilt バージョンを選択してください");
+        t.put("download.prompt.select.quilt", "Quilt バージョンを選択してください");
+        t.put("download.prompt.select.quiltApi", "Quilted Fabric API バージョンを選択してください");
+        t.put("download.prompt.empty.quilt", "利用できる Quilt バージョンがありません");
+        t.put("download.prompt.empty.quiltApi", "利用できる Quilted Fabric API バージョンがありません");
+        t.put("download.prompt.error.quilt", "Quilt バージョンの取得に失敗しました");
+        t.put("download.prompt.error.quiltApi", "Quilted Fabric API バージョンの取得に失敗しました");
+        t.put("download.stage.quilt.config.fetch", "Quilt 設定を取得しています");
+        t.put("download.stage.quilt.loader.install", "Quilt Loader をインストールしています");
+        t.put("download.stage.quilt.api.download", "Quilted Fabric API をダウンロードしています");
+        t.put("download.stage.quilt.verify", "Quilt のインストールを検証しています");
+        t.put("log.download.installed.quilt", "[ダウンロード] Quilt インスタンス %s をインストールしました (Loader %s)");
+        t.put("operation.fetchQuiltLoader", "Quilt Loader のバージョンを取得");
+        t.put("operation.fetchQuiltApi", "Quilted Fabric API のバージョンを取得");
+        t.put("operation.installQuilt", "Quilt インスタンス %s をインストール");
     }
 }
 

@@ -407,5 +407,27 @@ public final class ENUSGenerator extends LanguageTranslationGenerator {
         t.put("operation.loadModIcon", "Load mod icon");
         t.put("operation.saveLastInstance", "Save last launched instance");
         t.put("operation.launchGame", "Launch game %s");
+
+        // Quilt loader
+        t.put("download.description.quilt", "Quilt Loader %s");
+        t.put("download.description.quiltWithApi", "Quilt Loader %s + Quilted Fabric API %s");
+        t.put("download.setup.option.quilt", "Select Quilt version");
+        t.put("download.setup.option.quiltApi", "Select Quilted Fabric API version");
+        t.put("download.prompt.loading.quilt", "Loading Quilt versions...");
+        t.put("download.prompt.quiltFirst", "Select a Quilt version first");
+        t.put("download.prompt.select.quilt", "Select a Quilt version");
+        t.put("download.prompt.select.quiltApi", "Select a Quilted Fabric API version");
+        t.put("download.prompt.empty.quilt", "No Quilt versions available");
+        t.put("download.prompt.empty.quiltApi", "No Quilted Fabric API versions available");
+        t.put("download.prompt.error.quilt", "Failed to load Quilt versions");
+        t.put("download.prompt.error.quiltApi", "Failed to load Quilted Fabric API versions");
+        t.put("download.stage.quilt.config.fetch", "Fetching Quilt configuration");
+        t.put("download.stage.quilt.loader.install", "Installing Quilt Loader");
+        t.put("download.stage.quilt.api.download", "Downloading Quilted Fabric API");
+        t.put("download.stage.quilt.verify", "Verifying Quilt installation");
+        t.put("log.download.installed.quilt", "[Download] Installed Quilt instance %s (Loader %s)");
+        t.put("operation.fetchQuiltLoader", "Fetch Quilt Loader versions");
+        t.put("operation.fetchQuiltApi", "Fetch Quilted Fabric API versions");
+        t.put("operation.installQuilt", "Install Quilt instance %s");
     }
 }

@@ -407,6 +407,28 @@ public final class BOCNGenerator extends LanguageTranslationGenerator {
         t.put("operation.loadModIcon", "MOD རྟགས་མ་ལེན");
         t.put("operation.saveLastInstance", "མཐའ་མའི་འགོ་འཛུགས་བཟོ་བཅོས་ཉར་ཚགས");
         t.put("operation.launchGame", "རྩེད་མོ %s འགོ་འཛུགས");
+
+        // Quilt འཇུག་ཆས
+        t.put("download.description.quilt", "Quilt Loader %s");
+        t.put("download.description.quiltWithApi", "Quilt Loader %s + Quilted Fabric API %s");
+        t.put("download.setup.option.quilt", "Quilt པར་གཞི་འདེམས");
+        t.put("download.setup.option.quiltApi", "Quilted Fabric API པར་གཞི་འདེམས");
+        t.put("download.prompt.loading.quilt", "Quilt པར་གཞི་ལེན་བཞིན་པ...");
+        t.put("download.prompt.quiltFirst", "སྔོན་ལ Quilt པར་གཞི་འདེམས་རོགས");
+        t.put("download.prompt.select.quilt", "Quilt པར་གཞི་འདེམས་རོགས");
+        t.put("download.prompt.select.quiltApi", "Quilted Fabric API པར་གཞི་འདེམས་རོགས");
+        t.put("download.prompt.empty.quilt", "Quilt པར་གཞི་མེད");
+        t.put("download.prompt.empty.quiltApi", "Quilted Fabric API པར་གཞི་མེད");
+        t.put("download.prompt.error.quilt", "Quilt པར་གཞི་ལེན་མ་ཐུབ");
+        t.put("download.prompt.error.quiltApi", "Quilted Fabric API པར་གཞི་ལེན་མ་ཐུབ");
+        t.put("download.stage.quilt.config.fetch", "Quilt སྒྲིག་བཀོད་ལེན་བཞིན་པ");
+        t.put("download.stage.quilt.loader.install", "Quilt Loader སྒྲིག་བཞིན་པ");
+        t.put("download.stage.quilt.api.download", "Quilted Fabric API ཕབ་ལེན་བཞིན་པ");
+        t.put("download.stage.quilt.verify", "Quilt སྒྲིག་བཀོད་དཔྱད་བཞིན་པ");
+        t.put("log.download.installed.quilt", "[ཕབ་ལེན] Quilt མིང་ཚིག %s སྒྲིག་ཟིན (Loader %s)");
+        t.put("operation.fetchQuiltLoader", "Quilt Loader པར་གཞི་ལེན");
+        t.put("operation.fetchQuiltApi", "Quilted Fabric API པར་གཞི་ལེན");
+        t.put("operation.installQuilt", "Quilt མིང་ཚིག %s སྒྲིག");
     }
 }
 

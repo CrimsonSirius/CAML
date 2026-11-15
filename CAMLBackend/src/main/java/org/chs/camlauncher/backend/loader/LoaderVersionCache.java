@@ -16,6 +16,8 @@ public final class LoaderVersionCache {
     public enum Kind {
         FABRIC_LOADER,
         FABRIC_API,
+        QUILT_LOADER,
+        QUILT_API,
         FORGE,
         NEOFORGE,
         OPTIFINE

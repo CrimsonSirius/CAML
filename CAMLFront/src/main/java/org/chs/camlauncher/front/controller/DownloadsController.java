@@ -13,6 +13,8 @@ import org.chs.camlauncher.backend.loader.fabric.FabricLoaderVersion;
 import org.chs.camlauncher.backend.loader.forge.ForgeVersion;
 import org.chs.camlauncher.backend.loader.neoforge.NeoForgeVersion;
 import org.chs.camlauncher.backend.loader.optifine.OptiFineVersion;
+import org.chs.camlauncher.backend.loader.quilt.QuiltApiVersion;
+import org.chs.camlauncher.backend.loader.quilt.QuiltLoaderVersion;
 import org.chs.camlauncher.backend.metadata.model.VersionManifest;
 import org.chs.camlauncher.backend.mod.model.ModDownloadResult;
 import org.chs.camlauncher.backend.mod.model.ModFile;
@@ -215,6 +217,53 @@ public final class DownloadsController {
                     LOGGER.info("Fabric 实例安装完成: {} / {} -> {}",
                             instanceId, loaderVersion, installed.gameDirectory());
                     context.sendLog(UiText.tr("log.download.installed.fabric",
+                            instanceId, loaderVersion));
+                    onSuccess.run();
+                },
+                onError);
+    }
+
+    public FrontTask<List<QuiltLoaderVersion>> fetchQuiltLoaderVersions(
+            String gameVersion,
+            Consumer<List<QuiltLoaderVersion>> onLoaded,
+            Consumer<String> onError) {
+        return context.runMetadata(UiText.tr("operation.fetchQuiltLoader"),
+                () -> context.backend().fetchQuiltLoaderVersions(gameVersion),
+                onLoaded, onError);
+    }
+
+    public FrontTask<List<QuiltApiVersion>> fetchQuiltApiVersions(
+            String gameVersion,
+            Consumer<List<QuiltApiVersion>> onLoaded,
+            Consumer<String> onError) {
+        return context.runMetadata(UiText.tr("operation.fetchQuiltApi"),
+                () -> context.backend().fetchQuiltApiVersions(gameVersion),
+                onLoaded, onError);
+    }
+
+    public FrontTask<InstalledVersion> downloadQuiltVersion(
+            String gameVersion,
+            String instanceId,
+            String loaderVersion,
+            QuiltApiVersion apiVersion,
+            Path gameDirectory,
+            DownloadListener listener,
+            Runnable onSuccess,
+            Consumer<String> onError) {
+        Objects.requireNonNull(gameDirectory, "gameDirectory");
+        return context.runDownload(UiText.tr("operation.installQuilt", instanceId),
+                () -> context.backend().installQuiltVersion(
+                        gameVersion,
+                        instanceId,
+                        loaderVersion,
+                        apiVersion,
+                        gameDirectory,
+                        listener
+                ),
+                installed -> {
+                    LOGGER.info("Quilt 实例安装完成: {} / {} -> {}",
+                            instanceId, loaderVersion, installed.gameDirectory());
+                    context.sendLog(UiText.tr("log.download.installed.quilt",
                             instanceId, loaderVersion));
                     onSuccess.run();
                 },

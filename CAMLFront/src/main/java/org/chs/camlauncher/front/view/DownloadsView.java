@@ -163,6 +163,10 @@ final class DownloadsView extends HBox implements SidebarPage, PageLifecycle {
             controller.downloadFabricVersion(request.version().id(), request.instanceId(),
                     request.fabricLoader().version(), request.fabricApi(), request.gameDirectory(),
                     telemetry, onSuccess, onError);
+        } else if (request.quiltLoader() != null) {
+            controller.downloadQuiltVersion(request.version().id(), request.instanceId(),
+                    request.quiltLoader().version(), request.quiltApi(), request.gameDirectory(),
+                    telemetry, onSuccess, onError);
         } else if (request.neoForge() != null) {
             controller.downloadNeoForgeVersion(request.version().id(), request.instanceId(),
                     request.neoForge(), request.gameDirectory(), telemetry, onSuccess, onError);

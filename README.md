@@ -20,7 +20,7 @@ CAML 是一个基于 **Java 25 + JavaFX** 的 Minecraft 启动器，采用前后
 | 远程元数据 | 拉取版本清单与单版本 JSON，本地缓存，网络失败时回退缓存；请求地址遵循下载源设置 |
 | 下载 | 客户端 jar、libraries、natives、asset index、assets objects 下载计划；镜像源 / 官方源 / 自定义镜像根地址三种下载源，覆盖版本清单、版本 JSON、Fabric/Forge/NeoForge/OptiFine 元数据、加载器 installer/API 和 Fabric Maven 依赖；SHA-1 校验；`.part` 临时文件 + 原子移动；已知大小的大文件使用 HTTP Range 分片下载，`.part.json` 检查点支持断点续传，Range 不可用时回退单流；响应体有 30 秒空闲读超时，元数据请求有总截止时间；显式 `DownloadCancellationToken`，失败或取消时取消剩余任务并等待 worker 收敛；默认总计最多 6 次下载尝试；并发下载数可设 1–256；已有有效文件跳过 |
 | Mod 下载 | 下载页新增 Mod 子页；通过 Modrinth/CurseForge 官方 API 搜索、分页、查看详情、按加载器和游戏版本分组、显示依赖并下载到当前实例 `mods` 目录；不使用镜像源；CurseForge 文件地址为空时按 fileId 回退 CDN，兼容旧 CDN 域名变体并透传 `x-api-key`，SHA-1 缺失时回退 MD5，大小 0 视为未知；Modrinth 的 WebP 图标在后端转换为 PNG 后显示 |
-| 版本安装 | 本地已安装版本直接复用（支持第三方启动器/整合包的自定义版本 ID），下载时可用自定义实例名；官方版本 ID 负责元数据，实例 ID 作为 `versions/<id>` 目录名；支持 Fabric Loader/Fabric API、Forge、NeoForge、OptiFine（仅 Forge）安装；Forge/NeoForge 版本列表优先从 BMCLAPI JSON 接口获取，官方源使用 Maven 元数据和 NeoForge 版本号映射匹配 Minecraft 版本；支持旧式 Forge library、Maven 路径推导和子版本库优先去重；缺失文件自动补齐；兼容 PCL/HMCL 版本隔离布局；基础文件完成后才写入版本 JSON |
+| 版本安装 | 本地已安装版本直接复用（支持第三方启动器/整合包的自定义版本 ID），下载时可用自定义实例名；官方版本 ID 负责元数据，实例 ID 作为 `versions/<id>` 目录名；支持 Fabric Loader/Fabric API、Quilt Loader/Quilted Fabric API、Forge、NeoForge、OptiFine（仅 Forge）安装；Forge/NeoForge 版本列表优先从 BMCLAPI JSON 接口获取，官方源使用 Maven 元数据和 NeoForge 版本号映射匹配 Minecraft 版本；支持旧式 Forge library、Maven 路径推导和子版本库优先去重；缺失文件自动补齐；兼容 PCL/HMCL 版本隔离布局；基础文件完成后才写入版本 JSON |
 | 账号 | 离线登录，稳定离线 UUID，生成 `AuthSession` |
 | Java | 扫描 `java.home`、`JAVA_HOME`、`PATH` 及常见 JDK 目录；读取版本、供应商、架构、位数；按版本要求选择运行时；Windows 优先 `javaw.exe` |
 | 启动 | 不可变 `LaunchPlan`、classpath 构建、JVM/游戏参数与 `${...}` 占位符、natives 子目录解压、Log4j 配置、旧版本 virtual assets 重建；NeoForge 26.2 + Vulkan 自动关闭 early window；根据设置选择，`--gameDir` 指向 `versions/<id>` 或 `.minecraft` 根目录 |
@@ -32,7 +32,6 @@ CAML 是一个基于 **Java 25 + JavaFX** 的 Minecraft 启动器，采用前后
 - 微软账号登录、token 刷新与安全存储
 - CAMLFront 启动错误对话框、停止按钮、启动器隐藏 / 保留 / 关闭策略
 - 崩溃分析、异常退出分类和真实 Minecraft 客户端端到端验证
-- Quilt 加载器安装
 - 前端下载取消入口与内容寻址缓存
 - quick play、服务器直连、整合包与模组管理
 
@@ -52,7 +51,7 @@ CAML/
 │  │  ├─ auth/        账号与离线登录
 │  │  ├─ runtime/     Java 运行时检测与匹配
 │  │  ├─ launch/      启动编排；command/classpath/prepare/process/patch 子包
-│  │  ├─ loader/      Fabric/Forge/NeoForge/OptiFine 安装编排
+│  │  ├─ loader/      Fabric/Quilt/Forge/NeoForge/OptiFine 安装编排
 │  │  ├─ theme/       主题目录、默认主题复制和当前主题配置
 │  │  ├─ settings/    启动器设置持久化
 │  │  ├─ system/      物理内存读取（Linux MemAvailable）
@@ -88,7 +87,7 @@ CAML/
 │  │     ├─ LogPaneView.java          运行日志面板
 │  │     ├─ DownloadsView.java        下载页导航与内部页面切换
 │  │     ├─ DownloadVersionsView.java 正式版/快照版/远古版列表
-│  │     ├─ DownloadVersionSetupView.java 版本信息、Forge/OptiFine/Fabric/NeoForge 选择与下载
+│  │     ├─ DownloadVersionSetupView.java 版本信息、Forge/OptiFine/Fabric/Quilt/NeoForge 选择与下载
 │  │     ├─ DownloadProgressView.java 下载进度、网速与阶段列表
 │  │     ├─ DownloadTelemetry.java    下载事件聚合与网速计算
 │  │     ├─ DownloadRequest.java      下载设置提交快照
