@@ -256,6 +256,12 @@ public final class FNCNGenerator extends LanguageTranslationGenerator {
         t.put("settings.game.isolation.full", "完整译本孤立法");
         t.put("settings.game.isolation.none", "不施行译本孤立法");
 
+        // Game language
+        t.put("settings.game.language.title", "比赛腔调");
+        t.put("settings.game.language.description", "头一回发射新译本时，把比赛腔调掰成发射器现在用的腔调。");
+        t.put("settings.game.language.auto", "头一回发射自动换腔调");
+        t.put("settings.game.language.hint", "只在译本还没定过腔调时动手；options.txt 里已经定好的腔调不动。地道中国话会掰成简体中文。");
+
         // Java
         t.put("settings.game.java.title", "爪哇");
         t.put("settings.game.java.description", "揪出发射比赛时使用的爪哇跑路包围圈。自动的会按照比赛版本要求揪出一个能用的爪哇。");
@@ -389,6 +395,7 @@ public final class FNCNGenerator extends LanguageTranslationGenerator {
         t.put("operation.saveMaxMemory", "拯救最大记忆摆弄");
         t.put("operation.saveGameDirectory", "拯救比赛名录");
         t.put("operation.saveVersionIsolation", "拯救译本孤立法摆弄");
+        t.put("operation.saveAutoGameLanguage", "拯救自动比赛腔调摆弄");
         t.put("operation.saveDownloadConcurrency", "拯救向下装载并发数");
         t.put("operation.saveDownloadSource", "拯救向下装载来源摆弄");
         t.put("operation.saveTheme", "拯救命题作文挑三拣四");

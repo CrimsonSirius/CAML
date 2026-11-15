@@ -256,6 +256,12 @@ public final class ENUSGenerator extends LanguageTranslationGenerator {
         t.put("settings.game.isolation.full", "Full version isolation");
         t.put("settings.game.isolation.none", "No version isolation");
 
+        // Game language
+        t.put("settings.game.language.title", "Game language");
+        t.put("settings.game.language.description", "Automatically set the game language to the launcher language when an instance is launched for the first time.");
+        t.put("settings.game.language.auto", "Switch game language on first launch");
+        t.put("settings.game.language.hint", "Only applies when the instance has no language configured yet; an existing language in options.txt is preserved. The custom Chinese locale maps to Simplified Chinese.");
+
         // Java
         t.put("settings.game.java.title", "Java");
         t.put("settings.game.java.description", "Choose the Java runtime used to launch the game. Automatic mode picks a Java that meets the game version requirements.");
@@ -388,6 +394,7 @@ public final class ENUSGenerator extends LanguageTranslationGenerator {
         t.put("operation.saveMaxMemory", "Save max memory setting");
         t.put("operation.saveGameDirectory", "Save game directory");
         t.put("operation.saveVersionIsolation", "Save version isolation setting");
+        t.put("operation.saveAutoGameLanguage", "Save automatic game language setting");
         t.put("operation.saveDownloadConcurrency", "Save download concurrency");
         t.put("operation.saveDownloadSource", "Save download source setting");
         t.put("operation.saveTheme", "Save theme selection");

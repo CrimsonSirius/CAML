@@ -45,6 +45,7 @@ public final class CAMLApplication extends Application {
     private Path gameDirectory;
     private boolean fullVersionIsolation = SettingsService.DEFAULT_VERSION_ISOLATION
             == VersionIsolationMode.FULL;
+    private boolean autoGameLanguage = true;
     private JavaSelectionMode javaSelectionMode = JavaSelectionMode.AUTO;
     private Path selectedJavaPath;
     private String lastLaunchedInstanceId = "1.21.4";
@@ -99,6 +100,11 @@ public final class CAMLApplication extends Application {
             logger.warn("无法读取版本隔离设置，使用默认值 {}", SettingsService.DEFAULT_VERSION_ISOLATION, e);
         }
         try {
+            autoGameLanguage = backend.autoGameLanguage();
+        } catch (IOException e) {
+            logger.warn("无法读取自动游戏语言设置，使用默认值 true", e);
+        }
+        try {
             lastLaunchedInstanceId = backend.lastLaunchedInstanceId().orElse(lastLaunchedInstanceId);
         } catch (IOException e) {
             logger.warn("无法读取最后启动实例，使用默认实例 {}", lastLaunchedInstanceId, e);
@@ -121,6 +127,7 @@ public final class CAMLApplication extends Application {
         view = new MainView(
                 controller, savedMaxMemoryMb, systemMemory, gameDirectory,
                 fullVersionIsolation, lastLaunchedInstanceId, javaSelectionMode, selectedJavaPath,
+                autoGameLanguage,
                 languageSelectionMode, language,
                 languageFallbackMode, languageFallbackLocale,
                 this::changeLanguage, this::changeLanguageFallback);

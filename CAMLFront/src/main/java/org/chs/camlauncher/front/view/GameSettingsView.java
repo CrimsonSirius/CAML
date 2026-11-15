@@ -8,6 +8,7 @@ import javafx.util.Duration;
 import org.chs.camlauncher.backend.system.SystemMemoryInfo;
 import org.chs.camlauncher.front.controller.SettingsController;
 import org.chs.camlauncher.front.text.UiText;
+import org.chs.camlauncher.ui.control.CamlCheckBox;
 import org.chs.camlauncher.ui.control.CamlMemorySlider;
 
 import java.util.function.IntConsumer;
@@ -112,6 +113,27 @@ final class GameSettingsView extends VBox {
         group.getStyleClass().add("app-settings-group");
         group.setMaxWidth(Double.MAX_VALUE);
 
+        Label languageHeading = new Label(UiText.tr("settings.game.language.title"));
+        languageHeading.getStyleClass().add("app-settings-group-title");
+        Label languageDescription = new Label(
+                UiText.tr("settings.game.language.description"));
+        languageDescription.getStyleClass().addAll("caml-body-medium", "caml-on-surface-muted");
+        languageDescription.setWrapText(true);
+        CamlCheckBox autoGameLanguage = new CamlCheckBox(
+                UiText.tr("settings.game.language.auto"));
+        autoGameLanguage.setSelected(launchSettings.autoGameLanguage());
+        autoGameLanguage.selectedProperty().addListener((observable, oldValue, enabled) -> {
+            launchSettings.setAutoGameLanguage(enabled);
+            controller.saveAutoGameLanguageAsync(enabled);
+        });
+        Label languageHint = new Label(UiText.tr("settings.game.language.hint"));
+        languageHint.getStyleClass().addAll("caml-body-small", "field-hint");
+        languageHint.setWrapText(true);
+        VBox languageGroup = new VBox(
+                languageHeading, languageDescription, autoGameLanguage, languageHint);
+        languageGroup.getStyleClass().add("app-settings-group");
+        languageGroup.setMaxWidth(Double.MAX_VALUE);
+
         // 间距、宽度与内边距由 app.css 的 .app-settings-content / .app-settings-group 控制；
         // 内容宽度在 SettingsView 中按滚动视口重新设置。
         setMinWidth(0);
@@ -120,6 +142,7 @@ final class GameSettingsView extends VBox {
         getChildren().addAll(
                 new GameLocationSettingsView(launchSettings, controller),
                 new VersionIsolationSettingsView(launchSettings, onVersionIsolationChanged),
+                languageGroup,
                 javaSettings,
                 group
         );

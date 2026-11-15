@@ -132,6 +132,7 @@ public final class CAMLBackend implements AutoCloseable {
     private volatile int downloadConcurrency = DownloadConcurrency.DEFAULT;
     private volatile DownloadSourceMode downloadSourceMode = SettingsService.DEFAULT_DOWNLOAD_SOURCE;
     private volatile String customDownloadApi = "";
+    private volatile boolean autoGameLanguage = true;
     private volatile CachedVersionManifest cachedVersionManifest;
     private boolean started;
 
@@ -240,6 +241,12 @@ public final class CAMLBackend implements AutoCloseable {
             downloadSourceMode = SettingsService.DEFAULT_DOWNLOAD_SOURCE;
             customDownloadApi = "";
         }
+        try {
+            autoGameLanguage = settingsService.autoGameLanguage();
+        } catch (IOException e) {
+            LOGGER.warn("无法读取自动游戏语言设置，使用默认值 true", e);
+            autoGameLanguage = true;
+        }
         applyDownloadSources();
         try {
             gameLaunchService.setJavaSelection(
@@ -312,6 +319,16 @@ public final class CAMLBackend implements AutoCloseable {
 
     public void setVersionIsolationMode(VersionIsolationMode mode) throws IOException {
         settingsService.setVersionIsolationMode(mode);
+    }
+
+    public boolean autoGameLanguage() throws IOException {
+        autoGameLanguage = settingsService.autoGameLanguage();
+        return autoGameLanguage;
+    }
+
+    public void setAutoGameLanguage(boolean enabled) throws IOException {
+        settingsService.setAutoGameLanguage(enabled);
+        autoGameLanguage = enabled;
     }
 
     public int downloadConcurrency() {
@@ -895,6 +912,8 @@ public final class CAMLBackend implements AutoCloseable {
             DownloadListener downloadListener,
             ProcessListener processListener
     ) throws IOException, InterruptedException {
+        gameLaunchService.configureGameLanguage(
+                autoGameLanguage, languageService.activeLocale());
         return gameLaunchService.launch(
                 versionId,
                 gameDirectory,
