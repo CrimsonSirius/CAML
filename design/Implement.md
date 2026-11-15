@@ -25,7 +25,7 @@
 → 进程启动/日志
 ```
 
-尚未完成：微软登录、Quilt、启动错误对话框、停止按钮、崩溃分析、启动器可见性策略和真实客户端验证。
+尚未完成：微软登录、启动错误对话框、停止按钮、崩溃分析、启动器可见性策略和真实客户端验证。
 
 ## 2. 项目结构
 
@@ -95,8 +95,8 @@ CAML
   总文件数；安装器在关键步骤发送阶段事件，供下载进度页展示。
 - 下载并发数持久化到 `~/.caml/settings.properties`，并同时用于实例安装和启动前补文件。
 - 下载源支持镜像、官方和自定义镜像根地址；镜像源默认使用 BMCLAPI，失败时回退原始官方地址；
-  同时用于版本清单、版本 JSON、原版文件、资源、Fabric/Forge/NeoForge/OptiFine 元数据、
-  Fabric Maven 依赖、Forge/NeoForge installer 和 Fabric API 下载。
+  同时用于版本清单、版本 JSON、原版文件、资源、Fabric/Quilt/Forge/NeoForge/OptiFine 元数据、
+  Fabric/Quilt Maven 依赖、Forge/NeoForge installer、Fabric API 和 Quilted Fabric API 下载。
 - 已有有效文件时跳过。
 
 ### 3.4 版本安装
@@ -112,6 +112,7 @@ CAML
 - 子版本 libraries 排在父版本之前，classpath 去重时子版本优先。
 - `clientreq=false` 的库在客户端下载和 classpath 中跳过。
 - Fabric 安装：确保原版父版本、写入 Fabric profile、可选下载 Fabric API 到实际 `mods` 目录。
+- Quilt 安装：确保原版父版本、写入 Quilt Meta `v3` profile、可选下载 Quilted Fabric API 到实际 `mods` 目录。
 - Forge/NeoForge 安装：先用 CAML 下载器把 installer 声明的依赖库从当前下载源预下载到 staging，
   再调用官方 installer 的 headless `--installClient` 完成 processor，最后合并库并重命名实例目录。
 - NeoForge 版本匹配：镜像源优先读取 BMCLAPI 的 `/neoforge/list/<mcversion>` JSON；
@@ -229,10 +230,11 @@ CAML
 - 下载页侧边栏提供“正式版 / 快照版 / 远古版”胶囊；`DownloadVersionsView` 通过后端异步获取官方
   版本清单，分别保留 `type=release`、`type=snapshot` 和 `old_alpha/old_beta`，按 `releaseTime` 从新到旧排列。
 - 点击任一版本后进入 `DownloadVersionSetupView`，页面由版本信息、Forge、OptiFine、Fabric、
-  Fabric API、NeoForge 六条组成；顶部实例名输入框默认官方版本号。OptiFine
-  只有选择 Forge 后才可用，选择 Fabric/NeoForge 会清空并禁用。Fabric Loader
-  从 Fabric Meta 获取，Fabric API 从 Modrinth 获取，Forge/NeoForge 从各自 Maven
-  获取；三种加载器互斥，选择后自动更新实例默认名。底部“下载实例”安装原版或所选加载器。
+  Fabric API、Quilt、Quilted Fabric API、NeoForge 八条组成；顶部实例名输入框默认官方版本号。OptiFine
+  只有选择 Forge 后才可用，选择 Fabric/Quilt/NeoForge 会清空并禁用。Fabric Loader
+  从 Fabric Meta 获取，Fabric API 从 Modrinth 获取，Quilt Loader 从 Quilt Meta 获取，
+  Quilted Fabric API 从 Modrinth 获取，Forge/NeoForge 从各自 Maven
+  获取；四种加载器互斥，选择后自动更新实例默认名。底部“下载实例”安装原版或所选加载器。
 - 设置页侧边栏提供“游戏设置 / 下载设置 / 外观”。
 - 设置页右侧内容放入透明 `ScrollPane`，内容超过可用高度时支持纵向滚动。
 - 游戏设置新增“Java”圆角组：自动/手动两个圆形单选项、手动模式下的 Java 地址下拉框、
@@ -421,6 +423,7 @@ PATH=/usr/lib/jvm/zulu-25/bin:$PATH \
   - 旧式 Forge library 的 Maven 路径、URL/checksum 和 `clientreq` 过滤。
   - classpath 的坐标去重和旧式 library 路径。
   - Fabric Meta/Modrinth 响应解析、Fabric profile 安装和 Fabric API 落盘。
+  - Quilt Meta/Modrinth 响应解析、Quilt profile 安装和 Quilted Fabric API 落盘。
   - Forge/NeoForge Maven 版本筛选、installer staging、processor 子进程、库合并和实例重命名。
   - JVM/游戏参数、占位符、features 和旧版参数回退。
   - natives 清理、解压、排除规则和 26.3 `natives/java` 子目录。
@@ -460,7 +463,6 @@ PATH=/usr/lib/jvm/zulu-25/bin:$PATH \
 - 启动脚本导出。
 - 微软账号登录。
 - token 刷新和安全存储。
-- Quilt 加载器。
 - 下载取消和内容寻址缓存。
 - quick play 和服务器直连。
 - 整合包和模组管理。

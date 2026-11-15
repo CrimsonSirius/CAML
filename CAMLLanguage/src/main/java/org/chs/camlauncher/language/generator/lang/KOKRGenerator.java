@@ -407,6 +407,28 @@ public final class KOKRGenerator extends LanguageTranslationGenerator {
         t.put("operation.loadModIcon", "모드 아이콘 불러오기");
         t.put("operation.saveLastInstance", "마지막 실행 인스턴스 저장");
         t.put("operation.launchGame", "게임 %s 실행");
+
+        // Quilt 로더
+        t.put("download.description.quilt", "Quilt Loader %s");
+        t.put("download.description.quiltWithApi", "Quilt Loader %s + Quilted Fabric API %s");
+        t.put("download.setup.option.quilt", "Quilt 버전 선택");
+        t.put("download.setup.option.quiltApi", "Quilted Fabric API 버전 선택");
+        t.put("download.prompt.loading.quilt", "Quilt 버전을 불러오는 중...");
+        t.put("download.prompt.quiltFirst", "먼저 Quilt 버전을 선택하세요");
+        t.put("download.prompt.select.quilt", "Quilt 버전을 선택하세요");
+        t.put("download.prompt.select.quiltApi", "Quilted Fabric API 버전을 선택하세요");
+        t.put("download.prompt.empty.quilt", "사용 가능한 Quilt 버전이 없습니다");
+        t.put("download.prompt.empty.quiltApi", "사용 가능한 Quilted Fabric API 버전이 없습니다");
+        t.put("download.prompt.error.quilt", "Quilt 버전을 불러오지 못했습니다");
+        t.put("download.prompt.error.quiltApi", "Quilted Fabric API 버전을 불러오지 못했습니다");
+        t.put("download.stage.quilt.config.fetch", "Quilt 설정을 가져오는 중");
+        t.put("download.stage.quilt.loader.install", "Quilt Loader 설치 중");
+        t.put("download.stage.quilt.api.download", "Quilted Fabric API 다운로드 중");
+        t.put("download.stage.quilt.verify", "Quilt 설치 확인 중");
+        t.put("log.download.installed.quilt", "[다운로드] Quilt 인스턴스 %s 설치 완료 (Loader %s)");
+        t.put("operation.fetchQuiltLoader", "Quilt Loader 버전 가져오기");
+        t.put("operation.fetchQuiltApi", "Quilted Fabric API 버전 가져오기");
+        t.put("operation.installQuilt", "Quilt 인스턴스 %s 설치");
     }
 }
 

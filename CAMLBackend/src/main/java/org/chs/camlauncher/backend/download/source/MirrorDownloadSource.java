@@ -34,6 +34,7 @@ public final class MirrorDownloadSource implements DownloadSource {
                 new Rule("https://maven.neoforged.net", this.root + "/maven"),
                 new Rule("https://maven.fabricmc.net", this.root + "/maven"),
                 new Rule("https://meta.fabricmc.net", this.root + "/fabric-meta"),
+                new Rule("https://meta.quiltmc.org", this.root + "/quilt-meta"),
                 new Rule("https://resources.download.minecraft.net", this.root + "/assets")
         );
     }

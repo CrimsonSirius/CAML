@@ -407,5 +407,27 @@ public final class ZHCNGenerator extends LanguageTranslationGenerator {
         t.put("operation.loadModIcon", "加载 Mod 图标");
         t.put("operation.saveLastInstance", "保存最后启动实例");
         t.put("operation.launchGame", "启动游戏 %s");
+
+        // Quilt 加载器
+        t.put("download.description.quilt", "Quilt Loader %s");
+        t.put("download.description.quiltWithApi", "Quilt Loader %s + Quilted Fabric API %s");
+        t.put("download.setup.option.quilt", "选择 Quilt 版本");
+        t.put("download.setup.option.quiltApi", "选择 Quilted Fabric API 版本");
+        t.put("download.prompt.loading.quilt", "正在获取 Quilt 版本...");
+        t.put("download.prompt.quiltFirst", "请先选择 Quilt 版本");
+        t.put("download.prompt.select.quilt", "请选择 Quilt 版本");
+        t.put("download.prompt.select.quiltApi", "请选择 Quilted Fabric API 版本");
+        t.put("download.prompt.empty.quilt", "没有可用的 Quilt 版本");
+        t.put("download.prompt.empty.quiltApi", "没有可用的 Quilted Fabric API 版本");
+        t.put("download.prompt.error.quilt", "获取 Quilt 版本失败");
+        t.put("download.prompt.error.quiltApi", "获取 Quilted Fabric API 版本失败");
+        t.put("download.stage.quilt.config.fetch", "正在获取 Quilt 配置");
+        t.put("download.stage.quilt.loader.install", "正在安装 Quilt Loader");
+        t.put("download.stage.quilt.api.download", "正在下载 Quilted Fabric API");
+        t.put("download.stage.quilt.verify", "正在校验 Quilt 安装");
+        t.put("log.download.installed.quilt", "[下载] 已安装 Quilt 实例 %s（Loader %s）");
+        t.put("operation.fetchQuiltLoader", "获取 Quilt Loader 版本");
+        t.put("operation.fetchQuiltApi", "获取 Quilted Fabric API 版本");
+        t.put("operation.installQuilt", "安装 Quilt 实例 %s");
     }
 }

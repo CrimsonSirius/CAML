@@ -157,6 +157,15 @@ Fabric 安装流程：
 - profile 没有 `jar` 时复用父版本客户端 jar。
 - Fabric API 从 Modrinth `fabric-api` 项目获取，并写入实际游戏目录的 `mods`。
 
+Quilt 安装流程：
+
+- 从 `https://meta.quiltmc.org/v3/versions/loader/<game>` 获取 Loader 版本，按 `build` 从新到旧排列。
+- 获取 `v3/versions/loader/<game>/<loader>/profile/json`，写入 `versions/<instance>/<instance>.json`；
+  profile 结构与 Fabric 一致，同样依赖本地已存在的原版父版本。
+- Quilted Fabric API 从 Modrinth `quilted-fabric-api` 项目按 `loaders=["quilt"]` 获取，
+  下载后同时放入实例 `mods` 和实际游戏目录的 `mods`。
+- 失败时删除目标版本目录，避免留下半成品实例。
+
 Forge/NeoForge 安装流程：
 
 - Forge/NeoForge 在镜像源下优先读取 BMCLAPI 的按 Minecraft 版本 JSON 接口；
@@ -328,11 +337,13 @@ assetIndexFile
 
 ### 2.13 当前下载限制
 
-- 支持原版、Fabric Loader/Fabric API、Forge、NeoForge 和 OptiFine（仅 Forge）安装；Quilt 尚未实现。
+- 支持原版、Fabric Loader/Fabric API、Quilt Loader/Quilted Fabric API、Forge、NeoForge 和 OptiFine（仅 Forge）安装。
 - `inheritsFrom` 只读取本地父版本，不会自动安装父版本。
 - 下载源支持镜像、官方和自定义镜像根地址；应用于版本文件、libraries、asset index、assets objects、
-  Fabric/Forge/NeoForge/OptiFine 元数据、Fabric Maven 依赖、Forge/NeoForge installer 和 Fabric API 下载；
-  版本清单与版本 JSON 也按下载源重写地址。Fabric API 的 Modrinth API/CDN 没有 BMCLAPI 镜像时仍回退官方地址。
+  Fabric/Quilt/Forge/NeoForge/OptiFine 元数据、Fabric/Quilt Maven 依赖、Forge/NeoForge installer、
+  Fabric API 和 Quilted Fabric API 下载；
+  版本清单与版本 JSON 也按下载源重写地址。Fabric API 与 Quilted Fabric API 的 Modrinth API/CDN
+  没有 BMCLAPI 镜像时仍回退官方地址。
 - 下载使用有界线程池并发执行，并发数可配置为 1–256；下载取消尚未实现。
 - 没有内容寻址缓存，只有目标文件存在且 SHA-1 匹配时跳过。
 

@@ -407,6 +407,28 @@ public final class LALAGenerator extends LanguageTranslationGenerator {
         t.put("operation.loadModIcon", "Iconem modi legere");
         t.put("operation.saveLastInstance", "Ultimam instantiam deducendam servare");
         t.put("operation.launchGame", "Ludum %s deducere");
+
+        // Quilt onerator
+        t.put("download.description.quilt", "Quilt Loader %s");
+        t.put("download.description.quiltWithApi", "Quilt Loader %s + Quilted Fabric API %s");
+        t.put("download.setup.option.quilt", "Versionem Quilt eligere");
+        t.put("download.setup.option.quiltApi", "Versionem Quilted Fabric API eligere");
+        t.put("download.prompt.loading.quilt", "Versiones Quilt leguntur...");
+        t.put("download.prompt.quiltFirst", "Primum versionem Quilt elige");
+        t.put("download.prompt.select.quilt", "Versionem Quilt elige");
+        t.put("download.prompt.select.quiltApi", "Versionem Quilted Fabric API elige");
+        t.put("download.prompt.empty.quilt", "Nullae versiones Quilt praesto sunt");
+        t.put("download.prompt.empty.quiltApi", "Nullae versiones Quilted Fabric API praesto sunt");
+        t.put("download.prompt.error.quilt", "Versiones Quilt legere non potuimus");
+        t.put("download.prompt.error.quiltApi", "Versiones Quilted Fabric API legere non potuimus");
+        t.put("download.stage.quilt.config.fetch", "Configuratio Quilt petenda");
+        t.put("download.stage.quilt.loader.install", "Quilt Loader installatur");
+        t.put("download.stage.quilt.api.download", "Quilted Fabric API deponitur");
+        t.put("download.stage.quilt.verify", "Installatio Quilt probatur");
+        t.put("log.download.installed.quilt", "[Depositio] Instantia Quilt %s installata (Loader %s)");
+        t.put("operation.fetchQuiltLoader", "Versiones Quilt Loader petere");
+        t.put("operation.fetchQuiltApi", "Versiones Quilted Fabric API petere");
+        t.put("operation.installQuilt", "Instantiam Quilt %s installare");
     }
 }
 

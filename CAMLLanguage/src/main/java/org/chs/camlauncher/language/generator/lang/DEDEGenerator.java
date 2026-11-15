@@ -407,6 +407,28 @@ public final class DEDEGenerator extends LanguageTranslationGenerator {
         t.put("operation.loadModIcon", "Mod-Symbol laden");
         t.put("operation.saveLastInstance", "Zuletzt gestartete Instanz speichern");
         t.put("operation.launchGame", "Spiel %s starten");
+
+        // Quilt-Loader
+        t.put("download.description.quilt", "Quilt Loader %s");
+        t.put("download.description.quiltWithApi", "Quilt Loader %s + Quilted Fabric API %s");
+        t.put("download.setup.option.quilt", "Quilt-Version auswählen");
+        t.put("download.setup.option.quiltApi", "Quilted-Fabric-API-Version auswählen");
+        t.put("download.prompt.loading.quilt", "Quilt-Versionen werden geladen...");
+        t.put("download.prompt.quiltFirst", "Zuerst eine Quilt-Version auswählen");
+        t.put("download.prompt.select.quilt", "Quilt-Version auswählen");
+        t.put("download.prompt.select.quiltApi", "Quilted-Fabric-API-Version auswählen");
+        t.put("download.prompt.empty.quilt", "Keine Quilt-Versionen verfügbar");
+        t.put("download.prompt.empty.quiltApi", "Keine Quilted-Fabric-API-Versionen verfügbar");
+        t.put("download.prompt.error.quilt", "Quilt-Versionen konnten nicht geladen werden");
+        t.put("download.prompt.error.quiltApi", "Quilted-Fabric-API-Versionen konnten nicht geladen werden");
+        t.put("download.stage.quilt.config.fetch", "Quilt-Konfiguration wird abgerufen");
+        t.put("download.stage.quilt.loader.install", "Quilt Loader wird installiert");
+        t.put("download.stage.quilt.api.download", "Quilted Fabric API wird heruntergeladen");
+        t.put("download.stage.quilt.verify", "Quilt-Installation wird geprüft");
+        t.put("log.download.installed.quilt", "[Download] Quilt-Instanz %s installiert (Loader %s)");
+        t.put("operation.fetchQuiltLoader", "Quilt-Loader-Versionen abrufen");
+        t.put("operation.fetchQuiltApi", "Quilted-Fabric-API-Versionen abrufen");
+        t.put("operation.installQuilt", "Quilt-Instanz %s installieren");
     }
 }
 

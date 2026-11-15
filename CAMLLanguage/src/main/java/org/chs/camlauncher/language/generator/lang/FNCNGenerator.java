@@ -408,5 +408,27 @@ public final class FNCNGenerator extends LanguageTranslationGenerator {
         t.put("operation.loadModIcon", "揪出零件图案");
         t.put("operation.saveLastInstance", "拯救最后发射的事例");
         t.put("operation.launchGame", "发射比赛 %s");
+
+        // Quilt 装载零件
+        t.put("download.description.quilt", "Quilt Loader %s");
+        t.put("download.description.quiltWithApi", "Quilt Loader %s + Quilted Fabric API %s");
+        t.put("download.setup.option.quilt", "挑三拣四 Quilt 译本");
+        t.put("download.setup.option.quiltApi", "挑三拣四 Quilted Fabric API 译本");
+        t.put("download.prompt.loading.quilt", "正在揪出 Quilt 译本...");
+        t.put("download.prompt.quiltFirst", "先挑三拣四 Quilt 译本");
+        t.put("download.prompt.select.quilt", "挑三拣四 Quilt 译本");
+        t.put("download.prompt.select.quiltApi", "挑三拣四 Quilted Fabric API 译本");
+        t.put("download.prompt.empty.quilt", "没有可揪出的 Quilt 译本");
+        t.put("download.prompt.empty.quiltApi", "没有可揪出的 Quilted Fabric API 译本");
+        t.put("download.prompt.error.quilt", "揪出 Quilt 译本失败");
+        t.put("download.prompt.error.quiltApi", "揪出 Quilted Fabric API 译本失败");
+        t.put("download.stage.quilt.config.fetch", "正在揪出 Quilt 摆弄");
+        t.put("download.stage.quilt.loader.install", "正在安顿 Quilt Loader");
+        t.put("download.stage.quilt.api.download", "正在向下装载 Quilted Fabric API");
+        t.put("download.stage.quilt.verify", "正在验明 Quilt 安顿");
+        t.put("log.download.installed.quilt", "[向下装载] 已安顿 Quilt 事例 %s（Loader %s）");
+        t.put("operation.fetchQuiltLoader", "揪出 Quilt Loader 译本");
+        t.put("operation.fetchQuiltApi", "揪出 Quilted Fabric API 译本");
+        t.put("operation.installQuilt", "安顿 Quilt 事例 %s");
     }
 }
