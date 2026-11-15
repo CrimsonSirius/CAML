@@ -11,6 +11,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.Locale;
+import java.util.Set;
 import java.util.regex.Pattern;
 
 /** 首次启动实例时把游戏语言设置为启动器当前语言。 */
@@ -20,6 +21,11 @@ final class GameLanguageInitializer {
             Pattern.compile("[a-z]{2,3}(?:_[a-z0-9]{2,8})*");
     private static final String OPTIONS_FILE = "options.txt";
     private static final String LANGUAGE_PREFIX = "lang:";
+    /** Minecraft 没有对应语言文件的启动器专有 locale，游戏语言回退到默认语言。 */
+    private static final Set<String> NON_GAME_LOCALES = Set.of(
+            LanguageConstants.LATIN_LOCALE,
+            LanguageConstants.TIBETAN_LOCALE
+    );
 
     private GameLanguageInitializer() {
     }
@@ -56,6 +62,9 @@ final class GameLanguageInitializer {
                 : launcherLocale.trim().toLowerCase(Locale.ROOT).replace('-', '_');
         if ("fn_cn".equals(normalized)) {
             return LanguageConstants.SIMPLIFIED_CHINESE_LOCALE;
+        }
+        if (NON_GAME_LOCALES.contains(normalized)) {
+            return LanguageConstants.DEFAULT_LOCALE;
         }
         if (!LOCALE_PATTERN.matcher(normalized).matches()) {
             return LanguageConstants.DEFAULT_LOCALE;

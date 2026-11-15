@@ -1,7 +1,14 @@
 package org.chs.camlauncher.language.generator;
 
+import org.chs.camlauncher.language.generator.lang.BOCNGenerator;
+import org.chs.camlauncher.language.generator.lang.DEDEGenerator;
 import org.chs.camlauncher.language.generator.lang.ENUSGenerator;
 import org.chs.camlauncher.language.generator.lang.FNCNGenerator;
+import org.chs.camlauncher.language.generator.lang.FRFRGenerator;
+import org.chs.camlauncher.language.generator.lang.JAJPGenerator;
+import org.chs.camlauncher.language.generator.lang.KOKRGenerator;
+import org.chs.camlauncher.language.generator.lang.LALAGenerator;
+import org.chs.camlauncher.language.generator.lang.RURUGenerator;
 import org.chs.camlauncher.language.generator.lang.ZHCNGenerator;
 import org.chs.camlauncher.language.generator.lang.ZHTWGenerator;
 
@@ -25,9 +32,16 @@ public final class TranslationGeneratorRunner {
         Files.createDirectories(output);
         List<LanguageTranslationGenerator> generators = List.of(
                 new ZHCNGenerator(),
+                new ZHTWGenerator(),
                 new ENUSGenerator(),
                 new FNCNGenerator(),
-                new ZHTWGenerator()
+                new JAJPGenerator(),
+                new KOKRGenerator(),
+                new FRFRGenerator(),
+                new DEDEGenerator(),
+                new RURUGenerator(),
+                new LALAGenerator(),
+                new BOCNGenerator()
         );
         for (LanguageTranslationGenerator generator : generators) {
             Path file = generator.generate(output);
@@ -35,4 +49,3 @@ public final class TranslationGeneratorRunner {
         }
     }
 }
-

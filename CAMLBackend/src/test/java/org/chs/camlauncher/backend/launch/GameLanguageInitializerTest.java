@@ -23,6 +23,17 @@ class GameLanguageInitializerTest {
     }
 
     @Test
+    void mapsLauncherOnlyLocalesToDefaultGameLanguage() {
+        assertEquals("en_us", GameLanguageInitializer.minecraftLanguage("la_la"));
+        assertEquals("en_us", GameLanguageInitializer.minecraftLanguage("bo_cn"));
+        assertEquals("ja_jp", GameLanguageInitializer.minecraftLanguage("ja_jp"));
+        assertEquals("ko_kr", GameLanguageInitializer.minecraftLanguage("ko_kr"));
+        assertEquals("fr_fr", GameLanguageInitializer.minecraftLanguage("FR-FR"));
+        assertEquals("de_de", GameLanguageInitializer.minecraftLanguage("de_de"));
+        assertEquals("ru_ru", GameLanguageInitializer.minecraftLanguage("ru_ru"));
+    }
+
+    @Test
     void createsOptionsForFirstLaunch() throws Exception {
         GameLanguageInitializer.apply(gameDataDirectory, "fn_cn");
 
@@ -40,7 +51,7 @@ class GameLanguageInitializerTest {
         String content = Files.readString(options, StandardCharsets.UTF_8);
         assertTrue(content.contains("fov:0.5"));
         assertTrue(content.contains("renderDistance:12"));
-        assertTrue(content.endsWith("lang:zh_cn\n"));
+        assertTrue(content.stripTrailing().endsWith("lang:zh_cn"));
     }
 
     @Test

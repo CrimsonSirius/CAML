@@ -14,11 +14,26 @@ final class LanguageLocales {
     private static final String CHINESE_LANGUAGE = "zh";
     private static final String TRADITIONAL_SCRIPT = "Hant";
     private static final Set<String> TRADITIONAL_REGIONS = Set.of("TW", "HK", "MO");
-    private static final Map<String, String> NATIVE_NAMES = Map.of(
-            "zh_cn", "简体中文",
-            "zh_tw", "繁體中文",
-            "en_us", "English",
-            "fn_cn", "地道中国话"
+    /** 参与系统语言检测的语言代码与内置 locale 的对应关系；拉丁文与藏文不参与检测。 */
+    private static final Map<String, String> DETECTED_LANGUAGE_LOCALES = Map.of(
+            "ja", LanguageConstants.JAPANESE_LOCALE,
+            "ko", LanguageConstants.KOREAN_LOCALE,
+            "fr", LanguageConstants.FRENCH_LOCALE,
+            "de", LanguageConstants.GERMAN_LOCALE,
+            "ru", LanguageConstants.RUSSIAN_LOCALE
+    );
+    private static final Map<String, String> NATIVE_NAMES = Map.ofEntries(
+            Map.entry("zh_cn", "简体中文"),
+            Map.entry("zh_tw", "繁體中文"),
+            Map.entry("en_us", "English"),
+            Map.entry("fn_cn", "地道中国话"),
+            Map.entry("ja_jp", "日本語"),
+            Map.entry("ko_kr", "한국어"),
+            Map.entry("fr_fr", "Français"),
+            Map.entry("de_de", "Deutsch"),
+            Map.entry("ru_ru", "Русский"),
+            Map.entry("la_la", "Latina"),
+            Map.entry("bo_cn", "བོད་ཡིག")
     );
 
     private LanguageLocales() {
@@ -58,16 +73,25 @@ final class LanguageLocales {
     }
 
     /**
-     * 只区分中文系统的简繁：简体中文系统使用 {@code zh_cn}，繁体中文系统（脚本 {@code Hant} 或地区
-     * {@code TW}/{@code HK}/{@code MO}）使用 {@code zh_tw}；其他语言（含英语）一律使用默认语言。
+     * 检测系统语言：简体中文系统使用 {@code zh_cn}，繁体中文系统（脚本 {@code Hant} 或地区
+     * {@code TW}/{@code HK}/{@code MO}）使用 {@code zh_tw}，日语、韩语、法语、德语、俄语系统分别使用
+     * 对应内置 locale；其余语言（含英语，以及不参与检测的拉丁文与藏文）一律使用默认语言。
      */
     static String detectSystemLocale(Locale systemLocale) {
-        if (systemLocale == null || !CHINESE_LANGUAGE.equalsIgnoreCase(systemLocale.getLanguage())) {
+        if (systemLocale == null) {
             return LanguageConstants.DEFAULT_LOCALE;
         }
-        return isTraditionalChinese(systemLocale)
-                ? LanguageConstants.TRADITIONAL_CHINESE_LOCALE
-                : LanguageConstants.SIMPLIFIED_CHINESE_LOCALE;
+        String language = systemLocale.getLanguage();
+        if (language == null || language.isBlank()) {
+            return LanguageConstants.DEFAULT_LOCALE;
+        }
+        if (CHINESE_LANGUAGE.equalsIgnoreCase(language)) {
+            return isTraditionalChinese(systemLocale)
+                    ? LanguageConstants.TRADITIONAL_CHINESE_LOCALE
+                    : LanguageConstants.SIMPLIFIED_CHINESE_LOCALE;
+        }
+        return DETECTED_LANGUAGE_LOCALES.getOrDefault(
+                language.toLowerCase(Locale.ROOT), LanguageConstants.DEFAULT_LOCALE);
     }
 
     private static boolean isTraditionalChinese(Locale systemLocale) {

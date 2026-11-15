@@ -299,15 +299,22 @@ CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
   `UiText.initialize(backend.languageService())` 取得只读显示入口。
 - 语言文件同步到 `~/.caml/lang`：内置同名文件与资源按键值比对，不一致（含 JSON 损坏）就原子重写；
   非内置语言文件原样保留。
-- 语言选择顺序：系统属性 `caml.language` → 系统语言。默认语言是 `en_us`，所以不再检测英语系统，
-  只区分中文系统：`zh_CN`、`zh_SG`、脚本 `Hans` 等简体中文系统使用 `zh_cn`；`zh_TW`、`zh_HK`、
-  `zh_MO`、脚本 `Hant` 等繁体中文系统使用 `zh_tw`；其余系统（含英语）一律使用默认语言。
-  找不到对应文件时回退默认语言。
-- 语言下拉框中的语言名**不参与翻译**：后端 `LanguageService.displayName(locale)` 直接查运行时名称表，
-  既不读取翻译文件也不经过当前界面语言，因此 `zh_cn` 永远显示
-  “简体中文”、`zh_tw` 永远显示“繁體中文”、`en_us` 永远显示“English”、`fn_cn` 永远显示“地道中国话”；
-  翻译文件写错名称或用户改坏语言文件都不会影响下拉框。未登记的自定义语言显示 locale 标识。
-- 新增内置语言时在后端语言名称表中登记该语言的自称，翻译文件只登记界面文案。
+- 语言选择顺序：系统属性 `caml.language` → 系统语言。默认语言是 `en_us`，所以不检测英语系统，
+  只检测已内置且允许自动切换的系统语言：`zh_CN`、`zh_SG`、脚本 `Hans` 等简体中文系统使用 `zh_cn`；
+  `zh_TW`、`zh_HK`、`zh_MO`、脚本 `Hant` 等繁体中文系统使用 `zh_tw`；`ja` 使用 `ja_jp`、
+  `ko` 使用 `ko_kr`、`fr` 使用 `fr_fr`、`de` 使用 `de_de`、`ru` 使用 `ru_ru`；
+  其余系统（含英语）一律使用默认语言。拉丁文 `la_la` 与藏文 `bo_cn` 不参与检测，
+  只能在手动模式下选择。找不到对应文件时回退默认语言。
+- 语言下拉框中的语言名**不参与翻译**：后端 `LanguageService.displayName(locale)` 直接查
+  `LanguageLocales` 的运行时名称表，既不读取翻译文件也不经过当前界面语言，因此 `zh_cn` 永远显示
+  “简体中文”、`zh_tw` 永远显示“繁體中文”、`en_us` 永远显示“English”、`fn_cn` 永远显示“地道中国话”、
+  `ja_jp` 永远显示“日本語”、`ko_kr` 永远显示“한국어”、`fr_fr` 永远显示“Français”、
+  `de_de` 永远显示“Deutsch”、`ru_ru` 永远显示“Русский”、`la_la` 永远显示“Latina”、
+  `bo_cn` 永远显示“བོད་ཡིག”；翻译文件写错名称或用户改坏语言文件都不会影响下拉框。
+  未登记的自定义语言显示 locale 标识。
+- 新增内置语言需要在四处登记：`generator.lang` 下的生成器、`TranslationGeneratorRunner` 的列表、
+  `LanguageConstants.BUNDLED_LOCALES`（决定安装、同步与下拉框顺序）以及后端 `LanguageLocales` 的名称表；
+  需要参与自动检测的语言还要在 `LanguageLocales.DETECTED_LANGUAGE_LOCALES` 中登记语言代码。
 - 设置 → 外观 → 语言提供自动/手动两种模式；模式与手动语言写入
   `~/.caml/settings.properties` 的 `languageMode`、`language`。手动切换后
   `CAMLApplication` 复用当前 `LaunchSettings` 快照重建 `MainView`，立即应用新语言。
@@ -319,7 +326,8 @@ CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
   全部位于 `org.chs.camlauncher.language.generator`，不参与运行时语言逻辑。
 - `TranslationGeneratorRunner` 遍历生成器；Gradle 任务 `:CAMLLanguage:generateTranslation`
   先编译再生成，`.run/generateTranslation` 提供 IDEA 入口。
-- `LanguageTest` 只校验生成器输出与已提交 JSON 一致、各语言键集合相同和重复键保护。
+- `LanguageTest` 只校验生成器输出与已提交 JSON 一致、`BUNDLED_LOCALES` 与生成器一一对应、
+  各语言键集合相同和重复键保护。
 - 后端 `LanguageServiceTest` 覆盖安装修复、系统语言检测、逐键回退、缺键诊断、自定义语言和文件损坏。
 - 下载阶段使用 `DownloadStage` 稳定键和可选参数，由后端语言服务按当前快照翻译，前端只显示最终文本。
 - 后端用户可见失败使用 `BackendError(code, args)` / `BackendException` 传递；

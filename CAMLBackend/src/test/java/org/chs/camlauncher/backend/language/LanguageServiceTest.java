@@ -41,13 +41,23 @@ class LanguageServiceTest {
 
         assertEquals("en_us", snapshot.activeLocale());
         assertEquals("Launch game", service.text("home.launch"));
-        assertTrue(Files.isRegularFile(dataDirectory.resolve("lang/en_us.json")));
-        assertTrue(Files.isRegularFile(dataDirectory.resolve("lang/zh_cn.json")));
-        assertTrue(Files.isRegularFile(dataDirectory.resolve("lang/zh_tw.json")));
-        assertTrue(Files.isRegularFile(dataDirectory.resolve("lang/fn_cn.json")));
-        assertEquals(List.of("zh_cn", "zh_tw", "en_us", "fn_cn"), service.availableLocales());
+        for (String locale : List.of("zh_cn", "zh_tw", "en_us", "fn_cn",
+                "ja_jp", "ko_kr", "fr_fr", "de_de", "ru_ru", "la_la", "bo_cn")) {
+            assertTrue(Files.isRegularFile(dataDirectory.resolve("lang/" + locale + ".json")),
+                    "缺少内置语言文件: " + locale);
+        }
+        assertEquals(List.of("zh_cn", "zh_tw", "en_us", "fn_cn",
+                        "ja_jp", "ko_kr", "fr_fr", "de_de", "ru_ru", "la_la", "bo_cn"),
+                service.availableLocales());
         assertEquals("简体中文", service.displayName("zh_cn"));
         assertEquals("繁體中文", service.displayName("zh_tw"));
+        assertEquals("日本語", service.displayName("ja_jp"));
+        assertEquals("한국어", service.displayName("ko_kr"));
+        assertEquals("Français", service.displayName("fr_fr"));
+        assertEquals("Deutsch", service.displayName("de_de"));
+        assertEquals("Русский", service.displayName("ru_ru"));
+        assertEquals("Latina", service.displayName("la_la"));
+        assertEquals("བོད་ཡིག", service.displayName("bo_cn"));
     }
 
     @Test
@@ -70,6 +80,17 @@ class LanguageServiceTest {
         assertEquals("zh_tw", snapshot.activeLocale());
         assertEquals("啟動遊戲", service.text("home.launch"));
         assertEquals("目前實例：1.21.5", service.text("home.instance.current", "1.21.5"));
+    }
+
+    @Test
+    void switchesToJapaneseAndFormatsPlaceholders() throws Exception {
+        LanguageService service = service();
+        service.initialize();
+        LanguageSnapshot snapshot = service.switchLanguage(LanguageSelectionMode.MANUAL, "ja_jp");
+
+        assertEquals("ja_jp", snapshot.activeLocale());
+        assertEquals("ゲームを起動", service.text("home.launch"));
+        assertEquals("現在のインスタンス: 1.21.5", service.text("home.instance.current", "1.21.5"));
     }
 
     @Test
@@ -246,9 +267,19 @@ class LanguageServiceTest {
         assertEquals("zh_tw", LanguageService.detectSystemLocale(Locale.forLanguageTag("zh-HK")));
         assertEquals("zh_tw", LanguageService.detectSystemLocale(Locale.forLanguageTag("zh-MO")));
         assertEquals("zh_tw", LanguageService.detectSystemLocale(Locale.forLanguageTag("zh-Hant")));
+        assertEquals("ja_jp", LanguageService.detectSystemLocale(Locale.JAPAN));
+        assertEquals("ja_jp", LanguageService.detectSystemLocale(Locale.forLanguageTag("ja-JP")));
+        assertEquals("ko_kr", LanguageService.detectSystemLocale(Locale.KOREA));
+        assertEquals("ko_kr", LanguageService.detectSystemLocale(Locale.forLanguageTag("ko-KR")));
+        assertEquals("fr_fr", LanguageService.detectSystemLocale(Locale.FRANCE));
+        assertEquals("fr_fr", LanguageService.detectSystemLocale(Locale.forLanguageTag("fr-CA")));
+        assertEquals("de_de", LanguageService.detectSystemLocale(Locale.GERMANY));
+        assertEquals("de_de", LanguageService.detectSystemLocale(Locale.forLanguageTag("de-AT")));
+        assertEquals("ru_ru", LanguageService.detectSystemLocale(Locale.forLanguageTag("ru-RU")));
         assertEquals("en_us", LanguageService.detectSystemLocale(Locale.US));
         assertEquals("en_us", LanguageService.detectSystemLocale(Locale.UK));
-        assertEquals("en_us", LanguageService.detectSystemLocale(Locale.JAPAN));
+        assertEquals("en_us", LanguageService.detectSystemLocale(Locale.forLanguageTag("la")));
+        assertEquals("en_us", LanguageService.detectSystemLocale(Locale.forLanguageTag("bo-CN")));
         assertEquals("en_us", LanguageService.detectSystemLocale(null));
     }
 
