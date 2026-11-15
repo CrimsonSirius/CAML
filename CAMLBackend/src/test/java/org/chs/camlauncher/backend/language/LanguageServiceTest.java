@@ -1,6 +1,7 @@
 package org.chs.camlauncher.backend.language;
 
 import org.chs.camlauncher.backend.settings.SettingsService;
+import org.chs.camlauncher.language.contract.LanguageConstants;
 import org.chs.camlauncher.language.contract.LanguageEvent;
 import org.chs.camlauncher.language.contract.LanguageFallbackMode;
 import org.chs.camlauncher.language.contract.LanguageSelectionMode;
@@ -21,6 +22,14 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class LanguageServiceTest {
+    /**
+     * 一个既不在内置语言清单中、也没有对应内置资源的 locale。
+     *
+     * <p>回退相关用例必须使用它：内置语言一定会被 {@code LanguageCatalogLoader} 从 classpath 读到，
+     * 无法构造“请求的语言不可用”场景，因此不能拿任何内置 locale 充当缺失语言。</p>
+     */
+    private static final String UNBUNDLED_LOCALE = "sv_se";
+
     @TempDir
     Path dataDirectory;
 
@@ -142,9 +151,9 @@ class LanguageServiceTest {
         List<LanguageEvent> events = new ArrayList<>();
         service.addEventListener(events::add);
 
-        LanguageSnapshot snapshot = service.switchLanguage(LanguageSelectionMode.MANUAL, "fr_fr");
+        LanguageSnapshot snapshot = service.switchLanguage(LanguageSelectionMode.MANUAL, UNBUNDLED_LOCALE);
 
-        assertEquals("fr_fr", snapshot.requestedLocale());
+        assertEquals(UNBUNDLED_LOCALE, snapshot.requestedLocale());
         assertEquals("en_us", snapshot.activeLocale());
         assertNotNull(snapshot.fallbackReason());
         assertTrue(events.stream().anyMatch(LanguageEvent.Fallback.class::isInstance));
@@ -232,7 +241,7 @@ class LanguageServiceTest {
 
     @Test
     void automaticFallbackHasNoEnglishFallback() throws Exception {
-        System.setProperty("caml.language", "fr_fr");
+        System.setProperty("caml.language", UNBUNDLED_LOCALE);
         LanguageService service = service();
         service.initialize();
         Files.writeString(dataDirectory.resolve("lang/xx_yy.json"),
@@ -250,11 +259,19 @@ class LanguageServiceTest {
         service.initialize();
         Files.writeString(dataDirectory.resolve("lang/xx_yy.json"),
                 "{\"home.launch\":\"Custom launch\"}");
-        service.setLanguageFallback(LanguageFallbackMode.CUSTOM, "fr_fr");
+        service.setLanguageFallback(LanguageFallbackMode.CUSTOM, UNBUNDLED_LOCALE);
 
         service.switchLanguage(LanguageSelectionMode.MANUAL, "xx_yy");
 
         assertEquals("nav.home", service.text("nav.home"));
+    }
+
+    @Test
+    void unbundledLocaleIsReallyNotBundled() {
+        assertFalse(LanguageConstants.BUNDLED_LOCALES.contains(UNBUNDLED_LOCALE),
+                UNBUNDLED_LOCALE + " 已成为内置语言，回退用例必须换用其他未内置的 locale");
+        assertFalse(LanguageService.detectSystemLocale(Locale.forLanguageTag("sv-SE")).equals(UNBUNDLED_LOCALE),
+                "系统检测不应把 " + UNBUNDLED_LOCALE + " 识别为可用语言");
     }
 
     @Test
