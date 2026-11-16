@@ -307,8 +307,7 @@ assetIndexFile
    └─ version_manifest_v2.json       版本清单缓存
 
 游戏目录：
-  Linux/macOS: ~/.minecraft
-  Windows:     <启动器所在目录>/.minecraft
+  Linux/macOS/Windows: ~/.minecraft
 
 <游戏目录>/
 ├─ versions/
@@ -322,6 +321,9 @@ assetIndexFile
    └─ objects/
       └─ <hash 前两位>/<hash>         资源对象
 ```
+
+所有平台都以用户主目录为基准：发布包会把启动器装到只读的受管目录（Windows 默认
+`C:\Program Files\CAML`），若以启动器所在目录为基准，普通用户无权写入版本、存档和日志。
 
 ### 2.12 下载链路关键类
 
@@ -600,8 +602,7 @@ java 可执行文件
 - 使用 `ProcessBuilder`。
 - 工作目录设置为游戏目录。
 - 合并 `LaunchOptions.environmentVariables()`。
-- 仅在 Windows 设置 `APPDATA`，并以 `.minecraft` 根目录为基准计算；
-  版本隔离时不会误用 `versions/<id>` 的父目录。
+- 继承系统环境变量，不再改写 `APPDATA`。
 - 启动后返回 `GameProcess`。
 
 `GameProcess`：

@@ -50,9 +50,7 @@ CAML
 - 启动器数据：`~/.caml`。
 - 外部主题：`~/.caml/themes/*.css`。
 - 当前主题：`~/.caml/theme.txt`。
-- 游戏数据：
-  - Linux/macOS：`~/.minecraft`。
-  - Windows：启动器所在目录下的 `.minecraft`。
+- 游戏数据：`~/.minecraft`（所有平台都以用户主目录为基准）。
 
 ## 3. 已实现功能
 
@@ -291,8 +289,7 @@ CAML
 
 - 构建最终启动命令。
 - 设置工作目录。
-- 合并环境变量。
-- Windows 条件设置 `APPDATA`。
+- 合并环境变量，不改写 `APPDATA`。
 - 启动 `ProcessBuilder`。
 - 读取 stdout/stderr，经 `MinecraftLogFormatter` 将 Log4j XML 转为原版日志风格后再转发。
 - 回调退出码。
@@ -304,7 +301,7 @@ CAML
 - 提供中文 `userMessage()`。
 - `GameLaunchService` 串联安装、离线登录、Java、LaunchPlan、classpath、natives 和进程启动。
 - NeoForge 26.2 选择 Vulkan 时自动关闭 `earlyWindowControl`，避免 GLFW 65540。
-- 版本隔离时工作目录为 `versions/<id>`，但 Windows `APPDATA` 仍按 `.minecraft` 根目录计算。
+- 版本隔离只改变工作目录和 `--gameDir`，不影响进程环境变量。
 
 ### 3.15 前端多语言
 
@@ -428,7 +425,7 @@ PATH=/usr/lib/jvm/zulu-25/bin:$PATH \
   - JVM/游戏参数、占位符、features 和旧版参数回退。
   - natives 清理、解压、排除规则和 26.3 `natives/java` 子目录。
   - virtual assets 重建和 assets 目录替换。
-  - 平台默认游戏目录：Linux 用户目录，Windows 启动器目录。
+  - 平台默认游戏目录：所有平台都使用用户主目录下的 `.minecraft`。
   - 默认主题首次复制、主题列表排序、主题选择持久化和路径穿越校验。
   - 最大内存默认值、持久化往返、非法值回退和最小值校验。
   - 游戏位置持久化往返和缺失配置回退。
