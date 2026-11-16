@@ -159,11 +159,14 @@ Fabric 安装流程：
 
 Quilt 安装流程：
 
-- 从 `https://meta.quiltmc.org/v3/versions/loader/<game>` 获取 Loader 版本，按 `build` 从新到旧排列。
+- 从 `https://meta.quiltmc.org/v3/versions/loader/<game>` 获取 Loader 版本；官方把版本信息嵌在
+  `loader` 对象里（`loader.version` / `loader.build`），`build` 是该版本自身的构建号（`0.24.0` 为 0、
+  `0.20.0-beta.9` 为 9），不能用于比较新旧，界面按语义化版本从新到旧排列。
+- Quilt Meta 对尚未收录的游戏版本（例如刚发布的正式版）返回 404，此时界面按“无可用版本”处理而不是报错。
 - 获取 `v3/versions/loader/<game>/<loader>/profile/json`，写入 `versions/<instance>/<instance>.json`；
   profile 结构与 Fabric 一致，同样依赖本地已存在的原版父版本。
-- Quilted Fabric API 从 Modrinth `quilted-fabric-api` 项目按 `loaders=["quilt"]` 获取，
-  下载后同时放入实例 `mods` 和实际游戏目录的 `mods`。
+- Quilted Fabric API 从 Modrinth `qsl` 项目（标题为 QFAPI / QSL）按 `loaders=["quilt"]` 获取，
+  下载后同时放入实例 `mods` 和实际游戏目录的 `mods`；QFAPI 只发布到 1.21 为止，更新的游戏版本没有可用条目。
 - 失败时删除目标版本目录，避免留下半成品实例。
 
 Forge/NeoForge 安装流程：
