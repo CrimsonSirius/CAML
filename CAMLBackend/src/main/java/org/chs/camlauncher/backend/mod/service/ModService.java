@@ -70,6 +70,24 @@ public final class ModService {
         };
     }
 
+    public Map<String, ModFile> latestVersions(
+            List<String> hashes, String gameVersion, org.chs.camlauncher.backend.mod.model.ModLoader loader)
+            throws IOException, InterruptedException {
+        return modrinth.latestVersions(hashes, gameVersion, loader);
+    }
+
+    public Map<Long, String> curseForgeFingerprintModIds(List<Long> fingerprints)
+            throws IOException, InterruptedException {
+        return curseForge.fingerprintModIds(fingerprints);
+    }
+
+    public Map<Long, ModFile> latestCurseForgeVersions(
+            Map<Long, String> fingerprintToModId, String gameVersion,
+            org.chs.camlauncher.backend.mod.model.ModLoader loader)
+            throws IOException, InterruptedException {
+        return curseForge.latestVersions(fingerprintToModId, gameVersion, loader);
+    }
+
     public ModDownloadResult download(
             ModFile file,
             Path gameDirectory,

@@ -333,6 +333,9 @@ public final class JAJPGenerator extends LanguageTranslationGenerator {
         t.put("instances.manage.mods.empty", "このインスタンスに MOD はありません");
         t.put("instances.manage.mods.scanFailed", "MOD 一覧の読み込みに失敗しました：%s");
         t.put("instances.manage.mods.toggleFailed", "MOD の状態を切り替えられませんでした：%s");
+        t.put("instances.manage.mods.update", "更新");
+        t.put("instances.manage.mods.updating", "%s を更新しています...");
+        t.put("instances.manage.mods.updateFailed", "MOD の更新に失敗しました：%s");
         t.put("instances.manage.mods.enabled", "有効");
         t.put("instances.manage.mods.disabled", "無効");
 
@@ -398,6 +401,8 @@ public final class JAJPGenerator extends LanguageTranslationGenerator {
         t.put("operation.openInstanceFolder", "インスタンスフォルダーを開く");
         t.put("operation.loadInstanceModIcon", "MOD アイコンを読み込む");
         t.put("operation.setModDisabled", "MOD の状態を切り替える");
+        t.put("operation.checkModUpdates", "MOD の更新を確認");
+        t.put("operation.updateMod", "MOD %s を更新");
         t.put("operation.checkInstanceName", "インスタンス名を確認");
         t.put("operation.fetchVersionList", "公式 %s 一覧を取得");
         t.put("operation.installVanilla", "バニラインスタンス %s をインストール");

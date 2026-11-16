@@ -130,6 +130,125 @@ public final class CurseForgeClient {
         return new ModProjectDetail(summary, string(project, "summary"), List.copyOf(files));
     }
 
+    /** 批量查询 CurseForge 指纹对应的工程 ID。 */
+    public Map<Long, String> fingerprintModIds(List<Long> fingerprints)
+            throws IOException, InterruptedException {
+        requireApiKey();
+        if (fingerprints == null || fingerprints.isEmpty()) {
+            return Map.of();
+        }
+        JsonObject body = new JsonObject();
+        JsonArray values = new JsonArray();
+        fingerprints.stream().filter(value -> value != null && value > 0).distinct().forEach(values::add);
+        if (values.isEmpty()) {
+            return Map.of();
+        }
+        body.add("fingerprints", values);
+        JsonObject root = http.post(base.resolve("fingerprints/432"), body.toString(), headers())
+                .getAsJsonObject();
+        JsonObject data = root.has("data") && root.get("data").isJsonObject()
+                ? root.getAsJsonObject("data") : new JsonObject();
+        JsonArray matches = data.getAsJsonArray("exactMatches");
+        Map<Long, String> result = new java.util.LinkedHashMap<>();
+        if (matches != null) {
+            for (JsonElement element : matches) {
+                if (!element.isJsonObject()) {
+                    continue;
+                }
+                JsonObject project = element.getAsJsonObject();
+                long modId = longValue(project, "id");
+                JsonObject file = project.has("file") && project.get("file").isJsonObject()
+                        ? project.getAsJsonObject("file") : new JsonObject();
+                long fingerprint = longValue(file, "fileFingerprint");
+                if (modId > 0 && fingerprint > 0) {
+                    result.put(fingerprint, Long.toString(modId));
+                }
+            }
+        }
+        return Map.copyOf(result);
+    }
+
+    /** 按指纹对应的工程查询当前 MC 版本/加载器的最新文件。 */
+    public Map<Long, ModFile> latestVersions(
+            Map<Long, String> fingerprintToModId, String gameVersion, ModLoader loader)
+            throws IOException, InterruptedException {
+        requireApiKey();
+        if (fingerprintToModId == null || fingerprintToModId.isEmpty()) {
+            return Map.of();
+        }
+
+        JsonArray modIds = new JsonArray();
+        fingerprintToModId.values().stream().distinct().forEach(modIds::add);
+        JsonObject modsBody = new JsonObject();
+        modsBody.add("modIds", modIds);
+        JsonObject modsRoot = http.post(base.resolve("mods"), modsBody.toString(), headers())
+                .getAsJsonObject();
+        JsonArray projects = modsRoot.getAsJsonArray("data");
+        Map<String, Long> fileByMod = new java.util.LinkedHashMap<>();
+        if (projects != null) {
+            for (JsonElement element : projects) {
+                if (!element.isJsonObject()) {
+                    continue;
+                }
+                JsonObject project = element.getAsJsonObject();
+                String modId = string(project, "id");
+                JsonArray indexes = project.getAsJsonArray("latestFilesIndexes");
+                if (modId == null || indexes == null) {
+                    continue;
+                }
+                long bestFileId = 0;
+                for (JsonElement indexElement : indexes) {
+                    if (!indexElement.isJsonObject()) {
+                        continue;
+                    }
+                    JsonObject index = indexElement.getAsJsonObject();
+                    if (!gameVersion.equals(string(index, "gameVersion"))) {
+                        continue;
+                    }
+                    int modLoader = intValue(index, "modLoader");
+                    if (loader != null && modLoader != 0
+                            && modLoader != loader.curseForgeType()) {
+                        continue;
+                    }
+                    bestFileId = Math.max(bestFileId, longValue(index, "fileId"));
+                }
+                if (bestFileId > 0) {
+                    fileByMod.put(modId, bestFileId);
+                }
+            }
+        }
+        if (fileByMod.isEmpty()) {
+            return Map.of();
+        }
+
+        JsonArray fileIds = new JsonArray();
+        fileByMod.values().forEach(fileIds::add);
+        JsonObject filesBody = new JsonObject();
+        filesBody.add("fileIds", fileIds);
+        JsonObject filesRoot = http.post(base.resolve("mods/files"), filesBody.toString(), headers())
+                .getAsJsonObject();
+        JsonArray files = filesRoot.getAsJsonArray("data");
+        Map<Long, ModFile> fileById = new java.util.LinkedHashMap<>();
+        if (files != null) {
+            for (JsonElement element : files) {
+                if (element.isJsonObject()) {
+                    JsonObject file = element.getAsJsonObject();
+                    fileById.put(longValue(file, "id"), parseFile(file, Map.of(), false));
+                }
+            }
+        }
+
+        Map<Long, ModFile> result = new java.util.LinkedHashMap<>();
+        for (Map.Entry<Long, String> entry : fingerprintToModId.entrySet()) {
+            Long fileId = fileByMod.get(entry.getValue());
+            ModFile file = fileId == null ? null : fileById.get(fileId);
+            if (file != null) {
+                result.put(entry.getKey(), file);
+            }
+        }
+        return Map.copyOf(result);
+    }
+
     private List<JsonObject> fetchAllFiles(String projectId)
             throws IOException, InterruptedException {
         List<JsonObject> result = new ArrayList<>();
@@ -214,6 +333,11 @@ public final class CurseForgeClient {
     }
 
     private ModFile parseFile(JsonObject object, Map<Long, String> dependencyNames) {
+        return parseFile(object, dependencyNames, true);
+    }
+
+    private ModFile parseFile(JsonObject object, Map<Long, String> dependencyNames,
+                              boolean resolveDependencies) {
         String fileName = string(object, "fileName");
         long fileId = longValue(object, "id");
         List<URI> downloadUris = downloadUris(fileId, fileName, string(object, "downloadUrl"));
@@ -245,7 +369,7 @@ public final class CurseForgeClient {
                 size,
                 List.copyOf(versions),
                 List.copyOf(loaders),
-                dependencies(object, dependencyNames),
+                resolveDependencies ? dependencies(object, dependencyNames) : List.of(),
                 string(object, "fileDate"),
                 longValue(object, "downloadCount")
         );

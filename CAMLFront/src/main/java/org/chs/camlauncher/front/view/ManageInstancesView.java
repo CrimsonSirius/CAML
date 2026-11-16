@@ -8,10 +8,13 @@ import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
+import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import org.chs.camlauncher.backend.api.InstanceDetails;
 import org.chs.camlauncher.backend.api.InstanceMod;
+import org.chs.camlauncher.backend.api.InstanceModUpdate;
+import org.chs.camlauncher.backend.download.DownloadListener;
 import org.chs.camlauncher.front.controller.FrontTask;
 import org.chs.camlauncher.front.controller.HomeController;
 import org.chs.camlauncher.front.text.UiText;
@@ -20,7 +23,9 @@ import org.chs.camlauncher.ui.control.CamlButton;
 import java.io.ByteArrayInputStream;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Locale;
 
 /** 管理实例二级页：显示实例 mods 列表并打开实例数据目录。 */
@@ -36,7 +41,9 @@ final class ManageInstancesView extends VBox implements PageLifecycle {
     private final CamlButton openFolderButton =
             CamlButton.outlined(UiText.tr("instances.manage.openFolder"));
     private final List<FrontTask<byte[]>> iconTasks = new ArrayList<>();
+    private final Map<String, ModRow> modRows = new LinkedHashMap<>();
     private FrontTask<?> inspectTask;
+    private FrontTask<?> updateTask;
     private int lastModCount;
     private boolean disposed;
 
@@ -86,6 +93,10 @@ final class ManageInstancesView extends VBox implements PageLifecycle {
     }
 
     private void loadInstance() {
+        if (updateTask != null) {
+            updateTask.cancel();
+            updateTask = null;
+        }
         if (gameDirectory == null) {
             setStatus(UiText.tr("instances.manage.noGameDirectory"), true);
             return;
@@ -114,10 +125,12 @@ final class ManageInstancesView extends VBox implements PageLifecycle {
         pathLabel.setText(UiText.tr("instances.manage.folder", details.gameDataDirectory()));
         openFolderButton.setDisable(false);
         populateMods(details);
+        loadUpdates();
     }
 
     private void populateMods(InstanceDetails details) {
         cancelIconTasks();
+        modRows.clear();
         modsList.getChildren().clear();
         lastModCount = details.modCount();
         if (details.mods().isEmpty()) {
@@ -159,8 +172,22 @@ final class ManageInstancesView extends VBox implements PageLifecycle {
             name.setMaxWidth(Double.MAX_VALUE);
             HBox.setHgrow(name, Priority.ALWAYS);
 
+            Label version = new Label(displayVersion(mod.version()));
+            version.getStyleClass().add("app-instance-mod-version");
+            version.setMinWidth(Region.USE_PREF_SIZE);
+
+            HBox title = new HBox(name, version);
+            title.getStyleClass().add("app-instance-mod-title-row");
+            title.setAlignment(Pos.CENTER_LEFT);
+            title.setMaxWidth(Double.MAX_VALUE);
+            HBox.setHgrow(name, Priority.ALWAYS);
+
             Label size = new Label(formatSize(mod.sizeBytes()));
             size.getStyleClass().addAll("caml-body-small", "caml-on-surface-muted");
+
+            CamlButton update = CamlButton.filled(UiText.tr("instances.manage.mods.update"));
+            update.getStyleClass().add("app-instance-mod-update");
+            update.setDisable(true);
 
             boolean[] enabledState = {mod.enabled()};
             ToggleButton state = new ToggleButton();
@@ -169,12 +196,72 @@ final class ManageInstancesView extends VBox implements PageLifecycle {
             updateModToggleText(state, enabledState[0]);
             state.setOnAction(event -> toggleMod(state, mod, enabledState));
 
-            HBox row = new HBox(iconFrame, name, size, state);
+            ModRow modRow = new ModRow(mod, version, update);
+            modRows.put(mod.fileName(), modRow);
+
+            HBox row = new HBox(iconFrame, title, size, update, state);
             row.getStyleClass().add("app-instance-mod-row");
             row.setAlignment(Pos.CENTER_LEFT);
+            HBox.setHgrow(title, Priority.ALWAYS);
             modsList.getChildren().add(row);
         }
         setStatus(UiText.tr("instances.manage.mods.count", lastModCount), false);
+    }
+
+    private void loadUpdates() {
+        if (modRows.isEmpty()) {
+            return;
+        }
+        updateTask = controller.checkInstanceModUpdates(gameDirectory, instanceId,
+                this::applyUpdates,
+                message -> {
+                    if (!disposed) {
+                        setStatus(UiText.tr("instances.manage.mods.updateFailed", message), true);
+                    }
+                });
+    }
+
+    private void applyUpdates(List<InstanceModUpdate> updates) {
+        if (disposed) {
+            return;
+        }
+        Map<String, InstanceModUpdate> byFile = new LinkedHashMap<>();
+        for (InstanceModUpdate update : updates) {
+            byFile.put(update.fileName(), update);
+        }
+        for (ModRow row : modRows.values()) {
+            InstanceModUpdate update = byFile.get(row.mod().fileName());
+            if (update == null) {
+                continue;
+            }
+            row.versionLabel().setText(versionText(update));
+            row.versionLabel().getStyleClass().remove("app-instance-mod-version-update");
+            if (update.updateAvailable()) {
+                row.versionLabel().getStyleClass().add("app-instance-mod-version-update");
+            }
+            row.updateButton().setDisable(!update.updateAvailable());
+            if (update.updateAvailable() && update.latestFile() != null) {
+                row.updateButton().setOnAction(event -> updateMod(row, update));
+            }
+        }
+    }
+
+    private void updateMod(ModRow row, InstanceModUpdate update) {
+        row.updateButton().setDisable(true);
+        setStatus(UiText.tr("instances.manage.mods.updating", row.mod().fileName()), false);
+        controller.updateInstanceMod(gameDirectory, instanceId, row.mod().fileName(),
+                update.latestFile(), DownloadListener.NONE,
+                result -> {
+                    if (!disposed) {
+                        loadInstance();
+                    }
+                },
+                message -> {
+                    if (!disposed) {
+                        row.updateButton().setDisable(false);
+                        setStatus(UiText.tr("instances.manage.mods.updateFailed", message), true);
+                    }
+                });
     }
 
     private void openFolder() {
@@ -247,6 +334,18 @@ final class ManageInstancesView extends VBox implements PageLifecycle {
         return String.format(Locale.ROOT, "%.1f MB", bytes / (1024.0 * 1024.0));
     }
 
+    private static String displayVersion(String version) {
+        return version == null || version.isBlank() ? "?" : version;
+    }
+
+    private static String versionText(InstanceModUpdate update) {
+        String current = displayVersion(update.currentVersion());
+        String latest = displayVersion(update.latestVersion());
+        return update.updateAvailable() && !current.equals(latest)
+                ? current + " → " + latest
+                : current;
+    }
+
     private static String initialOf(String fileName) {
         if (fileName == null || fileName.isBlank()) {
             return "?";
@@ -277,13 +376,21 @@ final class ManageInstancesView extends VBox implements PageLifecycle {
         iconTasks.clear();
     }
 
+    private record ModRow(InstanceMod mod, Label versionLabel, CamlButton updateButton) {
+    }
+
     @Override
     public void dispose() {
         disposed = true;
         cancelIconTasks();
+        if (updateTask != null) {
+            updateTask.cancel();
+            updateTask = null;
+        }
         if (inspectTask != null) {
             inspectTask.cancel();
             inspectTask = null;
         }
+        modRows.clear();
     }
 }

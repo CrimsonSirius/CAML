@@ -333,6 +333,9 @@ public final class ZHCNGenerator extends LanguageTranslationGenerator {
         t.put("instances.manage.mods.empty", "该实例没有 Mod");
         t.put("instances.manage.mods.scanFailed", "读取 Mod 列表失败：%s");
         t.put("instances.manage.mods.toggleFailed", "切换 Mod 状态失败：%s");
+        t.put("instances.manage.mods.update", "更新");
+        t.put("instances.manage.mods.updating", "正在更新 %s...");
+        t.put("instances.manage.mods.updateFailed", "更新 Mod 失败：%s");
         t.put("instances.manage.mods.enabled", "已启用");
         t.put("instances.manage.mods.disabled", "已禁用");
 
@@ -398,6 +401,8 @@ public final class ZHCNGenerator extends LanguageTranslationGenerator {
         t.put("operation.openInstanceFolder", "打开实例文件夹");
         t.put("operation.loadInstanceModIcon", "加载 Mod 图标");
         t.put("operation.setModDisabled", "切换 Mod 状态");
+        t.put("operation.checkModUpdates", "检查 Mod 更新");
+        t.put("operation.updateMod", "更新 Mod %s");
         t.put("operation.checkInstanceName", "检查实例名");
         t.put("operation.fetchVersionList", "获取官方%s列表");
         t.put("operation.installVanilla", "安装原版实例 %s");

@@ -83,6 +83,56 @@ public final class ModrinthClient {
         return new ModProjectDetail(summary, body, List.copyOf(files));
     }
 
+    /**
+     * 批量查询本地文件对应的最新兼容版本。
+     *
+     * @param hashes     本地 jar 的 SHA-1
+     * @param gameVersion 当前实例 MC 版本
+     * @param loader      当前实例加载器
+     * @return SHA-1 -> 最新兼容版本；不在 Modrinth 的文件不会出现在结果中
+     */
+    public Map<String, ModFile> latestVersions(
+            List<String> hashes, String gameVersion, ModLoader loader)
+            throws IOException, InterruptedException {
+        if (hashes == null || hashes.isEmpty()) {
+            return Map.of();
+        }
+        JsonObject body = new JsonObject();
+        body.addProperty("algorithm", "sha1");
+        JsonArray entries = new JsonArray();
+        for (String hash : hashes) {
+            if (hash == null || hash.isBlank()) {
+                continue;
+            }
+            JsonObject entry = new JsonObject();
+            entry.addProperty("hash", hash);
+            JsonArray loaders = new JsonArray();
+            loaders.add(loader.apiName());
+            entry.add("loaders", loaders);
+            JsonArray gameVersions = new JsonArray();
+            gameVersions.add(gameVersion);
+            entry.add("game_versions", gameVersions);
+            entries.add(entry);
+        }
+        if (entries.isEmpty()) {
+            return Map.of();
+        }
+        body.add("hashes", entries);
+        JsonObject root = http.post(
+                base.resolve("version_files/update_individual"),
+                body.toString(),
+                Map.of()
+        ).getAsJsonObject();
+        Map<String, ModFile> result = new LinkedHashMap<>();
+        for (Map.Entry<String, JsonElement> entry : root.entrySet()) {
+            if (entry.getValue().isJsonObject()) {
+                result.put(entry.getKey(),
+                        parseFile(entry.getValue().getAsJsonObject(), Map.of(), false));
+            }
+        }
+        return Map.copyOf(result);
+    }
+
     private ModProjectSummary parseSummary(JsonObject object) {
         String slug = string(object, "slug");
         return new ModProjectSummary(
@@ -104,9 +154,16 @@ public final class ModrinthClient {
 
     private ModFile parseFile(JsonObject object, Map<String, String> dependencyNames)
             throws IOException, InterruptedException {
+        return parseFile(object, dependencyNames, true);
+    }
+
+    private ModFile parseFile(JsonObject object, Map<String, String> dependencyNames,
+                              boolean resolveDependencies)
+            throws IOException, InterruptedException {
         String projectId = string(object, "project_id");
-        List<ModDependency> dependencies = parseDependencies(
-                object.getAsJsonArray("dependencies"), dependencyNames);
+        List<ModDependency> dependencies = resolveDependencies
+                ? parseDependencies(object.getAsJsonArray("dependencies"), dependencyNames)
+                : List.of();
         JsonArray fileArray = object.getAsJsonArray("files");
         if (fileArray == null || fileArray.isEmpty()) {
             return new ModFile(ModSource.MODRINTH, projectId, string(object, "id"),

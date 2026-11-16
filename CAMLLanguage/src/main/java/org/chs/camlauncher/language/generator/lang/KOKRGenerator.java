@@ -333,6 +333,9 @@ public final class KOKRGenerator extends LanguageTranslationGenerator {
         t.put("instances.manage.mods.empty", "이 인스턴스에는 모드가 없습니다");
         t.put("instances.manage.mods.scanFailed", "모드 목록을 읽지 못했습니다: %s");
         t.put("instances.manage.mods.toggleFailed", "모드 상태를 전환하지 못했습니다: %s");
+        t.put("instances.manage.mods.update", "업데이트");
+        t.put("instances.manage.mods.updating", "%s 업데이트 중...");
+        t.put("instances.manage.mods.updateFailed", "모드 업데이트에 실패했습니다: %s");
         t.put("instances.manage.mods.enabled", "사용");
         t.put("instances.manage.mods.disabled", "사용 안 함");
 
@@ -398,6 +401,8 @@ public final class KOKRGenerator extends LanguageTranslationGenerator {
         t.put("operation.openInstanceFolder", "인스턴스 폴더 열기");
         t.put("operation.loadInstanceModIcon", "모드 아이콘 불러오기");
         t.put("operation.setModDisabled", "모드 상태 전환");
+        t.put("operation.checkModUpdates", "모드 업데이트 확인");
+        t.put("operation.updateMod", "모드 %s 업데이트");
         t.put("operation.checkInstanceName", "인스턴스 이름 확인");
         t.put("operation.fetchVersionList", "공식 %s 목록 가져오기");
         t.put("operation.installVanilla", "바닐라 인스턴스 %s 설치");

@@ -333,6 +333,9 @@ public final class FRFRGenerator extends LanguageTranslationGenerator {
         t.put("instances.manage.mods.empty", "Cette instance ne contient aucun mod");
         t.put("instances.manage.mods.scanFailed", "Impossible de lire la liste des mods : %s");
         t.put("instances.manage.mods.toggleFailed", "Impossible de changer l'état du mod : %s");
+        t.put("instances.manage.mods.update", "Mettre à jour");
+        t.put("instances.manage.mods.updating", "Mise à jour de %s...");
+        t.put("instances.manage.mods.updateFailed", "Impossible de mettre à jour le mod : %s");
         t.put("instances.manage.mods.enabled", "Activé");
         t.put("instances.manage.mods.disabled", "Désactivé");
 
@@ -398,6 +401,8 @@ public final class FRFRGenerator extends LanguageTranslationGenerator {
         t.put("operation.openInstanceFolder", "Ouvrir le dossier de l'instance");
         t.put("operation.loadInstanceModIcon", "Charger l'icône du mod");
         t.put("operation.setModDisabled", "Changer l'état du mod");
+        t.put("operation.checkModUpdates", "Vérifier les mises à jour des mods");
+        t.put("operation.updateMod", "Mettre à jour le mod %s");
         t.put("operation.checkInstanceName", "Vérifier le nom de l’instance");
         t.put("operation.fetchVersionList", "Récupérer la liste officielle %s");
         t.put("operation.installVanilla", "Installer l’instance vanilla %s");

@@ -32,6 +32,7 @@ class InstanceInspectorTest {
         assertEquals(2, details.modCount());
         assertEquals("iris.jar", details.mods().get(0).fileName());
         assertEquals("sodium.jar", details.mods().get(1).fileName());
+        assertEquals("", details.mods().get(0).version());
         assertFalse(details.mods().stream()
                 .filter(mod -> mod.fileName().equals("iris.jar"))
                 .findFirst().orElseThrow().enabled());
