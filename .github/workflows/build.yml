@@ -38,11 +38,30 @@ jobs:
           path: CAMLFront/build/distributions/*.zip
 
   linux-packages:
-    if: github.event_name == 'pull_request' && github.base_ref == 'main'
+    if: (github.event_name == 'pull_request' && github.base_ref == 'main') || (github.event_name == 'push' && github.ref == 'refs/heads/main')
     needs: build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
+      - name: Resolve package identity
+        id: package
+        run: |
+          if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
+            pr="${{ github.event.pull_request.number }}"
+          else
+            message=$(git log -1 --pretty=%B)
+            pr=$(printf '%s\n' "$message" | sed -n 's/.*Merge pull request #\([0-9][0-9]*\).*/\1/p' | head -n 1)
+            if [ -z "$pr" ]; then
+              pr=$(printf '%s\n' "$message" | sed -n 's/.*(#\([0-9][0-9]*\)).*/\1/p' | head -n 1)
+            fi
+          fi
+          if [ -n "$pr" ]; then
+            echo "release=$pr" >> "$GITHUB_OUTPUT"
+            echo "artifact=caml-linux-packages-pr-$pr" >> "$GITHUB_OUTPUT"
+          else
+            echo "release=$GITHUB_RUN_NUMBER" >> "$GITHUB_OUTPUT"
+            echo "artifact=caml-linux-packages-run-$GITHUB_RUN_NUMBER" >> "$GITHUB_OUTPUT"
+          fi
       - uses: actions/setup-java@v5
         with:
           distribution: temurin
@@ -61,7 +80,7 @@ jobs:
           ./gradlew :CAMLFront:packageLinux \
             -PcamlJdkHome="$JAVA_HOME" \
             -PcamlVersion=1.0.0 \
-            -PcamlRelease="${{ github.event.pull_request.number }}" \
+            -PcamlRelease="${{ steps.package.outputs.release }}" \
             --no-daemon --stacktrace
       - name: Inspect packages
         run: |
@@ -78,7 +97,7 @@ jobs:
       - name: Upload Linux packages
         uses: actions/upload-artifact@v4
         with:
-          name: caml-linux-packages-pr-${{ github.event.pull_request.number }}
+          name: ${{ steps.package.outputs.artifact }}
           path: |
             CAMLFront/build/packages/linux/*.deb
             CAMLFront/build/packages/linux/*.rpm
