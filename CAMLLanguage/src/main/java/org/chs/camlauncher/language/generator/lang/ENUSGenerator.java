@@ -395,6 +395,7 @@ public final class ENUSGenerator extends LanguageTranslationGenerator {
         t.put("operation.inspectGameDirectory", "Inspect game directory");
         t.put("operation.inspectInstance", "Read instance information");
         t.put("operation.openInstanceFolder", "Open instance folder");
+        t.put("operation.loadInstanceModIcon", "Load mod icon");
         t.put("operation.checkInstanceName", "Check instance name");
         t.put("operation.fetchVersionList", "Fetch official %s list");
         t.put("operation.installVanilla", "Install vanilla instance %s");

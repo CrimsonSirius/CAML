@@ -295,6 +295,7 @@
   "operation.installQuilt": "Quilt インスタンス %s をインストール",
   "operation.installVanilla": "バニラインスタンス %s をインストール",
   "operation.launchGame": "ゲーム %s を起動",
+  "operation.loadInstanceModIcon": "MOD アイコンを読み込む",
   "operation.loadModIcon": "MOD アイコンを読み込む",
   "operation.openInstanceFolder": "インスタンスフォルダーを開く",
   "operation.saveAutoGameLanguage": "ゲーム言語の自動設定を保存",

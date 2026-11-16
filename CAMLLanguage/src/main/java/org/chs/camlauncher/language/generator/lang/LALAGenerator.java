@@ -395,6 +395,7 @@ public final class LALAGenerator extends LanguageTranslationGenerator {
         t.put("operation.inspectGameDirectory", "Directorium ludi inspicere");
         t.put("operation.inspectInstance", "Informationes instantiae legere");
         t.put("operation.openInstanceFolder", "Directorium instantiae aperire");
+        t.put("operation.loadInstanceModIcon", "Iconem modi legere");
         t.put("operation.checkInstanceName", "Nomen instantiae inspicere");
         t.put("operation.fetchVersionList", "Indicem officialem %s petere");
         t.put("operation.installVanilla", "Instantiam vanilla %s installare");

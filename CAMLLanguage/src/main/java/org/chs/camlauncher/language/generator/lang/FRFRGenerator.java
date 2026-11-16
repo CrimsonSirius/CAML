@@ -395,6 +395,7 @@ public final class FRFRGenerator extends LanguageTranslationGenerator {
         t.put("operation.inspectGameDirectory", "Inspecter le répertoire de jeu");
         t.put("operation.inspectInstance", "Lire les informations de l'instance");
         t.put("operation.openInstanceFolder", "Ouvrir le dossier de l'instance");
+        t.put("operation.loadInstanceModIcon", "Charger l'icône du mod");
         t.put("operation.checkInstanceName", "Vérifier le nom de l’instance");
         t.put("operation.fetchVersionList", "Récupérer la liste officielle %s");
         t.put("operation.installVanilla", "Installer l’instance vanilla %s");

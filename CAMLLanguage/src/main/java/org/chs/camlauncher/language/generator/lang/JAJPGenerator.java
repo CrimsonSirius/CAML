@@ -395,6 +395,7 @@ public final class JAJPGenerator extends LanguageTranslationGenerator {
         t.put("operation.inspectGameDirectory", "ゲームディレクトリを確認");
         t.put("operation.inspectInstance", "インスタンス情報を読み込む");
         t.put("operation.openInstanceFolder", "インスタンスフォルダーを開く");
+        t.put("operation.loadInstanceModIcon", "MOD アイコンを読み込む");
         t.put("operation.checkInstanceName", "インスタンス名を確認");
         t.put("operation.fetchVersionList", "公式 %s 一覧を取得");
         t.put("operation.installVanilla", "バニラインスタンス %s をインストール");

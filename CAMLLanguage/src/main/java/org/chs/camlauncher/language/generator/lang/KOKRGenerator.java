@@ -395,6 +395,7 @@ public final class KOKRGenerator extends LanguageTranslationGenerator {
         t.put("operation.inspectGameDirectory", "게임 디렉터리 검사");
         t.put("operation.inspectInstance", "인스턴스 정보 읽기");
         t.put("operation.openInstanceFolder", "인스턴스 폴더 열기");
+        t.put("operation.loadInstanceModIcon", "모드 아이콘 불러오기");
         t.put("operation.checkInstanceName", "인스턴스 이름 확인");
         t.put("operation.fetchVersionList", "공식 %s 목록 가져오기");
         t.put("operation.installVanilla", "바닐라 인스턴스 %s 설치");

@@ -295,6 +295,7 @@
   "operation.installQuilt": "Quilt མིང་ཚིག %s སྒྲིག",
   "operation.installVanilla": "སྲོལ་རྒྱུན་བཟོ་བཅོས %s སྒྲིག",
   "operation.launchGame": "རྩེད་མོ %s འགོ་འཛུགས",
+  "operation.loadInstanceModIcon": "Load mod icon",
   "operation.loadModIcon": "MOD རྟགས་མ་ལེན",
   "operation.openInstanceFolder": "Open instance folder",
   "operation.saveAutoGameLanguage": "རྩེད་མོའི་སྐད་ཡིག་རང་བཞིན་སྒྲིག་བཀོད་ཉར་ཚགས",

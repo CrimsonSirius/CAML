@@ -295,6 +295,7 @@
   "operation.installQuilt": "Installer l’instance Quilt %s",
   "operation.installVanilla": "Installer l’instance vanilla %s",
   "operation.launchGame": "Lancer le jeu %s",
+  "operation.loadInstanceModIcon": "Charger l'icône du mod",
   "operation.loadModIcon": "Charger l’icône du mod",
   "operation.openInstanceFolder": "Ouvrir le dossier de l'instance",
   "operation.saveAutoGameLanguage": "Enregistrer le paramètre de langue automatique du jeu",

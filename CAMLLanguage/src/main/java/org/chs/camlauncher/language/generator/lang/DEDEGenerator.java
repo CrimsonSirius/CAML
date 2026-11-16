@@ -395,6 +395,7 @@ public final class DEDEGenerator extends LanguageTranslationGenerator {
         t.put("operation.inspectGameDirectory", "Spielverzeichnis prüfen");
         t.put("operation.inspectInstance", "Instanzinformationen lesen");
         t.put("operation.openInstanceFolder", "Instanzordner öffnen");
+        t.put("operation.loadInstanceModIcon", "Mod-Symbol laden");
         t.put("operation.checkInstanceName", "Instanznamen prüfen");
         t.put("operation.fetchVersionList", "Offizielle %s-Liste abrufen");
         t.put("operation.installVanilla", "Vanilla-Instanz %s installieren");
