@@ -1,0 +1,29 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: CAML
+Upstream-Contact: CrimsonSirius <227993016@qq.com>
+Source: https://github.com/CrimsonSirius/CAML
+
+Files: *
+Copyright: 2026 CrimsonSirius <227993016@qq.com>
+           2026 namelessgod2008 <3505488164@qq.com>
+License: GPL-3.0-only
+Comment: The full GPL-3.0-only text is installed as
+ licenses/CAML-GPL-3.0-only.txt.
+
+Files: opt/caml-launcher/lib/runtime/*
+Copyright: 2026 Eclipse Adoptium and contributors
+License: GPL-2.0-with-classpath-exception
+Comment: The JDK runtime license and module notices are installed under
+ licenses/JDK/.
+
+Files: opt/caml-launcher/lib/app/javafx-*
+Copyright: 2013-2026 Oracle and/or its affiliates
+License: GPL-2.0-with-classpath-exception
+Comment: The OpenJFX license text is installed as
+ licenses/OpenJFX-GPL-2.0-CE.txt.
+
+Files: opt/caml-launcher/lib/app/*
+Copyright: 2026 CAML contributors and third-party authors
+License: Apache-2.0 or BSD-3-Clause
+Comment: See licenses/THIRD-PARTY-NOTICES.md for the dependency list and
+ licenses/Apache-2.0.txt and licenses/BSD-3-Clause.txt for the full texts.

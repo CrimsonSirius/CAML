@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <rect x="28" y="28" width="456" height="456" rx="104" fill="#201914"/>
+  <rect x="40" y="40" width="432" height="432" rx="92" fill="none" stroke="#ffb74d" stroke-width="18"/>
+  <text x="256" y="315" text-anchor="middle"
+        font-family="DejaVu Sans, sans-serif" font-size="148" font-weight="700"
+        fill="#ffcc80">CAML</text>
+</svg>

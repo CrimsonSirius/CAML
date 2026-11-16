@@ -1,0 +1,92 @@
+name: Package Linux
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Package version without leading v
+        required: false
+        default: 1.0.0
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '25'
+          cache: gradle
+      - name: Install package tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y rpm
+      - name: Make Gradle wrapper executable
+        run: chmod +x gradlew
+      - name: Resolve package version
+        id: package_version
+        run: |
+          if [ "$GITHUB_REF_TYPE" = "tag" ]; then
+            version="${GITHUB_REF_NAME#v}"
+          else
+            version="${{ github.event.inputs.version }}"
+            if [ -z "$version" ]; then
+              version="1.0.0"
+            fi
+          fi
+          echo "value=$version" >> "$GITHUB_OUTPUT"
+      - name: Build Linux packages
+        env:
+          CURSEFORGE_API_KEY: ${{ secrets.CURSEFORGE_API_KEY }}
+        run: |
+          ./gradlew :CAMLFront:packageLinux \
+            -PcamlJdkHome="$JAVA_HOME" \
+            -PcamlVersion="${{ steps.package_version.outputs.value }}" \
+            --no-daemon --stacktrace
+      - name: Inspect packages
+        run: |
+          deb=$(find CAMLFront/build/packages/linux -maxdepth 1 -name '*.deb' -print -quit)
+          rpm=$(find CAMLFront/build/packages/linux -maxdepth 1 -name '*.rpm' -print -quit)
+          test -n "$deb"
+          test -n "$rpm"
+          dpkg-deb -I "$deb"
+          dpkg-deb -c "$deb" >/dev/null
+          mkdir -p .rpmdb
+          rpm --dbpath "$PWD/.rpmdb" -qpi "$rpm"
+          rpm --dbpath "$PWD/.rpmdb" -qpl "$rpm" >/dev/null
+          cat CAMLFront/build/packages/linux/SHA256SUMS.txt
+      - name: Upload Linux packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: caml-linux-packages
+          path: |
+            CAMLFront/build/packages/linux/*.deb
+            CAMLFront/build/packages/linux/*.rpm
+            CAMLFront/build/packages/linux/SHA256SUMS.txt
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: package
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+    steps:
+      - name: Download Linux packages
+        uses: actions/download-artifact@v4
+        with:
+          name: caml-linux-packages
+          path: packages
+      - name: Upload release assets
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1 || \
+            gh release create "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" --notes "CAML $GITHUB_REF_NAME"
+          gh release upload "$GITHUB_REF_NAME" packages/* --clobber
