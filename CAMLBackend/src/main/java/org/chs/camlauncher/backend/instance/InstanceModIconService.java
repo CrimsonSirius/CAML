@@ -33,7 +33,13 @@ public final class InstanceModIconService {
         try {
             Path modsDirectory = InstanceInspector.dataDirectory(gameDirectory, instanceId)
                     .resolve("mods");
-            Path modFile = SafePaths.resolveChild(modsDirectory, fileName, "mod file");
+            String baseName = fileName != null && fileName.endsWith(".disabled")
+                    ? fileName.substring(0, fileName.length() - ".disabled".length())
+                    : fileName;
+            Path modFile = SafePaths.resolveChild(modsDirectory, baseName, "mod file");
+            if (!java.nio.file.Files.isRegularFile(modFile)) {
+                modFile = modsDirectory.resolve(baseName + ".disabled");
+            }
             if (!java.nio.file.Files.isRegularFile(modFile)) {
                 return new byte[0];
             }

@@ -1,5 +1,7 @@
 package org.chs.camlauncher.backend.settings;
 
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
 import org.chs.camlauncher.backend.download.DownloadConcurrency;
 import org.chs.camlauncher.backend.download.source.DownloadSourceMode;
 import org.chs.camlauncher.backend.instance.VersionIsolationMode;
@@ -15,12 +17,19 @@ import java.nio.file.Files;
 import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.nio.charset.StandardCharsets;
+import java.lang.reflect.Type;
 import java.util.ArrayList;
+import java.util.Base64;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Properties;
+import java.util.Set;
 import java.util.function.Consumer;
 
 /** 启动器设置持久化：游戏位置、内存、隔离、下载、Java 和语言选择。 */
@@ -48,6 +57,10 @@ public final class SettingsService {
     private static final String LANGUAGE_FALLBACK_MODE_KEY = "languageFallbackMode";
     private static final String LANGUAGE_FALLBACK_LOCALE_KEY = "languageFallbackLocale";
     private static final String AUTO_GAME_LANGUAGE_KEY = "autoGameLanguage";
+    private static final String DISABLED_MODS_KEY = "disabledMods";
+    private static final Gson GSON = new Gson();
+    private static final Type DISABLED_MODS_TYPE =
+            new TypeToken<Map<String, List<String>>>() { }.getType();
 
     private final Path settingsFile;
     private final Object writeLock = new Object();
@@ -299,6 +312,62 @@ public final class SettingsService {
     public void setAutoGameLanguage(boolean enabled) throws IOException {
         update(properties -> properties.setProperty(
                 AUTO_GAME_LANGUAGE_KEY, Boolean.toString(enabled)));
+    }
+
+    /** 读取某个实例在 CAML 配置中的禁用 Mod 文件名。 */
+    public Set<String> disabledMods(Path gameDirectory, String instanceId) throws IOException {
+        Map<String, List<String>> states = parseDisabledMods(
+                load().getProperty(DISABLED_MODS_KEY));
+        List<String> files = states.getOrDefault(modStateKey(gameDirectory, instanceId), List.of());
+        return Set.copyOf(new LinkedHashSet<>(files.stream().filter(Objects::nonNull).toList()));
+    }
+
+    /** 更新某个实例的 Mod 禁用状态；文件名按未带 .disabled 的 jar 名保存。 */
+    public void setModDisabled(Path gameDirectory, String instanceId, String fileName,
+                               boolean disabled) throws IOException {
+        Objects.requireNonNull(fileName, "fileName");
+        update(properties -> {
+            Map<String, List<String>> states = parseDisabledMods(
+                    properties.getProperty(DISABLED_MODS_KEY));
+            String key = modStateKey(gameDirectory, instanceId);
+            LinkedHashSet<String> files = new LinkedHashSet<>(
+                    states.getOrDefault(key, List.of()));
+            if (disabled) {
+                files.add(fileName);
+            } else {
+                files.remove(fileName);
+            }
+            if (files.isEmpty()) {
+                states.remove(key);
+            } else {
+                states.put(key, List.copyOf(files));
+            }
+            if (states.isEmpty()) {
+                properties.remove(DISABLED_MODS_KEY);
+            } else {
+                properties.setProperty(DISABLED_MODS_KEY, GSON.toJson(states));
+            }
+        });
+    }
+
+    private static Map<String, List<String>> parseDisabledMods(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return new LinkedHashMap<>();
+        }
+        try {
+            Map<String, List<String>> parsed = GSON.fromJson(raw, DISABLED_MODS_TYPE);
+            return parsed == null ? new LinkedHashMap<>() : new LinkedHashMap<>(parsed);
+        } catch (RuntimeException ignored) {
+            return new LinkedHashMap<>();
+        }
+    }
+
+    private static String modStateKey(Path gameDirectory, String instanceId) {
+        Objects.requireNonNull(gameDirectory, "gameDirectory");
+        Objects.requireNonNull(instanceId, "instanceId");
+        String value = gameDirectory.toAbsolutePath().normalize() + "\n" + instanceId;
+        return Base64.getUrlEncoder().withoutPadding().encodeToString(
+                value.getBytes(StandardCharsets.UTF_8));
     }
 
     private Properties load() throws IOException {

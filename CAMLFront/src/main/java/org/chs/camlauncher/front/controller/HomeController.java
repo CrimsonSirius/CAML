@@ -158,6 +158,22 @@ public final class HomeController {
                 onLoaded, onError);
     }
 
+    public FrontTask<Void> setModDisabled(
+            Path gameDirectory, String instanceId, String fileName, boolean disabled,
+            Runnable onSuccess, Consumer<String> onError) {
+        if (gameDirectory == null) {
+            return null;
+        }
+        return context.runSettings(UiText.tr("operation.setModDisabled"), () -> {
+            context.backend().setModDisabled(gameDirectory, instanceId, fileName, disabled);
+            return null;
+        }, ignored -> {
+            if (onSuccess != null) {
+                onSuccess.run();
+            }
+        }, onError);
+    }
+
     private void notifyLaunchFinished() {
         if (onLaunchFinished != null) {
             Platform.runLater(onLaunchFinished);

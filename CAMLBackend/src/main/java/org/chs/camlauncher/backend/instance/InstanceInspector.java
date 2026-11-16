@@ -14,6 +14,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Stream;
 
 /** 读取实例实际数据目录和 mods 文件列表。 */
@@ -25,9 +26,15 @@ public final class InstanceInspector {
     }
 
     public static InstanceDetails inspect(Path gameDirectory, String instanceId) throws IOException {
+        return inspect(gameDirectory, instanceId, Set.of());
+    }
+
+    public static InstanceDetails inspect(Path gameDirectory, String instanceId,
+                                          Set<String> configuredDisabled) throws IOException {
         Path normalizedGameDirectory = Objects.requireNonNull(gameDirectory, "gameDirectory")
                 .toAbsolutePath()
                 .normalize();
+        Objects.requireNonNull(configuredDisabled, "configuredDisabled");
         String instance = InstanceNameRules.validate(instanceId);
         Path versionDirectory = SafePaths.resolveChild(
                 normalizedGameDirectory.resolve("versions"), instance, "instance id");
@@ -40,7 +47,7 @@ public final class InstanceInspector {
                 versionDirectory,
                 dataDirectory,
                 modsDirectory,
-                scanMods(modsDirectory)
+                scanMods(modsDirectory, configuredDisabled)
         );
     }
 
@@ -56,7 +63,8 @@ public final class InstanceInspector {
                 normalizedGameDirectory, versionDirectory, VersionIsolationMode.AUTO);
     }
 
-    private static List<InstanceMod> scanMods(Path modsDirectory) throws IOException {
+    private static List<InstanceMod> scanMods(Path modsDirectory,
+                                              Set<String> configuredDisabled) throws IOException {
         if (!Files.isDirectory(modsDirectory)) {
             return List.of();
         }
@@ -66,12 +74,16 @@ public final class InstanceInspector {
             entries.filter(Files::isRegularFile).forEach(path -> {
                 String fileName = path.getFileName().toString();
                 String lowerName = fileName.toLowerCase(Locale.ROOT);
-                boolean disabled = lowerName.endsWith(DISABLED_SUFFIX);
-                if (!lowerName.endsWith(".jar") && !disabled) {
+                boolean suffixDisabled = lowerName.endsWith(DISABLED_SUFFIX);
+                if (!lowerName.endsWith(".jar") && !suffixDisabled) {
                     return;
                 }
+                String baseName = suffixDisabled
+                        ? fileName.substring(0, fileName.length() - ".disabled".length())
+                        : fileName;
+                boolean disabled = suffixDisabled || configuredDisabled.contains(baseName);
                 try {
-                    mods.add(new InstanceMod(fileName, Files.size(path), !disabled));
+                    mods.add(new InstanceMod(baseName, Files.size(path), !disabled));
                 } catch (IOException e) {
                     LOGGER.warn("无法读取 Mod 文件大小: {}", path, e);
                 }

@@ -30,10 +30,10 @@ class InstanceInspectorTest {
         assertEquals(version, details.gameDataDirectory());
         assertEquals(version.resolve("mods"), details.modsDirectory());
         assertEquals(2, details.modCount());
-        assertEquals("iris.jar.disabled", details.mods().get(0).fileName());
+        assertEquals("iris.jar", details.mods().get(0).fileName());
         assertEquals("sodium.jar", details.mods().get(1).fileName());
         assertFalse(details.mods().stream()
-                .filter(mod -> mod.fileName().equals("iris.jar.disabled"))
+                .filter(mod -> mod.fileName().equals("iris.jar"))
                 .findFirst().orElseThrow().enabled());
         assertTrue(details.mods().stream()
                 .filter(mod -> mod.fileName().equals("sodium.jar"))

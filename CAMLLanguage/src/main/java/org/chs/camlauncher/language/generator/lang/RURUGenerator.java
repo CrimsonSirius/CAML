@@ -332,6 +332,7 @@ public final class RURUGenerator extends LanguageTranslationGenerator {
         t.put("instances.manage.mods.count", "Модов: %d");
         t.put("instances.manage.mods.empty", "В этой сборке нет модов");
         t.put("instances.manage.mods.scanFailed", "Не удалось прочитать список модов: %s");
+        t.put("instances.manage.mods.toggleFailed", "Не удалось изменить состояние мода: %s");
         t.put("instances.manage.mods.enabled", "Включён");
         t.put("instances.manage.mods.disabled", "Отключён");
 
@@ -396,6 +397,7 @@ public final class RURUGenerator extends LanguageTranslationGenerator {
         t.put("operation.inspectInstance", "Чтение информации о сборке");
         t.put("operation.openInstanceFolder", "Открыть папку сборки");
         t.put("operation.loadInstanceModIcon", "Загрузить значок мода");
+        t.put("operation.setModDisabled", "Изменить состояние мода");
         t.put("operation.checkInstanceName", "Проверка названия сборки");
         t.put("operation.fetchVersionList", "Получение официального списка %s");
         t.put("operation.installVanilla", "Установка ванильной сборки %s");
