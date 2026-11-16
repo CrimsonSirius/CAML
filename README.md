@@ -167,6 +167,60 @@ CAML/
 ./gradlew :CAMLFront:test
 ```
 
+### Linux 安装包
+
+Linux 安装包使用 jpackage 生成自包含 app-image，再组装成 Debian 和 RPM 包。
+构建机需要 Temurin JDK 25，并通过 `JAVA_HOME` 或 `-PcamlJdkHome` 指向它：
+
+```bash
+./gradlew :CAMLFront:packageLinux \
+  -PcamlJdkHome=/path/to/temurin-25 \
+  -PcamlVersion=1.0.0 \
+  -PcamlRelease=1
+```
+
+Arch Linux 本地构建需要：
+
+```bash
+sudo pacman -S dpkg rpm-tools
+```
+
+产物位于：
+
+```text
+CAMLFront/build/packages/linux/
+├─ caml-launcher_1.0.0-1_amd64.deb
+├─ caml-launcher-1.0.0-1.x86_64.rpm
+└─ SHA256SUMS.txt
+```
+
+安装后布局：
+
+```text
+/opt/caml-launcher/          应用与内置 JDK/JavaFX
+/usr/bin/caml                命令入口
+/usr/share/applications/caml.desktop
+/usr/share/icons/hicolor/    应用图标
+/usr/share/doc/caml-launcher/copyright
+/usr/share/licenses/caml-launcher/
+```
+
+启动器数据保存在 `~/.caml`，默认游戏目录为 `~/.minecraft`。卸载软件包不会删除这两个目录。
+
+Debian/Ubuntu 安装：
+
+```bash
+sudo apt install ./caml-launcher_1.0.0-1_amd64.deb
+```
+
+Fedora/RHEL 系安装：
+
+```bash
+sudo dnf install ./caml-launcher-1.0.0-1.x86_64.rpm
+```
+
+GitHub Actions 的 `Package Linux` workflow 会在 `v*` tag 或手动触发时构建并上传 deb、rpm 和校验和。
+
 ### CAMLUI 组件库
 
 `CAMLUI` 不引入第三方主题库。`caml.css` 只包含布局、字体层级、圆角和

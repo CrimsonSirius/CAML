@@ -1,0 +1,11 @@
+[Desktop Entry]
+Name=CAML
+GenericName=Minecraft Launcher
+Comment=CAML Minecraft Launcher
+Exec=caml
+Icon=caml
+Terminal=false
+Type=Application
+Categories=Game;
+Keywords=Minecraft;Launcher;
+StartupWMClass=CAML
