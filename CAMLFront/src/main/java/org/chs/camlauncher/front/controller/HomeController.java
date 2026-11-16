@@ -2,6 +2,7 @@ package org.chs.camlauncher.front.controller;
 
 import javafx.application.Platform;
 import org.chs.camlauncher.backend.api.GameDirectoryInfo;
+import org.chs.camlauncher.backend.api.InstanceDetails;
 import org.chs.camlauncher.backend.download.DownloadListener;
 import org.chs.camlauncher.backend.instance.VersionIsolationMode;
 import org.chs.camlauncher.backend.launch.GameLaunch;
@@ -117,6 +118,33 @@ public final class HomeController {
     public FrontTask<GameDirectoryInfo> inspectGameDirectory(
             Path directory, Consumer<GameDirectoryInfo> callback, Consumer<String> onError) {
         return context.inspectGameDirectory(directory, callback, onError);
+    }
+
+    public FrontTask<InstanceDetails> inspectInstance(
+            Path gameDirectory, String instanceId,
+            Consumer<InstanceDetails> callback, Consumer<String> onError) {
+        if (gameDirectory == null) {
+            return null;
+        }
+        return context.runCheck(UiText.tr("operation.inspectInstance"),
+                () -> context.backend().inspectInstance(gameDirectory, instanceId),
+                callback, onError);
+    }
+
+    public FrontTask<Void> openInstanceFolder(
+            Path gameDirectory, String instanceId,
+            Runnable onOpened, Consumer<String> onError) {
+        if (gameDirectory == null) {
+            return null;
+        }
+        return context.runJava(UiText.tr("operation.openInstanceFolder"), () -> {
+            context.backend().openInstanceFolder(gameDirectory, instanceId);
+            return null;
+        }, ignored -> {
+            if (onOpened != null) {
+                onOpened.run();
+            }
+        }, onError);
     }
 
     private void notifyLaunchFinished() {

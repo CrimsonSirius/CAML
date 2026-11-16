@@ -653,6 +653,23 @@
     -fx-padding: 0.25em 0;
 }
 
+.app-instance-manage-toolbar {
+    -fx-spacing: 0.75em;
+    -fx-padding: 0.75em 0 0 0;
+}
+
+.app-instance-mod-list {
+    -fx-spacing: 0.25em;
+    -fx-padding: 0.25em 0;
+}
+
+.app-instance-mod-row {
+    -fx-spacing: 0.75em;
+    -fx-padding: 0.5em 0.75em;
+    -fx-background-color: -caml-surface-low;
+    -fx-background-radius: 0.5em;
+}
+
 /* 下载进度页 */
 .app-download-title-block {
     -fx-spacing: 0.25em;

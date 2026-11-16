@@ -320,6 +320,20 @@ public final class BOCNGenerator extends LanguageTranslationGenerator {
         t.put("instances.picker.count", "སྤྱི་ %d གི་རྩེད་མོའི་བཟོ་བཅོས");
         t.put("instances.picker.scanFailed", "བཟོ་བཅོས་བཤེར་མ་ཐུབ: %s");
         t.put("instances.manage.title", "བཟོ་བཅོས་དོ་དམ");
+        t.put("instances.manage.instance", "Instance: %s");
+        t.put("instances.manage.folder", "Instance folder: %s");
+        t.put("instances.manage.openFolder", "Open instance folder");
+        t.put("instances.manage.openFolder.opening", "Opening instance folder...");
+        t.put("instances.manage.openFolder.failed", "Failed to open instance folder: %s");
+        t.put("instances.manage.noGameDirectory", "No game directory configured");
+        t.put("instances.manage.noInstance", "No instance selected");
+        t.put("instances.manage.mods.title", "Mods");
+        t.put("instances.manage.mods.scanning", "Reading mod list...");
+        t.put("instances.manage.mods.count", "%d mods");
+        t.put("instances.manage.mods.empty", "This instance has no mods");
+        t.put("instances.manage.mods.scanFailed", "Failed to read mod list: %s");
+        t.put("instances.manage.mods.enabled", "Enabled");
+        t.put("instances.manage.mods.disabled", "Disabled");
 
         // MOD ཕབ་ལེན
         t.put("mods.nav", "MOD");
@@ -379,6 +393,8 @@ public final class BOCNGenerator extends LanguageTranslationGenerator {
 
         // རྒྱབ་ལྗོངས་ཀྱི་བྱ་བའི་མིང
         t.put("operation.inspectGameDirectory", "རྩེད་མོའི་སྣེའུ་ཞིབ་བཤེར");
+        t.put("operation.inspectInstance", "Read instance information");
+        t.put("operation.openInstanceFolder", "Open instance folder");
         t.put("operation.checkInstanceName", "བཟོ་བཅོས་ཀྱི་མིང་ཞིབ་བཤེར");
         t.put("operation.fetchVersionList", "གཞུང་ཕྱོགས་ %s ཐོ་གཞུང་ལེན");
         t.put("operation.installVanilla", "སྲོལ་རྒྱུན་བཟོ་བཅོས %s སྒྲིག");
