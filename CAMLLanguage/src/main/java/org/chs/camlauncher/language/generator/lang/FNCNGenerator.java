@@ -321,6 +321,20 @@ public final class FNCNGenerator extends LanguageTranslationGenerator {
         t.put("instances.picker.count", "总共 %d 个比赛事例");
         t.put("instances.picker.scanFailed", "用光扫比赛事例们失败：%s");
         t.put("instances.manage.title", "操纵事例们");
+        t.put("instances.manage.instance", "事例：%s");
+        t.put("instances.manage.folder", "事例窝：%s");
+        t.put("instances.manage.openFolder", "撬开事例窝");
+        t.put("instances.manage.openFolder.opening", "正撬开事例窝...");
+        t.put("instances.manage.openFolder.failed", "撬不开事例窝：%s");
+        t.put("instances.manage.noGameDirectory", "比赛窝还没定");
+        t.put("instances.manage.noInstance", "还没挑事例");
+        t.put("instances.manage.mods.title", "零件清单");
+        t.put("instances.manage.mods.scanning", "正翻零件...");
+        t.put("instances.manage.mods.count", "一共 %d 个零件");
+        t.put("instances.manage.mods.empty", "这个事例没零件");
+        t.put("instances.manage.mods.scanFailed", "翻零件翻车：%s");
+        t.put("instances.manage.mods.enabled", "开着");
+        t.put("instances.manage.mods.disabled", "关了");
 
         // 零件下载
         t.put("mods.nav", "零件");
@@ -380,6 +394,8 @@ public final class FNCNGenerator extends LanguageTranslationGenerator {
 
         // 后台操作名
         t.put("operation.inspectGameDirectory", "检查比赛名录");
+        t.put("operation.inspectInstance", "读取事例情报");
+        t.put("operation.openInstanceFolder", "撬开事例窝");
         t.put("operation.checkInstanceName", "检查事例名字");
         t.put("operation.fetchVersionList", "获取朝廷 %s 列表");
         t.put("operation.installVanilla", "打进香草事例 %s");

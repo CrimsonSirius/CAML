@@ -320,6 +320,20 @@ public final class LALAGenerator extends LanguageTranslationGenerator {
         t.put("instances.picker.count", "%d instantiae ludi");
         t.put("instances.picker.scanFailed", "Scrutatio instantiarum ludi defecit: %s");
         t.put("instances.manage.title", "Instantias administrare");
+        t.put("instances.manage.instance", "Instantia: %s");
+        t.put("instances.manage.folder", "Directorium instantiae: %s");
+        t.put("instances.manage.openFolder", "Directorium instantiae aperire");
+        t.put("instances.manage.openFolder.opening", "Directorium instantiae aperitur...");
+        t.put("instances.manage.openFolder.failed", "Directorium instantiae aperire non potuit: %s");
+        t.put("instances.manage.noGameDirectory", "Directorium ludi non positum est");
+        t.put("instances.manage.noInstance", "Instantia non selecta est");
+        t.put("instances.manage.mods.title", "Index modorum");
+        t.put("instances.manage.mods.scanning", "Index modorum legitur...");
+        t.put("instances.manage.mods.count", "%d modi");
+        t.put("instances.manage.mods.empty", "Haec instantia modos non habet");
+        t.put("instances.manage.mods.scanFailed", "Index modorum legi non potuit: %s");
+        t.put("instances.manage.mods.enabled", "Activatus");
+        t.put("instances.manage.mods.disabled", "Inactivatus");
 
         // Deposita modorum
         t.put("mods.nav", "Modi");
@@ -379,6 +393,8 @@ public final class LALAGenerator extends LanguageTranslationGenerator {
 
         // Nomina operationum
         t.put("operation.inspectGameDirectory", "Directorium ludi inspicere");
+        t.put("operation.inspectInstance", "Informationes instantiae legere");
+        t.put("operation.openInstanceFolder", "Directorium instantiae aperire");
         t.put("operation.checkInstanceName", "Nomen instantiae inspicere");
         t.put("operation.fetchVersionList", "Indicem officialem %s petere");
         t.put("operation.installVanilla", "Instantiam vanilla %s installare");

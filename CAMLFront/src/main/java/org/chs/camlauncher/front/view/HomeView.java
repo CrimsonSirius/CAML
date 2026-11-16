@@ -63,7 +63,8 @@ final class HomeView extends StackPane implements PageLifecycle {
     }
 
     private void showManageInstances() {
-        setSubPage(new ManageInstancesView(this::showWorkspace));
+        setSubPage(new ManageInstancesView(controller, launchSettings.gameDirectory(),
+                launchSettings.selectedVersion(), this::showWorkspace));
     }
 
     private void showWorkspace() {

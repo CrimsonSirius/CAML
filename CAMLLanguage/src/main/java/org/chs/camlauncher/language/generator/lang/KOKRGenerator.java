@@ -320,6 +320,20 @@ public final class KOKRGenerator extends LanguageTranslationGenerator {
         t.put("instances.picker.count", "총 %d개의 게임 인스턴스");
         t.put("instances.picker.scanFailed", "게임 인스턴스 검색 실패: %s");
         t.put("instances.manage.title", "인스턴스 관리");
+        t.put("instances.manage.instance", "인스턴스: %s");
+        t.put("instances.manage.folder", "인스턴스 폴더: %s");
+        t.put("instances.manage.openFolder", "인스턴스 폴더 열기");
+        t.put("instances.manage.openFolder.opening", "인스턴스 폴더를 여는 중...");
+        t.put("instances.manage.openFolder.failed", "인스턴스 폴더를 열지 못했습니다: %s");
+        t.put("instances.manage.noGameDirectory", "게임 디렉터리가 설정되지 않았습니다");
+        t.put("instances.manage.noInstance", "인스턴스가 선택되지 않았습니다");
+        t.put("instances.manage.mods.title", "모드 목록");
+        t.put("instances.manage.mods.scanning", "모드 목록을 읽는 중...");
+        t.put("instances.manage.mods.count", "모드 %d개");
+        t.put("instances.manage.mods.empty", "이 인스턴스에는 모드가 없습니다");
+        t.put("instances.manage.mods.scanFailed", "모드 목록을 읽지 못했습니다: %s");
+        t.put("instances.manage.mods.enabled", "사용");
+        t.put("instances.manage.mods.disabled", "사용 안 함");
 
         // 모드 다운로드
         t.put("mods.nav", "모드");
@@ -379,6 +393,8 @@ public final class KOKRGenerator extends LanguageTranslationGenerator {
 
         // 백그라운드 작업 이름
         t.put("operation.inspectGameDirectory", "게임 디렉터리 검사");
+        t.put("operation.inspectInstance", "인스턴스 정보 읽기");
+        t.put("operation.openInstanceFolder", "인스턴스 폴더 열기");
         t.put("operation.checkInstanceName", "인스턴스 이름 확인");
         t.put("operation.fetchVersionList", "공식 %s 목록 가져오기");
         t.put("operation.installVanilla", "바닐라 인스턴스 %s 설치");

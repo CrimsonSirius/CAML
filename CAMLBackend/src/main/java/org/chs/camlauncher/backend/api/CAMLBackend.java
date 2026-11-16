@@ -19,6 +19,7 @@ import org.chs.camlauncher.backend.instance.GameDataLayout;
 import org.chs.camlauncher.backend.instance.InstalledVersion;
 import org.chs.camlauncher.backend.instance.InstanceNameCheck;
 import org.chs.camlauncher.backend.instance.InstanceNameRules;
+import org.chs.camlauncher.backend.instance.InstanceInspector;
 import org.chs.camlauncher.backend.log.LatestLogService;
 import org.chs.camlauncher.backend.instance.VersionIsolationMode;
 import org.chs.camlauncher.backend.instance.VersionInstaller;
@@ -78,6 +79,7 @@ import org.chs.camlauncher.language.contract.LanguageFallbackMode;
 import org.chs.camlauncher.language.contract.LanguageSelectionMode;
 import org.chs.camlauncher.backend.system.SystemMemoryInfo;
 import org.chs.camlauncher.backend.system.SystemMemoryService;
+import org.chs.camlauncher.backend.system.DirectoryOpener;
 import org.chs.camlauncher.backend.theme.ThemeInfo;
 import org.chs.camlauncher.backend.theme.ThemeService;
 
@@ -863,6 +865,16 @@ public final class CAMLBackend implements AutoCloseable {
             throw new UncheckedIOException("Failed to inspect game directory: " + normalized, e);
         }
         return new GameDirectoryInfo(normalized, true, versions, isolated);
+    }
+
+    /** 读取实例数据目录和 mods 列表。 */
+    public InstanceDetails inspectInstance(Path gameDirectory, String instanceId) throws IOException {
+        return InstanceInspector.inspect(gameDirectory, instanceId);
+    }
+
+    /** 使用系统文件管理器打开实例的实际数据目录。 */
+    public void openInstanceFolder(Path gameDirectory, String instanceId) throws IOException {
+        DirectoryOpener.open(InstanceInspector.dataDirectory(gameDirectory, instanceId));
     }
 
     public AuthSession loginOffline(String username) {
