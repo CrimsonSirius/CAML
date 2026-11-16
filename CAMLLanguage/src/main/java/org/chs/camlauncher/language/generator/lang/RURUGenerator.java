@@ -395,6 +395,7 @@ public final class RURUGenerator extends LanguageTranslationGenerator {
         t.put("operation.inspectGameDirectory", "Проверка каталога игры");
         t.put("operation.inspectInstance", "Чтение информации о сборке");
         t.put("operation.openInstanceFolder", "Открыть папку сборки");
+        t.put("operation.loadInstanceModIcon", "Загрузить значок мода");
         t.put("operation.checkInstanceName", "Проверка названия сборки");
         t.put("operation.fetchVersionList", "Получение официального списка %s");
         t.put("operation.installVanilla", "Установка ванильной сборки %s");

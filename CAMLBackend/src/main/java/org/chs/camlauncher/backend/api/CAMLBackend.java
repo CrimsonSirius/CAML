@@ -20,6 +20,7 @@ import org.chs.camlauncher.backend.instance.InstalledVersion;
 import org.chs.camlauncher.backend.instance.InstanceNameCheck;
 import org.chs.camlauncher.backend.instance.InstanceNameRules;
 import org.chs.camlauncher.backend.instance.InstanceInspector;
+import org.chs.camlauncher.backend.instance.InstanceModIconService;
 import org.chs.camlauncher.backend.log.LatestLogService;
 import org.chs.camlauncher.backend.instance.VersionIsolationMode;
 import org.chs.camlauncher.backend.instance.VersionInstaller;
@@ -875,6 +876,11 @@ public final class CAMLBackend implements AutoCloseable {
     /** 使用系统文件管理器打开实例的实际数据目录。 */
     public void openInstanceFolder(Path gameDirectory, String instanceId) throws IOException {
         DirectoryOpener.open(InstanceInspector.dataDirectory(gameDirectory, instanceId));
+    }
+
+    /** 从本地 mod jar 读取图标；没有图标时返回空数组。 */
+    public byte[] loadInstanceModIcon(Path gameDirectory, String instanceId, String fileName) {
+        return InstanceModIconService.load(gameDirectory, instanceId, fileName);
     }
 
     public AuthSession loginOffline(String username) {

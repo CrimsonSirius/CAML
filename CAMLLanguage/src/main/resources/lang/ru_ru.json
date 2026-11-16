@@ -295,6 +295,7 @@
   "operation.installQuilt": "Установить сборку Quilt %s",
   "operation.installVanilla": "Установка ванильной сборки %s",
   "operation.launchGame": "Запуск игры %s",
+  "operation.loadInstanceModIcon": "Загрузить значок мода",
   "operation.loadModIcon": "Загрузка значка мода",
   "operation.openInstanceFolder": "Открыть папку сборки",
   "operation.saveAutoGameLanguage": "Сохранение настройки языка игры",

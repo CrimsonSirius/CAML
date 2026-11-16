@@ -395,6 +395,7 @@ public final class BOCNGenerator extends LanguageTranslationGenerator {
         t.put("operation.inspectGameDirectory", "རྩེད་མོའི་སྣེའུ་ཞིབ་བཤེར");
         t.put("operation.inspectInstance", "Read instance information");
         t.put("operation.openInstanceFolder", "Open instance folder");
+        t.put("operation.loadInstanceModIcon", "Load mod icon");
         t.put("operation.checkInstanceName", "བཟོ་བཅོས་ཀྱི་མིང་ཞིབ་བཤེར");
         t.put("operation.fetchVersionList", "གཞུང་ཕྱོགས་ %s ཐོ་གཞུང་ལེན");
         t.put("operation.installVanilla", "སྲོལ་རྒྱུན་བཟོ་བཅོས %s སྒྲིག");

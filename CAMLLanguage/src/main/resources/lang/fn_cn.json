@@ -295,6 +295,7 @@
   "operation.installQuilt": "安顿 Quilt 事例 %s",
   "operation.installVanilla": "打进香草事例 %s",
   "operation.launchGame": "发射比赛 %s",
+  "operation.loadInstanceModIcon": "抓零件图",
   "operation.loadModIcon": "揪出零件图案",
   "operation.openInstanceFolder": "撬开事例窝",
   "operation.saveAutoGameLanguage": "拯救自动比赛腔调摆弄",

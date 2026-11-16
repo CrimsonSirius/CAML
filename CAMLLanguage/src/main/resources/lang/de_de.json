@@ -295,6 +295,7 @@
   "operation.installQuilt": "Quilt-Instanz %s installieren",
   "operation.installVanilla": "Vanilla-Instanz %s installieren",
   "operation.launchGame": "Spiel %s starten",
+  "operation.loadInstanceModIcon": "Mod-Symbol laden",
   "operation.loadModIcon": "Mod-Symbol laden",
   "operation.openInstanceFolder": "Instanzordner öffnen",
   "operation.saveAutoGameLanguage": "Automatische Spielsprache speichern",

@@ -295,6 +295,7 @@
   "operation.installQuilt": "安装 Quilt 实例 %s",
   "operation.installVanilla": "安装原版实例 %s",
   "operation.launchGame": "启动游戏 %s",
+  "operation.loadInstanceModIcon": "加载 Mod 图标",
   "operation.loadModIcon": "加载 Mod 图标",
   "operation.openInstanceFolder": "打开实例文件夹",
   "operation.saveAutoGameLanguage": "保存自动游戏语言设置",

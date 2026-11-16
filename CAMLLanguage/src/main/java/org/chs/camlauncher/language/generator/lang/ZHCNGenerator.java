@@ -395,6 +395,7 @@ public final class ZHCNGenerator extends LanguageTranslationGenerator {
         t.put("operation.inspectGameDirectory", "检查游戏目录");
         t.put("operation.inspectInstance", "读取实例信息");
         t.put("operation.openInstanceFolder", "打开实例文件夹");
+        t.put("operation.loadInstanceModIcon", "加载 Mod 图标");
         t.put("operation.checkInstanceName", "检查实例名");
         t.put("operation.fetchVersionList", "获取官方%s列表");
         t.put("operation.installVanilla", "安装原版实例 %s");

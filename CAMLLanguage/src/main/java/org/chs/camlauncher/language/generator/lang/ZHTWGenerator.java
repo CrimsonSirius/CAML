@@ -395,6 +395,7 @@ public final class ZHTWGenerator extends LanguageTranslationGenerator {
         t.put("operation.inspectGameDirectory", "檢查遊戲目錄");
         t.put("operation.inspectInstance", "讀取實例資訊");
         t.put("operation.openInstanceFolder", "開啟實例資料夾");
+        t.put("operation.loadInstanceModIcon", "載入 Mod 圖示");
         t.put("operation.checkInstanceName", "檢查實例名稱");
         t.put("operation.fetchVersionList", "取得官方%s清單");
         t.put("operation.installVanilla", "安裝原版實例 %s");

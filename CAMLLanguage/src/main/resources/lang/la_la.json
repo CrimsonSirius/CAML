@@ -295,6 +295,7 @@
   "operation.installQuilt": "Instantiam Quilt %s installare",
   "operation.installVanilla": "Instantiam vanilla %s installare",
   "operation.launchGame": "Ludum %s deducere",
+  "operation.loadInstanceModIcon": "Iconem modi legere",
   "operation.loadModIcon": "Iconem modi legere",
   "operation.openInstanceFolder": "Directorium instantiae aperire",
   "operation.saveAutoGameLanguage": "Linguam ludi automaticam servare",

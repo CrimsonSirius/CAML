@@ -147,6 +147,17 @@ public final class HomeController {
         }, onError);
     }
 
+    public FrontTask<byte[]> loadInstanceModIcon(
+            Path gameDirectory, String instanceId, String fileName,
+            Consumer<byte[]> onLoaded, Consumer<String> onError) {
+        if (gameDirectory == null) {
+            return null;
+        }
+        return context.runIcon(UiText.tr("operation.loadInstanceModIcon"),
+                () -> context.backend().loadInstanceModIcon(gameDirectory, instanceId, fileName),
+                onLoaded, onError);
+    }
+
     private void notifyLaunchFinished() {
         if (onLaunchFinished != null) {
             Platform.runLater(onLaunchFinished);

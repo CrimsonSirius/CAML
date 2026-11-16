@@ -295,6 +295,7 @@
   "operation.installQuilt": "Quilt 인스턴스 %s 설치",
   "operation.installVanilla": "바닐라 인스턴스 %s 설치",
   "operation.launchGame": "게임 %s 실행",
+  "operation.loadInstanceModIcon": "모드 아이콘 불러오기",
   "operation.loadModIcon": "모드 아이콘 불러오기",
   "operation.openInstanceFolder": "인스턴스 폴더 열기",
   "operation.saveAutoGameLanguage": "게임 언어 자동 설정 저장",
