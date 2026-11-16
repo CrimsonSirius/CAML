@@ -332,6 +332,7 @@ public final class ZHTWGenerator extends LanguageTranslationGenerator {
         t.put("instances.manage.mods.count", "共 %d 個 Mod");
         t.put("instances.manage.mods.empty", "此實例沒有 Mod");
         t.put("instances.manage.mods.scanFailed", "讀取 Mod 列表失敗：%s");
+        t.put("instances.manage.mods.toggleFailed", "切換 Mod 狀態失敗：%s");
         t.put("instances.manage.mods.enabled", "已啟用");
         t.put("instances.manage.mods.disabled", "已停用");
 
@@ -396,6 +397,7 @@ public final class ZHTWGenerator extends LanguageTranslationGenerator {
         t.put("operation.inspectInstance", "讀取實例資訊");
         t.put("operation.openInstanceFolder", "開啟實例資料夾");
         t.put("operation.loadInstanceModIcon", "載入 Mod 圖示");
+        t.put("operation.setModDisabled", "切換 Mod 狀態");
         t.put("operation.checkInstanceName", "檢查實例名稱");
         t.put("operation.fetchVersionList", "取得官方%s清單");
         t.put("operation.installVanilla", "安裝原版實例 %s");

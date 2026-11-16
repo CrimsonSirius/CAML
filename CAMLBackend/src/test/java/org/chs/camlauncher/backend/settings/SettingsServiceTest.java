@@ -302,4 +302,20 @@ class SettingsServiceTest {
         service.setAutoGameLanguage(false);
         assertFalse(new SettingsService(dataDirectory).autoGameLanguage());
     }
+
+    @Test
+    void persistsDisabledModsPerInstanceAndGameDirectory() throws Exception {
+        Path game = dataDirectory.resolve("game");
+        SettingsService service = new SettingsService(dataDirectory);
+        service.setModDisabled(game, "cuteJKpww", "sodium.jar", true);
+
+        SettingsService loaded = new SettingsService(dataDirectory);
+        assertTrue(loaded.disabledMods(game, "cuteJKpww").contains("sodium.jar"));
+        assertTrue(loaded.disabledMods(game, "other").isEmpty());
+        assertTrue(loaded.disabledMods(dataDirectory.resolve("other-game"), "cuteJKpww").isEmpty());
+
+        loaded.setModDisabled(game, "cuteJKpww", "sodium.jar", false);
+        assertTrue(new SettingsService(dataDirectory)
+                .disabledMods(game, "cuteJKpww").isEmpty());
+    }
 }

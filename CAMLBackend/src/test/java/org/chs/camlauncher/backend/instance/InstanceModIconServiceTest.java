@@ -57,6 +57,17 @@ class InstanceModIconServiceTest {
     }
 
     @Test
+    void loadsIconFromDisabledJar() throws Exception {
+        Path game = root.resolve("game");
+        Path mods = game.resolve("versions").resolve("1.21.4").resolve("mods");
+        Files.createDirectories(mods);
+        byte[] icon = new byte[]{10, 11};
+        writeJar(mods.resolve("demo.jar.disabled"), new Entry("icon.png", icon));
+
+        assertArrayEquals(icon, InstanceModIconService.load(game, "1.21.4", "demo.jar"));
+    }
+
+    @Test
     void returnsEmptyWhenJarHasNoIcon() throws Exception {
         Path game = root.resolve("game");
         Path mods = game.resolve("versions").resolve("1.21.4").resolve("mods");

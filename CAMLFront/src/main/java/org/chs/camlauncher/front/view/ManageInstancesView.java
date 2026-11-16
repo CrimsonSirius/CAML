@@ -3,6 +3,7 @@ package org.chs.camlauncher.front.view;
 import javafx.geometry.Pos;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
+import javafx.scene.control.ToggleButton;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.HBox;
@@ -161,13 +162,12 @@ final class ManageInstancesView extends VBox implements PageLifecycle {
             Label size = new Label(formatSize(mod.sizeBytes()));
             size.getStyleClass().addAll("caml-body-small", "caml-on-surface-muted");
 
-            Label state = new Label(UiText.tr(mod.enabled()
-                    ? "instances.manage.mods.enabled"
-                    : "instances.manage.mods.disabled"));
-            state.getStyleClass().add("caml-label-small");
-            if (!mod.enabled()) {
-                state.getStyleClass().add("caml-on-surface-muted");
-            }
+            boolean[] enabledState = {mod.enabled()};
+            ToggleButton state = new ToggleButton();
+            state.getStyleClass().add("app-instance-mod-toggle");
+            state.setSelected(!enabledState[0]);
+            updateModToggleText(state, enabledState[0]);
+            state.setOnAction(event -> toggleMod(state, mod, enabledState));
 
             HBox row = new HBox(iconFrame, name, size, state);
             row.getStyleClass().add("app-instance-mod-row");
@@ -197,6 +197,36 @@ final class ManageInstancesView extends VBox implements PageLifecycle {
                         setStatus(UiText.tr("instances.manage.openFolder.failed", message), true);
                     }
                 });
+    }
+
+    private void toggleMod(ToggleButton button, InstanceMod mod, boolean[] enabledState) {
+        boolean targetDisabled = button.isSelected();
+        button.setDisable(true);
+        controller.setModDisabled(gameDirectory, instanceId, mod.fileName(), targetDisabled,
+                () -> {
+                    if (disposed) {
+                        return;
+                    }
+                    enabledState[0] = !targetDisabled;
+                    button.setSelected(!enabledState[0]);
+                    updateModToggleText(button, enabledState[0]);
+                    button.setDisable(false);
+                },
+                message -> {
+                    if (disposed) {
+                        return;
+                    }
+                    button.setSelected(!enabledState[0]);
+                    updateModToggleText(button, enabledState[0]);
+                    button.setDisable(false);
+                    setStatus(UiText.tr("instances.manage.mods.toggleFailed", message), true);
+                });
+    }
+
+    private static void updateModToggleText(ToggleButton button, boolean enabled) {
+        button.setText(UiText.tr(enabled
+                ? "instances.manage.mods.enabled"
+                : "instances.manage.mods.disabled"));
     }
 
     private void setStatus(String text, boolean error) {
