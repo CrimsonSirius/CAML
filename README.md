@@ -167,31 +167,80 @@ CAML/
 ./gradlew :CAMLFront:test
 ```
 
-### Linux 安装包
+### 发布打包
 
-Linux 安装包使用 jpackage 生成自包含 app-image，再组装成 Debian 和 RPM 包。
-构建机需要 Temurin JDK 25，并通过 `JAVA_HOME` 或 `-PcamlJdkHome` 指向它：
+两种平台都用 jpackage 生成自带裁剪运行时的 `app-image`，再封装成系统安装包。
+脚本会读取构建 JDK 的 `release` 文件校验 `IMPLEMENTOR` 与 `JAVA_VERSION`，两边的运行时来源分别是 Temurin 和 Zulu：
+
+| 平台 | 构建 JDK | 产物内运行时 |
+|---|---|---|
+| Linux | Eclipse Temurin JDK 25 | Temurin 裁剪运行时 |
+| Windows | Azul Zulu JDK 25 | Zulu 裁剪运行时 |
+
+通过 `JAVA_HOME` 或 `-PcamlJdkHome` 指定 JDK；用错供应商或版本会直接报错，
+不会产出内容与许可文本不一致的包。
+
+打包任务都带 `onlyIf` 平台判断，**不能在 Windows 上交叉生成 Linux 包**（反之亦然）。
+要在 Windows 上拿到 Linux 产物，用 WSL2、Docker 或 CI 的 Linux runner 各跑一次
+`packageLinux`。
+
+#### 产物位置
+
+各平台的打包任务把产物写在自己模块的 `build` 目录，这是 Gradle 的约定：
+`clean`、增量判断和 `--parallel` 都假定任务输出属于自己所在的工程。
+
+| 位置 | 内容 | 清理方式 |
+|---|---|---|
+| `CAMLFront/build/packages/linux/` | deb、rpm、`SHA256SUMS.txt` | `:CAMLFront:cleanLinuxPackages` |
+| `CAMLFront/build/packages/windows/` | exe、免安装 zip、`SHA256SUMS.txt` | `:CAMLFront:cleanWindowsPackages` |
+
+取包统一用根工程任务，它把各平台的成品复制到 **`build/packages/`** 并重新生成一份
+覆盖全部产物的 `SHA256SUMS.txt`（`Sync` 语义，会清掉上一次留下但已不存在的文件）：
 
 ```bash
+./gradlew collectPackages          # 或 .\gradlew.bat collectPackages
+```
+
+`collectPackages` 默认依赖 `packageLinux`（Linux 主机）与 `packageWindowsPortable`
+（Windows 主机）；需要 Windows EXE 时先单独跑一次 `:CAMLFront:packageWindows`（需 WiX），
+再运行 `collectPackages`，exe 会被一起收集。
+根目录 `./gradlew clean` 会删除 `build/`，因此汇总结果不会长期堆积。
+
+#### Linux
+
+Arch Linux 本地构建需要：
+
+```bash
+sudo pacman -S dpkg rpm-tools
+
 ./gradlew :CAMLFront:packageLinux \
   -PcamlJdkHome=/path/to/temurin-25 \
   -PcamlVersion=1.0.0 \
   -PcamlRelease=1
 ```
 
-Arch Linux 本地构建需要：
+在 Windows 上构建 Linux 包（WSL2，把 Temurin 解压到 `~/jdk/temurin-25`）：
 
 ```bash
-sudo pacman -S dpkg rpm-tools
+# 建议 clone 到 WSL 自己的文件系统，避免 /mnt/f 的权限与性能问题
+cd ~ && git clone <repo> caml && cd caml
+sudo apt install -y dpkg rpm
+./gradlew :CAMLFront:packageLinux -PcamlJdkHome=~/jdk/temurin-25
 ```
 
-产物位于：
+也可以用 Docker，宿主机不需要安装 dpkg/rpmbuild：
+
+```bash
+docker run --rm -v "$PWD":/w -w /w eclipse-temurin:25-jdk \
+  bash -lc "apt-get update && apt-get install -y rpm && ./gradlew :CAMLFront:packageLinux"
+```
+
+产物位于 `CAMLFront/build/packages/linux/`：
 
 ```text
-CAMLFront/build/packages/linux/
-├─ caml-launcher_1.0.0-1_amd64.deb
-├─ caml-launcher-1.0.0-1.x86_64.rpm
-└─ SHA256SUMS.txt
+caml-launcher_1.0.0-1_amd64.deb
+caml-launcher-1.0.0-1.x86_64.rpm
+SHA256SUMS.txt
 ```
 
 安装后布局：
@@ -205,21 +254,58 @@ CAMLFront/build/packages/linux/
 /usr/share/licenses/caml-launcher/
 ```
 
-启动器数据保存在 `~/.caml`，默认游戏目录为 `~/.minecraft`。卸载软件包不会删除这两个目录。
+Debian/Ubuntu：`sudo apt install ./caml-launcher_1.0.0-1_amd64.deb`；
+Fedora/RHEL：`sudo dnf install ./caml-launcher-1.0.0-1.x86_64.rpm`。
 
-Debian/Ubuntu 安装：
+#### Windows
 
-```bash
-sudo apt install ./caml-launcher_1.0.0-1_amd64.deb
+Windows 包用 Zulu 25 生成裁剪运行时（Linux 包用 Temurin，两者不能混用）。
+
+```powershell
+.\gradlew.bat :CAMLFront:packageWindows `
+  -PcamlJdkHome="C:\path\to\zulu-25" `
+  -PcamlVersion=1.0.0 `
+  -PcamlRelease=1
 ```
 
-Fedora/RHEL 系安装：
+`packageWindows` 会同时产出 EXE 安装包和免安装便携包。EXE 依赖 [WiX Toolset](https://wixtoolset.org/docs/download/)（3.14 或 4.0.4+，5.x 不受支持），
+需要把它的 `bin` 目录加入 `PATH`；jpackage 通过 `candle`/`light`（或 `wix`）构建安装器。
+**没装 WiX 时可以只出免安装包**：
 
-```bash
-sudo dnf install ./caml-launcher-1.0.0-1.x86_64.rpm
+```powershell
+.\gradlew.bat :CAMLFront:packageWindowsPortable -PcamlJdkHome="C:\path\to\zulu-25"
 ```
 
-GitHub Actions 的 `Build` workflow 会在任意分支向 `main` 发起 PR，以及 PR 合并后 push 到 `main` 时构建并上传 deb、rpm 和校验和。release 号优先使用 PR 编号，artifact 名称为 `caml-linux-packages-pr-<PR 编号>`；无法从合并提交提取 PR 编号时回退到 run number。`Package Linux` workflow 仍用于 `v*` tag 或手动发布。
+产物位于 `CAMLFront/build/packages/windows/`：
+
+```text
+caml-launcher-1.0.0-1-windows-x64.exe            安装包（需 WiX）
+caml-launcher-1.0.0-1-windows-x64-portable.zip   免安装包（不需要 WiX）
+SHA256SUMS.txt                                  packageWindows 生成的校验和
+```
+
+免安装包解压后是单层 `CAML/` 目录，直接双击 `CAML.exe` 运行；
+应用数据仍写在 `%USERPROFILE%\.caml`，游戏目录仍是 `%USERPROFILE%\.minecraft`。
+
+安装包特点：
+
+- 按机器安装（per-machine），默认目录 `C:\Program Files\CAML`，需要管理员权限；
+- 开始菜单固定创建 `CAML` 分组快捷方式；**桌面快捷方式在安装向导中询问，默认勾选**，
+  由 `--win-shortcut-prompt` 提供；
+- 安装向导包含 GPL-3.0 许可页（`--license-file`），并允许自定义安装目录；
+- 升级依赖固定的 `--win-upgrade-uuid`，改动它会让新旧版本并存而不是覆盖安装；
+- 卸载只删除安装目录，保留 `%USERPROFILE%\.caml` 与游戏数据。
+
+安装后布局：
+
+```text
+C:\Program Files\CAML\           应用与内置 JDK/JavaFX
+C:\Program Files\CAML\app\       应用 jar 与 licenses/（许可文本）
+C:\Program Files\CAML\runtime\   裁剪后的 Java 运行时
+```
+
+应用图标由 `packaging/icons/caml-512.png` 在构建期缩放生成多尺寸
+`caml.ico`（16/24/32/48/64/128/256），因此仓库里不需要保存二进制图标。
 
 ### CAMLUI 组件库
 
@@ -326,16 +412,20 @@ statusLabel.setText(UiText.tr("home.instance.current", version));
 - Modrinth 使用 `https://api.modrinth.com/v2` 官方 API，无需额外配置。
 - CurseForge 使用 `https://api.curseforge.com/v1` 官方 API，必须配置 API Key。
   运行时读取优先级：JVM 参数 `-Dcaml.curseforge.apiKey=...` → 环境变量
-  `CURSEFORGE_API_KEY` → 构建时写入 jar 的 `caml.properties`。
+  `CURSEFORGE_API_KEY` → 构建时写入 jar 的编码 Key。
 - 本地开发可以直接设置环境变量：
   ```bash
   CURSEFORGE_API_KEY='你的Key' ./gradlew :CAMLFront:run
   ```
 - CI 发布时不要把 Key 写进仓库。`CAMLBackend` 的 `generateBuildProperties` 会在构建期读取
-  `CURSEFORGE_API_KEY`，生成 `caml.properties` 并打进 jar；发布包即可开箱使用。
+  `CURSEFORGE_API_KEY`，按固定盐做 XOR 后再 Base64，写成
+  `caml.curseforge.apikey.enc` 并打进 `CAMLBackend` 的 `caml.properties`；发布包即可开箱使用。
   未配置时选择 CurseForge 会显示明确错误；“全部来源”仍会返回 Modrinth 结果。
+  编码只是让发布包里不出现能被 `grep` 直接命中的明文，**不构成安全边界**：
+  拿到 jar 的人仍可还原出 Key，因此务必使用专用 Key 并定期轮换。
 - GitHub Actions 示例（在仓库 Settings → Secrets and variables → Actions 新建
   `CURSEFORGE_API_KEY`）：
+
   ```yaml
   name: Build
   on: [push, pull_request, workflow_dispatch]
@@ -357,20 +447,11 @@ statusLabel.setText(UiText.tr("home.instance.current", version));
             name: CAMLFront
             path: CAMLFront/build/distributions/*.zip
   ```
+
   Key 会嵌入客户端 jar，和 HMCL/PCL 的做法相同；请使用专用 Key，泄露后及时在
   CurseForge 控制台重新生成。
-- 两个来源都不使用现有镜像下载源，搜索、详情、依赖和文件下载均直连官方地址。
-- 下载目标根据当前实例和版本隔离设置解析为 `<gameDirectory>/mods` 或
-  `<gameDirectory>/versions/<instance>/mods`。
-- 模组页尺寸集中在 `ModDownloadLayout`：所有常量都是设计基准 `1440×900` 下的像素值，
-  使用前统一乘以 `UiScale` 的缩放因子。下载侧边栏取窗口宽度 `1/6` 并限制在 `180–260`，
-  内容区留白 `40/32`，卡片内边距 `24`、内部间距 `18`；搜索表单按内容区宽度（已扣除侧边栏）
-  在三种方向间切换——`>= 660` 为两行两列且字段列与下拉列按 `2:1` 分配，`520–659` 为
-  “标签在上”的两行两列，`< 520` 为单列纵向堆叠；切换时控件尺寸、行高和字号不变。
-  结果行图标 `88`、最小行高 `112`，来源标签贴右，左侧为 `4px` 强调条。
-  搜索卡、状态、结果与分页整体放在页面滚动容器中，高度不足时整页纵向滚动，结果行不被裁切。
-  （1080p 屏幕在 150% 缩放下的逻辑空间只有约 `1280×720`，因此断点按内容宽度判断，
-  不假设存在 `1920×1080` 的逻辑像素。）
+- TODO（未实现）：允许用户在 `~/.caml/caml.properties` 或设置页填写自己的
+  CurseForge Key，以覆盖内置 Key；实现前普通用户无法自行更换 Key。
 
 ### 界面缩放
 
@@ -399,8 +480,7 @@ statusLabel.setText(UiText.tr("home.instance.current", version));
 | 当前主题 | `~/.caml/theme.txt` |
 | 外部语言文件 | `~/.caml/lang/*.json` |
 | 启动器设置 | `~/.caml/settings.properties` |
-| 游戏数据（Linux / macOS） | `~/.minecraft` |
-| 游戏数据（Windows） | 启动器所在目录下的 `.minecraft` |
+| 游戏数据（Linux / macOS / Windows） | `~/.minecraft`（Windows 为 `%USERPROFILE%\.minecraft`） |
 
 游戏目录在 **设置 → 游戏设置 → 游戏位置** 中修改；输入或浏览后必须点击保存才会生效。
 版本隔离在 **设置 → 游戏设置 → 版本隔离** 中选择，修改后立即生效并写入设置文件。
@@ -434,8 +514,8 @@ usercache.json
 command_history.txt
 ```
 
-无论选择哪种模式，`libraries`、`assets` 都来自 `.minecraft` 根目录；Windows 的
-`APPDATA` 也始终按 `.minecraft` 根目录计算。主页会根据当前选择显示实际存档位置。
+无论选择哪种模式，`libraries`、`assets` 都来自 `.minecraft` 根目录。游戏进程继承系统环境
+（不再改写 `APPDATA`）。主页会根据当前选择显示实际存档位置。
 
 ---
 

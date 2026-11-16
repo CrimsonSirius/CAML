@@ -6,7 +6,6 @@ import org.chs.camlauncher.backend.launch.LaunchFailure;
 import org.chs.camlauncher.backend.launch.LaunchPlan;
 import org.chs.camlauncher.backend.launch.command.LaunchCommand;
 import org.chs.camlauncher.backend.launch.command.LaunchCommandBuilder;
-import org.chs.camlauncher.backend.metadata.rule.RuleEvaluator;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -31,7 +30,7 @@ public final class ProcessLauncher {
             throws IOException {
         LaunchCommand command = commandBuilder.build(plan, classpath);
         try {
-            return start(command.asList(), command.workingDirectory(), command.environment(), listener, null, plan);
+            return start(command.asList(), command.workingDirectory(), command.environment(), listener, null);
         } catch (IOException firstFailure) {
             if (!LaunchException.isCommandTooLong(firstFailure)) {
                 throw LaunchException.from(firstFailure);
@@ -40,14 +39,14 @@ public final class ProcessLauncher {
             IOException argFileFailure = null;
             if (plan.java().majorVersion() >= 9) {
                 try {
-                    return launchWithArgFile(plan, command, listener);
+                    return launchWithArgFile(command, listener);
                 } catch (IOException e) {
                     argFileFailure = e;
                 }
             }
 
             try {
-                return launchWithManifest(plan, command, classpath, listener);
+                return launchWithManifest(command, classpath, listener);
             } catch (IOException manifestFailure) {
                 if (argFileFailure != null) {
                     manifestFailure.addSuppressed(argFileFailure);
@@ -62,7 +61,7 @@ public final class ProcessLauncher {
 
     }
 
-    private GameProcess launchWithArgFile(LaunchPlan plan, LaunchCommand command, ProcessListener listener)
+    private GameProcess launchWithArgFile(LaunchCommand command, ProcessListener listener)
             throws IOException {
         Path argumentFile = ArgumentFile.write(command.jvmArguments());
         try {
@@ -76,8 +75,7 @@ public final class ProcessLauncher {
                     command.workingDirectory(),
                     command.environment(),
                     listener,
-                    argumentFile,
-                    plan
+                    argumentFile
             );
         } catch (IOException e) {
             Files.deleteIfExists(argumentFile);
@@ -86,7 +84,6 @@ public final class ProcessLauncher {
     }
 
     private GameProcess launchWithManifest(
-            LaunchPlan plan,
             LaunchCommand command,
             List<Path> classpath,
             ProcessListener listener
@@ -115,8 +112,7 @@ public final class ProcessLauncher {
                     command.workingDirectory(),
                     command.environment(),
                     listener,
-                    manifestJar,
-                    plan
+                    manifestJar
             );
         } catch (IOException e) {
             Files.deleteIfExists(manifestJar);
@@ -129,28 +125,11 @@ public final class ProcessLauncher {
             Path workingDirectory,
             Map<String, String> environment,
             ProcessListener listener,
-            Path cleanupFile,
-            LaunchPlan plan
+            Path cleanupFile
     ) throws IOException {
         ProcessBuilder builder = new ProcessBuilder(commandLine);
         builder.directory(workingDirectory.toFile());
         builder.environment().putAll(environment);
-
-        if (isWindows()) {
-            // 启用版本隔离时 workingDirectory 是 versions/<id>,
-            // 其父级会是 versions 目录，因此以 .minecraft 根目录为基准计算 APPDATA。
-            Path appData = plan.instance().gameDirectory().toAbsolutePath().getParent();
-            if (appData != null) {
-                builder.environment().put("APPDATA", appData.toString());
-            }
-        }
-
         return new GameProcess(builder.start(), commandLine, listener, cleanupFile);
-
     }
-
-    private static boolean isWindows() {
-        return "windows".equals(RuleEvaluator.currentOsName());
-    }
-
 }

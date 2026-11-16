@@ -23,6 +23,7 @@ import java.net.URLEncoder;
 import java.net.http.HttpClient;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -36,6 +37,20 @@ public final class CurseForgeClient {
     private static final int MINECRAFT_GAME_ID = 432;
     private static final int MOD_CLASS_ID = 6;
     private static final int FILE_PAGE_SIZE = 50;
+
+    private static final String BUNDLED_KEY_RESOURCE = "/caml.properties";
+    /** 构建期写入的编码 Key，见 CAMLBackend/build.gradle.kts 的 generateBuildProperties。 */
+    static final String ENCODED_KEY_PROPERTY = "caml.curseforge.apikey.enc";
+    /** 兼容手工把明文 Key 写进 caml.properties 的情况。 */
+    private static final String PLAIN_KEY_PROPERTY = "caml.curseforge.apikey";
+    /**
+     * 解码内置 Key 的固定盐，必须与 CAMLBackend/build.gradle.kts 中的编码保持一致。
+     *
+     * <p>构建期按该盐对明文做 XOR，再做 Base64；它只用于避免发布包里出现可以被 grep
+     * 直接命中的明文，不构成安全边界。
+     */
+    private static final byte[] BUNDLED_KEY_SALT =
+            "caml-launcher/curseforge/2026".getBytes(StandardCharsets.UTF_8);
 
     private final URI base;
     private final ModApiHttpClient http;
@@ -336,7 +351,7 @@ public final class CurseForgeClient {
 
     /** 读取构建时由 CI 写入 jar 的 Key；不记录、不输出。 */
     private static String bundledApiKey() {
-        InputStream input = CurseForgeClient.class.getResourceAsStream("/caml.properties");
+        InputStream input = CurseForgeClient.class.getResourceAsStream(BUNDLED_KEY_RESOURCE);
         if (input == null) {
             return "";
         }
@@ -344,8 +359,30 @@ public final class CurseForgeClient {
              InputStreamReader reader = new InputStreamReader(stream, StandardCharsets.UTF_8)) {
             Properties properties = new Properties();
             properties.load(reader);
-            return properties.getProperty("caml.curseforge.apikey", "").trim();
+            String encoded = properties.getProperty(ENCODED_KEY_PROPERTY, "").trim();
+            if (!encoded.isBlank()) {
+                return decodeBundledKey(encoded);
+            }
+            String plain = properties.getProperty(PLAIN_KEY_PROPERTY, "").trim();
+            if (!plain.isBlank()) {
+                return plain;
+            }
         } catch (IOException e) {
+            return "";
+        }
+        return "";
+    }
+
+    /** Base64 → 按固定盐 XOR，还原构建期写入的 Key。 */
+    private static String decodeBundledKey(String encoded) {
+        try {
+            byte[] bytes = Base64.getDecoder().decode(encoded);
+            byte[] plain = new byte[bytes.length];
+            for (int i = 0; i < bytes.length; i++) {
+                plain[i] = (byte) (bytes[i] ^ BUNDLED_KEY_SALT[i % BUNDLED_KEY_SALT.length]);
+            }
+            return new String(plain, StandardCharsets.UTF_8).trim();
+        } catch (IllegalArgumentException e) {
             return "";
         }
     }

@@ -177,7 +177,7 @@ CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
 
 - 构建最终 `java + JVM 参数 + mainClass + 游戏参数` 命令。
 - 设置工作目录和环境变量。
-- 仅在 Windows 设置 `APPDATA`。
+- 继承系统环境变量，不改写 `APPDATA`。
 - 使用 `ProcessBuilder` 启动。
 - 后台线程读取 stdout/stderr；Minecraft Log4j `LegacyXMLLayout` 事件转换为
   `[HH:mm:ss] [线程/级别]: 消息` 后再转发到界面。
@@ -188,7 +188,7 @@ CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
 - `LaunchException` 区分命令行过长、权限不足、找不到 Java 和其他启动失败。
 - 每种错误提供用户可读提示文本。
 - `GameLaunchService` 串联安装、离线登录、Java 选择、LaunchPlan、classpath、natives 和进程启动。
-- 版本隔离时 `workingDirectory` 是 `versions/<id>`，但 Windows `APPDATA` 仍按 `.minecraft` 根目录计算。
+- 版本隔离只改变 `workingDirectory` 与 `--gameDir`，不改变环境变量。
 
 ### 3.11 前端界面
 
@@ -358,7 +358,7 @@ CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
 - 缓存和实例目录必须有明确边界。
 - 启动器数据默认放在 `~/.caml`。
 - 外部主题放在 `~/.caml/themes`，启动器不覆盖用户已有主题。
-- 游戏数据默认放在 `~/.minecraft`（Linux/macOS）或启动器目录下的 `.minecraft`（Windows）。
+- 游戏数据默认放在 `~/.minecraft`（所有平台都以用户主目录为基准）。
 - 微软登录只使用官方 OAuth 流程，不收集用户密码。
 - refresh token 不得明文保存，不得写入日志。
 - 启动器 JDK 和游戏 Java 是两套运行时，不能混用。

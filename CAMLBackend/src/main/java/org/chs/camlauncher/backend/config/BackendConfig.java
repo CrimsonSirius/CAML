@@ -1,9 +1,7 @@
 package org.chs.camlauncher.backend.config;
 
 import java.nio.file.Path;
-import java.nio.file.Files;
 import java.util.Objects;
-import java.util.Locale;
 
 public record BackendConfig(Path dataDirectory, Path gameDirectory) {
     public BackendConfig {
@@ -13,37 +11,18 @@ public record BackendConfig(Path dataDirectory, Path gameDirectory) {
 
     public static BackendConfig defaults() {
         Path userHome = Path.of(System.getProperty("user.home"));
-        String osName = System.getProperty("os.name", "");
-        Path gameDirectory = isWindows(osName)
-                ? launcherDirectory().resolve(".minecraft")
-                : userHome.resolve(".minecraft");
-        return new BackendConfig(userHome.resolve(".caml"), gameDirectory);
+        return new BackendConfig(userHome.resolve(".caml"), defaultGameDirectory(userHome));
     }
 
-    static Path defaultGameDirectory(Path userHome, Path launcherDirectory, String osName) {
+    /**
+     * 游戏目录统一放在用户主目录下。
+     *
+     * <p>Linux 与 Windows 一致：发布包会把启动器装到只读的受管目录（Windows 默认
+     * {@code C:\Program Files\CAML}），因此不能再以启动器所在目录为基准，否则普通用户
+     * 无权写入版本、存档和日志。
+     */
+    static Path defaultGameDirectory(Path userHome) {
         Objects.requireNonNull(userHome, "userHome");
-        Objects.requireNonNull(launcherDirectory, "launcherDirectory");
-        return isWindows(osName)
-                ? launcherDirectory.resolve(".minecraft")
-                : userHome.resolve(".minecraft");
-    }
-
-    static Path launcherDirectory() {
-        try {
-            var codeSource = BackendConfig.class.getProtectionDomain().getCodeSource();
-            Path location = Path.of(codeSource.getLocation().toURI());
-            Path directory = Files.isDirectory(location)
-                    ? Path.of(System.getProperty("user.dir"))
-                    : location.getParent();
-            if (directory != null) {
-                return directory.toAbsolutePath().normalize();
-            }
-        } catch (Exception ignored) {
-        }
-        return Path.of(System.getProperty("user.dir")).toAbsolutePath().normalize();
-    }
-
-    private static boolean isWindows(String osName) {
-        return osName != null && osName.toLowerCase(Locale.ROOT).contains("win");
+        return userHome.resolve(".minecraft");
     }
 }

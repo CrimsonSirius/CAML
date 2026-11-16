@@ -1,11 +1,17 @@
 import org.gradle.api.tasks.Exec
 import org.gradle.api.tasks.Delete
 import org.gradle.api.tasks.Sync
+import org.gradle.api.tasks.bundling.Zip
 import org.gradle.jvm.toolchain.JavaLanguageVersion
+import java.awt.RenderingHints
+import java.awt.image.BufferedImage
+import java.io.ByteArrayOutputStream
+import java.io.DataOutputStream
 import java.io.File
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption
 import java.security.MessageDigest
+import javax.imageio.ImageIO
 
 plugins {
     java
@@ -61,7 +67,9 @@ fun findExecutable(name: String): File? {
         .firstOrNull { it.isFile && it.canExecute() }
 }
 
-fun resolvePackageJdkHome(): File {
+fun resolvePackageJdkHome(forWindows: Boolean): File {
+    val platformLabel = if (forWindows) "Windows" else "Linux"
+    val expectedJdk = if (forWindows) "Zulu JDK 25（Azul Systems）" else "Temurin JDK 25（Eclipse Adoptium）"
     val configured = packageJdkHome.orNull?.trim()?.takeIf { it.isNotEmpty() }
     val home = if (configured != null) {
         File(configured)
@@ -69,18 +77,36 @@ fun resolvePackageJdkHome(): File {
         fallbackJdk.get().metadata.installationPath.asFile
     }
 
-    if (!File(home, "bin/jpackage").isFile) {
+    val jpackage = if (forWindows) File(home, "bin/jpackage.exe") else File(home, "bin/jpackage")
+    if (!jpackage.isFile) {
         throw GradleException(
-            "未找到 jpackage：${home}/bin/jpackage。请把 camlJdkHome 或 JAVA_HOME 指向 Temurin JDK 25。"
+            "未找到 jpackage：${jpackage.absolutePath}。请把 camlJdkHome 或 JAVA_HOME 指向 $expectedJdk。"
         )
     }
 
     val releaseText = File(home, "release").takeIf { it.isFile }?.readText().orEmpty()
-    if (!releaseText.contains("IMPLEMENTOR=\"Eclipse Adoptium\"") &&
-        !releaseText.contains("IMPLEMENTOR=\"Temurin\"")) {
+    val implementor = Regex("IMPLEMENTOR=\"([^\"]*)\"")
+        .find(releaseText)?.groupValues?.get(1).orEmpty()
+    val vendorMatches = if (forWindows) {
+        implementor.contains("Azul", ignoreCase = true)
+    } else {
+        implementor.contains("Eclipse Adoptium", ignoreCase = true) ||
+            implementor.contains("Temurin", ignoreCase = true)
+    }
+    if (!vendorMatches) {
         throw GradleException(
-            "Linux 发布包必须使用 Temurin JDK 25 构建，避免把不可再分发的 JDK 打进安装包。" +
-                " 当前 JDK：${home}。请设置 -PcamlJdkHome=<Temurin 25 路径> 或 JAVA_HOME。"
+            "$platformLabel 发布包必须使用 $expectedJdk 构建，避免把不可再分发的 JDK 打进安装包，" +
+                "并保证 packaging/licenses 中的许可文本与实际运行时一致。" +
+                " 当前 JDK：${home}（IMPLEMENTOR=\"$implementor\"）。" +
+                " 请设置 -PcamlJdkHome=<${if (forWindows) "Zulu 25" else "Temurin 25"} 路径> 或 JAVA_HOME。"
+        )
+    }
+
+    val javaVersion = Regex("JAVA_VERSION=\"([^\"]*)\"")
+        .find(releaseText)?.groupValues?.get(1).orEmpty()
+    if (!javaVersion.startsWith("25")) {
+        throw GradleException(
+            "发布包必须使用 JDK 25 构建；当前 JAVA_VERSION=\"$javaVersion\"（$home）。"
         )
     }
 
@@ -192,7 +218,7 @@ val packageLinuxAppImage = tasks.register<Exec>("packageLinuxAppImage") {
         val version = packageVersion.get()
         validatePackageVersion(version)
         validateLinuxArchitecture()
-        val jdkHome = resolvePackageJdkHome()
+        val jdkHome = resolvePackageJdkHome(false)
         project.delete(linuxAppImageParent)
         linuxAppImageParent.mkdirs()
 
@@ -396,6 +422,334 @@ val packageLinux = tasks.register("packageLinux") {
             throw GradleException("Linux 打包未生成完整的 deb/rpm 产物。")
         }
         File(linuxPackageDirectory, "SHA256SUMS.txt").writeText(
+            artifacts.joinToString("\n") { "${digest(it, "SHA-256")}  ${it.name}" } + "\n"
+        )
+    }
+}
+
+fun isWindowsHost(): Boolean = System.getProperty("os.name").lowercase().contains("win")
+
+fun validateWindowsArchitecture() {
+    val architecture = System.getProperty("os.arch").lowercase()
+    if (architecture != "amd64" && architecture != "x86_64") {
+        throw GradleException("当前 Windows 打包仅支持 x64/amd64；当前架构：$architecture")
+    }
+}
+
+/** EXE/MSI 的 ProductVersion 只接受 major.minor.build，且每段 0-255。 */
+fun validateWindowsVersion(version: String) {
+    val parts = version.split('.')
+    if (parts.size < 1 || parts.size > 3) {
+        throw GradleException(
+            "Windows 安装包的版本号必须是 major.minor.build 形式（每段 0-255）；当前值：$version"
+        )
+    }
+    for (part in parts) {
+        val number = part.toIntOrNull()
+        if (number == null || number !in 0..255) {
+            throw GradleException(
+                "Windows 安装包的版本号必须是 major.minor.build 形式（每段 0-255）；当前值：$version"
+            )
+        }
+    }
+}
+
+/** jpackage 生成 exe/msi 时依赖 WiX Toolset，提前给出可读的错误提示。 */
+fun requireWix() {
+    if (findExecutable("wix") == null &&
+        findExecutable("light") == null &&
+        findExecutable("candle") == null) {
+        throw GradleException(
+            "未找到 WiX Toolset。请安装 WiX 3.14 或 WiX 4.0.4+ 并把 bin 目录加入 PATH：" +
+                "https://wixtoolset.org/docs/download/ 。" +
+                " 只想要免安装包时改用 :CAMLFront:packageWindowsPortable（不需要 WiX）。"
+        )
+    }
+}
+
+val windowsPackageDirectory = layout.buildDirectory.dir("packages/windows").get().asFile
+val windowsInputDirectory = windowsPackageDirectory.resolve("input")
+val windowsAppImageParent = windowsPackageDirectory.resolve("app-image")
+val windowsAppImage = windowsAppImageParent.resolve("CAML")
+val windowsIcon = windowsPackageDirectory.resolve("caml.ico")
+val windowsExeOutput = windowsPackageDirectory.resolve(
+    "caml-launcher-${packageVersion.get()}-${packageRelease.get()}-windows-x64.exe"
+)
+val windowsPortableOutput = windowsPackageDirectory.resolve(
+    "caml-launcher-${packageVersion.get()}-${packageRelease.get()}-windows-x64-portable.zip"
+)
+
+/**
+ * 固定的升级 UUID：jpackage 用它识别“同一产品的不同版本”，
+ * 一旦发布就不能再改，否则新版本会与旧版本并存而不是升级。
+ */
+val windowsUpgradeUuid = "6f1c2b4a-8f2d-4e57-9d3a-1b7c5e9a2f60"
+
+val windowsModuleList = "java.base,java.desktop,java.logging,java.management,java.naming," +
+    "java.net.http,java.prefs,java.scripting,java.sql,java.xml," +
+    "jdk.management,jdk.unsupported,jdk.jfr"
+
+fun scaleIcon(source: BufferedImage, size: Int): BufferedImage {
+    val target = BufferedImage(size, size, BufferedImage.TYPE_INT_ARGB)
+    val graphics = target.createGraphics()
+    try {
+        graphics.setRenderingHint(
+            RenderingHints.KEY_INTERPOLATION,
+            RenderingHints.VALUE_INTERPOLATION_BICUBIC
+        )
+        graphics.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY)
+        graphics.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
+        graphics.drawImage(source, 0, 0, size, size, null)
+    } finally {
+        graphics.dispose()
+    }
+    return target
+}
+
+fun littleEndian(value: Int): ByteArray = byteArrayOf(
+    (value and 0xFF).toByte(),
+    ((value shr 8) and 0xFF).toByte(),
+    ((value shr 16) and 0xFF).toByte(),
+    ((value shr 24) and 0xFF).toByte()
+)
+
+/** 把一张 ARGB 位图编码成 ICO 中的 32bpp DIB 数据（含 AND 掩码）。 */
+fun icoImageData(image: BufferedImage): ByteArray {
+    val width = image.width
+    val height = image.height
+    val out = ByteArrayOutputStream()
+    val data = DataOutputStream(out)
+
+    data.write(littleEndian(40))                 // BITMAPINFOHEADER 大小
+    data.write(littleEndian(width))
+    data.write(littleEndian(height * 2))         // 高度包含 AND 掩码
+    data.write(byteArrayOf(1, 0))                // planes
+    data.write(byteArrayOf(32, 0))               // 每像素位数
+    data.write(littleEndian(0))                  // BI_RGB
+    data.write(littleEndian(width * height * 4))
+    repeat(4) { data.write(littleEndian(0)) }    // 分辨率与调色板信息
+
+    for (y in height - 1 downTo 0) {
+        for (x in 0 until width) {
+            val argb = image.getRGB(x, y)
+            data.write(argb and 0xFF)                // B
+            data.write((argb shr 8) and 0xFF)        // G
+            data.write((argb shr 16) and 0xFF)       // R
+            data.write((argb ushr 24) and 0xFF)      // A
+        }
+    }
+
+    // AND 掩码全 0（透明度由 alpha 通道表达），每行按 4 字节对齐。
+    val maskRow = ByteArray(((width + 31) / 32) * 4)
+    repeat(height) { data.write(maskRow) }
+
+    data.flush()
+    return out.toByteArray()
+}
+
+fun writeIco(target: File, source: BufferedImage, sizes: List<Int>) {
+    val images = sizes.map { icoImageData(scaleIcon(source, it)) }
+    val out = ByteArrayOutputStream()
+    val data = DataOutputStream(out)
+
+    data.write(byteArrayOf(0, 0, 1, 0))          // reserved, type = icon
+    data.write(byteArrayOf(sizes.size.toByte(), 0))
+
+    var offset = 6 + 16 * sizes.size
+    sizes.forEachIndexed { index, size ->
+        val dimension = if (size >= 256) 0 else size
+        data.write(dimension)
+        data.write(dimension)
+        data.write(0)                            // 调色板颜色数
+        data.write(0)                            // 保留
+        data.write(byteArrayOf(1, 0))            // planes
+        data.write(byteArrayOf(32, 0))           // 每像素位数
+        data.write(littleEndian(images[index].size))
+        data.write(littleEndian(offset))
+        offset += images[index].size
+    }
+    images.forEach { data.write(it) }
+
+    data.flush()
+    target.parentFile.mkdirs()
+    target.writeBytes(out.toByteArray())
+}
+
+val cleanWindowsPackages = tasks.register<Delete>("cleanWindowsPackages") {
+    group = "caml"
+    description = "删除 Windows 打包中间文件和产物。"
+    delete(windowsPackageDirectory)
+}
+
+val generateWindowsIcon = tasks.register("generateWindowsIcon") {
+    group = "caml"
+    description = "由 caml-512.png 生成 Windows 安装包所需的多尺寸 caml.ico。"
+    val source = File(packagingDirectory, "icons/caml-512.png")
+    inputs.file(source)
+    outputs.file(windowsIcon)
+
+    doLast {
+        val image = ImageIO.read(source)
+            ?: throw GradleException("无法读取图标源文件：${source.absolutePath}")
+        if (image.width < 256 || image.height < 256) {
+            throw GradleException("图标源文件至少需要 256x256：${source.absolutePath}")
+        }
+        writeIco(windowsIcon, image, listOf(16, 24, 32, 48, 64, 128, 256))
+    }
+}
+
+val stageWindowsInput = tasks.register<Sync>("stageWindowsInput") {
+    group = "caml"
+    description = "收集 CAMLFront 运行时 jar，作为 Windows jpackage 的输入。"
+    dependsOn(tasks.named("installDist"))
+    onlyIf { isWindowsHost() }
+    into(windowsInputDirectory)
+    doFirst {
+        project.delete(windowsInputDirectory)
+    }
+    from(layout.buildDirectory.dir("install/CAMLFront/lib")) {
+        include("*.jar")
+    }
+}
+
+val packageWindowsAppImage = tasks.register<Exec>("packageWindowsAppImage") {
+    group = "caml"
+    description = "生成包含 Zulu JDK 25 和 JavaFX 的 Windows app-image。"
+    dependsOn(stageWindowsInput, generateWindowsIcon)
+    onlyIf { isWindowsHost() }
+
+    doFirst {
+        val version = packageVersion.get()
+        validatePackageVersion(version)
+        validateWindowsVersion(version)
+        validateWindowsArchitecture()
+        val jdkHome = resolvePackageJdkHome(true)
+        project.delete(windowsAppImageParent)
+        windowsAppImageParent.mkdirs()
+
+        executable = File(jdkHome, "bin/jpackage.exe").absolutePath
+        args = listOf(
+            "--type", "app-image",
+            "--name", "CAML",
+            "--app-version", version,
+            "--vendor", "CAML Contributors",
+            "--description", "CAML Minecraft Launcher",
+            "--copyright", "Copyright (C) 2026 CAML Contributors",
+            "--icon", windowsIcon.absolutePath,
+            "--input", windowsInputDirectory.absolutePath,
+            "--dest", windowsAppImageParent.absolutePath,
+            "--main-jar", "CAMLFront-${project.version}.jar",
+            "--main-class", "org.chs.camlauncher.front.CAMLApplication",
+            "--java-options", "--module-path=\$APPDIR",
+            "--java-options", "--add-modules=javafx.controls,javafx.fxml",
+            "--java-options", "--enable-native-access=ALL-UNNAMED,javafx.graphics",
+            "--add-modules", windowsModuleList,
+            "--jlink-options", "--strip-native-commands --strip-debug --no-man-pages --no-header-files",
+            "--app-content", File(packagingDirectory, "licenses").absolutePath,
+            "--app-content", rootProject.file("LICENSE").absolutePath,
+            "--verbose"
+        )
+    }
+}
+
+/**
+ * 免安装便携包：直接打包 app-image，不需要 WiX。
+ *
+ * <p>没有安装 WiX、或只想就地试用时用它；安装式发布仍以 EXE 为准。
+ */
+val packageWindowsPortable = tasks.register<Zip>("packageWindowsPortable") {
+    group = "caml"
+    description = "生成 Windows 免安装便携包（zip，不需要 WiX）。"
+    dependsOn(packageWindowsAppImage)
+    onlyIf { isWindowsHost() }
+
+    archiveFileName.set(windowsPortableOutput.name)
+    destinationDirectory.set(windowsPackageDirectory)
+    isPreserveFileTimestamps = false
+    isReproducibleFileOrder = true
+
+    from(windowsAppImage) {
+        into("CAML")
+    }
+    from(rootProject.file("LICENSE")) {
+        into("CAML")
+        rename { "CAML-GPL-3.0-only.txt" }
+    }
+}
+
+val packageWindowsExe = tasks.register<Exec>("packageWindowsExe") {
+    group = "caml"
+    description = "生成 caml-launcher Windows EXE 安装包（per-machine，含桌面快捷方式选项）。"
+    dependsOn(stageWindowsInput, generateWindowsIcon)
+    onlyIf { isWindowsHost() }
+
+    doFirst {
+        val version = packageVersion.get()
+        validatePackageVersion(version)
+        validateWindowsVersion(version)
+        validateWindowsArchitecture()
+        requireWix()
+        val jdkHome = resolvePackageJdkHome(true)
+        windowsPackageDirectory.mkdirs()
+
+        executable = File(jdkHome, "bin/jpackage.exe").absolutePath
+        args = listOf(
+            "--type", "exe",
+            "--name", "CAML",
+            "--app-version", version,
+            "--vendor", "CAML Contributors",
+            "--description", "CAML Minecraft Launcher",
+            "--copyright", "Copyright (C) 2026 CAML Contributors",
+            "--icon", windowsIcon.absolutePath,
+            "--input", windowsInputDirectory.absolutePath,
+            "--dest", windowsPackageDirectory.absolutePath,
+            "--main-jar", "CAMLFront-${project.version}.jar",
+            "--main-class", "org.chs.camlauncher.front.CAMLApplication",
+            "--java-options", "--module-path=\$APPDIR",
+            "--java-options", "--add-modules=javafx.controls,javafx.fxml",
+            "--java-options", "--enable-native-access=ALL-UNNAMED,javafx.graphics",
+            "--add-modules", windowsModuleList,
+            "--jlink-options", "--strip-native-commands --strip-debug --no-man-pages --no-header-files",
+            "--app-content", File(packagingDirectory, "licenses").absolutePath,
+            "--app-content", rootProject.file("LICENSE").absolutePath,
+            "--license-file", rootProject.file("LICENSE").absolutePath,
+            "--win-menu",
+            "--win-menu-group", "CAML",
+            "--win-shortcut",
+            // 安装时询问是否创建快捷方式；复选框默认勾选，用户可取消。
+            "--win-shortcut-prompt",
+            "--win-dir-chooser",
+            "--win-upgrade-uuid", windowsUpgradeUuid,
+            "--win-help-url", "https://github.com/CrimsonSirius/CAML",
+            "--verbose"
+        )
+    }
+
+    doLast {
+        val builtExe = File(windowsPackageDirectory, "CAML-${packageVersion.get()}.exe")
+        if (!builtExe.isFile) {
+            throw GradleException("jpackage 未生成预期文件：${builtExe.absolutePath}")
+        }
+        Files.move(
+            builtExe.toPath(),
+            windowsExeOutput.toPath(),
+            StandardCopyOption.REPLACE_EXISTING
+        )
+    }
+}
+
+val packageWindows = tasks.register("packageWindows") {
+    group = "caml"
+    description = "生成 Windows EXE 安装包、免安装便携包和 SHA256SUMS.txt。"
+    dependsOn(packageWindowsExe, packageWindowsPortable)
+    onlyIf { isWindowsHost() }
+
+    doLast {
+        val artifacts = listOf(windowsExeOutput, windowsPortableOutput).filter { it.isFile }
+        if (artifacts.size != 2) {
+            throw GradleException("Windows 打包未生成完整的 exe/zip 产物。")
+        }
+        File(windowsPackageDirectory, "SHA256SUMS.txt").writeText(
             artifacts.joinToString("\n") { "${digest(it, "SHA-256")}  ${it.name}" } + "\n"
         )
     }
