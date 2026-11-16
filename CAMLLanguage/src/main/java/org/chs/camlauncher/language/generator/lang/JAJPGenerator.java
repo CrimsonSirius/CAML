@@ -320,6 +320,21 @@ public final class JAJPGenerator extends LanguageTranslationGenerator {
         t.put("instances.picker.count", "全 %d 件のゲームインスタンス");
         t.put("instances.picker.scanFailed", "ゲームインスタンスのスキャンに失敗しました: %s");
         t.put("instances.manage.title", "インスタンスを管理");
+        t.put("instances.manage.instance", "インスタンス：%s");
+        t.put("instances.manage.folder", "インスタンスフォルダー：%s");
+        t.put("instances.manage.openFolder", "インスタンスフォルダーを開く");
+        t.put("instances.manage.openFolder.opening", "インスタンスフォルダーを開いています...");
+        t.put("instances.manage.openFolder.failed", "インスタンスフォルダーを開けませんでした：%s");
+        t.put("instances.manage.noGameDirectory", "ゲームディレクトリが未設定です");
+        t.put("instances.manage.noInstance", "インスタンスが選択されていません");
+        t.put("instances.manage.mods.title", "MOD 一覧");
+        t.put("instances.manage.mods.scanning", "MOD 一覧を読み込んでいます...");
+        t.put("instances.manage.mods.count", "%d 個の MOD");
+        t.put("instances.manage.mods.empty", "このインスタンスに MOD はありません");
+        t.put("instances.manage.mods.scanFailed", "MOD 一覧の読み込みに失敗しました：%s");
+        t.put("instances.manage.mods.toggleFailed", "MOD の状態を切り替えられませんでした：%s");
+        t.put("instances.manage.mods.enabled", "有効");
+        t.put("instances.manage.mods.disabled", "無効");
 
         // MOD ダウンロード
         t.put("mods.nav", "MOD");
@@ -379,6 +394,10 @@ public final class JAJPGenerator extends LanguageTranslationGenerator {
 
         // バックグラウンド操作名
         t.put("operation.inspectGameDirectory", "ゲームディレクトリを確認");
+        t.put("operation.inspectInstance", "インスタンス情報を読み込む");
+        t.put("operation.openInstanceFolder", "インスタンスフォルダーを開く");
+        t.put("operation.loadInstanceModIcon", "MOD アイコンを読み込む");
+        t.put("operation.setModDisabled", "MOD の状態を切り替える");
         t.put("operation.checkInstanceName", "インスタンス名を確認");
         t.put("operation.fetchVersionList", "公式 %s 一覧を取得");
         t.put("operation.installVanilla", "バニラインスタンス %s をインストール");

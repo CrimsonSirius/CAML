@@ -306,6 +306,7 @@ C:\Program Files\CAML\runtime\   裁剪后的 Java 运行时
 
 应用图标由 `packaging/icons/caml-512.png` 在构建期缩放生成多尺寸
 `caml.ico`（16/24/32/48/64/128/256），因此仓库里不需要保存二进制图标。
+GitHub Actions 的 `Build` workflow 会在所有 PR 和所有分支 push（包括普通分支 push 和合并后的 push）时构建并上传 deb、rpm 和校验和。release 号优先使用 PR 编号，artifact 名称为 `caml-linux-packages-pr-<PR 编号>`；无法从合并提交提取 PR 编号时回退到 run number。`v*` tag 和手动发布继续由 `Package Linux` workflow 处理。
 
 ### CAMLUI 组件库
 

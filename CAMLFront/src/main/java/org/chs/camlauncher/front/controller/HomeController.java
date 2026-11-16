@@ -2,6 +2,7 @@ package org.chs.camlauncher.front.controller;
 
 import javafx.application.Platform;
 import org.chs.camlauncher.backend.api.GameDirectoryInfo;
+import org.chs.camlauncher.backend.api.InstanceDetails;
 import org.chs.camlauncher.backend.download.DownloadListener;
 import org.chs.camlauncher.backend.instance.VersionIsolationMode;
 import org.chs.camlauncher.backend.launch.GameLaunch;
@@ -117,6 +118,60 @@ public final class HomeController {
     public FrontTask<GameDirectoryInfo> inspectGameDirectory(
             Path directory, Consumer<GameDirectoryInfo> callback, Consumer<String> onError) {
         return context.inspectGameDirectory(directory, callback, onError);
+    }
+
+    public FrontTask<InstanceDetails> inspectInstance(
+            Path gameDirectory, String instanceId,
+            Consumer<InstanceDetails> callback, Consumer<String> onError) {
+        if (gameDirectory == null) {
+            return null;
+        }
+        return context.runCheck(UiText.tr("operation.inspectInstance"),
+                () -> context.backend().inspectInstance(gameDirectory, instanceId),
+                callback, onError);
+    }
+
+    public FrontTask<Void> openInstanceFolder(
+            Path gameDirectory, String instanceId,
+            Runnable onOpened, Consumer<String> onError) {
+        if (gameDirectory == null) {
+            return null;
+        }
+        return context.runJava(UiText.tr("operation.openInstanceFolder"), () -> {
+            context.backend().openInstanceFolder(gameDirectory, instanceId);
+            return null;
+        }, ignored -> {
+            if (onOpened != null) {
+                onOpened.run();
+            }
+        }, onError);
+    }
+
+    public FrontTask<byte[]> loadInstanceModIcon(
+            Path gameDirectory, String instanceId, String fileName,
+            Consumer<byte[]> onLoaded, Consumer<String> onError) {
+        if (gameDirectory == null) {
+            return null;
+        }
+        return context.runIcon(UiText.tr("operation.loadInstanceModIcon"),
+                () -> context.backend().loadInstanceModIcon(gameDirectory, instanceId, fileName),
+                onLoaded, onError);
+    }
+
+    public FrontTask<Void> setModDisabled(
+            Path gameDirectory, String instanceId, String fileName, boolean disabled,
+            Runnable onSuccess, Consumer<String> onError) {
+        if (gameDirectory == null) {
+            return null;
+        }
+        return context.runSettings(UiText.tr("operation.setModDisabled"), () -> {
+            context.backend().setModDisabled(gameDirectory, instanceId, fileName, disabled);
+            return null;
+        }, ignored -> {
+            if (onSuccess != null) {
+                onSuccess.run();
+            }
+        }, onError);
     }
 
     private void notifyLaunchFinished() {

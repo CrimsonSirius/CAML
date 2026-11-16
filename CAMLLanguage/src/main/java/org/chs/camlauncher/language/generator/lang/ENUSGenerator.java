@@ -320,6 +320,21 @@ public final class ENUSGenerator extends LanguageTranslationGenerator {
         t.put("instances.picker.count", "%d game instances");
         t.put("instances.picker.scanFailed", "Failed to scan game instances: %s");
         t.put("instances.manage.title", "Manage instances");
+        t.put("instances.manage.instance", "Instance: %s");
+        t.put("instances.manage.folder", "Instance folder: %s");
+        t.put("instances.manage.openFolder", "Open instance folder");
+        t.put("instances.manage.openFolder.opening", "Opening instance folder...");
+        t.put("instances.manage.openFolder.failed", "Failed to open instance folder: %s");
+        t.put("instances.manage.noGameDirectory", "No game directory configured");
+        t.put("instances.manage.noInstance", "No instance selected");
+        t.put("instances.manage.mods.title", "Mods");
+        t.put("instances.manage.mods.scanning", "Reading mod list...");
+        t.put("instances.manage.mods.count", "%d mods");
+        t.put("instances.manage.mods.empty", "This instance has no mods");
+        t.put("instances.manage.mods.scanFailed", "Failed to read mod list: %s");
+        t.put("instances.manage.mods.toggleFailed", "Failed to toggle mod state: %s");
+        t.put("instances.manage.mods.enabled", "Enabled");
+        t.put("instances.manage.mods.disabled", "Disabled");
 
         // Mod downloads
         t.put("mods.nav", "Mods");
@@ -379,6 +394,10 @@ public final class ENUSGenerator extends LanguageTranslationGenerator {
 
         // Background operation names
         t.put("operation.inspectGameDirectory", "Inspect game directory");
+        t.put("operation.inspectInstance", "Read instance information");
+        t.put("operation.openInstanceFolder", "Open instance folder");
+        t.put("operation.loadInstanceModIcon", "Load mod icon");
+        t.put("operation.setModDisabled", "Toggle mod state");
         t.put("operation.checkInstanceName", "Check instance name");
         t.put("operation.fetchVersionList", "Fetch official %s list");
         t.put("operation.installVanilla", "Install vanilla instance %s");

@@ -34,6 +34,14 @@ class LaunchExceptionTest {
     }
 
     @Test
+    void classifiesLocalizedE2bigCommand() {
+        LaunchException exception = LaunchException.from(
+                new IOException("Exec failed, error: 7 (参数列表过长)"));
+
+        assertEquals(LaunchFailure.COMMAND_TOO_LONG, exception.failure());
+    }
+
+    @Test
     void fallsBackToGenericProcessFailure() {
         LaunchException exception = LaunchException.from(new IOException("unexpected failure"));
 

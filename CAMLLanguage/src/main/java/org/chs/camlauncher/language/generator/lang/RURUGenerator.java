@@ -320,6 +320,21 @@ public final class RURUGenerator extends LanguageTranslationGenerator {
         t.put("instances.picker.count", "Всего сборок: %d");
         t.put("instances.picker.scanFailed", "Не удалось просканировать сборки: %s");
         t.put("instances.manage.title", "Управление сборками");
+        t.put("instances.manage.instance", "Сборка: %s");
+        t.put("instances.manage.folder", "Папка сборки: %s");
+        t.put("instances.manage.openFolder", "Открыть папку сборки");
+        t.put("instances.manage.openFolder.opening", "Открытие папки сборки...");
+        t.put("instances.manage.openFolder.failed", "Не удалось открыть папку сборки: %s");
+        t.put("instances.manage.noGameDirectory", "Каталог игры не задан");
+        t.put("instances.manage.noInstance", "Сборка не выбрана");
+        t.put("instances.manage.mods.title", "Список модов");
+        t.put("instances.manage.mods.scanning", "Чтение списка модов...");
+        t.put("instances.manage.mods.count", "Модов: %d");
+        t.put("instances.manage.mods.empty", "В этой сборке нет модов");
+        t.put("instances.manage.mods.scanFailed", "Не удалось прочитать список модов: %s");
+        t.put("instances.manage.mods.toggleFailed", "Не удалось изменить состояние мода: %s");
+        t.put("instances.manage.mods.enabled", "Включён");
+        t.put("instances.manage.mods.disabled", "Отключён");
 
         // Загрузка модов
         t.put("mods.nav", "Моды");
@@ -379,6 +394,10 @@ public final class RURUGenerator extends LanguageTranslationGenerator {
 
         // Фоновые операции
         t.put("operation.inspectGameDirectory", "Проверка каталога игры");
+        t.put("operation.inspectInstance", "Чтение информации о сборке");
+        t.put("operation.openInstanceFolder", "Открыть папку сборки");
+        t.put("operation.loadInstanceModIcon", "Загрузить значок мода");
+        t.put("operation.setModDisabled", "Изменить состояние мода");
         t.put("operation.checkInstanceName", "Проверка названия сборки");
         t.put("operation.fetchVersionList", "Получение официального списка %s");
         t.put("operation.installVanilla", "Установка ванильной сборки %s");

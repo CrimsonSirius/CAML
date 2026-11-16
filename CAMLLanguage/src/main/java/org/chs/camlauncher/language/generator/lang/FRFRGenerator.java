@@ -320,6 +320,21 @@ public final class FRFRGenerator extends LanguageTranslationGenerator {
         t.put("instances.picker.count", "%d instances de jeu");
         t.put("instances.picker.scanFailed", "Échec de l’analyse des instances de jeu : %s");
         t.put("instances.manage.title", "Gérer les instances");
+        t.put("instances.manage.instance", "Instance : %s");
+        t.put("instances.manage.folder", "Dossier de l'instance : %s");
+        t.put("instances.manage.openFolder", "Ouvrir le dossier de l'instance");
+        t.put("instances.manage.openFolder.opening", "Ouverture du dossier de l'instance...");
+        t.put("instances.manage.openFolder.failed", "Impossible d'ouvrir le dossier de l'instance : %s");
+        t.put("instances.manage.noGameDirectory", "Aucun répertoire de jeu configuré");
+        t.put("instances.manage.noInstance", "Aucune instance sélectionnée");
+        t.put("instances.manage.mods.title", "Liste des mods");
+        t.put("instances.manage.mods.scanning", "Lecture de la liste des mods...");
+        t.put("instances.manage.mods.count", "%d mods");
+        t.put("instances.manage.mods.empty", "Cette instance ne contient aucun mod");
+        t.put("instances.manage.mods.scanFailed", "Impossible de lire la liste des mods : %s");
+        t.put("instances.manage.mods.toggleFailed", "Impossible de changer l'état du mod : %s");
+        t.put("instances.manage.mods.enabled", "Activé");
+        t.put("instances.manage.mods.disabled", "Désactivé");
 
         // Téléchargement de mods
         t.put("mods.nav", "Mods");
@@ -379,6 +394,10 @@ public final class FRFRGenerator extends LanguageTranslationGenerator {
 
         // Opérations en arrière-plan
         t.put("operation.inspectGameDirectory", "Inspecter le répertoire de jeu");
+        t.put("operation.inspectInstance", "Lire les informations de l'instance");
+        t.put("operation.openInstanceFolder", "Ouvrir le dossier de l'instance");
+        t.put("operation.loadInstanceModIcon", "Charger l'icône du mod");
+        t.put("operation.setModDisabled", "Changer l'état du mod");
         t.put("operation.checkInstanceName", "Vérifier le nom de l’instance");
         t.put("operation.fetchVersionList", "Récupérer la liste officielle %s");
         t.put("operation.installVanilla", "Installer l’instance vanilla %s");

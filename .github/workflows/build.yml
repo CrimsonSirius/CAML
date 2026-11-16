@@ -2,6 +2,8 @@ name: Build
 
 on:
   push:
+    branches:
+      - '**'
   pull_request:
   workflow_dispatch:
 
@@ -38,7 +40,6 @@ jobs:
           path: CAMLFront/build/distributions/*.zip
 
   linux-packages:
-    if: (github.event_name == 'pull_request' && github.base_ref == 'main') || (github.event_name == 'push' && github.ref == 'refs/heads/main')
     needs: build
     runs-on: ubuntu-latest
     steps:

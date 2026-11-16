@@ -320,6 +320,21 @@ public final class ZHCNGenerator extends LanguageTranslationGenerator {
         t.put("instances.picker.count", "共 %d 个游戏实例");
         t.put("instances.picker.scanFailed", "扫描游戏实例失败：%s");
         t.put("instances.manage.title", "管理实例");
+        t.put("instances.manage.instance", "实例：%s");
+        t.put("instances.manage.folder", "实例文件夹：%s");
+        t.put("instances.manage.openFolder", "打开实例文件夹");
+        t.put("instances.manage.openFolder.opening", "正在打开实例文件夹...");
+        t.put("instances.manage.openFolder.failed", "打开实例文件夹失败：%s");
+        t.put("instances.manage.noGameDirectory", "尚未设置游戏位置");
+        t.put("instances.manage.noInstance", "尚未选择游戏实例");
+        t.put("instances.manage.mods.title", "Mod 列表");
+        t.put("instances.manage.mods.scanning", "正在读取 Mod 列表...");
+        t.put("instances.manage.mods.count", "共 %d 个 Mod");
+        t.put("instances.manage.mods.empty", "该实例没有 Mod");
+        t.put("instances.manage.mods.scanFailed", "读取 Mod 列表失败：%s");
+        t.put("instances.manage.mods.toggleFailed", "切换 Mod 状态失败：%s");
+        t.put("instances.manage.mods.enabled", "已启用");
+        t.put("instances.manage.mods.disabled", "已禁用");
 
         // Mod 下载
         t.put("mods.nav", "模组");
@@ -379,6 +394,10 @@ public final class ZHCNGenerator extends LanguageTranslationGenerator {
 
         // 后台操作名
         t.put("operation.inspectGameDirectory", "检查游戏目录");
+        t.put("operation.inspectInstance", "读取实例信息");
+        t.put("operation.openInstanceFolder", "打开实例文件夹");
+        t.put("operation.loadInstanceModIcon", "加载 Mod 图标");
+        t.put("operation.setModDisabled", "切换 Mod 状态");
         t.put("operation.checkInstanceName", "检查实例名");
         t.put("operation.fetchVersionList", "获取官方%s列表");
         t.put("operation.installVanilla", "安装原版实例 %s");

@@ -19,9 +19,12 @@ import org.chs.camlauncher.backend.instance.GameDataLayout;
 import org.chs.camlauncher.backend.instance.InstalledVersion;
 import org.chs.camlauncher.backend.instance.InstanceNameCheck;
 import org.chs.camlauncher.backend.instance.InstanceNameRules;
+import org.chs.camlauncher.backend.instance.InstanceInspector;
+import org.chs.camlauncher.backend.instance.InstanceModIconService;
 import org.chs.camlauncher.backend.log.LatestLogService;
 import org.chs.camlauncher.backend.instance.VersionIsolationMode;
 import org.chs.camlauncher.backend.instance.VersionInstaller;
+import org.chs.camlauncher.backend.io.SafePaths;
 import org.chs.camlauncher.backend.json.JsonService;
 import org.chs.camlauncher.backend.loader.fabric.FabricApiVersion;
 import org.chs.camlauncher.backend.loader.fabric.FabricInstaller;
@@ -78,18 +81,22 @@ import org.chs.camlauncher.language.contract.LanguageFallbackMode;
 import org.chs.camlauncher.language.contract.LanguageSelectionMode;
 import org.chs.camlauncher.backend.system.SystemMemoryInfo;
 import org.chs.camlauncher.backend.system.SystemMemoryService;
+import org.chs.camlauncher.backend.system.DirectoryOpener;
 import org.chs.camlauncher.backend.theme.ThemeInfo;
 import org.chs.camlauncher.backend.theme.ThemeService;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Stream;
 
@@ -863,6 +870,83 @@ public final class CAMLBackend implements AutoCloseable {
             throw new UncheckedIOException("Failed to inspect game directory: " + normalized, e);
         }
         return new GameDirectoryInfo(normalized, true, versions, isolated);
+    }
+
+    /** 读取实例数据目录和 mods 列表。 */
+    public InstanceDetails inspectInstance(Path gameDirectory, String instanceId) throws IOException {
+        String instance = InstanceNameRules.validate(instanceId);
+        Set<String> disabled = settingsService.disabledMods(gameDirectory, instance);
+        return InstanceInspector.inspect(gameDirectory, instance, disabled);
+    }
+
+    /** 使用系统文件管理器打开实例的实际数据目录。 */
+    public void openInstanceFolder(Path gameDirectory, String instanceId) throws IOException {
+        DirectoryOpener.open(InstanceInspector.dataDirectory(gameDirectory, instanceId));
+    }
+
+    /** 切换实例 Mod 的启用状态，并把状态写入 CAML 配置。 */
+    public void setModDisabled(Path gameDirectory, String instanceId, String fileName,
+                               boolean disabled) throws IOException {
+        Path normalizedGameDirectory = Objects.requireNonNull(gameDirectory, "gameDirectory")
+                .toAbsolutePath()
+                .normalize();
+        String instance = InstanceNameRules.validate(instanceId);
+        String baseName = normalizeModFileName(fileName);
+        Path modsDirectory = InstanceInspector.dataDirectory(normalizedGameDirectory, instance)
+                .resolve("mods");
+        Path enabledPath = SafePaths.resolveChild(modsDirectory, baseName, "mod file");
+        Path disabledPath = SafePaths.resolveChild(modsDirectory, baseName + ".disabled",
+                "disabled mod file");
+
+        boolean moved = false;
+        Path source = disabled ? enabledPath : disabledPath;
+        Path target = disabled ? disabledPath : enabledPath;
+        if (Files.isRegularFile(source)) {
+            if (Files.exists(target)) {
+                throw new IOException("目标 Mod 文件已存在: " + target);
+            }
+            move(source, target);
+            moved = true;
+        } else if (!Files.isRegularFile(target)) {
+            throw new IOException("Mod 文件不存在: " + source);
+        }
+
+        try {
+            settingsService.setModDisabled(normalizedGameDirectory, instance, baseName, disabled);
+        } catch (IOException | RuntimeException e) {
+            if (moved) {
+                try {
+                    move(target, source);
+                } catch (IOException rollbackFailure) {
+                    LOGGER.warn("回滚 Mod 文件状态失败: {}", target, rollbackFailure);
+                }
+            }
+            throw e;
+        }
+    }
+
+    /** 从本地 mod jar 读取图标；没有图标时返回空数组。 */
+    public byte[] loadInstanceModIcon(Path gameDirectory, String instanceId, String fileName) {
+        return InstanceModIconService.load(gameDirectory, instanceId, fileName);
+    }
+
+    private static String normalizeModFileName(String fileName) {
+        String value = Objects.requireNonNull(fileName, "fileName").trim();
+        if (value.endsWith(".disabled")) {
+            value = value.substring(0, value.length() - ".disabled".length());
+        }
+        if (!value.toLowerCase(java.util.Locale.ROOT).endsWith(".jar")) {
+            throw new IllegalArgumentException("不是有效的 Mod jar: " + fileName);
+        }
+        return value;
+    }
+
+    private static void move(Path source, Path target) throws IOException {
+        try {
+            Files.move(source, target, StandardCopyOption.ATOMIC_MOVE);
+        } catch (AtomicMoveNotSupportedException e) {
+            Files.move(source, target);
+        }
     }
 
     public AuthSession loginOffline(String username) {

@@ -320,6 +320,21 @@ public final class ZHTWGenerator extends LanguageTranslationGenerator {
         t.put("instances.picker.count", "共 %d 個遊戲實例");
         t.put("instances.picker.scanFailed", "掃描遊戲實例失敗：%s");
         t.put("instances.manage.title", "管理實例");
+        t.put("instances.manage.instance", "實例：%s");
+        t.put("instances.manage.folder", "實例資料夾：%s");
+        t.put("instances.manage.openFolder", "開啟實例資料夾");
+        t.put("instances.manage.openFolder.opening", "正在開啟實例資料夾...");
+        t.put("instances.manage.openFolder.failed", "開啟實例資料夾失敗：%s");
+        t.put("instances.manage.noGameDirectory", "尚未設定遊戲位置");
+        t.put("instances.manage.noInstance", "尚未選擇遊戲實例");
+        t.put("instances.manage.mods.title", "Mod 列表");
+        t.put("instances.manage.mods.scanning", "正在讀取 Mod 列表...");
+        t.put("instances.manage.mods.count", "共 %d 個 Mod");
+        t.put("instances.manage.mods.empty", "此實例沒有 Mod");
+        t.put("instances.manage.mods.scanFailed", "讀取 Mod 列表失敗：%s");
+        t.put("instances.manage.mods.toggleFailed", "切換 Mod 狀態失敗：%s");
+        t.put("instances.manage.mods.enabled", "已啟用");
+        t.put("instances.manage.mods.disabled", "已停用");
 
         // Mod 下載
         t.put("mods.nav", "模組");
@@ -379,6 +394,10 @@ public final class ZHTWGenerator extends LanguageTranslationGenerator {
 
         // 背景操作名稱
         t.put("operation.inspectGameDirectory", "檢查遊戲目錄");
+        t.put("operation.inspectInstance", "讀取實例資訊");
+        t.put("operation.openInstanceFolder", "開啟實例資料夾");
+        t.put("operation.loadInstanceModIcon", "載入 Mod 圖示");
+        t.put("operation.setModDisabled", "切換 Mod 狀態");
         t.put("operation.checkInstanceName", "檢查實例名稱");
         t.put("operation.fetchVersionList", "取得官方%s清單");
         t.put("operation.installVanilla", "安裝原版實例 %s");

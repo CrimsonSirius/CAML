@@ -74,6 +74,12 @@ public final class LaunchException extends IOException implements BackendErrorCa
         String lower = message.toLowerCase(Locale.ROOT);
         return lower.contains("too long")
                 || lower.contains("argument list")
+                || lower.contains("too many arguments")
+                || lower.contains("error=7")
+                || lower.contains("error: 7")
+                || lower.contains("errno 7")
+                || lower.contains("e2big")
+                || lower.contains("参数列表过长")
                 || lower.contains("error=206");
     }
 }

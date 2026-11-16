@@ -320,6 +320,21 @@ public final class DEDEGenerator extends LanguageTranslationGenerator {
         t.put("instances.picker.count", "%d Spielinstanzen");
         t.put("instances.picker.scanFailed", "Suche nach Spielinstanzen fehlgeschlagen: %s");
         t.put("instances.manage.title", "Instanzen verwalten");
+        t.put("instances.manage.instance", "Instanz: %s");
+        t.put("instances.manage.folder", "Instanzordner: %s");
+        t.put("instances.manage.openFolder", "Instanzordner öffnen");
+        t.put("instances.manage.openFolder.opening", "Instanzordner wird geöffnet...");
+        t.put("instances.manage.openFolder.failed", "Instanzordner konnte nicht geöffnet werden: %s");
+        t.put("instances.manage.noGameDirectory", "Kein Spielverzeichnis konfiguriert");
+        t.put("instances.manage.noInstance", "Keine Instanz ausgewählt");
+        t.put("instances.manage.mods.title", "Mod-Liste");
+        t.put("instances.manage.mods.scanning", "Mod-Liste wird gelesen...");
+        t.put("instances.manage.mods.count", "%d Mods");
+        t.put("instances.manage.mods.empty", "Diese Instanz enthält keine Mods");
+        t.put("instances.manage.mods.scanFailed", "Mod-Liste konnte nicht gelesen werden: %s");
+        t.put("instances.manage.mods.toggleFailed", "Mod-Status konnte nicht geändert werden: %s");
+        t.put("instances.manage.mods.enabled", "Aktiviert");
+        t.put("instances.manage.mods.disabled", "Deaktiviert");
 
         // Mod-Downloads
         t.put("mods.nav", "Mods");
@@ -379,6 +394,10 @@ public final class DEDEGenerator extends LanguageTranslationGenerator {
 
         // Hintergrundvorgänge
         t.put("operation.inspectGameDirectory", "Spielverzeichnis prüfen");
+        t.put("operation.inspectInstance", "Instanzinformationen lesen");
+        t.put("operation.openInstanceFolder", "Instanzordner öffnen");
+        t.put("operation.loadInstanceModIcon", "Mod-Symbol laden");
+        t.put("operation.setModDisabled", "Mod-Status ändern");
         t.put("operation.checkInstanceName", "Instanznamen prüfen");
         t.put("operation.fetchVersionList", "Offizielle %s-Liste abrufen");
         t.put("operation.installVanilla", "Vanilla-Instanz %s installieren");
