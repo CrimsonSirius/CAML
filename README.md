@@ -219,7 +219,7 @@ Fedora/RHEL 系安装：
 sudo dnf install ./caml-launcher-1.0.0-1.x86_64.rpm
 ```
 
-GitHub Actions 的 `Package Linux` workflow 会在 `v*` tag 或手动触发时构建并上传 deb、rpm 和校验和。
+GitHub Actions 的 `Build` workflow 会在任意分支向 `main` 发起 PR 时构建并上传 deb、rpm 和校验和，release 号使用 PR 编号，artifact 名称为 `caml-linux-packages-pr-<PR 编号>`；`Package Linux` workflow 仍用于 `v*` tag 或手动发布。
 
 ### CAMLUI 组件库
 
