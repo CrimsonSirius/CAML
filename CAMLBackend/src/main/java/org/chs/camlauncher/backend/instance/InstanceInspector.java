@@ -63,6 +63,20 @@ public final class InstanceInspector {
                 normalizedGameDirectory, versionDirectory, VersionIsolationMode.AUTO);
     }
 
+    /** 解析本地 Mod 的实际文件路径，兼容 .jar 和 .jar.disabled。 */
+    public static Path modFile(Path gameDirectory, String instanceId, String fileName) {
+        String baseName = fileName != null && fileName.endsWith(".disabled")
+                ? fileName.substring(0, fileName.length() - ".disabled".length())
+                : fileName;
+        Path modsDirectory = dataDirectory(gameDirectory, instanceId).resolve("mods");
+        Path enabled = SafePaths.resolveChild(modsDirectory, baseName, "mod file");
+        if (Files.isRegularFile(enabled)) {
+            return enabled;
+        }
+        return SafePaths.resolveChild(modsDirectory, baseName + ".disabled",
+                "disabled mod file");
+    }
+
     private static List<InstanceMod> scanMods(Path modsDirectory,
                                               Set<String> configuredDisabled) throws IOException {
         if (!Files.isDirectory(modsDirectory)) {
@@ -83,7 +97,8 @@ public final class InstanceInspector {
                         : fileName;
                 boolean disabled = suffixDisabled || configuredDisabled.contains(baseName);
                 try {
-                    mods.add(new InstanceMod(baseName, Files.size(path), !disabled));
+                    mods.add(new InstanceMod(baseName,
+                            InstanceModMetadataService.version(path), Files.size(path), !disabled));
                 } catch (IOException e) {
                     LOGGER.warn("无法读取 Mod 文件大小: {}", path, e);
                 }

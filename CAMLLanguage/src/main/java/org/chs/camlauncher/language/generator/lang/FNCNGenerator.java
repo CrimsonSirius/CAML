@@ -334,6 +334,9 @@ public final class FNCNGenerator extends LanguageTranslationGenerator {
         t.put("instances.manage.mods.empty", "这个事例没零件");
         t.put("instances.manage.mods.scanFailed", "翻零件翻车：%s");
         t.put("instances.manage.mods.toggleFailed", "拨弄零件翻车：%s");
+        t.put("instances.manage.mods.update", "翻新");
+        t.put("instances.manage.mods.updating", "正翻新 %s...");
+        t.put("instances.manage.mods.updateFailed", "翻新零件翻车：%s");
         t.put("instances.manage.mods.enabled", "开着");
         t.put("instances.manage.mods.disabled", "关了");
 
@@ -399,6 +402,8 @@ public final class FNCNGenerator extends LanguageTranslationGenerator {
         t.put("operation.openInstanceFolder", "撬开事例窝");
         t.put("operation.loadInstanceModIcon", "抓零件图");
         t.put("operation.setModDisabled", "拨弄零件开关");
+        t.put("operation.checkModUpdates", "查零件新版本");
+        t.put("operation.updateMod", "翻新零件 %s");
         t.put("operation.checkInstanceName", "检查事例名字");
         t.put("operation.fetchVersionList", "获取朝廷 %s 列表");
         t.put("operation.installVanilla", "打进香草事例 %s");

@@ -333,6 +333,9 @@ public final class DEDEGenerator extends LanguageTranslationGenerator {
         t.put("instances.manage.mods.empty", "Diese Instanz enthält keine Mods");
         t.put("instances.manage.mods.scanFailed", "Mod-Liste konnte nicht gelesen werden: %s");
         t.put("instances.manage.mods.toggleFailed", "Mod-Status konnte nicht geändert werden: %s");
+        t.put("instances.manage.mods.update", "Aktualisieren");
+        t.put("instances.manage.mods.updating", "%s wird aktualisiert...");
+        t.put("instances.manage.mods.updateFailed", "Mod konnte nicht aktualisiert werden: %s");
         t.put("instances.manage.mods.enabled", "Aktiviert");
         t.put("instances.manage.mods.disabled", "Deaktiviert");
 
@@ -398,6 +401,8 @@ public final class DEDEGenerator extends LanguageTranslationGenerator {
         t.put("operation.openInstanceFolder", "Instanzordner öffnen");
         t.put("operation.loadInstanceModIcon", "Mod-Symbol laden");
         t.put("operation.setModDisabled", "Mod-Status ändern");
+        t.put("operation.checkModUpdates", "Mod-Updates prüfen");
+        t.put("operation.updateMod", "Mod %s aktualisieren");
         t.put("operation.checkInstanceName", "Instanznamen prüfen");
         t.put("operation.fetchVersionList", "Offizielle %s-Liste abrufen");
         t.put("operation.installVanilla", "Vanilla-Instanz %s installieren");

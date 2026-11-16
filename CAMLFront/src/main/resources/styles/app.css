@@ -691,6 +691,34 @@
     -fx-text-fill: -caml-on-accent-container;
 }
 
+.app-instance-mod-title-row {
+    -fx-spacing: 0.6em;
+}
+
+.app-instance-mod-version {
+    -fx-text-fill: -caml-on-surface-muted;
+    -fx-font-size: 0.75em;
+}
+
+.app-instance-mod-version-update {
+    -fx-text-fill: -caml-accent-text;
+    -fx-font-weight: bold;
+}
+
+.app-instance-mod-update {
+    -fx-min-height: 2em;
+    -fx-padding: 0.25em 0.75em;
+    -fx-font-size: 0.75em;
+    -fx-background-color: -caml-accent;
+    -fx-text-fill: -caml-on-accent;
+}
+
+.app-instance-mod-update:disabled {
+    -fx-background-color: -caml-surface-high;
+    -fx-text-fill: -caml-on-surface-muted;
+    -fx-opacity: 1;
+}
+
 /* 下载进度页 */
 .app-download-title-block {
     -fx-spacing: 0.25em;

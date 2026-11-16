@@ -333,6 +333,9 @@ public final class LALAGenerator extends LanguageTranslationGenerator {
         t.put("instances.manage.mods.empty", "Haec instantia modos non habet");
         t.put("instances.manage.mods.scanFailed", "Index modorum legi non potuit: %s");
         t.put("instances.manage.mods.toggleFailed", "Status modi mutari non potuit: %s");
+        t.put("instances.manage.mods.update", "Renovare");
+        t.put("instances.manage.mods.updating", "%s renovatur...");
+        t.put("instances.manage.mods.updateFailed", "Modum renovare non potuit: %s");
         t.put("instances.manage.mods.enabled", "Activatus");
         t.put("instances.manage.mods.disabled", "Inactivatus");
 
@@ -398,6 +401,8 @@ public final class LALAGenerator extends LanguageTranslationGenerator {
         t.put("operation.openInstanceFolder", "Directorium instantiae aperire");
         t.put("operation.loadInstanceModIcon", "Iconem modi legere");
         t.put("operation.setModDisabled", "Statum modi mutare");
+        t.put("operation.checkModUpdates", "Renovationes modorum inspicere");
+        t.put("operation.updateMod", "Modum %s renovare");
         t.put("operation.checkInstanceName", "Nomen instantiae inspicere");
         t.put("operation.fetchVersionList", "Indicem officialem %s petere");
         t.put("operation.installVanilla", "Instantiam vanilla %s installare");

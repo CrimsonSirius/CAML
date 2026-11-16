@@ -21,6 +21,9 @@ import org.chs.camlauncher.backend.instance.InstanceNameCheck;
 import org.chs.camlauncher.backend.instance.InstanceNameRules;
 import org.chs.camlauncher.backend.instance.InstanceInspector;
 import org.chs.camlauncher.backend.instance.InstanceModIconService;
+import org.chs.camlauncher.backend.instance.InstanceEnvironment;
+import org.chs.camlauncher.backend.instance.InstanceEnvironmentResolver;
+import org.chs.camlauncher.backend.download.hash.HashVerifier;
 import org.chs.camlauncher.backend.log.LatestLogService;
 import org.chs.camlauncher.backend.instance.VersionIsolationMode;
 import org.chs.camlauncher.backend.instance.VersionInstaller;
@@ -70,6 +73,7 @@ import org.chs.camlauncher.backend.mod.model.ModSource;
 import org.chs.camlauncher.backend.mod.service.ModService;
 import org.chs.camlauncher.backend.mod.service.ModIconService;
 import org.chs.camlauncher.backend.mod.source.CurseForgeClient;
+import org.chs.camlauncher.backend.mod.source.CurseForgeFingerprint;
 import org.chs.camlauncher.backend.mod.source.ModrinthClient;
 import org.chs.camlauncher.backend.runtime.JavaLocator;
 import org.chs.camlauncher.backend.runtime.JavaCandidate;
@@ -97,6 +101,10 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Stream;
 
@@ -928,6 +936,139 @@ public final class CAMLBackend implements AutoCloseable {
     /** 从本地 mod jar 读取图标；没有图标时返回空数组。 */
     public byte[] loadInstanceModIcon(Path gameDirectory, String instanceId, String fileName) {
         return InstanceModIconService.load(gameDirectory, instanceId, fileName);
+    }
+
+    /** 检查实例中每个 Mod 在当前 MC 版本/加载器下是否有更新。 */
+    public List<InstanceModUpdate> checkInstanceModUpdates(
+            Path gameDirectory, String instanceId) throws IOException, InterruptedException {
+        InstanceDetails details = inspectInstance(gameDirectory, instanceId);
+        InstanceEnvironment environment = InstanceEnvironmentResolver.resolve(
+                gameDirectory, instanceId, metadata);
+        if (environment.loader() == null
+                || environment.gameVersion() == null || environment.gameVersion().isBlank()) {
+            return details.mods().stream()
+                    .map(mod -> new InstanceModUpdate(
+                            mod.fileName(), displayVersion(mod.version()),
+                            displayVersion(mod.version()), false, null, "unsupported"))
+                    .toList();
+        }
+
+        Set<String> hashes = new LinkedHashSet<>();
+        for (InstanceMod mod : details.mods()) {
+            Path file = InstanceInspector.modFile(gameDirectory, instanceId, mod.fileName());
+            if (Files.isRegularFile(file)) {
+                hashes.add(HashVerifier.sha1(file));
+            }
+        }
+        Map<String, ModFile> latestByHash = modService.latestVersions(
+                new ArrayList<>(hashes),
+                environment.gameVersion(),
+                environment.loader());
+
+        Map<Long, ModFile> latestByFingerprint = Map.of();
+        if (modService.curseForgeConfigured()) {
+            Map<Long, String> fingerprintToFile = new LinkedHashMap<>();
+            for (InstanceMod mod : details.mods()) {
+                String hash = null;
+                Path file = InstanceInspector.modFile(gameDirectory, instanceId, mod.fileName());
+                if (Files.isRegularFile(file)) {
+                    hash = HashVerifier.sha1(file);
+                }
+                if (hash != null && latestByHash.containsKey(hash)) {
+                    continue;
+                }
+                if (Files.isRegularFile(file)) {
+                    fingerprintToFile.put(CurseForgeFingerprint.of(file), mod.fileName());
+                }
+            }
+            if (!fingerprintToFile.isEmpty()) {
+                try {
+                    Map<Long, String> fingerprintToModId = modService.curseForgeFingerprintModIds(
+                            new ArrayList<>(fingerprintToFile.keySet()));
+                    latestByFingerprint = modService.latestCurseForgeVersions(
+                            fingerprintToModId, environment.gameVersion(), environment.loader());
+                } catch (IOException | RuntimeException e) {
+                    LOGGER.warn("CurseForge 更新检查失败", e);
+                }
+            }
+        }
+
+        List<InstanceModUpdate> updates = new ArrayList<>();
+        for (InstanceMod mod : details.mods()) {
+            String currentVersion = displayVersion(mod.version());
+            Path file = InstanceInspector.modFile(gameDirectory, instanceId, mod.fileName());
+            String hash = Files.isRegularFile(file) ? HashVerifier.sha1(file) : "";
+            ModFile latest = latestByHash.get(hash);
+            if (latest == null && Files.isRegularFile(file)) {
+                latest = latestByFingerprint.get(CurseForgeFingerprint.of(file));
+            }
+            boolean updateAvailable = latest != null && !sameVersion(
+                    mod.version(), latest.versionNumber(), latest.sha1(), hash);
+            String latestVersion = latest == null
+                    ? currentVersion
+                    : displayVersion(latest.versionNumber());
+            updates.add(new InstanceModUpdate(
+                    mod.fileName(), currentVersion, latestVersion,
+                    updateAvailable, latest, null));
+        }
+        return List.copyOf(updates);
+    }
+
+    /** 下载最新 Mod 文件，替换旧文件并保留禁用状态。 */
+    public ModDownloadResult updateInstanceMod(
+            Path gameDirectory, String instanceId, String currentFileName,
+            ModFile latestFile, DownloadListener listener)
+            throws IOException, InterruptedException {
+        Path normalizedGameDirectory = Objects.requireNonNull(gameDirectory, "gameDirectory")
+                .toAbsolutePath()
+                .normalize();
+        String instance = InstanceNameRules.validate(instanceId);
+        String oldBase = normalizeModFileName(currentFileName);
+        String newBase = normalizeModFileName(latestFile.fileName());
+        Path modsDirectory = InstanceInspector.dataDirectory(normalizedGameDirectory, instance)
+                .resolve("mods");
+        Path oldEnabled = SafePaths.resolveChild(modsDirectory, oldBase, "mod file");
+        Path oldDisabled = SafePaths.resolveChild(modsDirectory, oldBase + ".disabled",
+                "disabled mod file");
+        boolean wasDisabled = settingsService.disabledMods(normalizedGameDirectory, instance)
+                .contains(oldBase) || Files.isRegularFile(oldDisabled);
+
+        ModDownloadResult downloaded = modService.download(
+                latestFile, normalizedGameDirectory, instance, VersionIsolationMode.AUTO, listener);
+
+        if (!oldBase.equals(newBase)) {
+            Files.deleteIfExists(oldEnabled);
+            Files.deleteIfExists(oldDisabled);
+        }
+        Path newEnabled = SafePaths.resolveChild(modsDirectory, newBase, "mod file");
+        Path newDisabled = SafePaths.resolveChild(modsDirectory, newBase + ".disabled",
+                "disabled mod file");
+        Path resultPath = downloaded.path();
+        if (wasDisabled && Files.isRegularFile(newEnabled)) {
+            Files.move(newEnabled, newDisabled, StandardCopyOption.REPLACE_EXISTING);
+            resultPath = newDisabled;
+        }
+
+        settingsService.setModDisabled(normalizedGameDirectory, instance, newBase, wasDisabled);
+        if (!oldBase.equals(newBase)) {
+            settingsService.setModDisabled(normalizedGameDirectory, instance, oldBase, false);
+        }
+        return new ModDownloadResult(resultPath, latestFile);
+    }
+
+    private static String displayVersion(String version) {
+        return version == null || version.isBlank() ? "?" : version;
+    }
+
+    private static boolean sameVersion(String current, String latest, String latestSha1, String hash) {
+        if (latestSha1 != null && !latestSha1.isBlank()
+                && latestSha1.equalsIgnoreCase(hash)) {
+            return true;
+        }
+        if (current == null || current.isBlank()) {
+            return false;
+        }
+        return latest != null && current.equalsIgnoreCase(latest);
     }
 
     private static String normalizeModFileName(String fileName) {

@@ -333,6 +333,9 @@ public final class ENUSGenerator extends LanguageTranslationGenerator {
         t.put("instances.manage.mods.empty", "This instance has no mods");
         t.put("instances.manage.mods.scanFailed", "Failed to read mod list: %s");
         t.put("instances.manage.mods.toggleFailed", "Failed to toggle mod state: %s");
+        t.put("instances.manage.mods.update", "Update");
+        t.put("instances.manage.mods.updating", "Updating %s...");
+        t.put("instances.manage.mods.updateFailed", "Failed to update mod: %s");
         t.put("instances.manage.mods.enabled", "Enabled");
         t.put("instances.manage.mods.disabled", "Disabled");
 
@@ -398,6 +401,8 @@ public final class ENUSGenerator extends LanguageTranslationGenerator {
         t.put("operation.openInstanceFolder", "Open instance folder");
         t.put("operation.loadInstanceModIcon", "Load mod icon");
         t.put("operation.setModDisabled", "Toggle mod state");
+        t.put("operation.checkModUpdates", "Check mod updates");
+        t.put("operation.updateMod", "Update mod %s");
         t.put("operation.checkInstanceName", "Check instance name");
         t.put("operation.fetchVersionList", "Fetch official %s list");
         t.put("operation.installVanilla", "Install vanilla instance %s");

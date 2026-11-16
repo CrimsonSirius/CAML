@@ -3,11 +3,14 @@ package org.chs.camlauncher.front.controller;
 import javafx.application.Platform;
 import org.chs.camlauncher.backend.api.GameDirectoryInfo;
 import org.chs.camlauncher.backend.api.InstanceDetails;
+import org.chs.camlauncher.backend.api.InstanceModUpdate;
 import org.chs.camlauncher.backend.download.DownloadListener;
 import org.chs.camlauncher.backend.instance.VersionIsolationMode;
 import org.chs.camlauncher.backend.launch.GameLaunch;
 import org.chs.camlauncher.backend.launch.LaunchOptions;
 import org.chs.camlauncher.backend.launch.process.ProcessListener;
+import org.chs.camlauncher.backend.mod.model.ModDownloadResult;
+import org.chs.camlauncher.backend.mod.model.ModFile;
 import org.chs.camlauncher.front.text.UiText;
 
 import java.io.IOException;
@@ -172,6 +175,27 @@ public final class HomeController {
                 onSuccess.run();
             }
         }, onError);
+    }
+
+    public FrontTask<List<InstanceModUpdate>> checkInstanceModUpdates(
+            Path gameDirectory, String instanceId,
+            Consumer<List<InstanceModUpdate>> onLoaded, Consumer<String> onError) {
+        if (gameDirectory == null) {
+            return null;
+        }
+        return context.runMetadata(UiText.tr("operation.checkModUpdates"),
+                () -> context.backend().checkInstanceModUpdates(gameDirectory, instanceId),
+                onLoaded, onError);
+    }
+
+    public FrontTask<ModDownloadResult> updateInstanceMod(
+            Path gameDirectory, String instanceId, String currentFileName, ModFile latestFile,
+            DownloadListener listener,
+            Consumer<ModDownloadResult> onSuccess, Consumer<String> onError) {
+        return context.runDownload(UiText.tr("operation.updateMod", currentFileName),
+                () -> context.backend().updateInstanceMod(
+                        gameDirectory, instanceId, currentFileName, latestFile, listener),
+                onSuccess, onError);
     }
 
     private void notifyLaunchFinished() {
