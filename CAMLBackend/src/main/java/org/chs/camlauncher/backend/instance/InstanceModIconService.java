@@ -101,7 +101,7 @@ public final class InstanceModIconService {
                 return null;
             }
             JsonObject target = selector.select(root.getAsJsonObject());
-            return target == null ? null : iconValue(object(target, "icon"));
+            return target == null ? null : iconValue(target.get("icon"));
         } catch (IOException | RuntimeException e) {
             LOGGER.debug("解析 Mod 图标元数据失败: {}", metadataPath, e);
             return null;

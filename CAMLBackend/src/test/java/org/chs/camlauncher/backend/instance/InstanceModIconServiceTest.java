@@ -25,8 +25,8 @@ class InstanceModIconServiceTest {
         byte[] icon = new byte[]{1, 2, 3, 4};
         writeJar(mods.resolve("demo.jar"), new Entry(
                 "fabric.mod.json",
-                "{\"icon\":\"assets/demo/icon.png\"}".getBytes(StandardCharsets.UTF_8)
-        ), new Entry("assets/demo/icon.png", icon));
+                "{\"icon\":\"assets/demo/custom-icon.png\"}".getBytes(StandardCharsets.UTF_8)
+        ), new Entry("assets/demo/custom-icon.png", icon));
 
         assertArrayEquals(icon, InstanceModIconService.load(game, "1.21.4", "demo.jar"));
     }
