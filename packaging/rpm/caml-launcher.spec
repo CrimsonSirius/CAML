@@ -6,7 +6,7 @@ Name:           caml-launcher
 Version:        @VERSION@
 Release:        @RELEASE@
 Summary:        CAML Minecraft Launcher
-License:        GPL-3.0-only
+License:        GPL-3.0-only AND GPL-2.0-only WITH Classpath-exception-2.0
 URL:            https://github.com/CrimsonSirius/CAML
 Vendor:         CAML Contributors
 Packager:       CrimsonSirius <227993016@qq.com>

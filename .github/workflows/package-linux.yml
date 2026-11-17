@@ -21,7 +21,7 @@ jobs:
       - uses: actions/checkout@v5
       - uses: actions/setup-java@v5
         with:
-          distribution: temurin
+          distribution: zulu
           java-version: '25'
           cache: gradle
       - name: Install package tools
@@ -46,14 +46,14 @@ jobs:
         env:
           CURSEFORGE_API_KEY: ${{ secrets.CURSEFORGE_API_KEY }}
         run: |
-          ./gradlew :CAMLFront:packageLinux \
+          ./gradlew packageLinux \
             -PcamlJdkHome="$JAVA_HOME" \
             -PcamlVersion="${{ steps.package_version.outputs.value }}" \
             --no-daemon --stacktrace
       - name: Inspect packages
         run: |
-          deb=$(find CAMLFront/build/packages/linux -maxdepth 1 -name '*.deb' -print -quit)
-          rpm=$(find CAMLFront/build/packages/linux -maxdepth 1 -name '*.rpm' -print -quit)
+          deb=$(find build/packages/linux -maxdepth 1 -name '*.deb' -print -quit)
+          rpm=$(find build/packages/linux -maxdepth 1 -name '*.rpm' -print -quit)
           test -n "$deb"
           test -n "$rpm"
           dpkg-deb -I "$deb"
@@ -61,15 +61,15 @@ jobs:
           mkdir -p .rpmdb
           rpm --dbpath "$PWD/.rpmdb" -qpi "$rpm"
           rpm --dbpath "$PWD/.rpmdb" -qpl "$rpm" >/dev/null
-          cat CAMLFront/build/packages/linux/SHA256SUMS.txt
+          cat build/packages/linux/SHA256SUMS.txt
       - name: Upload Linux packages
         uses: actions/upload-artifact@v4
         with:
           name: caml-linux-packages
           path: |
-            CAMLFront/build/packages/linux/*.deb
-            CAMLFront/build/packages/linux/*.rpm
-            CAMLFront/build/packages/linux/SHA256SUMS.txt
+            build/packages/linux/*.deb
+            build/packages/linux/*.rpm
+            build/packages/linux/SHA256SUMS.txt
 
   release:
     if: startsWith(github.ref, 'refs/tags/')
