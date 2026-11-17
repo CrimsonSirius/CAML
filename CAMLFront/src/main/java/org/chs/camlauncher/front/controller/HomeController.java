@@ -11,6 +11,7 @@ import org.chs.camlauncher.backend.launch.LaunchOptions;
 import org.chs.camlauncher.backend.launch.process.ProcessListener;
 import org.chs.camlauncher.backend.mod.model.ModDownloadResult;
 import org.chs.camlauncher.backend.mod.model.ModFile;
+import org.chs.camlauncher.front.text.AccountChoice;
 import org.chs.camlauncher.front.text.UiText;
 
 import java.io.IOException;
@@ -57,6 +58,20 @@ public final class HomeController {
      */
     public FrontTask<GameLaunch> startGame(String version, String username, int memoryMb,
                                            Path gameDirectory, boolean fullVersionIsolation) {
+        return startGame(version, username, AccountChoice.OFFLINE, memoryMb,
+                gameDirectory, fullVersionIsolation);
+    }
+
+    /**
+     * 按账号选择启动游戏。
+     *
+     * @param accountChoice {@link AccountChoice#OFFLINE} 使用离线用户名；
+     *                      {@link AccountChoice#DEFAULT} 走“实例账号 → 全局账号”。
+     *                      其他值作为账号 id 直接使用
+     */
+    public FrontTask<GameLaunch> startGame(String version, String username, String accountChoice,
+                                           int memoryMb, Path gameDirectory,
+                                           boolean fullVersionIsolation) {
         Objects.requireNonNull(gameDirectory, "gameDirectory");
 
         LaunchOptions options = new LaunchOptions(
@@ -65,8 +80,42 @@ public final class HomeController {
         );
 
         DownloadListener downloadListener = new ThrottledDownloadLogger();
+        ProcessListener processListener = createProcessListener();
+        VersionIsolationMode isolationMode = fullVersionIsolation
+                ? VersionIsolationMode.FULL
+                : VersionIsolationMode.NONE;
 
-        ProcessListener processListener = new ProcessListener() {
+        sendStatus(UiText.tr("status.starting", version), false);
+        return context.runLaunch(UiText.tr("operation.launchGame", version),
+                () -> launch(version, gameDirectory, username, accountChoice,
+                        options, isolationMode, downloadListener, processListener),
+                launch -> {
+                    saveLastLaunchedInstance(version);
+                    sendStatus(UiText.tr("status.started"), false);
+                },
+                message -> {
+                    sendStatus(UiText.tr("status.launchFailedDetail", message), true);
+                    notifyLaunchFinished();
+                });
+    }
+
+    private GameLaunch launch(String version, Path gameDirectory, String username,
+                              String accountChoice, LaunchOptions options,
+                              VersionIsolationMode isolationMode,
+                              DownloadListener downloadListener,
+                              ProcessListener processListener)
+            throws IOException, InterruptedException {
+        if (accountChoice == null || AccountChoice.OFFLINE.equals(accountChoice)) {
+            return context.backend().launchGame(version, gameDirectory, username, options,
+                    isolationMode, downloadListener, processListener);
+        }
+        String accountId = AccountChoice.DEFAULT.equals(accountChoice) ? null : accountChoice;
+        return context.backend().launchGameWithAccount(version, gameDirectory, accountId,
+                options, isolationMode, downloadListener, processListener);
+    }
+
+    private ProcessListener createProcessListener() {
+        return new ProcessListener() {
             @Override
             public void onLog(String line, boolean error) {
                 context.sendLog(error ? "[ERR] " + line : line);
@@ -83,22 +132,6 @@ public final class HomeController {
                 notifyLaunchFinished();
             }
         };
-
-        sendStatus(UiText.tr("status.starting", version), false);
-        return context.runLaunch(UiText.tr("operation.launchGame", version),
-                () -> context.backend().launchGame(version, gameDirectory, username, options,
-                        fullVersionIsolation
-                                ? VersionIsolationMode.FULL
-                                : VersionIsolationMode.NONE,
-                        downloadListener, processListener),
-                launch -> {
-                    saveLastLaunchedInstance(version);
-                    sendStatus(UiText.tr("status.started"), false);
-                },
-                message -> {
-                    sendStatus(UiText.tr("status.launchFailedDetail", message), true);
-                    notifyLaunchFinished();
-                });
     }
 
     private void saveLastLaunchedInstance(String version) {

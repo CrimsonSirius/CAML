@@ -453,5 +453,77 @@ public final class ZHCNGenerator extends LanguageTranslationGenerator {
         t.put("operation.fetchQuiltLoader", "获取 Quilt Loader 版本");
         t.put("operation.fetchQuiltApi", "获取 Quilted Fabric API 版本");
         t.put("operation.installQuilt", "安装 Quilt 实例 %s");
+
+        // 账号
+        t.put("account.choice.default", "跟随默认账号");
+        t.put("account.choice.offline", "离线用户名");
+        t.put("home.account", "账号");
+        t.put("home.manageAccounts", "实例账号");
+        t.put("home.error.loadAccounts", "读取账号失败：%s");
+        t.put("settings.section.account", "账号");
+        t.put("settings.account.title", "账号");
+        t.put("settings.account.description",
+                "启动器保存的账号。accessToken 加密后才写入磁盘，密码不会被保存。");
+        t.put("account.list.empty", "还没有账号。可以添加离线账号，或登录第三方认证服务器。");
+        t.put("account.list.default", "默认");
+        t.put("account.list.remove", "移除");
+        t.put("account.default.saved", "%s 已设为默认账号");
+        t.put("account.removed", "已移除 %s");
+        t.put("account.offline.label", "添加离线账号");
+        t.put("account.offline.placeholder", "离线用户名");
+        t.put("account.offline.add", "添加");
+        t.put("account.offline.added", "已添加离线账号 %s");
+        t.put("settings.account.login.title", "第三方登录");
+        t.put("settings.account.login.description",
+                "使用 Yggdrasil 认证服务器（例如 LittleSkin）的账号登录。");
+        t.put("account.login.server", "认证服务器");
+        t.put("account.login.customServer", "自定义服务器地址");
+        t.put("account.login.customServerPlaceholder", "https://example.com/api/yggdrasil");
+        t.put("account.login.customServerOption", "自定义地址");
+        t.put("account.login.username", "邮箱或用户名");
+        t.put("account.login.password", "密码");
+        t.put("account.login.hint", "密码只用于本次登录，不会被保存。");
+        t.put("account.login.remember", "记住登录状态");
+        t.put("account.login.submit", "登录");
+        t.put("account.login.running", "正在登录...");
+        t.put("account.login.success", "已登录为 %s");
+        t.put("account.error.serverRequired", "请填写认证服务器地址");
+        t.put("account.error.usernameRequired", "请填写用户名");
+        t.put("account.error.passwordRequired", "请填写密码");
+        t.put("settings.account.injector.title", "authlib-injector");
+        t.put("settings.account.injector.description",
+                "启动器只在首次使用时下载 authlib-injector 并长期复用，每次启动都会用 SHA-256 校验。");
+        t.put("account.injector.builtin", "使用内置版本（按需下载）");
+        t.put("account.injector.custom", "自定义文件：%s");
+        t.put("account.injector.reset", "使用内置版本");
+        t.put("account.injector.saved", "authlib-injector 设置已保存");
+        t.put("account.injector.chooserTitle", "选择 authlib-injector jar");
+        t.put("account.instance.title", "实例账号");
+        t.put("account.instance.loading", "正在读取账号...");
+        t.put("account.instance.count", "共 %d 个实例，为每个实例选择启动时使用的账号");
+        t.put("account.instance.saved", "已保存实例 %s 的账号");
+        t.put("operation.loadAccounts", "读取账号");
+        t.put("operation.loginAccount", "登录账号");
+        t.put("operation.addOfflineAccount", "添加离线账号");
+        t.put("operation.fetchAuthServer", "获取认证服务器信息");
+        t.put("operation.saveDefaultAccount", "保存默认账号");
+        t.put("operation.removeAccount", "移除账号");
+        t.put("operation.loadInstanceAccount", "读取实例账号");
+        t.put("operation.saveInstanceAccount", "保存实例账号");
+        t.put("operation.saveInjectorPath", "保存 authlib-injector 路径");
+        t.put("auth.error.usernameRequired", "请填写用户名");
+        t.put("auth.error.passwordRequired", "请填写密码");
+        t.put("auth.error.metadataUnavailable", "无法读取认证服务器信息：%s（HTTP %s）");
+        t.put("auth.error.invalidCredentials", "%s 的用户名或密码错误 %s");
+        t.put("auth.error.requestFailed", "认证请求失败：%s（HTTP %s）%s");
+        t.put("auth.error.responseInvalid", "认证服务器返回了无法解析的响应：%s");
+        t.put("auth.error.noSelectedProfile", "该账号没有 Minecraft 角色：%s");
+        t.put("auth.error.accountMissing", "找不到账号：%s");
+        t.put("auth.error.accountRequired", "请先选择账号");
+        t.put("auth.error.loginRequired", "账号 %s（%s）没有保存的凭据，请重新登录");
+        t.put("auth.error.loginExpired", "账号 %s（%s）的登录已失效，请重新登录");
+        t.put("auth.error.noAccount", "尚未配置账号，请到设置中添加账号，或使用离线用户名。");
+        t.put("auth.error.injectorNotFound", "找不到 authlib-injector：%s");
+        t.put("auth.error.injectorChecksum", "authlib-injector 校验失败：%s");
     }
 }

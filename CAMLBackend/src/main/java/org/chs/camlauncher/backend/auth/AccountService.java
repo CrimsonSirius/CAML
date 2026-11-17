@@ -1,0 +1,311 @@
+package org.chs.camlauncher.backend.auth;
+
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.chs.camlauncher.backend.api.AccountSummary;
+import org.chs.camlauncher.backend.auth.injector.AuthlibInjector;
+import org.chs.camlauncher.backend.auth.injector.AuthlibInjectorService;
+import org.chs.camlauncher.backend.auth.store.AccountStore;
+import org.chs.camlauncher.backend.auth.store.StoredAccount;
+import org.chs.camlauncher.backend.auth.yggdrasil.AuthServerInfo;
+import org.chs.camlauncher.backend.auth.yggdrasil.AuthServerService;
+import org.chs.camlauncher.backend.auth.yggdrasil.YggdrasilClient;
+import org.chs.camlauncher.backend.auth.yggdrasil.YggdrasilSession;
+import org.chs.camlauncher.backend.error.BackendError;
+import org.chs.camlauncher.backend.error.BackendException;
+import org.chs.camlauncher.backend.settings.SettingsService;
+
+import java.io.IOException;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
+
+/**
+ * 账号编排：账号列表、Yggdrasil 登录、以及“实例账号 → 全局账号”的解析。
+ *
+ * <p>所有网络与磁盘操作都在后端完成；前端只拿到 {@link AccountSummary} 和
+ * {@link ResolvedAccount}，永远不接触 token。</p>
+ */
+public final class AccountService {
+    private static final Logger LOGGER = LogManager.getLogger(AccountService.class);
+
+    private final AccountStore store;
+    private final AuthServerService servers;
+    private final AuthlibInjectorService injectors;
+    private final SettingsService settings;
+    private final YggdrasilClient client;
+
+    public AccountService(AccountStore store,
+                         AuthServerService servers,
+                         AuthlibInjectorService injectors,
+                         SettingsService settings) {
+        this(store, servers, injectors, settings, new YggdrasilClient());
+    }
+
+    public AccountService(AccountStore store,
+                          AuthServerService servers,
+                          AuthlibInjectorService injectors,
+                          SettingsService settings,
+                          YggdrasilClient client) {
+        this.store = Objects.requireNonNull(store, "store");
+        this.servers = Objects.requireNonNull(servers, "servers");
+        this.injectors = Objects.requireNonNull(injectors, "injectors");
+        this.settings = Objects.requireNonNull(settings, "settings");
+        this.client = Objects.requireNonNull(client, "client");
+    }
+
+    // ------------------------------------------------------------------ 查询
+
+    public List<AccountSummary> list() throws IOException {
+        List<AccountSummary> result = new ArrayList<>();
+        for (StoredAccount account : store.load()) {
+            result.add(summary(account));
+        }
+        return List.copyOf(result);
+    }
+
+    public Optional<AccountSummary> find(String accountId) throws IOException {
+        return store.find(accountId).map(AccountService::summary);
+    }
+
+    public Optional<String> defaultAccountId() throws IOException {
+        return settings.defaultAccountId();
+    }
+
+    public void setDefaultAccountId(String accountId) throws IOException {
+        settings.setDefaultAccountId(accountId);
+    }
+
+    public Optional<String> instanceAccountId(Path gameDirectory, String instanceId) throws IOException {
+        return settings.instanceAccountId(gameDirectory, instanceId);
+    }
+
+    public void setInstanceAccountId(Path gameDirectory, String instanceId, String accountId)
+            throws IOException {
+        settings.setInstanceAccountId(gameDirectory, instanceId, accountId);
+    }
+
+    public AuthServerInfo fetchServer(String apiRoot) throws IOException, InterruptedException {
+        return servers.fetch(apiRoot);
+    }
+
+    public List<String> presetApiRoots() {
+        return servers.presetNames().keySet().stream().toList();
+    }
+
+    public String serverDisplayName(String apiRoot) {
+        AuthServerInfo info = servers.fetchOrRemember(apiRoot);
+        return info == null ? apiRoot : info.serverName();
+    }
+
+    public void setInjectorOverride(Path jar) {
+        injectors.setOverride(jar);
+    }
+
+    public Optional<Path> injectorOverride() {
+        return Optional.ofNullable(injectors.override());
+    }
+
+    // ------------------------------------------------------------------ 登录
+
+    /**
+     * 使用用户名 + 密码登录第三方认证服务器。
+     *
+     * @param remember 是否持久化 accessToken；为 {@code false} 时下次启动需要重新登录
+     */
+    public AccountSummary loginYggdrasil(String apiRoot, String username, String password,
+                                         boolean remember)
+            throws IOException, InterruptedException {
+        String normalized = AuthServerInfo.normalizeApiRoot(apiRoot);
+        if (username == null || username.isBlank()) {
+            throw new BackendException(BackendError.of("auth.error.usernameRequired"));
+        }
+        if (password == null || password.isEmpty()) {
+            throw new BackendException(BackendError.of("auth.error.passwordRequired"));
+        }
+
+        AuthServerInfo info = servers.fetch(normalized);
+        String clientToken = settings.clientToken();
+        YggdrasilSession session = client.authenticate(normalized, username.trim(), password, clientToken);
+
+        StoredAccount account = new StoredAccount(
+                yggdrasilAccountId(session.profileId()),
+                AccountType.YGGDRASIL,
+                session.username(),
+                normalizeUuid(session.profileId()),
+                normalized,
+                info.serverName(),
+                remember ? session.accessToken() : "",
+                blankToEmpty(session.clientToken()));
+
+        store.upsert(account);
+        if (remember) {
+            LOGGER.info("已登录第三方账号 {} @ {}", session.username(), info.serverName());
+        } else {
+            LOGGER.info("已登录第三方账号 {} @ {}（未保存凭据）", session.username(), info.serverName());
+        }
+        return summary(account);
+    }
+
+    /** 新增离线账号（仅名称，不访问网络）。 */
+    public AccountSummary addOfflineAccount(String username) throws IOException {
+        if (username == null || username.isBlank()) {
+            throw new BackendException(BackendError.of("auth.error.usernameRequired"));
+        }
+        String name = username.trim();
+        String uuid = normalizeUuid(OfflineAccount.offlineUuid(name).toString());
+        StoredAccount account = new StoredAccount(
+                "offline:" + uuid, AccountType.OFFLINE, name, uuid, "", "", "", "");
+        store.upsert(account);
+        return summary(account);
+    }
+
+    /** 退出登录并删除账号；如果它是全局默认账号，同时清空默认设置。 */
+    public void remove(String accountId) throws IOException {
+        if (accountId == null || accountId.isBlank()) {
+            return;
+        }
+        store.remove(accountId);
+        if (settings.defaultAccountId().filter(accountId::equals).isPresent()) {
+            settings.setDefaultAccountId(null);
+        }
+        settings.clearInstanceAccount(accountId);
+    }
+
+    // ------------------------------------------------------------------ 启动解析
+
+    /**
+     * 解析本次启动使用的账号：实例账号优先，其次全局默认账号。
+     *
+     * @return 没有可用账号时返回 {@code null}，由调用方回退到主页输入的离线用户名
+     */
+    public ResolvedAccount resolve(Path gameDirectory, String instanceId)
+            throws IOException, InterruptedException {
+        Optional<String> instanceAccount = gameDirectory == null || instanceId == null
+                ? Optional.empty()
+                : settings.instanceAccountId(gameDirectory, instanceId);
+        String accountId = instanceAccount
+                .or(() -> {
+                    try {
+                        return settings.defaultAccountId();
+                    } catch (IOException e) {
+                        return Optional.<String>empty();
+                    }
+                })
+                .orElse(null);
+        if (accountId == null || accountId.isBlank()) {
+            return null;
+        }
+
+        StoredAccount account = store.find(accountId).orElseThrow(() -> new BackendException(
+                BackendError.of("auth.error.accountMissing", accountId)));
+
+        if (account.type() == AccountType.OFFLINE) {
+            return new ResolvedAccount(
+                    new OfflineAccount(account.displayName()).login(), Optional.empty(), summary(account));
+        }
+        return resolveYggdrasil(account);
+    }
+
+    /** 按账号 id 直接解析；找不到账号时报结构化错误。 */
+    public ResolvedAccount resolveById(String accountId) throws IOException, InterruptedException {
+        if (accountId == null || accountId.isBlank()) {
+            throw new BackendException(BackendError.of("auth.error.accountRequired"));
+        }
+        StoredAccount account = store.find(accountId).orElseThrow(() -> new BackendException(
+                BackendError.of("auth.error.accountMissing", accountId)));
+        if (account.type() == AccountType.OFFLINE) {
+            return new ResolvedAccount(
+                    new OfflineAccount(account.displayName()).login(), Optional.empty(), summary(account));
+        }
+        return resolveYggdrasil(account);
+    }
+
+    private ResolvedAccount resolveYggdrasil(StoredAccount account)
+            throws IOException, InterruptedException {
+        if (!account.hasToken()) {
+            throw new BackendException(BackendError.of(
+                    "auth.error.loginRequired", account.displayName(), account.serverName()));
+        }
+
+        String accessToken = account.accessToken();
+        String clientToken = account.clientToken();
+        try {
+            if (!client.validate(account.apiRoot(), accessToken, clientToken)) {
+                Optional<YggdrasilSession> refreshed =
+                        client.refresh(account.apiRoot(), accessToken, clientToken);
+                if (refreshed.isEmpty()) {
+                    throw new BackendException(BackendError.of(
+                            "auth.error.loginExpired", account.displayName(), account.serverName()));
+                }
+                YggdrasilSession session = refreshed.get();
+                accessToken = session.accessToken();
+                clientToken = blankToEmpty(session.clientToken());
+                account = account.withToken(accessToken, clientToken);
+                store.upsert(account);
+                LOGGER.info("已刷新第三方账号 {} 的凭据", session.username());
+            }
+        } catch (BackendException e) {
+            throw e;
+        } catch (IOException e) {
+            // 认证服务器暂时不可达时继续使用现有 token：
+            // 单人生存不依赖它，多人服务器的校验由游戏自己完成。
+            LOGGER.warn("无法校验第三方账号凭据，继续使用现有 token: {}", account.apiRoot(), e);
+        }
+
+        AuthServerInfo info = servers.fetchOrRemember(account.apiRoot());
+        String prefetched = info == null ? "" : info.prefetchedBase64();
+        AuthlibInjector injector = injectors.ensure(account.apiRoot(), prefetched);
+
+        AuthSession session = new AuthSession(
+                account.displayName(),
+                YggdrasilSession.profileUuid(account.uuid()),
+                accessToken,
+                "mojang",
+                "{}");
+        return new ResolvedAccount(session, Optional.of(injector), summary(account));
+    }
+
+    // ------------------------------------------------------------------ 工具
+
+    private static AccountSummary summary(StoredAccount account) {
+        return new AccountSummary(
+                account.id(),
+                account.displayName(),
+                account.type(),
+                account.uuid(),
+                account.apiRoot(),
+                account.serverName());
+    }
+
+    private static String yggdrasilAccountId(String profileId) {
+        return "yggdrasil:" + normalizeUuid(profileId);
+    }
+
+    private static String normalizeUuid(String value) {
+        if (value == null) {
+            return "";
+        }
+        return value.replace("-", "").toLowerCase(java.util.Locale.ROOT);
+    }
+
+    private static String blankToEmpty(String value) {
+        return value == null ? "" : value;
+    }
+
+    /** 一次启动解析出的账号：会话、需要注入的 agent（如果有）以及展示信息。 */
+    public record ResolvedAccount(
+            AuthSession session,
+            Optional<AuthlibInjector> injector,
+            AccountSummary account
+    ) {
+        public ResolvedAccount {
+            Objects.requireNonNull(session, "session");
+            injector = injector == null ? Optional.empty() : injector;
+            Objects.requireNonNull(account, "account");
+        }
+    }
+}
+

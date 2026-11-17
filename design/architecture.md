@@ -37,7 +37,7 @@ CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
 | `instance` | 实例模型、本地版本复用、版本安装和隔离判定 | 已有 |
 | `download` | 下载入口；子包 `model`、`plan`、`source`、`io`、`hash` | 已有 |
 | `mod` | Modrinth/CurseForge 官方 API 搜索、详情、依赖和 Mod 文件下载；WebP 图标转 PNG | 已有 |
-| `auth` | 账号、AuthSession、离线登录 | 已有离线能力 |
+| `auth` | 账号、AuthSession、离线登录、Yggdrasil 第三方登录与 authlib-injector 注入 | 已有离线与第三方能力 |
 | `runtime` | Java 运行时检测、版本/架构/位数匹配 | 已有 |
 | `launch` | 启动编排；子包 `command`、`classpath`、`prepare`、`process`、`patch` | 已有 |
 | `theme` | 主题目录、默认主题复制和当前主题配置 | 已有 |
@@ -119,9 +119,17 @@ CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
 
 ### 3.4 账号
 
-- 离线账号登录。
-- 生成稳定的离线 UUID。
-- 生成 `AuthSession`。
+- 离线账号登录、稳定离线 UUID、生成 `AuthSession`。
+- 第三方 Yggdrasil 认证服务器（LittleSkin 等）登录：`authenticate` → `validate` → `refresh` 降级链，
+  `userType` 固定为 `mojang`，`selectedProfile.id` 的 32 位 ID 转换为标准 UUID。
+- 启动时通过 authlib-injector 以 `-javaagent` 注入，只增加 JVM 参数，不修改版本 JSON、
+  `libraries` 或 classpath。
+- authlib-injector **只下载一次**：落在 `~/.caml/authlib-injector/<版本>/`，之后每次启动只用
+  SHA-256 校验，命中即复用；版本升级或文件被改动时才重新下载，也可在设置页指定自定义 jar。
+- 账号归属：设置页维护全局账号列表与默认账号，主页“实例账号”二级页为每个实例单独指定账号；
+  未单独指定的实例回退到全局默认账号。
+- `accessToken` 用 AES-GCM 加密后写入 `~/.caml/accounts/accounts.json`；密码不落盘。
+- 详细说明见 [auth.md](auth.md)。
 
 ### 3.5 Java
 
@@ -204,8 +212,8 @@ CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
 - 异步失败统一走 `ControllerContext.reportError`：记录日志、写入 UI 日志，并把错误消息
   切回 JavaFX 线程交给页面展示；启动失败等致命路径额外标记错误日志。
 - `HomeView` 组合 `LaunchFormView` 与 `LogPaneView`，负责主页分栏和 900px 断点。
-- `LaunchFormView` 负责当前实例、用户名、状态提示和启动交互；
-  “浏览游戏实例”打开二级列表，“管理实例”打开空管理页。
+- `LaunchFormView` 负责当前实例、账号选择、离线用户名、状态提示和启动交互；
+  “浏览游戏实例”打开二级列表，“管理实例”打开管理页，“实例账号”打开按实例绑定账号的二级页。
 - `GameLocationSettingsView` 负责游戏位置草稿、浏览、显式保存和目录校验。
 - `InstancePickerView` 扫描当前游戏位置并列出全部已安装实例。
 - `DownloadsView` 负责下载页子导航；`DownloadVersionsView` 加载正式版、快照版和远古版列表，
@@ -269,10 +277,8 @@ CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
 - 启动按钮固定在表单底部，字段过多时只滚动字段区域，主操作始终可见。
 - 顶栏只保留应用身份和“主页 / 下载 / 设置”主导航。
 - 主页承载启动设置和日志；下载页带“正式版 / 快照版 / 远古版”胶囊、分类版本列表和原版下载设置页。
-- 设置页带“游戏设置 / 下载设置 / 外观”子侧边栏，不显示页面标题或说明。
-- 游戏设置使用内存滑块，线上方显示“游戏内存 / 可用内存 / 总内存”。
-- 外观设置使用圆角组承载主题选择，切换后立即生效，不额外放保存按钮。
-- 侧边栏不使用灰色背景，只用右侧分隔线；设置项选中时为橙黄实心胶囊，未选中时为橙黄描边胶囊。
+- 设置页带“游戏设置 / 下载设置 / 账号 / 外观”子侧边栏，不显示页面标题或说明。
+- 账号子页维护全局账号列表、默认账号、第三方登录与 authlib-injector 覆盖路径。
 
 ### 3.12 CAMLUI 组件库与主题
 
@@ -346,8 +352,8 @@ CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
 - CAMLFront 停止游戏按钮。
 - 真实 Minecraft 客户端端到端验证。
 - 启动脚本导出。
-- 微软账号登录。
-- token 刷新和安全存储。
+- 微软账号登录（第三方 Yggdrasil 登录已实现，详见 [auth.md](auth.md)）。
+- 第三方账号的 2FA / OAuth 登录。
 - 下载取消和内容寻址缓存。
 - 整合包和模组管理。
 
@@ -361,9 +367,10 @@ CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
 - 游戏数据默认放在 `~/.minecraft`（所有平台都以用户主目录为基准）。
 - 微软登录只使用官方 OAuth 流程，不收集用户密码。
 - refresh token 不得明文保存，不得写入日志。
-- 启动器 JDK 和游戏 Java 是两套运行时，不能混用。
-- 启动命令使用 `List<String>` 构建，不拼接 shell 字符串。
-- 网络、磁盘、进程和认证操作不得在 JavaFX Application Thread 执行。
+- 第三方账号密码只在登录时使用，不落盘；accessToken 用 AES-GCM 加密后写入
+  `~/.caml/accounts/accounts.json`，密钥在 `~/.caml/accounts/secret.key`。
+  这只是避免明文落盘，<b>不构成安全边界</b>。
+- 版本 JSON、`libraries` 和 classpath 不因登录方式变化：第三方登录只注入 JVM 参数。
 
 ## 6. 后端入口
 
@@ -390,6 +397,15 @@ backend.virtualAssetInstaller().prepare(plan);
 backend.launchCommandBuilder().build(plan, classpath);
 backend.processLauncher().launch(plan, classpath, listener);
 backend.launchGame(versionId, gameDirectory, username, options, downloadListener, processListener);
+backend.launchGameWithAccount(versionId, gameDirectory, accountId, options, isolationMode, dl, pl);
+
+backend.listAccounts();
+backend.loginYggdrasil(apiRoot, username, password, remember);
+backend.addOfflineAccount(username);
+backend.removeAccount(accountId);
+backend.setDefaultAccountId(accountId);
+backend.setInstanceAccountId(gameDirectory, instanceId, accountId);
+backend.setAuthlibInjectorPath(jar);
 
 GameDirectoryInfo info = backend.inspectGameDirectory(gameDirectory);
 info.installedVersions();
@@ -401,5 +417,4 @@ info.isolatedVersions();
 - 版本下载和启动链路详见 [version-download-and-launch.md](version-download-and-launch.md)。
 - 界面布局、组件映射和动效详见 [ui.md](ui.md)。
 - runtime 包详见 [runtime.md](runtime.md)。
-- 当前实现情况详见 [Implement.md](Implement.md)。
-- 开发任务和阶段计划由本地 `TODO.md` 维护。
+- 第三方账号登录详见 [auth.md](auth.md)。

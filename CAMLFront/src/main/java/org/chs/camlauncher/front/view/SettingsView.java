@@ -14,6 +14,7 @@ import org.chs.camlauncher.backend.theme.ThemeInfo;
 import org.chs.camlauncher.backend.system.SystemMemoryInfo;
 import org.chs.camlauncher.language.contract.LanguageSelectionMode;
 import org.chs.camlauncher.language.contract.LanguageFallbackMode;
+import org.chs.camlauncher.front.controller.AccountController;
 import org.chs.camlauncher.front.controller.SettingsController;
 import org.chs.camlauncher.front.text.UiText;
 import org.chs.camlauncher.ui.control.CamlSideNav;
@@ -31,9 +32,11 @@ final class SettingsView extends VBox implements SidebarPage, PageLifecycle {
     private final GameSettingsView gameSettings;
     private final DownloadSettingsView downloadSettings;
     private final LauncherSettingsView launcherSettings;
+    private final AccountSettingsView accountSettings;
     private final SettingsController controller;
     private final CamlSideNav sideNav;
     private final CamlSideNavItem launcherItem;
+    private final CamlSideNavItem accountItem;
     private final ScrollPane contentScroll = new ScrollPane();
     private final StackPane contentHost;
     private Node currentContent;
@@ -42,6 +45,7 @@ final class SettingsView extends VBox implements SidebarPage, PageLifecycle {
     SettingsView(LaunchSettings launchSettings, IntConsumer onMemoryChanged,
                  Consumer<Boolean> onVersionIsolationChanged,
                  SystemMemoryInfo systemMemory, SettingsController controller,
+                 AccountController accountController,
                  LanguageSelectionMode initialLanguageMode, String initialLanguage,
                  LanguageFallbackMode initialFallbackMode, String initialFallbackLocale,
                  BiConsumer<LanguageSelectionMode, String> onLanguageChanged,
@@ -57,6 +61,7 @@ final class SettingsView extends VBox implements SidebarPage, PageLifecycle {
                 controller.customDownloadApi(),
                 controller::saveDownloadSourceAsync
         );
+        accountSettings = new AccountSettingsView(accountController);
         launcherSettings = new LauncherSettingsView(
                 initialLanguageMode, initialLanguage,
                 initialFallbackMode, initialFallbackLocale,
@@ -67,9 +72,11 @@ final class SettingsView extends VBox implements SidebarPage, PageLifecycle {
         sideNav.setMaxHeight(Double.MAX_VALUE);
         CamlSideNavItem gameItem = new CamlSideNavItem(UiText.tr("settings.section.game"));
         CamlSideNavItem downloadItem = new CamlSideNavItem(UiText.tr("settings.section.download"));
+        accountItem = new CamlSideNavItem(UiText.tr("settings.section.account"));
         launcherItem = new CamlSideNavItem(UiText.tr("settings.section.appearance"));
         sideNav.addItem(gameItem);
         sideNav.addItem(downloadItem);
+        sideNav.addItem(accountItem);
         sideNav.addItem(launcherItem);
         sideNav.select(gameItem);
 
@@ -90,6 +97,7 @@ final class SettingsView extends VBox implements SidebarPage, PageLifecycle {
             double innerWidth = Math.max(0, newValue.getWidth());
             gameSettings.setPrefWidth(innerWidth);
             downloadSettings.setPrefWidth(innerWidth);
+            accountSettings.setPrefWidth(innerWidth);
             launcherSettings.setPrefWidth(innerWidth);
         });
         sideNav.selectedItemProperty().addListener((observable, oldValue, selected) -> {
@@ -97,6 +105,8 @@ final class SettingsView extends VBox implements SidebarPage, PageLifecycle {
                 showContent(launcherSettings);
             } else if (selected == downloadItem) {
                 showContent(downloadSettings);
+            } else if (selected == accountItem) {
+                showContent(accountSettings);
             } else {
                 showContent(gameSettings);
             }
@@ -133,6 +143,9 @@ final class SettingsView extends VBox implements SidebarPage, PageLifecycle {
     @Override
     public void onShow() {
         controller.startMemoryMonitor();
+        if (currentContent == accountSettings) {
+            accountSettings.reload();
+        }
     }
 
     @Override
