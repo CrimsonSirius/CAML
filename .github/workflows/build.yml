@@ -155,9 +155,9 @@ jobs:
         run: |
           $env:PATH = "$env:WIX_BIN;$env:PATH"
           .\gradlew.bat packageWindows `
-            -PcamlJdkHome="$env:JAVA_HOME" `
-            -PcamlVersion=1.0.0 `
-            -PcamlRelease="${{ steps.package.outputs.release }}" `
+            "-PcamlJdkHome=$env:JAVA_HOME" `
+            "-PcamlVersion=1.0.0" `
+            "-PcamlRelease=${{ steps.package.outputs.release }}" `
             --no-daemon --stacktrace
       - name: Inspect packages
         shell: pwsh
