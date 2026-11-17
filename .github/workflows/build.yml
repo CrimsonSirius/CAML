@@ -104,3 +104,77 @@ jobs:
             build/packages/linux/*.deb
             build/packages/linux/*.rpm
             build/packages/linux/SHA256SUMS.txt
+          if-no-files-found: error
+
+  windows-packages:
+    needs: build
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Resolve package identity
+        id: package
+        shell: bash
+        run: |
+          if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
+            pr="${{ github.event.pull_request.number }}"
+          else
+            message=$(git log -1 --pretty=%B)
+            pr=$(printf '%s\n' "$message" | sed -n 's/.*Merge pull request #\([0-9][0-9]*\).*/\1/p' | head -n 1)
+            if [ -z "$pr" ]; then
+              pr=$(printf '%s\n' "$message" | sed -n 's/.*(#\([0-9][0-9]*\)).*/\1/p' | head -n 1)
+            fi
+          fi
+          if [ -n "$pr" ]; then
+            echo "release=$pr" >> "$GITHUB_OUTPUT"
+            echo "artifact=caml-windows-packages-pr-$pr" >> "$GITHUB_OUTPUT"
+          else
+            echo "release=$GITHUB_RUN_NUMBER" >> "$GITHUB_OUTPUT"
+            echo "artifact=caml-windows-packages-run-$GITHUB_RUN_NUMBER" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/setup-java@v5
+        with:
+          distribution: zulu
+          java-version: '25'
+          cache: gradle
+      - name: Ensure WiX Toolset 3.14
+        shell: pwsh
+        run: |
+          $wixBin = "${env:ProgramFiles(x86)}\WiX Toolset v3.14\bin"
+          if (-not (Test-Path "$wixBin\candle.exe")) {
+            choco install wixtoolset --version=3.14.1 -y --no-progress
+          }
+          if (-not (Test-Path "$wixBin\candle.exe")) {
+            throw "WiX Toolset 3.14 installation failed"
+          }
+          "$wixBin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+          "WIX_BIN=$wixBin" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+      - name: Build Windows packages
+        shell: pwsh
+        env:
+          CURSEFORGE_API_KEY: ${{ secrets.CURSEFORGE_API_KEY }}
+        run: |
+          $env:PATH = "$env:WIX_BIN;$env:PATH"
+          .\gradlew.bat packageWindows `
+            -PcamlJdkHome="$env:JAVA_HOME" `
+            -PcamlVersion=1.0.0 `
+            -PcamlRelease="${{ steps.package.outputs.release }}" `
+            --no-daemon --stacktrace
+      - name: Inspect packages
+        shell: pwsh
+        run: |
+          $exe = Get-ChildItem build/packages/windows -Filter '*.exe' | Select-Object -First 1
+          $zip = Get-ChildItem build/packages/windows -Filter '*.zip' | Select-Object -First 1
+          if (-not $exe) { throw "Windows EXE installer not found" }
+          if (-not $zip) { throw "Windows portable ZIP not found" }
+          $exe | Format-List Name, Length
+          $zip | Format-List Name, Length
+          Get-Content build/packages/windows/SHA256SUMS.txt
+      - name: Upload Windows packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.package.outputs.artifact }}
+          path: |
+            build/packages/windows/*.exe
+            build/packages/windows/*.zip
+            build/packages/windows/SHA256SUMS.txt
+          if-no-files-found: error
