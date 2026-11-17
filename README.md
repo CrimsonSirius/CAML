@@ -268,9 +268,9 @@ Linux 和 Windows 包都用 Zulu 25 生成裁剪运行时。
 
 ```powershell
 .\gradlew.bat packageWindows `
-  -PcamlJdkHome="C:\path\to\zulu-25" `
-  -PcamlVersion=1.0.0 `
-  -PcamlRelease=1
+  "-PcamlJdkHome=C:\path\to\zulu-25" `
+  "-PcamlVersion=1.0.0" `
+  "-PcamlRelease=1"
 ```
 
 `packageWindows` 会同时产出 EXE 安装包和免安装便携包。EXE 依赖 [WiX Toolset](https://wixtoolset.org/docs/download/)（3.14 或 4.0.4+，5.x 不受支持），
