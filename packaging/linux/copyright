@@ -11,10 +11,18 @@ Comment: The full GPL-3.0-only text is installed as
  licenses/CAML-GPL-3.0-only.txt.
 
 Files: opt/caml-launcher/lib/runtime/*
-Copyright: 2026 Eclipse Adoptium and contributors
+Copyright: 2026 Azul Systems, Inc. and OpenJDK contributors
 License: GPL-2.0-with-classpath-exception
-Comment: The JDK runtime license and module notices are installed under
- licenses/JDK/.
+Comment: The Zulu-specific DISCLAIMER and readme are installed under
+ licenses/Zulu/. The JDK runtime license and module notices are installed
+ under licenses/JDK/.
+
+Files: usr/share/licenses/caml-launcher/Zulu/*
+       usr/share/doc/caml-launcher/licenses/Zulu/*
+Copyright: 2026 Azul Systems, Inc.
+License: GPL-2.0-with-classpath-exception
+Comment: These files contain Zulu-specific notice and source-offer text;
+ see DISCLAIMER and readme.txt in the same directory.
 
 Files: opt/caml-launcher/lib/app/javafx-*
 Copyright: 2013-2026 Oracle and/or its affiliates

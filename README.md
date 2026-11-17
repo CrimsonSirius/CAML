@@ -170,11 +170,11 @@ CAML/
 ### 发布打包
 
 两种平台都用 jpackage 生成自带裁剪运行时的 `app-image`，再封装成系统安装包。
-脚本会读取构建 JDK 的 `release` 文件校验 `IMPLEMENTOR` 与 `JAVA_VERSION`，两边的运行时来源分别是 Temurin 和 Zulu：
+脚本会读取构建 JDK 的 `release` 文件校验 `IMPLEMENTOR` 与 `JAVA_VERSION`，Linux 和 Windows 都使用 Azul Zulu：
 
 | 平台 | 构建 JDK | 产物内运行时 |
 |---|---|---|
-| Linux | Eclipse Temurin JDK 25 | Temurin 裁剪运行时 |
+| Linux | Azul Zulu JDK 25 | Zulu 裁剪运行时 |
 | Windows | Azul Zulu JDK 25 | Zulu 裁剪运行时 |
 
 通过 `JAVA_HOME` 或 `-PcamlJdkHome` 指定 JDK；用错供应商或版本会直接报错，
@@ -186,24 +186,27 @@ CAML/
 
 #### 产物位置
 
-各平台的打包任务把产物写在自己模块的 `build` 目录，这是 Gradle 的约定：
-`clean`、增量判断和 `--parallel` 都假定任务输出属于自己所在的工程。
+打包任务由根工程提供，实现集中在 `gradle/packaging.gradle.kts`；`CAMLFront`
+只负责生成自己的 `installDist` 运行时。所有发布包都写到根工程的 `build` 目录。
 
 | 位置 | 内容 | 清理方式 |
 |---|---|---|
-| `CAMLFront/build/packages/linux/` | deb、rpm、`SHA256SUMS.txt` | `:CAMLFront:cleanLinuxPackages` |
-| `CAMLFront/build/packages/windows/` | exe、免安装 zip、`SHA256SUMS.txt` | `:CAMLFront:cleanWindowsPackages` |
+| `build/packages/linux/` | deb、rpm、`SHA256SUMS.txt` | `./gradlew cleanLinuxPackages` |
+| `build/packages/windows/` | exe、免安装 zip、`SHA256SUMS.txt` | `./gradlew cleanWindowsPackages` |
 
-取包统一用根工程任务，它把各平台的成品复制到 **`build/packages/`** 并重新生成一份
-覆盖全部产物的 `SHA256SUMS.txt`（`Sync` 语义，会清掉上一次留下但已不存在的文件）：
+安装包会保留 CAML 的 GPL 文本、`THIRD-PARTY-NOTICES.md`、JDK legal，
+以及从实际构建 JDK 复制的 Zulu `DISCLAIMER` 和 `readme.txt`。
+
+取包统一用根工程任务，它在 **`build/packages/`** 生成一份覆盖当前平台全部产物的
+`SHA256SUMS.txt`：
 
 ```bash
 ./gradlew collectPackages          # 或 .\gradlew.bat collectPackages
 ```
 
 `collectPackages` 默认依赖 `packageLinux`（Linux 主机）与 `packageWindowsPortable`
-（Windows 主机）；需要 Windows EXE 时先单独跑一次 `:CAMLFront:packageWindows`（需 WiX），
-再运行 `collectPackages`，exe 会被一起收集。
+（Windows 主机）；需要 Windows EXE 时先单独跑一次 `packageWindows`（需 WiX），
+再运行 `collectPackages`，exe 会被一起汇总。
 根目录 `./gradlew clean` 会删除 `build/`，因此汇总结果不会长期堆积。
 
 #### Linux
@@ -213,29 +216,29 @@ Arch Linux 本地构建需要：
 ```bash
 sudo pacman -S dpkg rpm-tools
 
-./gradlew :CAMLFront:packageLinux \
-  -PcamlJdkHome=/path/to/temurin-25 \
+./gradlew packageLinux \
+  -PcamlJdkHome=/path/to/zulu-25 \
   -PcamlVersion=1.0.0 \
   -PcamlRelease=1
 ```
 
-在 Windows 上构建 Linux 包（WSL2，把 Temurin 解压到 `~/jdk/temurin-25`）：
+在 Windows 上构建 Linux 包（WSL2，把 Zulu 解压到 `~/jdk/zulu-25`）：
 
 ```bash
 # 建议 clone 到 WSL 自己的文件系统，避免 /mnt/f 的权限与性能问题
 cd ~ && git clone <repo> caml && cd caml
 sudo apt install -y dpkg rpm
-./gradlew :CAMLFront:packageLinux -PcamlJdkHome=~/jdk/temurin-25
+./gradlew packageLinux -PcamlJdkHome=~/jdk/zulu-25
 ```
 
 也可以用 Docker，宿主机不需要安装 dpkg/rpmbuild：
 
 ```bash
-docker run --rm -v "$PWD":/w -w /w eclipse-temurin:25-jdk \
-  bash -lc "apt-get update && apt-get install -y rpm && ./gradlew :CAMLFront:packageLinux"
+docker run --rm -v "$PWD":/w -w /w azul/zulu-openjdk-debian:25 \
+  bash -lc "apt-get update && apt-get install -y rpm && ./gradlew packageLinux"
 ```
 
-产物位于 `CAMLFront/build/packages/linux/`：
+产物位于 `build/packages/linux/`：
 
 ```text
 caml-launcher_1.0.0-1_amd64.deb
@@ -252,6 +255,8 @@ SHA256SUMS.txt
 /usr/share/icons/hicolor/    应用图标
 /usr/share/doc/caml-launcher/copyright
 /usr/share/licenses/caml-launcher/
+/usr/share/licenses/caml-launcher/Zulu/       Zulu DISCLAIMER 与 readme
+/usr/share/licenses/caml-launcher/JDK/        JDK 模块许可证
 ```
 
 Debian/Ubuntu：`sudo apt install ./caml-launcher_1.0.0-1_amd64.deb`；
@@ -259,10 +264,10 @@ Fedora/RHEL：`sudo dnf install ./caml-launcher-1.0.0-1.x86_64.rpm`。
 
 #### Windows
 
-Windows 包用 Zulu 25 生成裁剪运行时（Linux 包用 Temurin，两者不能混用）。
+Linux 和 Windows 包都用 Zulu 25 生成裁剪运行时。
 
 ```powershell
-.\gradlew.bat :CAMLFront:packageWindows `
+.\gradlew.bat packageWindows `
   -PcamlJdkHome="C:\path\to\zulu-25" `
   -PcamlVersion=1.0.0 `
   -PcamlRelease=1
@@ -273,10 +278,10 @@ Windows 包用 Zulu 25 生成裁剪运行时（Linux 包用 Temurin，两者不�
 **没装 WiX 时可以只出免安装包**：
 
 ```powershell
-.\gradlew.bat :CAMLFront:packageWindowsPortable -PcamlJdkHome="C:\path\to\zulu-25"
+.\gradlew.bat packageWindowsPortable -PcamlJdkHome="C:\path\to\zulu-25"
 ```
 
-产物位于 `CAMLFront/build/packages/windows/`：
+产物位于 `build/packages/windows/`：
 
 ```text
 caml-launcher-1.0.0-1-windows-x64.exe            安装包（需 WiX）
@@ -300,7 +305,7 @@ SHA256SUMS.txt                                  packageWindows 生成的校验�
 
 ```text
 C:\Program Files\CAML\           应用与内置 JDK/JavaFX
-C:\Program Files\CAML\app\       应用 jar 与 licenses/（许可文本）
+C:\Program Files\CAML\app\       应用 jar 与 licenses/（含 Zulu/ 许可文本）
 C:\Program Files\CAML\runtime\   裁剪后的 Java 运行时
 ```
 
@@ -437,7 +442,7 @@ statusLabel.setText(UiText.tr("home.instance.current", version));
         - uses: actions/checkout@v4
         - uses: actions/setup-java@v4
           with:
-            distribution: temurin
+            distribution: zulu
             java-version: '25'
         - name: Build
           env:
