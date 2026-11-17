@@ -137,6 +137,7 @@ jobs:
           java-version: '25'
           cache: gradle
       - name: Ensure WiX Toolset 3.14
+        id: wix
         shell: pwsh
         run: |
           $wixBin = "${env:ProgramFiles(x86)}\WiX Toolset v3.14\bin"
@@ -146,14 +147,16 @@ jobs:
           if (-not (Test-Path "$wixBin\candle.exe")) {
             throw "WiX Toolset 3.14 installation failed"
           }
-          "$wixBin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-          "WIX_BIN=$wixBin" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          Write-Host "WiX bin: $wixBin"
+          "path=$wixBin" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
       - name: Build Windows packages
         shell: pwsh
         env:
           CURSEFORGE_API_KEY: ${{ secrets.CURSEFORGE_API_KEY }}
+          WIX_BIN: ${{ steps.wix.outputs.path }}
         run: |
           $env:PATH = "$env:WIX_BIN;$env:PATH"
+          Get-Command candle.exe | Format-List Source
           .\gradlew.bat packageWindows `
             "-PcamlJdkHome=$env:JAVA_HOME" `
             "-PcamlVersion=1.0.0" `

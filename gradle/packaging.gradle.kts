@@ -47,9 +47,14 @@ fun isLinuxHost(): Boolean = System.getProperty("os.name").lowercase().contains(
 
 fun findExecutable(name: String): File? {
     val path = System.getenv("PATH") ?: return null
+    val names = if (isWindowsHost() && !name.endsWith(".exe", ignoreCase = true)) {
+        listOf(name, "$name.exe")
+    } else {
+        listOf(name)
+    }
     return path.split(File.pathSeparator)
         .asSequence()
-        .map { File(it, name) }
+        .flatMap { directory -> names.asSequence().map { File(directory, it) } }
         .firstOrNull { it.isFile && it.canExecute() }
 }
 
