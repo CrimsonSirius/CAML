@@ -34,9 +34,10 @@ jobs:
           path: |
             CAMLBackend/build/reports/tests/test
             CAMLBackend/build/test-results/test
-      - uses: actions/upload-artifact@v4
+      - name: Upload debug distribution
+        uses: actions/upload-artifact@v4
         with:
-          name: CAMLFront
+          name: CAML-Debug-Distribution
           path: CAMLFront/build/distributions/*.zip
 
   linux-packages:
