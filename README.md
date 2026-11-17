@@ -450,7 +450,7 @@ statusLabel.setText(UiText.tr("home.instance.current", version));
           run: ./gradlew :CAMLBackend:test :CAMLFront:assemble --no-daemon
         - uses: actions/upload-artifact@v4
           with:
-            name: CAMLFront
+            name: CAML-Debug-Distribution
             path: CAMLFront/build/distributions/*.zip
   ```
 
