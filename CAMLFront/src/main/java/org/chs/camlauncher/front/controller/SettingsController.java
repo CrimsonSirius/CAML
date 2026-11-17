@@ -93,6 +93,15 @@ public final class SettingsController {
                 () -> context.backend().setMaxMemoryMb(maxMemoryMb));
     }
 
+    public FrontTask<String> saveJvmArgumentsAsync(
+            String arguments, Consumer<String> onSaved, Consumer<String> onError) {
+        String normalized = arguments == null ? "" : arguments.trim();
+        return context.runSettings(UiText.tr("operation.saveJvmArguments"), () -> {
+            context.backend().setJvmArguments(normalized);
+            return normalized;
+        }, onSaved, onError);
+    }
+
     /** 异步保存游戏位置，避免在 JavaFX Application Thread 上写文件。 */
     public void saveGameDirectoryAsync(Path gameDirectory) {
         context.executeSettings(UiText.tr("operation.saveGameDirectory"),

@@ -252,6 +252,16 @@ public final class KOKRGenerator extends LanguageTranslationGenerator {
         t.put("settings.game.memory.summary", "사용 중 %d MB / 게임 %d MB / 사용 가능 %d MB / 전체 %d MB");
 
         // 버전 격리
+        // JVM 인수
+        t.put("settings.game.jvm.title", "JVM 인수");
+        t.put("settings.game.jvm.description", "게임 실행 시 사용자 지정 JVM 인수를 추가합니다. 메모리 할당은 위 슬라이더에서 관리됩니다. 용도를 정확히 모르면 변경하지 마세요.");
+        t.put("settings.game.jvm.label", "추가 인수");
+        t.put("settings.game.jvm.hint", "인수는 공백으로 구분합니다. 공백이 포함된 값은 -Dfoo=\"bar baz\"처럼 큰따옴표로 묶으세요. ${game_directory}, ${library_directory} 같은 자리표시자를 지원합니다.");
+        t.put("settings.game.jvm.placeholder", "-XX:+UseG1GC -Dexample=value");
+        t.put("settings.game.jvm.save", "저장");
+        t.put("settings.game.jvm.saved", "JVM 인수가 저장되었습니다");
+        t.put("settings.game.jvm.saveFailed", "JVM 인수 저장 실패: %s");
+
         t.put("settings.game.isolation.title", "버전 격리");
         t.put("settings.game.isolation.full", "완전 버전 격리");
         t.put("settings.game.isolation.none", "버전 격리 안 함");
@@ -417,6 +427,7 @@ public final class KOKRGenerator extends LanguageTranslationGenerator {
         t.put("operation.addManualJava", "수동 Java 추가");
         t.put("operation.saveJavaSelection", "Java 선택 저장");
         t.put("operation.saveMaxMemory", "최대 메모리 설정 저장");
+        t.put("operation.saveJvmArguments", "JVM 인수 저장");
         t.put("operation.saveGameDirectory", "게임 디렉터리 저장");
         t.put("operation.saveVersionIsolation", "버전 격리 설정 저장");
         t.put("operation.saveAutoGameLanguage", "게임 언어 자동 설정 저장");

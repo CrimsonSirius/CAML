@@ -36,6 +36,7 @@ import java.util.function.Consumer;
 public final class SettingsService {
     public static final int DEFAULT_MAX_MEMORY_MB = 4096;
     public static final int MIN_MAX_MEMORY_MB = 512;
+    public static final String DEFAULT_JVM_ARGUMENTS = "";
     public static final VersionIsolationMode DEFAULT_VERSION_ISOLATION = VersionIsolationMode.FULL;
     public static final int MIN_DOWNLOAD_CONCURRENCY = DownloadConcurrency.MIN;
     public static final int MAX_DOWNLOAD_CONCURRENCY = DownloadConcurrency.MAX;
@@ -43,6 +44,7 @@ public final class SettingsService {
     public static final DownloadSourceMode DEFAULT_DOWNLOAD_SOURCE = DownloadSourceMode.MIRROR;
 
     private static final String MAX_MEMORY_KEY = "maxMemoryMb";
+    private static final String JVM_ARGUMENTS_KEY = "jvmArguments";
     private static final String GAME_DIRECTORY_KEY = "gameDirectory";
     private static final String VERSION_ISOLATION_KEY = "versionIsolation";
     private static final String DOWNLOAD_CONCURRENCY_KEY = "downloadConcurrency";
@@ -95,6 +97,22 @@ public final class SettingsService {
         }
 
         update(properties -> properties.setProperty(MAX_MEMORY_KEY, Integer.toString(value)));
+    }
+
+    public String jvmArguments() throws IOException {
+        String raw = load().getProperty(JVM_ARGUMENTS_KEY);
+        return raw == null ? DEFAULT_JVM_ARGUMENTS : raw.trim();
+    }
+
+    public void setJvmArguments(String arguments) throws IOException {
+        String normalized = arguments == null ? DEFAULT_JVM_ARGUMENTS : arguments.trim();
+        update(properties -> {
+            if (normalized.isEmpty()) {
+                properties.remove(JVM_ARGUMENTS_KEY);
+            } else {
+                properties.setProperty(JVM_ARGUMENTS_KEY, normalized);
+            }
+        });
     }
 
     public Optional<Path> gameDirectory() throws IOException {

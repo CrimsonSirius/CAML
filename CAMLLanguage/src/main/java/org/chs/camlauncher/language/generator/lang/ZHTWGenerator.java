@@ -259,6 +259,16 @@ public final class ZHTWGenerator extends LanguageTranslationGenerator {
         t.put("settings.game.memory.summary", "已使用 %d MB / 遊戲 %d MB / 可用 %d MB / 總記憶體 %d MB");
 
         // 版本隔離
+        // JVM 參數
+        t.put("settings.game.jvm.title", "JVM 參數");
+        t.put("settings.game.jvm.description", "啟動遊戲時追加自訂 JVM 參數。記憶體分配仍由上方滑桿管理；除非明確知道參數用途，否則不要修改。");
+        t.put("settings.game.jvm.label", "額外參數");
+        t.put("settings.game.jvm.hint", "參數以空格分隔；含空格的值請用雙引號包住，例如 -Dfoo=\"bar baz\"。支援 ${game_directory}、${library_directory} 等佔位符。");
+        t.put("settings.game.jvm.placeholder", "-XX:+UseG1GC -Dexample=value");
+        t.put("settings.game.jvm.save", "儲存");
+        t.put("settings.game.jvm.saved", "JVM 參數已儲存");
+        t.put("settings.game.jvm.saveFailed", "儲存 JVM 參數失敗：%s");
+
         t.put("settings.game.isolation.title", "版本隔離");
         t.put("settings.game.isolation.full", "完全版本隔離");
         t.put("settings.game.isolation.none", "不進行版本隔離");
@@ -424,6 +434,7 @@ public final class ZHTWGenerator extends LanguageTranslationGenerator {
         t.put("operation.addManualJava", "新增手動 Java");
         t.put("operation.saveJavaSelection", "儲存 Java 選擇");
         t.put("operation.saveMaxMemory", "儲存最大記憶體設定");
+        t.put("operation.saveJvmArguments", "儲存 JVM 參數");
         t.put("operation.saveGameDirectory", "儲存遊戲位置");
         t.put("operation.saveVersionIsolation", "儲存版本隔離設定");
         t.put("operation.saveAutoGameLanguage", "儲存自動遊戲語言設定");

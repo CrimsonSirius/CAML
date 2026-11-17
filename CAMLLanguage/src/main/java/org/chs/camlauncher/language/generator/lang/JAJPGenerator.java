@@ -252,6 +252,16 @@ public final class JAJPGenerator extends LanguageTranslationGenerator {
         t.put("settings.game.memory.summary", "使用済み %d MB / ゲーム %d MB / 利用可能 %d MB / 合計 %d MB");
 
         // バージョン分離
+        // JVM 引数
+        t.put("settings.game.jvm.title", "JVM 引数");
+        t.put("settings.game.jvm.description", "ゲーム起動時に追加の JVM 引数を指定します。メモリ割り当ては上のスライダーで管理されます。内容が分からない場合は変更しないでください。");
+        t.put("settings.game.jvm.label", "追加引数");
+        t.put("settings.game.jvm.hint", "引数は空白で区切ります。空白を含む値は -Dfoo=\"bar baz\" のように二重引用符で囲んでください。${game_directory}、${library_directory} などのプレースホルダーに対応しています。");
+        t.put("settings.game.jvm.placeholder", "-XX:+UseG1GC -Dexample=value");
+        t.put("settings.game.jvm.save", "保存");
+        t.put("settings.game.jvm.saved", "JVM 引数を保存しました");
+        t.put("settings.game.jvm.saveFailed", "JVM 引数の保存に失敗しました: %s");
+
         t.put("settings.game.isolation.title", "バージョン分離");
         t.put("settings.game.isolation.full", "完全バージョン分離");
         t.put("settings.game.isolation.none", "バージョン分離しない");
@@ -417,6 +427,7 @@ public final class JAJPGenerator extends LanguageTranslationGenerator {
         t.put("operation.addManualJava", "手動 Java を追加");
         t.put("operation.saveJavaSelection", "Java の選択を保存");
         t.put("operation.saveMaxMemory", "最大メモリ設定を保存");
+        t.put("operation.saveJvmArguments", "JVM 引数を保存");
         t.put("operation.saveGameDirectory", "ゲームディレクトリを保存");
         t.put("operation.saveVersionIsolation", "バージョン分離設定を保存");
         t.put("operation.saveAutoGameLanguage", "ゲーム言語の自動設定を保存");

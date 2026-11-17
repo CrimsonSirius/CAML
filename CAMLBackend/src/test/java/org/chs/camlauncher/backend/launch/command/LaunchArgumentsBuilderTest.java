@@ -44,7 +44,7 @@ class LaunchArgumentsBuilderTest {
                 )
         ), new LaunchOptions(
                 1024, 2048, 854, 480, false,
-                List.of("-XX:+UseG1GC"), List.of(), Map.of()
+                List.of("-XX:+UseG1GC", "-Dgame=${game_directory}"), List.of(), Map.of()
         ));
         List<Path> classpath = List.of(Path.of("/tmp/a.jar"), Path.of("/tmp/b.jar"));
 
@@ -55,6 +55,7 @@ class LaunchArgumentsBuilderTest {
         assertTrue(result.contains("-Dfoo=Steve"));
         assertTrue(result.contains("-Dcustom"));
         assertTrue(result.contains("-XX:+UseG1GC"));
+        assertTrue(result.contains("-Dgame=" + gameDirectory));
         assertTrue(result.contains("-Djava.library.path=" + plan.nativesDirectory()));
         assertTrue(result.contains("-cp"));
         assertTrue(result.contains("/tmp/a.jar" + java.io.File.pathSeparator + "/tmp/b.jar"));

@@ -252,6 +252,16 @@ public final class ENUSGenerator extends LanguageTranslationGenerator {
         t.put("settings.game.memory.summary", "Used %d MB / Game %d MB / Available %d MB / Total %d MB");
 
         // Version isolation
+        // JVM arguments
+        t.put("settings.game.jvm.title", "JVM arguments");
+        t.put("settings.game.jvm.description", "Add custom JVM arguments when launching the game. Memory allocation is still controlled by the slider above; do not change these unless you know what they do.");
+        t.put("settings.game.jvm.label", "Extra arguments");
+        t.put("settings.game.jvm.hint", "Separate arguments with spaces; quote values that contain spaces, for example -Dfoo=\"bar baz\". Supports placeholders such as ${game_directory} and ${library_directory}.");
+        t.put("settings.game.jvm.placeholder", "-XX:+UseG1GC -Dexample=value");
+        t.put("settings.game.jvm.save", "Save");
+        t.put("settings.game.jvm.saved", "JVM arguments saved");
+        t.put("settings.game.jvm.saveFailed", "Failed to save JVM arguments: %s");
+
         t.put("settings.game.isolation.title", "Version isolation");
         t.put("settings.game.isolation.full", "Full version isolation");
         t.put("settings.game.isolation.none", "No version isolation");
@@ -417,6 +427,7 @@ public final class ENUSGenerator extends LanguageTranslationGenerator {
         t.put("operation.addManualJava", "Add manual Java");
         t.put("operation.saveJavaSelection", "Save Java selection");
         t.put("operation.saveMaxMemory", "Save max memory setting");
+        t.put("operation.saveJvmArguments", "Save JVM arguments");
         t.put("operation.saveGameDirectory", "Save game directory");
         t.put("operation.saveVersionIsolation", "Save version isolation setting");
         t.put("operation.saveAutoGameLanguage", "Save automatic game language setting");

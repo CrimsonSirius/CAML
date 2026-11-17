@@ -252,6 +252,16 @@ public final class FNCNGenerator extends LanguageTranslationGenerator {
         t.put("settings.game.memory.summary", "已榨干 %d MB / 比赛 %d MB / 能榨 %d MB / 底朝天 %d MB");
 
         // 版本隔离
+        // 爪哇摆弄参数
+        t.put("settings.game.jvm.title", "爪哇摆弄参数");
+        t.put("settings.game.jvm.description", "发射比赛时硬塞自定义爪哇摆弄参数。记忆仍归上面那根棍子管；除非你确信自己在干啥，否则别乱拨。");
+        t.put("settings.game.jvm.label", "额外摆弄");
+        t.put("settings.game.jvm.hint", "参数用空格拆开；带空格的值拿双引号夹住，比如 -Dfoo=\"bar baz\"。支持 ${game_directory}、${library_directory} 这类占位符。");
+        t.put("settings.game.jvm.placeholder", "-XX:+UseG1GC -Dexample=value");
+        t.put("settings.game.jvm.save", "拯救");
+        t.put("settings.game.jvm.saved", "爪哇摆弄参数已得救");
+        t.put("settings.game.jvm.saveFailed", "拯救爪哇摆弄参数失败：%s");
+
         t.put("settings.game.isolation.title", "译本孤立法");
         t.put("settings.game.isolation.full", "完整译本孤立法");
         t.put("settings.game.isolation.none", "不施行译本孤立法");
@@ -418,6 +428,7 @@ public final class FNCNGenerator extends LanguageTranslationGenerator {
         t.put("operation.addManualJava", "肉手硬塞爪哇");
         t.put("operation.saveJavaSelection", "拯救爪哇挑三拣四");
         t.put("operation.saveMaxMemory", "拯救最大记忆摆弄");
+        t.put("operation.saveJvmArguments", "拯救爪哇摆弄参数");
         t.put("operation.saveGameDirectory", "拯救比赛名录");
         t.put("operation.saveVersionIsolation", "拯救译本孤立法摆弄");
         t.put("operation.saveAutoGameLanguage", "拯救自动比赛腔调摆弄");

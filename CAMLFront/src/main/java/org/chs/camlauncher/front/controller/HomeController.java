@@ -57,26 +57,26 @@ public final class HomeController {
      * 都由 {@code CAMLBackend#launchGame} 在后端完成。</p>
      */
     public FrontTask<GameLaunch> startGame(String version, String username, int memoryMb,
-                                           Path gameDirectory, boolean fullVersionIsolation) {
-        return startGame(version, username, AccountChoice.OFFLINE, memoryMb,
-                gameDirectory, fullVersionIsolation);
-    }
+                                       Path gameDirectory, boolean fullVersionIsolation,
+                                       String jvmArguments) {
+    return startGame(version, username, AccountChoice.OFFLINE, memoryMb,
+            gameDirectory, fullVersionIsolation, jvmArguments);
+}
 
-    /**
-     * 按账号选择启动游戏。
-     *
-     * @param accountChoice {@link AccountChoice#OFFLINE} 使用离线用户名；
-     *                      {@link AccountChoice#DEFAULT} 走“实例账号 → 全局账号”。
-     *                      其他值作为账号 id 直接使用
-     */
-    public FrontTask<GameLaunch> startGame(String version, String username, String accountChoice,
-                                           int memoryMb, Path gameDirectory,
-                                           boolean fullVersionIsolation) {
+/**
+ * 按账号选择启动游戏。
+ *
+ * @param accountChoice {@link AccountChoice#OFFLINE} 使用离线用户名；
+ *                      {@link AccountChoice#DEFAULT} 走“实例账号 → 全局账号”。
+ *                      其他值作为账号 id 直接使用
+ */
+public FrontTask<GameLaunch> startGame(String version, String username, String accountChoice,
+                                       int memoryMb, Path gameDirectory,
+                                       boolean fullVersionIsolation, String jvmArguments) {
         Objects.requireNonNull(gameDirectory, "gameDirectory");
-
         LaunchOptions options = new LaunchOptions(
                 null, memoryMb, null, null, false,
-                List.of(), List.of(), Map.of()
+                context.backend().parseJvmArguments(jvmArguments), List.of(), Map.of()
         );
 
         DownloadListener downloadListener = new ThrottledDownloadLogger();

@@ -46,7 +46,7 @@ public final class JvmArgumentsBuilder {
                     Map.of("path", logConfig)
             ));
         }
-        result.addAll(plan.options().jvmArguments());
+        result.addAll(PlaceholderResolver.resolve(plan.options().jvmArguments(), placeholders));
 
         if (result.stream().noneMatch(argument -> argument.startsWith("-Djava.library.path="))) {
             result.add("-Djava.library.path=" + plan.nativesDirectory());

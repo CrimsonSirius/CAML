@@ -252,6 +252,16 @@ public final class FRFRGenerator extends LanguageTranslationGenerator {
         t.put("settings.game.memory.summary", "Utilisée %d Mo / Jeu %d Mo / Disponible %d Mo / Totale %d Mo");
 
         // Isolation des versions
+        // Arguments JVM
+        t.put("settings.game.jvm.title", "Arguments JVM");
+        t.put("settings.game.jvm.description", "Ajoutez des arguments JVM personnalisés au lancement du jeu. L’allocation mémoire reste contrôlée par le curseur ci-dessus ; ne modifiez pas ces arguments sans en comprendre l’effet.");
+        t.put("settings.game.jvm.label", "Arguments supplémentaires");
+        t.put("settings.game.jvm.hint", "Séparez les arguments par des espaces ; mettez entre guillemets les valeurs contenant des espaces, par exemple -Dfoo=\"bar baz\". Les variables ${game_directory} et ${library_directory} sont prises en charge.");
+        t.put("settings.game.jvm.placeholder", "-XX:+UseG1GC -Dexample=value");
+        t.put("settings.game.jvm.save", "Enregistrer");
+        t.put("settings.game.jvm.saved", "Arguments JVM enregistrés");
+        t.put("settings.game.jvm.saveFailed", "Échec de l’enregistrement des arguments JVM : %s");
+
         t.put("settings.game.isolation.title", "Isolation des versions");
         t.put("settings.game.isolation.full", "Isolation complète des versions");
         t.put("settings.game.isolation.none", "Aucune isolation des versions");
@@ -417,6 +427,7 @@ public final class FRFRGenerator extends LanguageTranslationGenerator {
         t.put("operation.addManualJava", "Ajouter un Java manuel");
         t.put("operation.saveJavaSelection", "Enregistrer la sélection Java");
         t.put("operation.saveMaxMemory", "Enregistrer la mémoire maximale");
+        t.put("operation.saveJvmArguments", "Enregistrer les arguments JVM");
         t.put("operation.saveGameDirectory", "Enregistrer le répertoire de jeu");
         t.put("operation.saveVersionIsolation", "Enregistrer le paramètre d’isolation des versions");
         t.put("operation.saveAutoGameLanguage", "Enregistrer le paramètre de langue automatique du jeu");

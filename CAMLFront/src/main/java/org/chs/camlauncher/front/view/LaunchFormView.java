@@ -235,8 +235,9 @@ final class LaunchFormView extends BorderPane {
         onLaunchStarted.run();
 
         launchTask = controller.startGame(version, username, accountChoice,
-                launchSettings.maxMemoryMb(), gameDirectory,
-                launchSettings.fullVersionIsolation());
+            launchSettings.maxMemoryMb(), gameDirectory,
+            launchSettings.fullVersionIsolation(), launchSettings.jvmArguments());
+
     }
 
     private void applyGameDirectoryInfo(GameDirectoryInfo info) {

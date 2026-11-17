@@ -252,6 +252,16 @@ public final class LALAGenerator extends LanguageTranslationGenerator {
         t.put("settings.game.memory.summary", "Adhibita %d MB / Ludus %d MB / Praesto %d MB / Summa %d MB");
 
         // Segregatio versionum
+        // Argumenta JVM
+        t.put("settings.game.jvm.title", "Argumenta JVM");
+        t.put("settings.game.jvm.description", "Argumenta JVM propria ad ludum deducendum adduntur. Memoria attributio a manubrio supra regitur; noli haec mutare nisi usum cognoscis.");
+        t.put("settings.game.jvm.label", "Argumenta addita");
+        t.put("settings.game.jvm.hint", "Argumenta spatiis dividuntur; valores spatia continentes duplicibus signis includantur, ut -Dfoo=\"bar baz\". Signa substitutionis ${game_directory} et ${library_directory} sustinentur.");
+        t.put("settings.game.jvm.placeholder", "-XX:+UseG1GC -Dexample=value");
+        t.put("settings.game.jvm.save", "Servare");
+        t.put("settings.game.jvm.saved", "Argumenta JVM servata sunt");
+        t.put("settings.game.jvm.saveFailed", "Argumenta JVM servare non potuit: %s");
+
         t.put("settings.game.isolation.title", "Segregatio versionum");
         t.put("settings.game.isolation.full", "Plena segregatio versionum");
         t.put("settings.game.isolation.none", "Nulla segregatio versionum");
@@ -417,6 +427,7 @@ public final class LALAGenerator extends LanguageTranslationGenerator {
         t.put("operation.addManualJava", "Java manualem addere");
         t.put("operation.saveJavaSelection", "Electionem Java servare");
         t.put("operation.saveMaxMemory", "Memoriam maximam servare");
+        t.put("operation.saveJvmArguments", "Argumenta JVM servare");
         t.put("operation.saveGameDirectory", "Directorium ludi servare");
         t.put("operation.saveVersionIsolation", "Segregationem versionum servare");
         t.put("operation.saveAutoGameLanguage", "Linguam ludi automaticam servare");
