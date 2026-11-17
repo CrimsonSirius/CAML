@@ -7,6 +7,7 @@ import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.property.StringProperty;
 import org.chs.camlauncher.backend.runtime.JavaSelectionMode;
+import org.chs.camlauncher.front.text.AccountChoice;
 
 import java.nio.file.Path;
 
@@ -23,6 +24,9 @@ final class LaunchSettings {
     private final BooleanProperty autoGameLanguage =
             new SimpleBooleanProperty(this, "autoGameLanguage");
     private String jvmArguments;
+    private final StringProperty selectedAccountChoice =
+            new SimpleStringProperty(this, "selectedAccountChoice", AccountChoice.DEFAULT);
+
     private int maxMemoryMb;
 
     LaunchSettings(int maxMemoryMb, Path gameDirectory, boolean fullVersionIsolation,
@@ -128,5 +132,17 @@ final class LaunchSettings {
 
     void setJvmArguments(String arguments) {
         jvmArguments = arguments == null ? "" : arguments;
+    }
+
+    String selectedAccountChoice() {
+        return selectedAccountChoice.get();
+    }
+
+    void setSelectedAccountChoice(String selectedAccountChoice) {
+        this.selectedAccountChoice.set(selectedAccountChoice);
+    }
+
+    StringProperty selectedAccountChoiceProperty() {
+        return selectedAccountChoice;
     }
 }

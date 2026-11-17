@@ -1,0 +1,92 @@
+package org.chs.camlauncher.language.generator;
+
+/**
+ * 繁體中文的帳號文案覆蓋。
+ *
+ * <p>與 {@link AccountTexts} 相同的「僅在鍵不存在時寫入」策略，因此在
+ * {@code populateSharedDefaults} 裡先呼叫本類、再呼叫英文預設值即可：
+ * 已翻譯的鍵保留繁中，其餘仍回退英文。</p>
+ */
+public final class TraditionalAccountTexts {
+    private TraditionalAccountTexts() {
+    }
+
+    public static void populate(TranslationTable t) {
+        put(t, "account.choice.default", "跟隨預設帳號");
+        put(t, "account.choice.offline", "離線使用者名稱");
+        put(t, "home.account", "帳號");
+        put(t, "home.manageAccounts", "實例帳號");
+        put(t, "home.error.loadAccounts", "讀取帳號失敗：%s");
+        put(t, "settings.section.account", "帳號");
+        put(t, "settings.account.title", "帳號");
+        put(t, "settings.account.description",
+                "啟動器儲存的帳號。accessToken 加密後才寫入磁碟，密碼不會被儲存。");
+        put(t, "account.list.empty", "還沒有帳號。可以新增離線帳號，或登入第三方認證伺服器。");
+        put(t, "account.list.default", "預設");
+        put(t, "account.list.remove", "移除");
+        put(t, "account.default.saved", "%s 已設為預設帳號");
+        put(t, "account.removed", "已移除 %s");
+        put(t, "account.offline.label", "新增離線帳號");
+        put(t, "account.offline.placeholder", "離線使用者名稱");
+        put(t, "account.offline.add", "新增");
+        put(t, "account.offline.added", "已新增離線帳號 %s");
+        put(t, "settings.account.login.title", "第三方登入");
+        put(t, "settings.account.login.description",
+                "使用 Yggdrasil 認證伺服器（例如 LittleSkin）的帳號登入。");
+        put(t, "account.login.server", "認證伺服器");
+        put(t, "account.login.customServer", "自訂伺服器位址");
+        put(t, "account.login.customServerPlaceholder", "https://example.com/api/yggdrasil");
+        put(t, "account.login.customServerOption", "自訂位址");
+        put(t, "account.login.username", "電子郵件或使用者名稱");
+        put(t, "account.login.password", "密碼");
+        put(t, "account.login.hint", "密碼只用於本次登入，不會被儲存。");
+        put(t, "account.login.remember", "記住登入狀態");
+        put(t, "account.login.submit", "登入");
+        put(t, "account.login.running", "正在登入...");
+        put(t, "account.login.success", "已登入為 %s");
+        put(t, "account.error.serverRequired", "請填寫認證伺服器位址");
+        put(t, "account.error.usernameRequired", "請填寫使用者名稱");
+        put(t, "account.error.passwordRequired", "請填寫密碼");
+        put(t, "settings.account.injector.title", "authlib-injector");
+        put(t, "settings.account.injector.description",
+                "啟動器只在首次使用時下載 authlib-injector 並長期重複使用，每次啟動都會以 SHA-256 驗證。");
+        put(t, "account.injector.builtin", "使用內建版本（視需要下載）");
+        put(t, "account.injector.custom", "自訂檔案：%s");
+        put(t, "account.injector.reset", "使用內建版本");
+        put(t, "account.injector.saved", "authlib-injector 設定已儲存");
+        put(t, "account.injector.chooserTitle", "選擇 authlib-injector jar");
+        put(t, "account.instance.title", "實例帳號");
+        put(t, "account.instance.loading", "正在讀取帳號...");
+        put(t, "account.instance.count", "共 %d 個實例，為每個實例選擇啟動時使用的帳號");
+        put(t, "account.instance.saved", "已儲存實例 %s 的帳號");
+        put(t, "operation.loadAccounts", "讀取帳號");
+        put(t, "operation.loginAccount", "登入帳號");
+        put(t, "operation.addOfflineAccount", "新增離線帳號");
+        put(t, "operation.fetchAuthServer", "取得認證伺服器資訊");
+        put(t, "operation.saveDefaultAccount", "儲存預設帳號");
+        put(t, "operation.removeAccount", "移除帳號");
+        put(t, "operation.loadInstanceAccount", "讀取實例帳號");
+        put(t, "operation.saveInstanceAccount", "儲存實例帳號");
+        put(t, "operation.saveInjectorPath", "儲存 authlib-injector 路徑");
+        put(t, "auth.error.usernameRequired", "請填寫使用者名稱");
+        put(t, "auth.error.passwordRequired", "請填寫密碼");
+        put(t, "auth.error.metadataUnavailable", "無法讀取認證伺服器資訊：%s（HTTP %s）");
+        put(t, "auth.error.invalidCredentials", "%s 的使用者名稱或密碼錯誤 %s");
+        put(t, "auth.error.requestFailed", "認證請求失敗：%s（HTTP %s）%s");
+        put(t, "auth.error.responseInvalid", "認證伺服器回傳了無法解析的回應：%s");
+        put(t, "auth.error.noSelectedProfile", "該帳號沒有 Minecraft 角色：%s");
+        put(t, "auth.error.accountMissing", "找不到帳號：%s");
+        put(t, "auth.error.accountRequired", "請先選擇帳號");
+        put(t, "auth.error.loginRequired", "帳號 %s（%s）沒有儲存的憑證，請重新登入");
+        put(t, "auth.error.loginExpired", "帳號 %s（%s）的登入已失效，請重新登入");
+        put(t, "auth.error.noAccount", "尚未設定帳號，請到設定中新增帳號，或使用離線使用者名稱。");
+        put(t, "auth.error.injectorNotFound", "找不到 authlib-injector：%s");
+        put(t, "auth.error.injectorChecksum", "authlib-injector 驗證失敗：%s");
+    }
+
+    private static void put(TranslationTable t, String key, String value) {
+        if (!t.containsKey(key)) {
+            t.put(key, value);
+        }
+    }
+}

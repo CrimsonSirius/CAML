@@ -27,10 +27,22 @@ public abstract class LanguageTranslationGenerator {
     /** 登记当前语言的全部翻译键；重复键会抛出异常。 */
     protected abstract void populate(TranslationTable translations);
 
+    /**
+     * 可选：先由子类登记本地化文案，再由此方法补齐尚未登记的键。
+     *
+     * <p>账号相关文案数量多、更新频繁，缺少翻译时统一回退到英文，
+     * 保证各语言键集合一致；子类只要在 {@link #populate(TranslationTable)} 中
+     * 登记同名键即可覆盖这里的默认值。</p>
+     */
+    protected void populateSharedDefaults(TranslationTable translations) {
+        AccountTexts.populateDefaults(translations);
+    }
+
     /** 生成翻译文件，返回写入路径。 */
     public final Path generate(Path outputDirectory) throws IOException {
         TranslationTable translations = new TranslationTable();
         populate(translations);
+        populateSharedDefaults(translations);
         Files.createDirectories(outputDirectory);
         Path file = outputDirectory.resolve(locale() + ".json");
         String json = GSON.toJson(translations) + System.lineSeparator();

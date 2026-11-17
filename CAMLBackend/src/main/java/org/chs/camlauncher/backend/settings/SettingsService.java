@@ -60,9 +60,15 @@ public final class SettingsService {
     private static final String LANGUAGE_FALLBACK_LOCALE_KEY = "languageFallbackLocale";
     private static final String AUTO_GAME_LANGUAGE_KEY = "autoGameLanguage";
     private static final String DISABLED_MODS_KEY = "disabledMods";
+    private static final String DEFAULT_ACCOUNT_KEY = "defaultAccountId";
+    private static final String INSTANCE_ACCOUNTS_KEY = "instanceAccounts";
+    private static final String CLIENT_TOKEN_KEY = "clientToken";
+    private static final String AUTHLIB_INJECTOR_KEY = "authlibInjectorPath";
     private static final Gson GSON = new Gson();
     private static final Type DISABLED_MODS_TYPE =
             new TypeToken<Map<String, List<String>>>() { }.getType();
+    private static final Type INSTANCE_ACCOUNTS_TYPE =
+            new TypeToken<Map<String, String>>() { }.getType();
 
     private final Path settingsFile;
     private final Object writeLock = new Object();
@@ -366,6 +372,108 @@ public final class SettingsService {
                 properties.setProperty(DISABLED_MODS_KEY, GSON.toJson(states));
             }
         });
+    }
+
+    // ------------------------------------------------------------------ 账号
+
+    /** 全局默认账号；没有设置时返回空。 */
+    public Optional<String> defaultAccountId() throws IOException {
+        String raw = load().getProperty(DEFAULT_ACCOUNT_KEY);
+        return raw == null || raw.isBlank() ? Optional.empty() : Optional.of(raw.trim());
+    }
+
+    public void setDefaultAccountId(String accountId) throws IOException {
+        update(properties -> {
+            if (accountId == null || accountId.isBlank()) {
+                properties.remove(DEFAULT_ACCOUNT_KEY);
+            } else {
+                properties.setProperty(DEFAULT_ACCOUNT_KEY, accountId.trim());
+            }
+        });
+    }
+
+    /** 某个实例指定的账号；没有单独设置时返回空，由调用方回退到全局默认账号。 */
+    public Optional<String> instanceAccountId(Path gameDirectory, String instanceId)
+            throws IOException {
+        Map<String, String> states = parseInstanceAccounts(
+                load().getProperty(INSTANCE_ACCOUNTS_KEY));
+        String value = states.get(modStateKey(gameDirectory, instanceId));
+        return value == null || value.isBlank() ? Optional.empty() : Optional.of(value);
+    }
+
+    /** 设置实例账号；{@code accountId} 为空表示清除该实例的单独设置。 */
+    public void setInstanceAccountId(Path gameDirectory, String instanceId, String accountId)
+            throws IOException {
+        update(properties -> {
+            Map<String, String> states = parseInstanceAccounts(
+                    properties.getProperty(INSTANCE_ACCOUNTS_KEY));
+            String key = modStateKey(gameDirectory, instanceId);
+            if (accountId == null || accountId.isBlank()) {
+                states.remove(key);
+            } else {
+                states.put(key, accountId.trim());
+            }
+            if (states.isEmpty()) {
+                properties.remove(INSTANCE_ACCOUNTS_KEY);
+            } else {
+                properties.setProperty(INSTANCE_ACCOUNTS_KEY, GSON.toJson(states));
+            }
+        });
+    }
+
+    /** 删除账号时清理所有指向它的实例绑定。 */
+    public void clearInstanceAccount(String accountId) throws IOException {
+        if (accountId == null || accountId.isBlank()) {
+            return;
+        }
+        update(properties -> {
+            Map<String, String> states = parseInstanceAccounts(
+                    properties.getProperty(INSTANCE_ACCOUNTS_KEY));
+            if (states.values().removeIf(accountId::equals) && !states.isEmpty()) {
+                properties.setProperty(INSTANCE_ACCOUNTS_KEY, GSON.toJson(states));
+            } else if (states.isEmpty()) {
+                properties.remove(INSTANCE_ACCOUNTS_KEY);
+            }
+        });
+    }
+
+    /** 稳定的 clientToken：第一次使用时生成并持久化，用于 refresh 校验。 */
+    public String clientToken() throws IOException {
+        String existing = load().getProperty(CLIENT_TOKEN_KEY);
+        if (existing != null && !existing.isBlank()) {
+            return existing.trim();
+        }
+        String created = java.util.UUID.randomUUID().toString().replace("-", "");
+        update(properties -> properties.setProperty(CLIENT_TOKEN_KEY, created));
+        return created;
+    }
+
+    /** 用户自定义的 authlib-injector jar；为空表示使用内置固定版本。 */
+    public Optional<Path> authlibInjectorPath() throws IOException {
+        return parsePath(load().getProperty(AUTHLIB_INJECTOR_KEY));
+    }
+
+    public void setAuthlibInjectorPath(Path jar) throws IOException {
+        update(properties -> {
+            if (jar == null) {
+                properties.remove(AUTHLIB_INJECTOR_KEY);
+            } else {
+                properties.setProperty(AUTHLIB_INJECTOR_KEY,
+                        jar.toAbsolutePath().normalize().toString());
+            }
+        });
+    }
+
+    private static Map<String, String> parseInstanceAccounts(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return new LinkedHashMap<>();
+        }
+        try {
+            Map<String, String> parsed = GSON.fromJson(raw, INSTANCE_ACCOUNTS_TYPE);
+            return parsed == null ? new LinkedHashMap<>() : new LinkedHashMap<>(parsed);
+        } catch (RuntimeException ignored) {
+            return new LinkedHashMap<>();
+        }
     }
 
     private static Map<String, List<String>> parseDisabledMods(String raw) {

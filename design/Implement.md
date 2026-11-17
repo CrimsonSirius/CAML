@@ -122,11 +122,15 @@ CAML
 - 补齐本地版本缺失的库、资源和客户端 jar。
 - 返回 `InstalledVersion`。
 
-### 3.5 离线账号
+### 3.5 账号
 
-- 离线账号登录。
-- 稳定离线 UUID。
-- 生成 `AuthSession`。
+- 离线账号登录、稳定离线 UUID、生成 `AuthSession`。
+- 第三方 Yggdrasil 认证服务器登录：`authenticate` / `validate` / `refresh`，`userType` 为 `mojang`。
+- authlib-injector 运行时下载一次（`~/.caml/authlib-injector/<版本>/`），之后每次启动只做 SHA-256 校验，
+  以 `-javaagent` 注入，不改动版本 JSON、`libraries` 或 classpath。
+- 设置 → 账号维护全局账号列表与默认账号；主页“实例账号”二级页为每个实例单独指定账号，
+  未指定时回退默认账号。
+- accessToken 用 AES-GCM 加密写入 `~/.caml/accounts/accounts.json`；密码不保存、不写日志。
 
 ### 3.6 Java 检测
 

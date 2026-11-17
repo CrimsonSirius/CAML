@@ -4,14 +4,16 @@ import javafx.geometry.Orientation;
 import javafx.scene.Node;
 import javafx.scene.control.SplitPane;
 import javafx.scene.layout.StackPane;
+import org.chs.camlauncher.front.controller.AccountController;
 import org.chs.camlauncher.front.controller.HomeController;
 import org.chs.camlauncher.ui.control.CamlPageHost;
 
 /**
- * 主页：启动表单 + 运行日志，以及二级游戏实例选择页。
+ * 主页：启动表单 + 运行日志，以及二级游戏实例选择页和实例账号页。
  */
 final class HomeView extends StackPane implements PageLifecycle {
     private final HomeController controller;
+    private final AccountController accountController;
     private final LaunchSettings launchSettings;
     private final LaunchFormView formPane;
     private final LogPaneView logPane;
@@ -21,14 +23,17 @@ final class HomeView extends StackPane implements PageLifecycle {
     private PageLifecycle activeSubPage;
     private boolean disposed;
 
-    HomeView(HomeController controller, LaunchSettings launchSettings) {
+    HomeView(HomeController controller, AccountController accountController,
+             LaunchSettings launchSettings) {
         this.controller = controller;
+        this.accountController = accountController;
         this.launchSettings = launchSettings;
 
         logPane = new LogPaneView();
         controller.setOnLogReceived(logPane::append);
-        formPane = new LaunchFormView(controller, launchSettings, logPane::clear,
-                this::showInstancePicker, this::showManageInstances);
+        formPane = new LaunchFormView(controller, accountController, launchSettings,
+                logPane::clear, this::showInstancePicker, this::showManageInstances,
+                this::showInstanceAccounts);
 
         workspace = new SplitPane(formPane, logPane);
         workspace.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
@@ -67,7 +72,14 @@ final class HomeView extends StackPane implements PageLifecycle {
                 launchSettings.selectedVersion(), this::showWorkspace));
     }
 
+    /** 主页二级页：为每个实例指定账号（未指定时回退到全局默认账号）。 */
+    private void showInstanceAccounts() {
+        setSubPage(new InstanceAccountView(accountController, controller,
+                launchSettings.gameDirectory(), this::showWorkspace));
+    }
+
     private void showWorkspace() {
+        formPane.reloadAccounts();
         setSubPage(workspace);
     }
 
@@ -93,6 +105,9 @@ final class HomeView extends StackPane implements PageLifecycle {
     public void onShow() {
         if (disposed) {
             return;
+        }
+        if (activeSubPage == workspace) {
+            formPane.reloadAccounts();
         }
         if (activeSubPage != null) {
             activeSubPage.onShow();

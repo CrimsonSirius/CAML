@@ -17,12 +17,14 @@ public final class MainController {
     private final HomeController homeController;
     private final DownloadsController downloadsController;
     private final SettingsController settingsController;
+    private final AccountController accountController;
 
     public MainController(CAMLBackend backend) {
         context = new ControllerContext(Objects.requireNonNull(backend, "backend"));
         homeController = new HomeController(context);
         downloadsController = new DownloadsController(context);
         settingsController = new SettingsController(context);
+        accountController = new AccountController(context);
     }
 
     public HomeController homeController() {
@@ -35,6 +37,10 @@ public final class MainController {
 
     public SettingsController settingsController() {
         return settingsController;
+    }
+
+    public AccountController accountController() {
+        return accountController;
     }
 
     public Path defaultGameDirectory() {
