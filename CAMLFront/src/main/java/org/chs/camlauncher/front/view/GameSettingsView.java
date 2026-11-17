@@ -159,7 +159,8 @@ final class GameSettingsView extends VBox {
                 new VersionIsolationSettingsView(launchSettings, onVersionIsolationChanged),
                 languageGroup,
                 javaSettings,
-                group
+                group,
+                new JvmArgumentsSettingsView(launchSettings, controller)
         );
     }
 

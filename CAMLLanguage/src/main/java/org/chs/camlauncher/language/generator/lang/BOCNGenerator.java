@@ -252,6 +252,16 @@ public final class BOCNGenerator extends LanguageTranslationGenerator {
         t.put("settings.game.memory.summary", "བེད་སྤྱོད་ཟིན %d MB / རྩེད་མོ %d MB / ཐུབ་རུང %d MB / སྤྱི %d MB");
 
         // པར་གཞི་ལོགས་བཀར
+        // JVM ཚད་སྒྲིག
+        t.put("settings.game.jvm.title", "JVM ཚད་སྒྲིག");
+        t.put("settings.game.jvm.description", "རྩེད་མོ་འགོ་འཛུགས་སྐབས་ JVM ཚད་སྒྲིག་ཁ་སྣོན་བྱེད། དྲན་ཤེས་བགོ་སྐལ་ནི་སྟེང་གི་འཐེན་ཆས་ཀྱིས་དོ་དམ་བྱེད། ཁྱེད་ཀྱིས་དེའི་བེད་སྤྱོད་ཤེས་མེད་ན་མ་བསྒྱུར།");
+        t.put("settings.game.jvm.label", "ཁ་སྣོན་ཚད་སྒྲིག");
+        t.put("settings.game.jvm.hint", "ཚད་སྒྲིག་རྣམས་བར་སྟོང་གིས་ཁ་བྲལ་བྱེད། བར་སྟོང་ཡོད་པའི་རིན་ཐང་ལ་ཡིག་སྒྲོམ་གཉིས་བེད་སྤྱོད་བྱེད། དཔེར་ན་ -Dfoo=\"bar baz\"། ${game_directory} དང་ ${library_directory} ལ་རྒྱབ་སྐྱོར་ཡོད།");
+        t.put("settings.game.jvm.placeholder", "-XX:+UseG1GC -Dexample=value");
+        t.put("settings.game.jvm.save", "ཉར་ཚགས");
+        t.put("settings.game.jvm.saved", "JVM ཚད་སྒྲིག་ཉར་ཚགས་ཟིན");
+        t.put("settings.game.jvm.saveFailed", "JVM ཚད་སྒྲིག་ཉར་ཚགས་བྱེད་མ་ཐུབ། %s");
+
         t.put("settings.game.isolation.title", "པར་གཞི་ལོགས་བཀར");
         t.put("settings.game.isolation.full", "པར་གཞི་ཆ་ཚང་ལོགས་བཀར");
         t.put("settings.game.isolation.none", "པར་གཞི་ལོགས་མི་བཀར");
@@ -417,6 +427,7 @@ public final class BOCNGenerator extends LanguageTranslationGenerator {
         t.put("operation.addManualJava", "ལག་ཐོགས་ Java སྣོན");
         t.put("operation.saveJavaSelection", "Java འདེམས་སྒྲུག་ཉར་ཚགས");
         t.put("operation.saveMaxMemory", "དྲན་ཤེས་མང་ཤོས་ཀྱི་སྒྲིག་བཀོད་ཉར་ཚགས");
+        t.put("operation.saveJvmArguments", "JVM ཚད་སྒྲིག་ཉར་ཚགས");
         t.put("operation.saveGameDirectory", "རྩེད་མོའི་སྣེའུ་ཉར་ཚགས");
         t.put("operation.saveVersionIsolation", "པར་གཞི་ལོགས་བཀར་གྱི་སྒྲིག་བཀོད་ཉར་ཚགས");
         t.put("operation.saveAutoGameLanguage", "རྩེད་མོའི་སྐད་ཡིག་རང་བཞིན་སྒྲིག་བཀོད་ཉར་ཚགས");

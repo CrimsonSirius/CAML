@@ -56,12 +56,13 @@ public final class HomeController {
      * 都由 {@code CAMLBackend#launchGame} 在后端完成。</p>
      */
     public FrontTask<GameLaunch> startGame(String version, String username, int memoryMb,
-                                           Path gameDirectory, boolean fullVersionIsolation) {
+                                           Path gameDirectory, boolean fullVersionIsolation,
+                                           String jvmArguments) {
         Objects.requireNonNull(gameDirectory, "gameDirectory");
 
         LaunchOptions options = new LaunchOptions(
                 null, memoryMb, null, null, false,
-                List.of(), List.of(), Map.of()
+                context.backend().parseJvmArguments(jvmArguments), List.of(), Map.of()
         );
 
         DownloadListener downloadListener = new ThrottledDownloadLogger();

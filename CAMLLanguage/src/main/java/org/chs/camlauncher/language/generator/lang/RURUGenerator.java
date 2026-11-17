@@ -252,6 +252,16 @@ public final class RURUGenerator extends LanguageTranslationGenerator {
         t.put("settings.game.memory.summary", "Занято %d МБ / Игра %d МБ / Доступно %d МБ / Всего %d МБ");
 
         // Изоляция версий
+        // Аргументы JVM
+        t.put("settings.game.jvm.title", "Аргументы JVM");
+        t.put("settings.game.jvm.description", "Добавляет дополнительные аргументы JVM при запуске игры. Выделение памяти по-прежнему управляется ползунком выше; не изменяйте эти аргументы, если не уверены в их назначении.");
+        t.put("settings.game.jvm.label", "Дополнительные аргументы");
+        t.put("settings.game.jvm.hint", "Аргументы разделяются пробелами; значения с пробелами заключайте в двойные кавычки, например -Dfoo=\"bar baz\". Поддерживаются подстановки ${game_directory} и ${library_directory}.");
+        t.put("settings.game.jvm.placeholder", "-XX:+UseG1GC -Dexample=value");
+        t.put("settings.game.jvm.save", "Сохранить");
+        t.put("settings.game.jvm.saved", "Аргументы JVM сохранены");
+        t.put("settings.game.jvm.saveFailed", "Не удалось сохранить аргументы JVM: %s");
+
         t.put("settings.game.isolation.title", "Изоляция версий");
         t.put("settings.game.isolation.full", "Полная изоляция версий");
         t.put("settings.game.isolation.none", "Без изоляции версий");
@@ -417,6 +427,7 @@ public final class RURUGenerator extends LanguageTranslationGenerator {
         t.put("operation.addManualJava", "Добавление Java вручную");
         t.put("operation.saveJavaSelection", "Сохранение выбора Java");
         t.put("operation.saveMaxMemory", "Сохранение максимальной памяти");
+        t.put("operation.saveJvmArguments", "Сохранение аргументов JVM");
         t.put("operation.saveGameDirectory", "Сохранение каталога игры");
         t.put("operation.saveVersionIsolation", "Сохранение настройки изоляции версий");
         t.put("operation.saveAutoGameLanguage", "Сохранение настройки языка игры");

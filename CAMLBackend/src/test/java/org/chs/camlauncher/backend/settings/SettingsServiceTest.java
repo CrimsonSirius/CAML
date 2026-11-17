@@ -56,6 +56,30 @@ class SettingsServiceTest {
     }
 
     @Test
+    void jvmArgumentsDefaultToEmptyAndPersist() throws Exception {
+        SettingsService service = new SettingsService(dataDirectory);
+
+        assertEquals(SettingsService.DEFAULT_JVM_ARGUMENTS, service.jvmArguments());
+
+        service.setJvmArguments("  -XX:+UseG1GC -Dname=\"hello world\"  ");
+
+        assertEquals(
+                "-XX:+UseG1GC -Dname=\"hello world\"",
+                new SettingsService(dataDirectory).jvmArguments()
+        );
+    }
+
+    @Test
+    void clearingJvmArgumentsRemovesSetting() throws Exception {
+        SettingsService service = new SettingsService(dataDirectory);
+        service.setJvmArguments("-XX:+UseG1GC");
+        service.setJvmArguments("  ");
+
+        assertEquals(SettingsService.DEFAULT_JVM_ARGUMENTS,
+                new SettingsService(dataDirectory).jvmArguments());
+    }
+
+    @Test
     void persistsGameDirectoryAcrossInstances() throws Exception {
         Path gameDirectory = dataDirectory.resolve("games").resolve(".minecraft");
         new SettingsService(dataDirectory).setGameDirectory(gameDirectory);

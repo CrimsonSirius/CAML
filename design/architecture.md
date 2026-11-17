@@ -237,14 +237,14 @@ CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
   `MemFree` 误当成任务管理器显示的可用内存。
 - `SettingsController` 只在设置页可见时每 500ms 在后台线程读取一次系统内存，
   并通过 `Platform.runLater` 立即刷新设置页。
-- 游戏位置、版本隔离、下载源、下载并发数、最大内存和最后启动实例保存在
+- 游戏位置、版本隔离、下载源、下载并发数、最大内存、额外 JVM 参数和最后启动实例保存在
   `~/.caml/settings.properties`，启动时加载；游戏位置只有点击保存才写入，其余选项立即写入。
   设置写入由串行写锁保护，并通过临时文件原子替换设置文件。
 - Java 选择模式、当前 Java 路径和手动 Java 列表保存在 `~/.caml/settings.properties`；
   自动模式按版本 Java 要求选择运行时，手动模式在启动时使用用户选中的可执行文件。
 - Java 候选由 `JavaLocator` 扫描结果和手动列表按真实路径去重合并；设置页“重新扫描”
   只刷新扫描结果，不丢弃手动添加项。
-- `LaunchSettings` 在主页和设置页之间共享游戏位置、版本隔离和最大内存值；`ViewSupport` 提供通用字段与侧边栏布局。
+- `LaunchSettings` 在主页和设置页之间共享游戏位置、版本隔离、最大内存值和额外 JVM 参数；`ViewSupport` 提供通用字段与侧边栏布局。
 - 当前实例通过共享 `LaunchSettings.selectedVersion` 管理；启动器初始化时恢复 `lastInstanceId`，实例信息下方显示存档位置。
 - `ControllerContext` 使用独立下载线程执行目录探测和下载，实例名检查使用独立短任务线程，
   元数据、Java 扫描、启动和设置保存分别使用独立线程；

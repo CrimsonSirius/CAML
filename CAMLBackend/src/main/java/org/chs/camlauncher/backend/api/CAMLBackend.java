@@ -54,6 +54,7 @@ import org.chs.camlauncher.backend.launch.LaunchPlanner;
 import org.chs.camlauncher.backend.launch.classpath.ClasspathBuilder;
 import org.chs.camlauncher.backend.launch.command.GameArgumentsBuilder;
 import org.chs.camlauncher.backend.launch.command.JvmArgumentsBuilder;
+import org.chs.camlauncher.backend.launch.command.JvmArgumentsParser;
 import org.chs.camlauncher.backend.launch.command.LaunchCommandBuilder;
 import org.chs.camlauncher.backend.launch.prepare.NativeExtractor;
 import org.chs.camlauncher.backend.launch.prepare.VirtualAssetInstaller;
@@ -328,6 +329,18 @@ public final class CAMLBackend implements AutoCloseable {
 
     public void setMaxMemoryMb(int value) throws IOException {
         settingsService.setMaxMemoryMb(value);
+    }
+
+    public String jvmArguments() throws IOException {
+        return settingsService.jvmArguments();
+    }
+
+    public void setJvmArguments(String arguments) throws IOException {
+        settingsService.setJvmArguments(arguments);
+    }
+
+    public List<String> parseJvmArguments(String arguments) {
+        return JvmArgumentsParser.parse(arguments);
     }
 
     public SystemMemoryInfo systemMemory() {

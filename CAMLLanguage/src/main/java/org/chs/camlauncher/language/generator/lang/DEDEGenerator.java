@@ -252,6 +252,16 @@ public final class DEDEGenerator extends LanguageTranslationGenerator {
         t.put("settings.game.memory.summary", "Belegt %d MB / Spiel %d MB / Verfügbar %d MB / Gesamt %d MB");
 
         // Versionsisolierung
+        // JVM-Argumente
+        t.put("settings.game.jvm.title", "JVM-Argumente");
+        t.put("settings.game.jvm.description", "Fügt beim Start zusätzliche JVM-Argumente hinzu. Die Speicherzuweisung wird weiterhin über den Schieberegler oben gesteuert; ändere diese Argumente nur, wenn du ihre Wirkung kennst.");
+        t.put("settings.game.jvm.label", "Zusätzliche Argumente");
+        t.put("settings.game.jvm.hint", "Argumente werden durch Leerzeichen getrennt; Werte mit Leerzeichen in Anführungszeichen setzen, z. B. -Dfoo=\"bar baz\". Platzhalter wie ${game_directory} und ${library_directory} werden unterstützt.");
+        t.put("settings.game.jvm.placeholder", "-XX:+UseG1GC -Dexample=value");
+        t.put("settings.game.jvm.save", "Speichern");
+        t.put("settings.game.jvm.saved", "JVM-Argumente gespeichert");
+        t.put("settings.game.jvm.saveFailed", "JVM-Argumente konnten nicht gespeichert werden: %s");
+
         t.put("settings.game.isolation.title", "Versionsisolierung");
         t.put("settings.game.isolation.full", "Vollständige Versionsisolierung");
         t.put("settings.game.isolation.none", "Keine Versionsisolierung");
@@ -417,6 +427,7 @@ public final class DEDEGenerator extends LanguageTranslationGenerator {
         t.put("operation.addManualJava", "Manuelles Java hinzufügen");
         t.put("operation.saveJavaSelection", "Java-Auswahl speichern");
         t.put("operation.saveMaxMemory", "Maximalen Arbeitsspeicher speichern");
+        t.put("operation.saveJvmArguments", "JVM-Argumente speichern");
         t.put("operation.saveGameDirectory", "Spielverzeichnis speichern");
         t.put("operation.saveVersionIsolation", "Versionsisolierung speichern");
         t.put("operation.saveAutoGameLanguage", "Automatische Spielsprache speichern");
