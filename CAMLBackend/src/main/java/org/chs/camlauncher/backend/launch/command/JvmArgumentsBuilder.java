@@ -23,6 +23,17 @@ public final class JvmArgumentsBuilder {
             result.add("-Xms" + plan.options().minMemoryMb() + "m");
         }
 
+        // 第三方（Yggdrasil）登录：把 authlib-injector 作为 javaagent 注入。
+        // 只影响 JVM 参数，不修改版本 JSON、libraries 或 classpath。
+        plan.injector().ifPresent(injector -> {
+            result.add("-javaagent:" + injector.javaAgentValue());
+            if (injector.hasPrefetched()) {
+                result.add("-Dauthlibinjector.yggdrasil.prefetched="
+                        + injector.prefetchedBase64());
+            }
+            result.add("-Dauthlibinjector.disableHttpd");
+        });
+
         result.addAll(resolve(plan.manifest().arguments().jvm(), ruleEvaluator, placeholders));
         LoggingInfo logging = plan.manifest().logging().get("client");
         if (logging != null && logging.argument() != null && logging.file() != null && logging.file().id() != null) {

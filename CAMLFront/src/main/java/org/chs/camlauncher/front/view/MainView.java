@@ -109,6 +109,7 @@ public final class MainView extends BorderPane {
                 settingsController::saveVersionIsolationAsync,
                 systemMemory,
                 settingsController,
+                controller.accountController(),
                 languageMode,
                 language,
                 languageFallbackMode,
@@ -126,7 +127,7 @@ public final class MainView extends BorderPane {
                     this.onLanguageFallbackChanged.accept(mode, this.languageFallbackLocale);
                 }
         );
-        homeView = new HomeView(homeController, launchSettings);
+        homeView = new HomeView(homeController, controller.accountController(), launchSettings);
         downloadsView = new DownloadsView(downloadsController, launchSettings);
         settingsController.setOnDownloadSourceSaved(downloadsView::refreshVersions);
         pageHost = new CamlPageHost(homeView);

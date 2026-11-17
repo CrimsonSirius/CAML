@@ -6,21 +6,29 @@ import javafx.scene.control.ScrollPane;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.ColumnConstraints;
 import javafx.scene.layout.GridPane;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
+import org.chs.camlauncher.backend.api.AccountSummary;
 import org.chs.camlauncher.backend.api.GameDirectoryInfo;
+import org.chs.camlauncher.front.controller.AccountController;
 import org.chs.camlauncher.front.controller.FrontTask;
 import org.chs.camlauncher.front.controller.HomeController;
+import org.chs.camlauncher.front.text.AccountChoice;
 import org.chs.camlauncher.front.text.UiText;
 import org.chs.camlauncher.ui.control.CamlButton;
+import org.chs.camlauncher.ui.control.CamlComboBox;
 import org.chs.camlauncher.ui.control.CamlTextField;
 
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 
 /** 主页左侧的启动表单与启动交互。 */
 final class LaunchFormView extends BorderPane {
     private final HomeController controller;
+    private final AccountController accountController;
     private final LaunchSettings launchSettings;
     private final Runnable onLaunchStarted;
 
@@ -28,15 +36,20 @@ final class LaunchFormView extends BorderPane {
     private final Label gameLocationLabel;
     private final Label saveLocationLabel;
     private final CamlTextField usernameField;
+    private final CamlComboBox<String> accountBox;
     private final CamlButton launchBtn;
     private final Label statusLabel;
 
+    private List<AccountSummary> accounts = List.of();
     private GameDirectoryInfo lastGameDirectoryInfo;
     private FrontTask<?> launchTask;
 
-    LaunchFormView(HomeController controller, LaunchSettings launchSettings,
-                   Runnable onLaunchStarted, Runnable onChooseInstance, Runnable onManageInstances) {
+    LaunchFormView(HomeController controller, AccountController accountController,
+                   LaunchSettings launchSettings, Runnable onLaunchStarted,
+                   Runnable onChooseInstance, Runnable onManageInstances,
+                   Runnable onManageAccounts) {
         this.controller = Objects.requireNonNull(controller, "controller");
+        this.accountController = Objects.requireNonNull(accountController, "accountController");
         this.launchSettings = Objects.requireNonNull(launchSettings, "launchSettings");
         this.onLaunchStarted = Objects.requireNonNull(onLaunchStarted, "onLaunchStarted");
 
@@ -54,6 +67,23 @@ final class LaunchFormView extends BorderPane {
         saveLocationLabel.getStyleClass().add("app-instance-info-detail");
         saveLocationLabel.setWrapText(true);
 
+        accountBox = new CamlComboBox<>();
+        accountBox.setMaxWidth(Double.MAX_VALUE);
+        accountBox.setConverter(new javafx.util.StringConverter<>() {
+            @Override
+            public String toString(String value) {
+                return AccountChoice.label(value == null ? AccountChoice.DEFAULT : value, accounts);
+            }
+
+            @Override
+            public String fromString(String value) {
+                return accountBox.getItems().stream()
+                        .filter(item -> toString(item).equals(value))
+                        .findFirst()
+                        .orElse(AccountChoice.DEFAULT);
+            }
+        });
+
         usernameField = new CamlTextField("player");
         usernameField.setMaxWidth(Double.MAX_VALUE);
 
@@ -67,16 +97,28 @@ final class LaunchFormView extends BorderPane {
         launchBtn.setMaxWidth(Double.MAX_VALUE);
         launchBtn.setDefaultButton(true);
 
-        buildLayout(onChooseInstance, onManageInstances);
+        buildLayout(onChooseInstance, onManageInstances, onManageAccounts);
         wireController();
         initializeDefaults();
+        refreshAccounts();
     }
 
-    private void buildLayout(Runnable onChooseInstance, Runnable onManageInstances) {
+    private void buildLayout(Runnable onChooseInstance, Runnable onManageInstances,
+                             Runnable onManageAccounts) {
         VBox instanceInfo = new VBox(instanceLabel, gameLocationLabel, saveLocationLabel);
         instanceInfo.getStyleClass().add("app-instance-info-group");
+
+        CamlButton manageAccountsButton = CamlButton.outlined(UiText.tr("home.manageAccounts"));
+        manageAccountsButton.setMinWidth(0);
+        manageAccountsButton.setOnAction(event -> onManageAccounts.run());
+
+        HBox accountRow = new HBox(accountBox, manageAccountsButton);
+        accountRow.setAlignment(Pos.CENTER_LEFT);
+        HBox.setHgrow(accountBox, Priority.ALWAYS);
+
         VBox fields = new VBox(
                 instanceInfo,
+                ViewSupport.buildField(UiText.tr("home.account"), accountRow, null),
                 ViewSupport.buildField(UiText.tr("home.username"), usernameField, null)
         );
         fields.getStyleClass().add("app-fields");
@@ -133,6 +175,16 @@ final class LaunchFormView extends BorderPane {
                 updateInstanceInfo());
         launchSettings.fullVersionIsolationProperty().addListener((observable, oldValue, newValue) ->
                 updateInstanceInfo());
+        launchSettings.selectedAccountChoiceProperty().addListener((observable, oldValue, newValue) -> {
+            if (newValue != null && !newValue.equals(accountBox.getValue())) {
+                accountBox.setValue(newValue);
+            }
+        });
+        accountBox.valueProperty().addListener((observable, oldValue, newValue) -> {
+            if (newValue != null) {
+                launchSettings.setSelectedAccountChoice(newValue);
+            }
+        });
 
         launchBtn.setOnAction(event -> launchGame());
     }
@@ -157,7 +209,9 @@ final class LaunchFormView extends BorderPane {
         }
         Path gameDirectory = launchSettings.gameDirectory();
         String version = launchSettings.selectedVersion();
-        String username = usernameField.getText().trim();
+        String username = usernameField.getText() == null ? "" : usernameField.getText().trim();
+        String accountChoice = launchSettings.selectedAccountChoice();
+        boolean offline = AccountChoice.OFFLINE.equals(accountChoice);
 
         if (gameDirectory == null) {
             showStatus(UiText.tr("home.error.noGameDirectory"), true);
@@ -171,7 +225,7 @@ final class LaunchFormView extends BorderPane {
             showStatus(UiText.tr("home.error.noInstance"), true);
             return;
         }
-        if (username.isEmpty()) {
+        if (offline && username.isEmpty()) {
             showStatus(UiText.tr("home.error.noUsername"), true);
             return;
         }
@@ -180,8 +234,9 @@ final class LaunchFormView extends BorderPane {
         launchBtn.setText(UiText.tr("home.launching"));
         onLaunchStarted.run();
 
-        launchTask = controller.startGame(version, username, launchSettings.maxMemoryMb(),
-                gameDirectory, launchSettings.fullVersionIsolation());
+        launchTask = controller.startGame(version, username, accountChoice,
+                launchSettings.maxMemoryMb(), gameDirectory,
+                launchSettings.fullVersionIsolation());
     }
 
     private void applyGameDirectoryInfo(GameDirectoryInfo info) {
@@ -256,5 +311,29 @@ final class LaunchFormView extends BorderPane {
     private void styleDetail(Label label, boolean error) {
         label.getStyleClass().removeAll("app-instance-info-detail", "app-instance-info-error");
         label.getStyleClass().add(error ? "app-instance-info-error" : "app-instance-info-detail");
+    }
+
+    private void refreshAccounts() {
+        accountController.loadAccounts(loaded -> {
+            this.accounts = loaded == null ? List.of() : loaded;
+            List<String> items = new ArrayList<>();
+            items.add(AccountChoice.DEFAULT);
+            items.add(AccountChoice.OFFLINE);
+            for (AccountSummary account : this.accounts) {
+                items.add(account.id());
+            }
+            accountBox.getItems().setAll(items);
+            accountBox.setValue(launchSettings.selectedAccountChoice());
+        }, error -> {
+            showStatus(UiText.tr("home.error.loadAccounts", error), true);
+            this.accounts = List.of();
+            accountBox.getItems().setAll(AccountChoice.DEFAULT, AccountChoice.OFFLINE);
+            accountBox.setValue(launchSettings.selectedAccountChoice());
+        });
+    }
+
+    /** 账号或实例变化后重新加载账号列表（设置页新增账号后回到主页即可见）。 */
+    void reloadAccounts() {
+        refreshAccounts();
     }
 }

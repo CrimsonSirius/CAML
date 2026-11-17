@@ -3,6 +3,7 @@ package org.chs.camlauncher.backend.launch;
 import org.chs.camlauncher.backend.error.BackendError;
 import org.chs.camlauncher.backend.auth.AuthSession;
 import org.chs.camlauncher.backend.auth.OfflineAccount;
+import org.chs.camlauncher.backend.auth.injector.AuthlibInjector;
 import org.chs.camlauncher.backend.download.DownloadListener;
 import org.chs.camlauncher.backend.instance.GameDataLayout;
 import org.chs.camlauncher.backend.instance.InstalledVersion;
@@ -26,6 +27,7 @@ import java.net.URI;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 
 public final class GameLaunchService {
     /** 未显式指定游戏目录时使用的默认目录。 */
@@ -139,7 +141,28 @@ public final class GameLaunchService {
             DownloadListener downloadListener,
             ProcessListener processListener
     ) throws IOException, InterruptedException {
+        return launch(versionId, gameDirectory, new OfflineAccount(username).login(),
+                Optional.empty(), options, isolationMode, downloadListener, processListener);
+    }
+
+    /**
+     * 使用已经解析好的账号启动游戏。
+     *
+     * <p>{@code injector} 非空时会在 JVM 参数中注入 authlib-injector，
+     * 登录本身由调用方（{@code AccountService}）完成；这里只负责启动编排。</p>
+     */
+    public GameLaunch launch(
+            String versionId,
+            Path gameDirectory,
+            AuthSession auth,
+            Optional<AuthlibInjector> injector,
+            LaunchOptions options,
+            VersionIsolationMode isolationMode,
+            DownloadListener downloadListener,
+            ProcessListener processListener
+    ) throws IOException, InterruptedException {
         Objects.requireNonNull(gameDirectory, "gameDirectory");
+        Objects.requireNonNull(auth, "auth");
         Objects.requireNonNull(isolationMode, "isolationMode");
         InstalledVersion installed = versionInstaller.install(
                 versionId,
@@ -148,7 +171,6 @@ public final class GameLaunchService {
                 manifestCacheFile,
                 downloadListener
         );
-        AuthSession auth = new OfflineAccount(username).login();
 
         JavaRuntime java = selectJava(installed);
 
@@ -168,7 +190,7 @@ public final class GameLaunchService {
                 java,
                 options,
                 gameDataDirectory
-        );
+        ).withInjector(injector);
 
         plan = virtualAssetInstaller.prepare(plan);
         nativeExtractor.extract(plan);

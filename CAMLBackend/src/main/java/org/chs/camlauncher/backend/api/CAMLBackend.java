@@ -3,7 +3,12 @@ package org.chs.camlauncher.backend.api;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.chs.camlauncher.backend.auth.AuthSession;
+import org.chs.camlauncher.backend.auth.AccountService;
 import org.chs.camlauncher.backend.auth.OfflineAccount;
+import org.chs.camlauncher.backend.auth.injector.AuthlibInjectorService;
+import org.chs.camlauncher.backend.auth.store.AccountStore;
+import org.chs.camlauncher.backend.auth.yggdrasil.AuthServerInfo;
+import org.chs.camlauncher.backend.auth.yggdrasil.AuthServerService;
 import org.chs.camlauncher.backend.config.BackendConfig;
 import org.chs.camlauncher.backend.config.BackendPaths;
 import org.chs.camlauncher.backend.download.plan.AssetDownloadPlanner;
@@ -15,6 +20,8 @@ import org.chs.camlauncher.backend.download.source.DownloadSourceFactory;
 import org.chs.camlauncher.backend.download.source.DownloadSourceMode;
 import org.chs.camlauncher.backend.download.plan.DownloadPlanner;
 import org.chs.camlauncher.backend.download.FileDownloader;
+import org.chs.camlauncher.backend.error.BackendError;
+import org.chs.camlauncher.backend.error.BackendException;
 import org.chs.camlauncher.backend.instance.GameDataLayout;
 import org.chs.camlauncher.backend.instance.InstalledVersion;
 import org.chs.camlauncher.backend.instance.InstanceNameCheck;
@@ -150,6 +157,10 @@ public final class CAMLBackend implements AutoCloseable {
     private final LanguageService languageService;
     private final SystemMemoryService systemMemoryService;
     private final LatestLogService latestLogService;
+    private final AccountStore accountStore;
+    private final AuthServerService authServerService;
+    private final AuthlibInjectorService authlibInjectorService;
+    private final AccountService accountService;
     private volatile int downloadConcurrency = DownloadConcurrency.DEFAULT;
     private volatile DownloadSourceMode downloadSourceMode = SettingsService.DEFAULT_DOWNLOAD_SOURCE;
     private volatile String customDownloadApi = "";
@@ -238,6 +249,13 @@ public final class CAMLBackend implements AutoCloseable {
                 virtualAssetInstaller,
                 processLauncher
         );
+        this.accountStore = new AccountStore(config.dataDirectory(), json);
+        this.authServerService = new AuthServerService();
+        this.authlibInjectorService = new AuthlibInjectorService(
+                config.dataDirectory(), fileDownloader);
+        this.accountService = new AccountService(
+                accountStore, authServerService, authlibInjectorService, settingsService);
+
     }
 
     public void start() {
@@ -285,6 +303,13 @@ public final class CAMLBackend implements AutoCloseable {
         } catch (IOException e) {
             LOGGER.warn("无法读取 Java 选择设置，使用自动选择", e);
             gameLaunchService.setJavaSelection(JavaSelectionMode.AUTO, null);
+        }
+        try {
+            authlibInjectorService.setOverride(
+                    settingsService.authlibInjectorPath().orElse(null));
+        } catch (IOException e) {
+            LOGGER.warn("无法读取 authlib-injector 路径设置，使用内置版本", e);
+            authlibInjectorService.setOverride(null);
         }
 
         started = true;
@@ -1094,8 +1119,79 @@ public final class CAMLBackend implements AutoCloseable {
         return new OfflineAccount(username).login();
     }
 
+    /** 判断目录是否存在，供前端保存“游戏位置”前做校验。 */
     public boolean directoryExists(Path directory) {
         return directory != null && Files.isDirectory(directory);
+    }
+
+    // ------------------------------------------------------------------ 账号
+
+    /** 账号列表（不含 token）。 */
+    public List<AccountSummary> listAccounts() throws IOException {
+        return accountService.list();
+    }
+
+    /** 全局默认账号；没有设置时返回空。 */
+    public Optional<AccountSummary> defaultAccount() throws IOException {
+        String id = settingsService.defaultAccountId().orElse(null);
+        if (id == null) {
+            return Optional.empty();
+        }
+        return accountService.find(id);
+    }
+
+    public void setDefaultAccountId(String accountId) throws IOException {
+        accountService.setDefaultAccountId(accountId);
+    }
+
+    /** 使用用户名 + 密码登录第三方 Yggdrasil 认证服务器。 */
+    public AccountSummary loginYggdrasil(String apiRoot, String username, String password,
+                                         boolean remember)
+            throws IOException, InterruptedException {
+        return accountService.loginYggdrasil(apiRoot, username, password, remember);
+    }
+
+    /** 新增离线账号记录。 */
+    public AccountSummary addOfflineAccount(String username) throws IOException {
+        return accountService.addOfflineAccount(username);
+    }
+
+    public void removeAccount(String accountId) throws IOException {
+        accountService.remove(accountId);
+    }
+
+    /** 拉取认证服务器 metadata（同时校验地址是否为有效 Yggdrasil 根）。 */
+    public AuthServerInfo fetchAuthServer(String apiRoot) throws IOException, InterruptedException {
+        return accountService.fetchServer(apiRoot);
+    }
+
+    /** 内置认证服务器地址列表。 */
+    public List<String> authServerPresets() {
+        return accountService.presetApiRoots();
+    }
+
+    /** 某个实例单独指定的账号；没有单独设置时返回空。 */
+    public Optional<String> instanceAccountId(Path gameDirectory, String instanceId)
+            throws IOException {
+        return accountService.instanceAccountId(gameDirectory, instanceId);
+    }
+
+    public void setInstanceAccountId(Path gameDirectory, String instanceId, String accountId)
+            throws IOException {
+        accountService.setInstanceAccountId(gameDirectory, instanceId, accountId);
+    }
+
+    public Optional<Path> authlibInjectorPath() throws IOException {
+        return settingsService.authlibInjectorPath();
+    }
+
+    public void setAuthlibInjectorPath(Path jar) throws IOException {
+        settingsService.setAuthlibInjectorPath(jar);
+        accountService.setInjectorOverride(jar);
+    }
+
+    public AccountService accountService() {
+        return accountService;
     }
 
     public LaunchPlan createLaunchPlan(
@@ -1203,6 +1299,43 @@ public final class CAMLBackend implements AutoCloseable {
                 versionId,
                 gameDirectory,
                 username,
+                options,
+                isolationMode,
+                downloadListener,
+                processListener
+        );
+    }
+
+    /**
+     * 使用已保存的账号启动游戏。
+     *
+     * <p>与 {@code launchGame(..., String username, ...)} 区分：这里的 {@code accountId}
+     * 是账号索引中的 id，而不是离线用户名。</p>
+     *
+     * @param accountId 账号 id；为 {@code null} 时按“实例账号 → 全局账号”解析
+     */
+    public GameLaunch launchGameWithAccount(
+            String versionId,
+            Path gameDirectory,
+            String accountId,
+            LaunchOptions options,
+            VersionIsolationMode isolationMode,
+            DownloadListener downloadListener,
+            ProcessListener processListener
+    ) throws IOException, InterruptedException {
+        gameLaunchService.configureGameLanguage(
+                autoGameLanguage, languageService.activeLocale());
+        AccountService.ResolvedAccount resolved = accountId == null
+                ? accountService.resolve(gameDirectory, versionId)
+                : accountService.resolveById(accountId);
+        if (resolved == null) {
+            throw new BackendException(BackendError.of("auth.error.noAccount"));
+        }
+        return gameLaunchService.launch(
+                versionId,
+                gameDirectory,
+                resolved.session(),
+                resolved.injector(),
                 options,
                 isolationMode,
                 downloadListener,
