@@ -1,6 +1,6 @@
 # CAML 总体架构
 
-更新日期：2026-11-09
+更新日期：2026-11-18
 
 ## 1. 构架目标
 
@@ -41,7 +41,7 @@ CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
 | `runtime` | Java 运行时检测、版本/架构/位数匹配 | 已有 |
 | `launch` | 启动编排；子包 `command`、`classpath`、`prepare`、`process`、`patch` | 已有 |
 | `theme` | 主题目录、默认主题复制和当前主题配置 | 已有 |
-| `settings` | 启动器设置持久化（游戏位置、最大内存、版本隔离、下载源、下载并发数） | 已有 |
+| `settings` | 启动器设置持久化：游戏位置、Java 选择、内存、JVM 参数、版本隔离、语言、下载源/并发和 Mod 禁用状态 | 已有 |
 | `system` | 物理内存与可用内存读取 | 已有 |
 | `loader` | Fabric Loader/Fabric API、Quilt Loader/Quilted Fabric API、Forge、NeoForge、OptiFine（仅 Forge）安装 | 已有 |
 | `json` | 通用 JSON 文件读写 | 已有 |
@@ -147,7 +147,7 @@ CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
 - 支持内存、分辨率、JVM 参数、游戏参数和环境变量。
 - 启动计划创建时校验 Java 是否满足版本要求。
 - **版本隔离**：界面持久化 `VersionIsolationMode.FULL` 或 `NONE`。`FULL` 始终把
-  `--gameDir` 指向 `versions/<id>`，`NONE` 始始终指向 `.minecraft` 根目录；
+  `--gameDir` 指向 `versions/<id>`，`NONE` 始终指向 `.minecraft` 根目录；
   `libraries` 与 `assets` 始终来自根目录。旧 API 仍可使用 `AUTO` 按
   `saves`、`options.txt` 等标记自动检测。`GameLaunchService` 接收显式模式并调用
   `GameDataLayout.resolve`。
@@ -202,7 +202,7 @@ CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
 
 - `CAMLApplication` 初始化后端并创建 `MainView`。
 - `MainView` 只负责壳层：顶栏、主导航、`CamlPageHost` 和底栏。
-- `MainController` 只组合 `HomeController`、`DownloadsController` 和 `SettingsController`；
+- `MainController` 只组合 `HomeController`、`DownloadsController`、`SettingsController` 和 `AccountController`；
   共享的 `ControllerContext` 负责后端访问、I/O 线程和日志回调。
 - 控制器的异步方法统一返回 `FrontTask<T>` 任务句柄。页面持有句柄，在离开或销毁时取消；
   取消会停止 UI 回调并尽力中断后台线程，但后端已开始且不响应中断的操作仍可能继续。
@@ -217,7 +217,7 @@ CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
 - `GameLocationSettingsView` 负责游戏位置草稿、浏览、显式保存和目录校验。
 - `InstancePickerView` 扫描当前游戏位置并列出全部已安装实例。
 - `DownloadsView` 负责下载页子导航；`DownloadVersionsView` 加载正式版、快照版和远古版列表，
-  `DownloadVersionSetupView` 负责实例命名、版本信息、Forge/OptiFine/Fabric/NeoForge 选择；
+  `DownloadVersionSetupView` 负责实例命名、版本信息、Forge/OptiFine/Fabric/NeoForge/Quilt 选择；
   OptiFine 只有在选择 Forge 后才可用。下载设置页提交不可变 `DownloadRequest` 后，
   `DownloadProgressView` 接管页面，展示网速、总进度、当前文件和阶段列表；
   `DownloadTelemetry` 在后台事件与 JavaFX 轮询之间聚合进度和网速。
@@ -238,9 +238,10 @@ CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
   `caml.css` 的 `-fx-min-height: 44` 会覆盖代码设置，再叠加 `Region.USE_PREF_SIZE`
   会使皮肤首选高度塌陷为 `0`，正文就会溢出到相邻行。`ModResultRowLayoutTest`
   用真实样式表在 JavaFX 工具里守住行高、图标边界与点击层覆盖范围。
-- `GameSettingsView` 负责叠层内存滑块，`DownloadSettingsView` 负责下载源三选一、
-  自定义 API 输入和 1–256 下载并发滑块，
-  `LauncherSettingsView` 负责外观设置中的主题选择。
+- `GameLocationSettingsView`、`VersionIsolationSettingsView`、`JavaSettingsView`、
+  `JvmArgumentsSettingsView` 和 `GameSettingsView` 分别负责游戏位置、版本隔离、Java、
+  额外 JVM 参数和叠层内存滑块；`DownloadSettingsView` 负责下载源三选一、自定义 API
+  输入和 1–256 下载并发滑块；`LauncherSettingsView` 负责外观设置中的主题与语言选择。
 - `SystemMemoryService` 在 Linux 读取 `/proc/meminfo` 的 `MemAvailable`，避免把
   `MemFree` 误当成任务管理器显示的可用内存。
 - `SettingsController` 只在设置页可见时每 500ms 在后台线程读取一次系统内存，
@@ -252,7 +253,8 @@ CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
   自动模式按版本 Java 要求选择运行时，手动模式在启动时使用用户选中的可执行文件。
 - Java 候选由 `JavaLocator` 扫描结果和手动列表按真实路径去重合并；设置页“重新扫描”
   只刷新扫描结果，不丢弃手动添加项。
-- `LaunchSettings` 在主页和设置页之间共享游戏位置、版本隔离、最大内存值和额外 JVM 参数；`ViewSupport` 提供通用字段与侧边栏布局。
+- `LaunchSettings` 在主页和设置页之间共享游戏位置、版本隔离、最大内存、额外 JVM 参数、
+  Java 选择和账号选择；`ViewSupport` 提供通用字段与侧边栏布局。
 - 当前实例通过共享 `LaunchSettings.selectedVersion` 管理；启动器初始化时恢复 `lastInstanceId`，实例信息下方显示存档位置。
 - `ControllerContext` 使用独立下载线程执行目录探测和下载，实例名检查使用独立短任务线程，
   元数据、Java 扫描、启动和设置保存分别使用独立线程；
@@ -289,14 +291,14 @@ CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
 - 主题文件位于 `~/.caml/themes/*.css`，设置 → 外观提供主题选择器。
 - 当前主题记录在 `~/.caml/theme.txt`，下次启动自动恢复。
 - 后端 `ThemeService` 负责扫描主题、首次复制默认主题和保存选择。
-- 默认主题 mango 作为 `CAMLBackend/src/main/resources/themes/mango.css` 打包，
+- 默认主题 mango 作为 `CAMLBackend/src/main/resources/themes/mango.css` 内置在 classpath，
   首次启动复制到 `~/.caml/themes/mango.css`。
 - 默认主题使用白底、灰色表面、黄色强调色和深色文字。
 - 组件 API 包括 `CamlButton`、`CamlCard`、`CamlTextField`、`CamlTextArea`、
   `CamlComboBox`、`CamlSpinner`、`CamlSwitch`、`CamlCheckBox`、`CamlSlider`、
   `CamlMemorySlider`、`CamlRadioButton`、`CamlProgressBar`、`CamlSideNav`、`CamlSideNavItem`、`CamlTopNav`、
   `CamlTopNavItem`、`CamlPageHost` 和 `CamlTopBar`。
-- `CAMLFront` 依赖 `CAMLUI` 和 `CAMLLanguage`，不再把控件外观或界面文案写死在业务界面里。
+- `CAMLFront` 依赖 `CAMLUI`、`CAMLLanguage` 和 `CAMLBackend`，不再把控件外观或界面文案写死在业务界面里。
 
 ### 3.13 前端多语言
 
@@ -354,8 +356,8 @@ CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
 - 启动脚本导出。
 - 微软账号登录（第三方 Yggdrasil 登录已实现，详见 [auth.md](auth.md)）。
 - 第三方账号的 2FA / OAuth 登录。
-- 下载取消和内容寻址缓存。
-- 整合包和模组管理。
+- 前端下载取消入口和内容寻址缓存。
+- 整合包导入/导出与管理。
 
 ## 5. 数据与安全原则
 
@@ -417,6 +419,6 @@ info.isolatedVersions();
 - 版本下载和启动链路详见 [version-download-and-launch.md](version-download-and-launch.md)。
 - 界面布局、组件映射和动效详见 [ui.md](ui.md)。
 - runtime 包详见 [runtime.md](runtime.md)。
+- 打包与发布流程详见 [package.md](package.md)。
 - 当前实现情况详见 [Implement.md](Implement.md)。
-- 开发任务和阶段计划由本地 `TODO.md` 维护。
 - 第三方账号登录详见 [auth.md](auth.md)。
