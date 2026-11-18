@@ -209,6 +209,28 @@ CAML/
 再运行 `collectPackages`，exe 会被一起汇总。
 根目录 `./gradlew clean` 会删除 `build/`，因此汇总结果不会长期堆积。
 
+`build/packages/SHA256SUMS.txt` 的条目带平台子目录前缀，可以直接在该目录校验：
+
+```bash
+cd build/packages && sha256sum -c SHA256SUMS.txt
+```
+
+```powershell
+# Windows 没有自带 sha256sum，用 PowerShell 逐项比对
+cd build\packages
+Get-Content SHA256SUMS.txt | ForEach-Object {
+    $hash, $path = $_ -split '\s+', 2
+    $actual = (Get-FileHash $path -Algorithm SHA256).Hash.ToLower()
+    "{0}  {1}" -f $(if ($actual -eq $hash) { 'OK' } else { 'FAILED' }), $path
+}
+```
+
+`build/packages/linux/SHA256SUMS.txt` 和 `build/packages/windows/SHA256SUMS.txt`
+只收录各自目录内的文件，因此条目不带前缀。
+
+发布包**不做代码签名**：Windows 首次运行会触发 SmartScreen 提示，Linux 也没有 GPG 签名。
+请让用户用上面的哈希值自行校验下载完整性。
+
 #### Linux
 
 Arch Linux 本地构建需要：
