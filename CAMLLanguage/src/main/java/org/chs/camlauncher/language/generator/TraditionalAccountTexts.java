@@ -66,6 +66,9 @@ public final class TraditionalAccountTexts {
         put(t, "account.instance.loading", "正在讀取帳號...");
         put(t, "account.instance.count", "共 %d 個實例，為每個實例選擇啟動時使用的帳號");
         put(t, "account.instance.saved", "已儲存實例 %s 的帳號");
+        put(t, "account.instance.mismatch", "部分實例帳號原本綁定在 %s，目前不生效（共 %d 個實例）");
+        put(t, "account.instance.mismatchApply", "套用到目前遊戲位置");
+        put(t, "account.instance.mismatchApplied", "已將 %d 個實例帳號綁定套用到目前遊戲位置");
         put(t, "operation.loadAccounts", "讀取帳號");
         put(t, "operation.loginAccount", "登入帳號");
         put(t, "operation.addOfflineAccount", "新增離線帳號");

@@ -86,6 +86,11 @@ final class AccountTexts {
         put(t, "account.instance.count",
                 "%d instances; choose the account used to launch each one");
         put(t, "account.instance.saved", "Account saved for instance %s");
+        put(t, "account.instance.mismatch",
+                "Some instance accounts were bound to %s and no longer apply here (%d instances)");
+        put(t, "account.instance.mismatchApply", "Apply to this game location");
+        put(t, "account.instance.mismatchApplied",
+                "Applied %d instance account bindings to this game location");
 
         // 后台操作名
         put(t, "operation.loadAccounts", "Load accounts");

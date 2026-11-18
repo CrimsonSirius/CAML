@@ -1,6 +1,7 @@
 package org.chs.camlauncher.front.controller;
 
 import org.chs.camlauncher.backend.api.AccountSummary;
+import org.chs.camlauncher.backend.api.InstanceAccountMismatch;
 import org.chs.camlauncher.backend.auth.yggdrasil.AuthServerInfo;
 import org.chs.camlauncher.front.text.UiText;
 
@@ -131,22 +132,43 @@ public final class AccountController {
         }, ignored -> run(onSaved), onError);
     }
 
+    /** 检测“实例账号绑定留在旧游戏位置”的情况；没有问题时回调 null。 */
+    public FrontTask<InstanceAccountMismatch> detectInstanceAccountMismatch(
+            Path gameDirectory, List<String> instances,
+            Consumer<InstanceAccountMismatch> onLoaded, Consumer<String> onError) {
+        if (gameDirectory == null) {
+            return null;
+        }
+        return context.runSettings(UiText.tr("operation.loadInstanceAccount"),
+                () -> context.backend().staleInstanceAccounts(gameDirectory, instances).orElse(null),
+                onLoaded, onError);
+    }
+
+    /** 把旧游戏位置下的实例账号绑定套用到当前目录。 */
+    public FrontTask<Integer> reapplyInstanceAccounts(
+            Path gameDirectory, List<String> instances,
+            Consumer<Integer> onApplied, Consumer<String> onError) {
+        if (gameDirectory == null) {
+            return null;
+        }
+        return context.runSettings(UiText.tr("operation.saveInstanceAccount"),
+                () -> context.backend().reapplyInstanceAccounts(gameDirectory, instances),
+                onApplied, onError);
+    }
+
     public FrontTask<Path> loadInjectorPath(
             Consumer<Path> onLoaded, Consumer<String> onError) {
         return context.runSettings(UiText.tr("operation.loadAccounts"),
                 () -> context.backend().authlibInjectorPath().orElse(null),
                 onLoaded, onError);
     }
-
     public FrontTask<Void> saveInjectorPath(
             Path jar, Runnable onSaved, Consumer<String> onError) {
         return context.runSettings(UiText.tr("operation.saveInjectorPath"), () -> {
             context.backend().setAuthlibInjectorPath(jar);
             return null;
         }, ignored -> run(onSaved), onError);
-    }
-
-    private static void run(Runnable action) {
+    }    private static void run(Runnable action) {
         if (action != null) {
             action.run();
         }

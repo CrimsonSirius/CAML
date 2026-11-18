@@ -3,6 +3,7 @@ package org.chs.camlauncher.backend.auth;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.chs.camlauncher.backend.api.AccountSummary;
+import org.chs.camlauncher.backend.api.InstanceAccountMismatch;
 import org.chs.camlauncher.backend.auth.injector.AuthlibInjector;
 import org.chs.camlauncher.backend.auth.injector.AuthlibInjectorService;
 import org.chs.camlauncher.backend.auth.store.AccountStore;
@@ -21,6 +22,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -96,6 +98,78 @@ public final class AccountService {
     public void setInstanceAccountId(Path gameDirectory, String instanceId, String accountId)
             throws IOException {
         settings.setInstanceAccountId(gameDirectory, instanceId, accountId);
+    }
+
+    /**
+     * 找出“绑定留在旧游戏目录”的实例。
+     *
+     * <p>实例账号绑定以“游戏目录 + 实例名”为键，修改“游戏位置”后旧绑定不会自动生效。
+     * 这里只报告<b>当前目录里也存在</b>的实例，避免把已经不需要的旧条目都算进来；
+     * 返回空表示没有需要提示的情况。</p>
+     *
+     * @param gameDirectory     当前游戏目录
+     * @param currentInstances  当前游戏目录里已安装的实例
+     */
+    public Optional<InstanceAccountMismatch> detectInstanceAccountMismatch(
+            Path gameDirectory, List<String> currentInstances) throws IOException {
+        if (gameDirectory == null || currentInstances == null || currentInstances.isEmpty()) {
+            return Optional.empty();
+        }
+        Path current = gameDirectory.toAbsolutePath().normalize();
+        List<SettingsService.InstanceAccountBinding> bindings = settings.instanceAccountBindings();
+
+        List<String> affected = new ArrayList<>();
+        Path previous = null;
+        for (String instanceId : currentInstances) {
+            if (instanceId == null || instanceId.isBlank()) {
+                continue;
+            }
+            for (SettingsService.InstanceAccountBinding binding : bindings) {
+                if (!instanceId.equals(binding.instanceId())) {
+                    continue;
+                }
+                if (binding.gameDirectory().equals(current)) {
+                    continue;
+                }
+                affected.add(instanceId);
+                // 多个旧目录时展示最近匹配到的那个；一键套用会对每个实例分别回溯。
+                previous = binding.gameDirectory();
+                break;
+            }
+        }
+        if (affected.isEmpty()) {
+            return Optional.empty();
+        }
+        return Optional.of(new InstanceAccountMismatch(previous, affected));
+    }
+
+    /**
+     * 把旧游戏目录下仍可用的实例绑定套用到当前游戏目录。
+     *
+     * @return 实际套用的绑定数量
+     */
+    public int reapplyInstanceAccounts(Path gameDirectory, List<String> currentInstances)
+            throws IOException {
+        if (gameDirectory == null || currentInstances == null || currentInstances.isEmpty()) {
+            return 0;
+        }
+        Path current = gameDirectory.toAbsolutePath().normalize();
+        Map<Path, List<String>> byDirectory = new LinkedHashMap<>();
+        for (SettingsService.InstanceAccountBinding binding : settings.instanceAccountBindings()) {
+            if (binding.gameDirectory().equals(current)) {
+                continue;
+            }
+            if (!currentInstances.contains(binding.instanceId())) {
+                continue;
+            }
+            byDirectory.computeIfAbsent(binding.gameDirectory(), key -> new ArrayList<>())
+                    .add(binding.instanceId());
+        }
+        int moved = 0;
+        for (Map.Entry<Path, List<String>> entry : byDirectory.entrySet()) {
+            moved += settings.moveInstanceAccountBindings(entry.getKey(), current, entry.getValue());
+        }
+        return moved;
     }
 
     public AuthServerInfo fetchServer(String apiRoot) throws IOException, InterruptedException {

@@ -1201,6 +1201,24 @@ public final class CAMLBackend implements AutoCloseable {
         accountService.setInstanceAccountId(gameDirectory, instanceId, accountId);
     }
 
+    /**
+     * 检测“实例账号绑定留在旧游戏位置”的情况。
+     *
+     * @param gameDirectory    当前游戏目录
+     * @param currentInstances 当前目录里已安装的实例
+     * @return 没有需要提示的情况时返回空
+     */
+    public Optional<InstanceAccountMismatch> staleInstanceAccounts(
+            Path gameDirectory, List<String> currentInstances) throws IOException {
+        return accountService.detectInstanceAccountMismatch(gameDirectory, currentInstances);
+    }
+
+    /** 把旧游戏位置下的实例账号绑定套用到当前目录，返回实际套用的数量。 */
+    public int reapplyInstanceAccounts(Path gameDirectory, List<String> currentInstances)
+            throws IOException {
+        return accountService.reapplyInstanceAccounts(gameDirectory, currentInstances);
+    }
+
     public Optional<Path> authlibInjectorPath() throws IOException {
         return settingsService.authlibInjectorPath();
     }
