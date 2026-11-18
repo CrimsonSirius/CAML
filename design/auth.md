@@ -1,6 +1,6 @@
 # CAML 第三方（Yggdrasil）账号登录
 
-更新日期：2026-11-17
+更新日期：2026-11-18
 
 ## 1. 方案结论
 
@@ -10,6 +10,7 @@
 用户名 + 密码
 → POST {apiRoot}/authserver/authenticate
 → accessToken + selectedProfile(id, name)
+→ （服务器未绑定角色时）POST {apiRoot}/authserver/refresh + selectedProfile 补绑定
 → AuthSession(username, uuid, accessToken, "mojang", "{}")
 → -javaagent:authlib-injector.jar={apiRoot}
 ```
@@ -80,20 +81,44 @@ CAMLBackend/.../backend/auth/
 | 场景 | 行为 |
 |---|---|
 | 用户名/密码错误 | `auth.error.invalidCredentials`，不降级离线 |
+| 服务器返回未绑定角色的 token | 登录时自动用 `refresh` + `selectedProfile` 补绑定 |
 | accessToken 失效但可刷新 | 自动 `refresh` 并回写新 token |
 | accessToken 失效且无法刷新 | `auth.error.loginExpired`，提示重新登录 |
+| `refresh` 返回 4xx | 一律按“需要重新登录”处理，不把服务器原文抛到界面 |
 | 认证服务器不可达（启动时） | 记录警告，继续使用现有 token |
 | 未保存凭据（未勾选“记住登录”） | `auth.error.loginRequired` |
 
-## 7. 已知限制
+## 7. 角色绑定与启动时刷新
+
+部分服务器（LittleSkin 等）在账号拥有**多个角色**时，`authenticate` 只返回 `availableProfiles`，
+不设置 `selectedProfile`。此时 accessToken 处于“未绑定角色”状态，服务器会对
+`validate`/`refresh` 和进入服务器返回 400：
+
+```text
+The access token has no profile assigned, please select a profile.
+```
+
+处理方式：
+
+1. 登录：`authenticate` 之后若响应没有 `selectedProfile`，立即调用一次
+   `refresh` 并带上所选角色的 `selectedProfile`，把 token 绑定到该角色。
+2. 启动：先把原有 `validate` 改成**直接 `refresh`**（同样带 `selectedProfile`）。
+   这样历史上已保存的、未绑定角色的 token 会在下次启动时自愈；只有 `refresh`
+   被拒且 `validate` 也失败时才报 `auth.error.loginExpired`。
+3. 角色选择：首版固定使用账号的第一个可用角色，`StoredAccount.uuid` 即该角色 id。
+   多角色切换留给后续的角色选择界面。
+
+代价：每次启动都会轮换一次 accessToken（服务器会吊销旧 token），因此同一账号
+不宜同时在多台机器上用本启动器登录。
+
+## 8. 已知限制
 
 - 一次启动只能注入一个认证服务器（`-javaagent` 单实例）。
 - Yggdrasil UUID 与离线 UUID 不同，切换账号后服务器端玩家数据/白名单不会自动迁移。
 - 首版只支持账号密码登录，2FA/OAuth 需要后续扩展。
 
-## 8. 待办
+## 9. 待办
 
 - LittleSkin 等站点的 2FA / OAuth 授权码流程。
 - 使用系统凭据库（DPAPI / libsecret）替换自管理密钥。
 - 账号皮肤头像展示。
-

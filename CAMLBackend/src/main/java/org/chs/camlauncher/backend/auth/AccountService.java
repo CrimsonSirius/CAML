@@ -232,20 +232,25 @@ public final class AccountService {
 
         String accessToken = account.accessToken();
         String clientToken = account.clientToken();
+        String profileId = account.uuid();
         try {
-            if (!client.validate(account.apiRoot(), accessToken, clientToken)) {
-                Optional<YggdrasilSession> refreshed =
-                        client.refresh(account.apiRoot(), accessToken, clientToken);
-                if (refreshed.isEmpty()) {
-                    throw new BackendException(BackendError.of(
-                            "auth.error.loginExpired", account.displayName(), account.serverName()));
-                }
+            // 直接 refresh 而不是先 validate：refresh 会带上 selectedProfile，
+            // 这样“token 未绑定角色”（LittleSkin 多角色账号）的旧凭据也能在启动时自愈，
+            // 否则 token 虽然有效，进服务器时仍会被 session 服务拒绝。
+            Optional<YggdrasilSession> refreshed = client.refresh(
+                    account.apiRoot(), accessToken, clientToken, profileId, account.displayName());
+            if (refreshed.isPresent()) {
                 YggdrasilSession session = refreshed.get();
                 accessToken = session.accessToken();
                 clientToken = blankToEmpty(session.clientToken());
+                profileId = session.profileId();
                 account = account.withToken(accessToken, clientToken);
                 store.upsert(account);
                 LOGGER.info("已刷新第三方账号 {} 的凭据", session.username());
+            } else if (!client.validate(account.apiRoot(), accessToken, clientToken)) {
+                // 服务器拒绝刷新且现有 token 也无效：只能重新登录。
+                throw new BackendException(BackendError.of(
+                        "auth.error.loginExpired", account.displayName(), account.serverName()));
             }
         } catch (BackendException e) {
             throw e;
@@ -261,7 +266,7 @@ public final class AccountService {
 
         AuthSession session = new AuthSession(
                 account.displayName(),
-                YggdrasilSession.profileUuid(account.uuid()),
+                YggdrasilSession.profileUuid(profileId),
                 accessToken,
                 "mojang",
                 "{}");
@@ -308,4 +313,3 @@ public final class AccountService {
         }
     }
 }
-

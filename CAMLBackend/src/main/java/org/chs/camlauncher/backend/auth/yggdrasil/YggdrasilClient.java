@@ -101,23 +101,48 @@ public final class YggdrasilClient {
                     "auth.error.requestFailed", normalized, response.statusCode(),
                     errorMessage(response.body())));
         }
-        return parseSession(response.body(), normalized, clientToken, true);
+        JsonObject root = parseObject(response.body(), normalized);
+        YggdrasilSession session = parseSession(root, normalized, clientToken, true, null, null);
+        if (asObject(root.get("selectedProfile")) == null) {
+            // 部分服务器（如 LittleSkin）在账号拥有多个角色时只返回 availableProfiles、
+            // 不把 token 绑定到任何角色，之后的 validate/refresh 与进入服务器都会被拒绝。
+            // Yggdrasil 允许用 refresh + selectedProfile 补一次绑定，这里就地完成。
+            session = refresh(normalized, session.accessToken(), session.clientToken(),
+                    session.profileId(), session.username()).orElse(session);
+        }
+        return session;
     }
 
     /**
-     * 用 accessToken 换取新 token。
+     * 用 accessToken 换取新 token，并把 token 绑定到指定角色。
      *
-     * @return token 已失效时返回空，调用方需要重新输入密码
+     * <p>Yggdrasil 允许在 refresh 请求里携带 {@code selectedProfile}。对于“未绑定角色”的
+     * accessToken，LittleSkin 等实现会直接返回 400 并提示 {@code please select a profile}，
+     * 因此只要知道角色就应当始终传入。</p>
+     *
+     * @return token 已失效或服务器拒绝绑定角色时返回空，调用方需要重新输入密码
      */
-    public Optional<YggdrasilSession> refresh(String apiRoot, String accessToken, String clientToken)
+    public Optional<YggdrasilSession> refresh(String apiRoot, String accessToken, String clientToken,
+                                              String profileId, String profileName)
             throws IOException, InterruptedException {
         String normalized = AuthServerInfo.normalizeApiRoot(apiRoot);
         JsonObject body = new JsonObject();
         body.addProperty("accessToken", accessToken);
         body.addProperty("clientToken", clientToken);
+        if (profileId != null && !profileId.isBlank()) {
+            JsonObject selectedProfile = new JsonObject();
+            selectedProfile.addProperty("id", profileId);
+            if (profileName != null && !profileName.isBlank()) {
+                selectedProfile.addProperty("name", profileName);
+            }
+            body.add("selectedProfile", selectedProfile);
+        }
 
         HttpResponse<String> response = post(normalized + "/authserver/refresh", body, normalized);
-        if (response.statusCode() == 401 || response.statusCode() == 403) {
+        if (response.statusCode() == 400 || response.statusCode() == 401
+                || response.statusCode() == 403) {
+            // token 过期、被吊销，或服务器不接受把 token 绑定到该角色：
+            // 统一按“需要重新登录”处理，避免把服务器原文直接抛到界面。
             return Optional.empty();
         }
         if (!isSuccess(response.statusCode())) {
@@ -125,7 +150,8 @@ public final class YggdrasilClient {
                     "auth.error.requestFailed", normalized, response.statusCode(),
                     errorMessage(response.body())));
         }
-        return Optional.of(parseSession(response.body(), normalized, clientToken, false));
+        return Optional.of(parseSession(parseObject(response.body(), normalized), normalized,
+                clientToken, false, profileId, profileName));
     }
 
     /** 校验 accessToken 是否仍然有效；网络错误按调用失败抛出，由调用方决定是否降级。 */
@@ -148,10 +174,10 @@ public final class YggdrasilClient {
                 errorMessage(response.body())));
     }
 
-    private YggdrasilSession parseSession(String body, String apiRoot, String requestedClientToken,
-                                          boolean requireSelectedProfile)
+    private YggdrasilSession parseSession(JsonObject root, String apiRoot, String requestedClientToken,
+                                          boolean requireSelectedProfile,
+                                          String fallbackProfileId, String fallbackProfileName)
             throws BackendException {
-        JsonObject root = parseObject(body, apiRoot);
         String accessToken = stringValue(root.get("accessToken"));
         if (accessToken == null || accessToken.isBlank()) {
             throw new BackendException(BackendError.of("auth.error.responseInvalid", apiRoot));
@@ -169,6 +195,12 @@ public final class YggdrasilClient {
             }
         }
         if (profile == null) {
+            // refresh 的响应允许不带角色信息，此时沿用调用方已知的角色。
+            if (fallbackProfileId != null && !fallbackProfileId.isBlank()
+                    && fallbackProfileName != null && !fallbackProfileName.isBlank()) {
+                return new YggdrasilSession(fallbackProfileName, fallbackProfileId,
+                        accessToken, clientToken);
+            }
             if (requireSelectedProfile) {
                 throw new BackendException(BackendError.of("auth.error.noSelectedProfile", apiRoot));
             }
@@ -266,4 +298,3 @@ public final class YggdrasilClient {
                 .build();
     }
 }
-
