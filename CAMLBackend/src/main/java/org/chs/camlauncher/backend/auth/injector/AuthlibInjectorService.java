@@ -45,6 +45,7 @@ public final class AuthlibInjectorService {
     private static final String ARTIFACT_BASE =
             "https://authlib-injector.yushi.moe/artifact/" + VERSION;
     private static final String FILE_NAME = "authlib-injector-" + VERSION + ".jar";
+    private static final String USER_AGENT = "CAML/1.0";
     private static final Duration TIMEOUT = Duration.ofSeconds(30);
 
     private final Path cacheDirectory;
@@ -122,7 +123,8 @@ public final class AuthlibInjectorService {
                                 + "/download/v" + VERSION + "/" + FILE_NAME)),
                 jar,
                 null,
-                0);
+                0,
+                java.util.Map.of("User-Agent", USER_AGENT));
         downloader.download(item, DownloadListener.NONE, file -> verify(file, expected),
                 new DownloadCancellationToken());
 
@@ -151,6 +153,7 @@ public final class AuthlibInjectorService {
             HttpRequest request = HttpRequest.newBuilder(
                             URI.create(ARTIFACT_BASE + "/" + FILE_NAME + ".sha256"))
                     .timeout(TIMEOUT)
+                    .header("User-Agent", USER_AGENT)
                     .GET()
                     .build();
             HttpResponse<String> response = httpClient.send(

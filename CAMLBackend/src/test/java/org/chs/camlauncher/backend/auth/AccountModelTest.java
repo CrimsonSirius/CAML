@@ -98,4 +98,3 @@ class AccountModelTest {
         assertFalse(loaded.hasToken());
     }
 }
-

@@ -3,6 +3,7 @@ package org.chs.camlauncher.backend.auth.store;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.chs.camlauncher.backend.auth.AccountType;
+import org.chs.camlauncher.backend.auth.yggdrasil.YggdrasilProfile;
 import org.chs.camlauncher.backend.json.JsonService;
 
 import java.io.IOException;
@@ -108,7 +109,8 @@ public final class AccountStore {
                     entry.apiRoot,
                     entry.serverName,
                     cipher.decrypt(entry.accessToken),
-                    entry.clientToken));
+                    entry.clientToken,
+                    readProfiles(entry.profiles)));
         }
         return List.copyOf(accounts);
     }
@@ -127,6 +129,7 @@ public final class AccountStore {
             entry.serverName = account.serverName();
             entry.accessToken = cipher.encrypt(account.accessToken());
             entry.clientToken = account.clientToken();
+            entry.profiles = writeProfiles(account.profiles());
             file.accounts.add(entry);
         }
 
@@ -147,6 +150,34 @@ public final class AccountStore {
         }
     }
 
+    private static List<YggdrasilProfile> readProfiles(List<ProfileEntry> entries) {
+        if (entries == null || entries.isEmpty()) {
+            return List.of();
+        }
+        List<YggdrasilProfile> profiles = new ArrayList<>(entries.size());
+        for (ProfileEntry entry : entries) {
+            if (entry == null || entry.id == null || entry.id.isBlank()) {
+                continue;
+            }
+            profiles.add(new YggdrasilProfile(entry.id, entry.name));
+        }
+        return List.copyOf(profiles);
+    }
+
+    private static List<ProfileEntry> writeProfiles(List<YggdrasilProfile> profiles) {
+        if (profiles == null || profiles.isEmpty()) {
+            return List.of();
+        }
+        List<ProfileEntry> entries = new ArrayList<>(profiles.size());
+        for (YggdrasilProfile profile : profiles) {
+            ProfileEntry entry = new ProfileEntry();
+            entry.id = profile.id();
+            entry.name = profile.name();
+            entries.add(entry);
+        }
+        return entries;
+    }
+
     private static final class AccountsFile {
         private int version = FILE_VERSION;
         private List<AccountEntry> accounts = new ArrayList<>();
@@ -161,6 +192,11 @@ public final class AccountStore {
         private String serverName;
         private String accessToken;
         private String clientToken;
+        private List<ProfileEntry> profiles;
+    }
+
+    private static final class ProfileEntry {
+        private String id;
+        private String name;
     }
 }
-

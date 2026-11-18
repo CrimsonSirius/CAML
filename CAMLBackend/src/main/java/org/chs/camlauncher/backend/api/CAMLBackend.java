@@ -7,6 +7,7 @@ import org.chs.camlauncher.backend.auth.AccountService;
 import org.chs.camlauncher.backend.auth.OfflineAccount;
 import org.chs.camlauncher.backend.auth.injector.AuthlibInjectorService;
 import org.chs.camlauncher.backend.auth.store.AccountStore;
+import org.chs.camlauncher.backend.auth.store.AuthServerStore;
 import org.chs.camlauncher.backend.auth.yggdrasil.AuthServerInfo;
 import org.chs.camlauncher.backend.auth.yggdrasil.AuthServerService;
 import org.chs.camlauncher.backend.config.BackendConfig;
@@ -251,7 +252,8 @@ public final class CAMLBackend implements AutoCloseable {
                 processLauncher
         );
         this.accountStore = new AccountStore(config.dataDirectory(), json);
-        this.authServerService = new AuthServerService();
+        this.authServerService = new AuthServerService(
+                new AuthServerStore(config.dataDirectory(), json));
         this.authlibInjectorService = new AuthlibInjectorService(
                 config.dataDirectory(), fileDownloader);
         this.accountService = new AccountService(
@@ -1183,6 +1185,11 @@ public final class CAMLBackend implements AutoCloseable {
         return accountService.presetApiRoots();
     }
 
+    /** 内置认证服务器地址 → 昵称。 */
+    public java.util.Map<String, String> authServerPresetNames() {
+        return accountService.presetServerNames();
+    }
+
     /** 某个实例单独指定的账号；没有单独设置时返回空。 */
     public Optional<String> instanceAccountId(Path gameDirectory, String instanceId)
             throws IOException {
@@ -1203,8 +1210,15 @@ public final class CAMLBackend implements AutoCloseable {
         accountService.setInjectorOverride(jar);
     }
 
-    public AccountService accountService() {
-        return accountService;
+    /**
+     * 把第三方账号切换到另一个角色。
+     *
+     * <p>账号 id 不变，只改变下次启动使用的 UUID 与角色名；切换失败（凭据过期）时
+     * 返回结构化错误，前端据此提示重新登录。</p>
+     */
+    public AccountSummary switchAccountProfile(String accountId, String profileId)
+            throws IOException, InterruptedException {
+        return accountService.switchProfile(accountId, profileId);
     }
 
     public LaunchPlan createLaunchPlan(

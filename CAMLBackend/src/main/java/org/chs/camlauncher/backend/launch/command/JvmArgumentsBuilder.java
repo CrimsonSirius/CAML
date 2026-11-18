@@ -25,13 +25,14 @@ public final class JvmArgumentsBuilder {
 
         // 第三方（Yggdrasil）登录：把 authlib-injector 作为 javaagent 注入。
         // 只影响 JVM 参数，不修改版本 JSON、libraries 或 classpath。
+        // 不添加 -Dauthlibinjector.disableHttpd：内置 HTTP 服务是皮肤域名代理的一部分，
+        // 关掉它属于无明确收益的行为变更，保持与上游默认一致。
         plan.injector().ifPresent(injector -> {
             result.add("-javaagent:" + injector.javaAgentValue());
             if (injector.hasPrefetched()) {
                 result.add("-Dauthlibinjector.yggdrasil.prefetched="
                         + injector.prefetchedBase64());
             }
-            result.add("-Dauthlibinjector.disableHttpd");
         });
 
         result.addAll(resolve(plan.manifest().arguments().jvm(), ruleEvaluator, placeholders));

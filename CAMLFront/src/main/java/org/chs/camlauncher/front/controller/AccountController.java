@@ -6,6 +6,7 @@ import org.chs.camlauncher.front.text.UiText;
 
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.function.Consumer;
 
@@ -32,6 +33,15 @@ public final class AccountController {
             return context.backend().authServerPresets();
         } catch (RuntimeException e) {
             return List.of();
+        }
+    }
+
+    /** 预设服务器地址 → 展示名；失败时退化为空表（下拉框仍显示地址）。 */
+    public Map<String, String> presetServerNames() {
+        try {
+            return context.backend().authServerPresetNames();
+        } catch (RuntimeException e) {
+            return Map.of();
         }
     }
 
@@ -89,6 +99,15 @@ public final class AccountController {
         }, ignored -> run(onRemoved), onError);
     }
 
+    /** 切换账号使用的角色；成功后回调新的账号摘要。 */
+    public FrontTask<AccountSummary> switchProfile(
+            String accountId, String profileId,
+            Consumer<AccountSummary> onSwitched, Consumer<String> onError) {
+        return context.runMetadata(UiText.tr("operation.switchProfile"),
+                () -> context.backend().switchAccountProfile(accountId, profileId),
+                onSwitched, onError);
+    }
+
     public FrontTask<String> loadInstanceAccount(
             Path gameDirectory, String instanceId,
             Consumer<String> onLoaded, Consumer<String> onError) {
@@ -114,13 +133,9 @@ public final class AccountController {
 
     public FrontTask<Path> loadInjectorPath(
             Consumer<Path> onLoaded, Consumer<String> onError) {
-        return context.runSettings(UiText.tr("operation.loadAccounts"), () -> {
-            try {
-                return context.backend().authlibInjectorPath().orElse(null);
-            } catch (java.io.IOException e) {
-                throw e;
-            }
-        }, onLoaded, onError);
+        return context.runSettings(UiText.tr("operation.loadAccounts"),
+                () -> context.backend().authlibInjectorPath().orElse(null),
+                onLoaded, onError);
     }
 
     public FrontTask<Void> saveInjectorPath(
@@ -137,4 +152,3 @@ public final class AccountController {
         }
     }
 }
-

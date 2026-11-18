@@ -2,6 +2,7 @@ package org.chs.camlauncher.backend.auth.yggdrasil;
 
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
+import org.chs.camlauncher.backend.error.BackendException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
@@ -16,6 +17,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -110,6 +112,47 @@ class YggdrasilClientTest {
 
         assertEquals(PROFILE_ID, refreshed.orElseThrow().profileId());
         assertFalse(requests.get(0).contains("selectedProfile"), requests.get(0));
+    }
+
+    @Test
+    void serverSideFailureIsReportedAsUnavailable() throws Exception {
+        HttpServer server = start(null, exchange -> respond(exchange, 503, "{}"));
+
+        assertThrows(YggdrasilUnavailableException.class, () -> new YggdrasilClient().refresh(
+                apiRoot(server), "token-1", "client-1", PROFILE_ID, "Steve"),
+                "5xx 属于暂时不可用，启动时应继续使用现有 token");
+    }
+
+    @Test
+    void rateLimitHasItsOwnErrorCode() throws Exception {
+        HttpServer server = start(exchange -> respond(exchange, 429, """
+                {"error":"TooManyRequests"}
+                """), exchange -> respond(exchange, 429, "{}"));
+
+        BackendException failure = assertThrows(BackendException.class,
+                () -> new YggdrasilClient().authenticate(apiRoot(server), "steve", "pw", "client-1"));
+
+        assertEquals("auth.error.tooManyRequests", failure.error().code());
+        assertFalse(failure.error().args().toString().contains("TooManyRequests"),
+                "服务器原文只写日志，不进入界面参数");
+    }
+
+    @Test
+    void allAvailableProfilesAreKeptForSelection() throws Exception {
+        String second = "9a8b7c6d5e4f30211234567890abcdef";
+        HttpServer server = start(exchange -> respond(exchange, 200, """
+                {"accessToken":"token-1","clientToken":"client-1",
+                 "selectedProfile":{"id":"%s","name":"Steve"},
+                 "availableProfiles":[{"id":"%s","name":"Steve"},{"id":"%s","name":"Alex"}]}
+                """.formatted(PROFILE_ID, PROFILE_ID, second)),
+                exchange -> respond(exchange, 200, "{\"accessToken\":\"token-2\"}"));
+
+        YggdrasilSession session = new YggdrasilClient().authenticate(
+                apiRoot(server), "steve", "pw", "client-1");
+
+        assertEquals(2, session.profiles().size(), "多角色账号应保留全部角色供界面切换");
+        assertEquals("Alex", session.profiles().get(1).name());
+        assertEquals(PROFILE_ID, session.selectedProfile().id());
     }
 
     private HttpServer start(Handler authenticate, Handler refresh) throws IOException {
