@@ -180,6 +180,24 @@ CAML/
 通过 `JAVA_HOME` 或 `-PcamlJdkHome` 指定 JDK；用错供应商或版本会直接报错，
 不会产出内容与许可文本不一致的包。
 
+没有显式指定时会按下面的顺序自动挑第一个合格的 JDK，所以在 IDE 里直接点任务也能用：
+
+1. `-PcamlJdkHome`（命令行显式指定，**指向非 Zulu 25 会直接失败**）；
+2. `PATH` 上的 `jpackage` 所在的 JDK；
+3. `JAVA_HOME`、`ZULU_HOME`；
+4. Gradle 工具链解析到的 JDK 25；
+5. 常见安装位置：`%ProgramFiles%\Zulu`、`%LOCALAPPDATA%\Programs\Zulu`、`~/.jdks`、
+   `~/.gradle/jdks`、`/usr/lib/jvm`、`/opt`。
+
+第 2 步之后都是"候选"，不满足 Zulu 25 就跳过，不会因为它而失败。排查时运行：
+
+```bash
+./gradlew printPackagingJdk          # 打印候选清单和最终选中的 JDK
+```
+
+IDE 里点任务但希望固定某个 JDK 时，在用户级 `~/.gradle/gradle.properties` 写入
+`camlJdkHome=<Zulu 25 路径>`，不必改仓库文件。
+
 打包任务都带 `onlyIf` 平台判断，**不能在 Windows 上交叉生成 Linux 包**（反之亦然）。
 要在 Windows 上拿到 Linux 产物，用 WSL2、Docker 或 CI 的 Linux runner 各跑一次
 `packageLinux`。
