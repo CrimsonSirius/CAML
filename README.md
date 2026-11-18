@@ -311,7 +311,7 @@ C:\Program Files\CAML\runtime\   裁剪后的 Java 运行时
 
 应用图标由 `packaging/icons/caml-512.png` 在构建期缩放生成多尺寸
 `caml.ico`（16/24/32/48/64/128/256），因此仓库里不需要保存二进制图标。
-GitHub Actions 的 `Build` workflow 会在所有 PR 和所有分支 push（包括普通分支 push 和合并后的 push）时构建并上传 Linux deb/rpm 与 Windows EXE/便携 ZIP。release 号优先使用 PR 编号，artifact 名称分别为 `caml-linux-packages-pr-<PR 编号>` 和 `caml-windows-packages-pr-<PR 编号>`；无法从合并提交提取 PR 编号时回退到 run number。Windows artifact 本身是 GitHub 提供的 zip，内含安装式 EXE、便携 zip 和 `SHA256SUMS.txt`。`v*` tag 和手动发布继续由 `Package Linux` workflow 处理。
+GitHub Actions 的 `Build` workflow 会在所有 PR 和所有分支 push 时构建并上传 Linux deb/rpm，artifact 名称为 `caml-linux-packages-pr-<PR 编号>`（无法提取 PR 编号时回退到 run number）。Windows 打包由独立的 `Package Windows` workflow 处理：PR/分支 push 生成 `caml-windows-packages-pr-<PR 编号>` 或 `caml-windows-packages-run-<run number>`，artifact 本身是 GitHub 提供的 zip，内含安装式 EXE、便携 zip 和 `SHA256SUMS.txt`；`v*` tag 与手动触发会生成 `caml-windows-packages` 并在 tag 发布时上传到 GitHub Release。Linux tag/手动发布继续由 `Package Linux` workflow 处理。
 
 ### CAMLUI 组件库
 
