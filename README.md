@@ -631,6 +631,7 @@ info.isolatedVersions();
 - [版本下载与启动链路](design/version-download-and-launch.md)
 - [runtime 包](design/runtime.md)
 - [第三方账号登录](design/auth.md)
+- [打包与发布](design/package.md)
 - [当前实现情况](design/Implement.md)
 
 ---
