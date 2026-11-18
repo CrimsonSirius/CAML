@@ -1,12 +1,19 @@
 package org.chs.camlauncher.backend.auth.store;
 
 import org.chs.camlauncher.backend.auth.AccountType;
+import org.chs.camlauncher.backend.auth.yggdrasil.YggdrasilProfile;
+
+import java.util.List;
+import java.util.Optional;
 
 /**
  * 账号索引中的一条记录（后端内部模型，不直接交给前端）。
  *
  * <p>{@code accessToken} 在内存中是明文，落盘时由 {@link AccountStore} 用 AES-GCM
  * 加密；{@code override toString} 抹掉 token，避免任何日志把凭据打出来。</p>
+ *
+ * <p>{@code profiles} 保存认证服务器返回的全部角色，{@code uuid} 是当前选中的角色 id。
+ * 这样账号 id 可以在切换角色时保持不变，避免同一账号在列表里变成多个条目。</p>
  */
 public record StoredAccount(
         String id,
@@ -16,7 +23,8 @@ public record StoredAccount(
         String apiRoot,
         String serverName,
         String accessToken,
-        String clientToken
+        String clientToken,
+        List<YggdrasilProfile> profiles
 ) {
     public StoredAccount {
         if (id == null || id.isBlank()) {
@@ -29,20 +37,50 @@ public record StoredAccount(
         serverName = serverName == null ? "" : serverName;
         accessToken = accessToken == null ? "" : accessToken;
         clientToken = clientToken == null ? "" : clientToken;
+        profiles = profiles == null ? List.of() : List.copyOf(profiles);
+    }
+
+    public StoredAccount(String id, AccountType type, String displayName, String uuid,
+                         String apiRoot, String serverName, String accessToken, String clientToken) {
+        this(id, type, displayName, uuid, apiRoot, serverName, accessToken, clientToken, List.of());
     }
 
     public boolean hasToken() {
         return !accessToken.isBlank();
     }
 
-    public StoredAccount withToken(String newAccessToken, String newClientToken) {
-        return new StoredAccount(id, type, displayName, uuid, apiRoot, serverName,
-                newAccessToken, newClientToken);
+    /** 全部角色；旧数据没有记录时退化为“当前角色”一个。 */
+    public List<YggdrasilProfile> profilesOrDefault() {
+        if (!profiles.isEmpty()) {
+            return profiles;
+        }
+        if (uuid.isBlank() || displayName.isBlank()) {
+            return List.of();
+        }
+        return List.of(new YggdrasilProfile(uuid, displayName));
     }
 
-    /** 主动抹掉凭据，用于“不记住登录”或退出登录。 */
-    public StoredAccount withoutToken() {
-        return new StoredAccount(id, type, displayName, uuid, apiRoot, serverName, "", clientToken);
+    /** 当前选中的角色。 */
+    public Optional<YggdrasilProfile> selectedProfile() {
+        if (uuid.isBlank()) {
+            return Optional.empty();
+        }
+        return profilesOrDefault().stream()
+                .filter(profile -> profile.sameId(uuid))
+                .findFirst()
+                .or(() -> Optional.of(new YggdrasilProfile(uuid, displayName)));
+    }
+
+    public StoredAccount withToken(String newAccessToken, String newClientToken) {
+        return new StoredAccount(id, type, displayName, uuid, apiRoot, serverName,
+                newAccessToken, newClientToken, profiles);
+    }
+
+    /** 切换角色：更新显示名、uuid 与角色列表，账号 id 保持不变。 */
+    public StoredAccount withProfile(YggdrasilProfile profile, List<YggdrasilProfile> newProfiles,
+                                     String newAccessToken, String newClientToken) {
+        return new StoredAccount(id, type, profile.name(), profile.id(), apiRoot, serverName,
+                newAccessToken, newClientToken, newProfiles);
     }
 
     @Override
@@ -54,6 +92,7 @@ public record StoredAccount(
                 + ", apiRoot=" + apiRoot
                 + ", serverName=" + serverName
                 + ", hasToken=" + hasToken()
+                + ", profiles=" + profiles.size()
                 + "]";
     }
 }

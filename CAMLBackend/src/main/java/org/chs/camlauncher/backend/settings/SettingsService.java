@@ -392,7 +392,7 @@ public final class SettingsService {
         });
     }
 
-    /** 某个实例指定的账号；没有单独设置时返回空，由调用方回退到全局默认账号。 */
+    /** 某个实例指定的账���；没有单独设置时返回空，由调用方回退到全局默认账号。 */
     public Optional<String> instanceAccountId(Path gameDirectory, String instanceId)
             throws IOException {
         Map<String, String> states = parseInstanceAccounts(
@@ -437,6 +437,86 @@ public final class SettingsService {
         });
     }
 
+    /**
+     * 全部实例账号绑定，已解码出所属游戏目录。
+     *
+     * <p>实例绑定的键包含游戏目录：修改“游戏位置”后旧绑定不会自动生效，
+     * 但也不会丢。这个方法让界面能够把这些“悬空绑定”找出来提示用户。</p>
+     */
+    public List<InstanceAccountBinding> instanceAccountBindings() throws IOException {
+        Map<String, String> states = parseInstanceAccounts(
+                load().getProperty(INSTANCE_ACCOUNTS_KEY));
+        List<InstanceAccountBinding> bindings = new ArrayList<>(states.size());
+        for (Map.Entry<String, String> entry : states.entrySet()) {
+            InstanceAccountBinding binding = decodeBinding(entry.getKey(), entry.getValue());
+            if (binding != null) {
+                bindings.add(binding);
+            }
+        }
+        return List.copyOf(bindings);
+    }
+
+    /**
+     * 把旧游戏目录下的实例绑定复制到新目录，只处理 {@code instances} 里存在的实例名。
+     *
+     * @return 实际迁移的绑定数量
+     */
+    public int moveInstanceAccountBindings(Path fromDirectory, Path toDirectory,
+                                          List<String> instances) throws IOException {
+        if (fromDirectory == null || toDirectory == null
+                || instances == null || instances.isEmpty()) {
+            return 0;
+        }
+        Path from = fromDirectory.toAbsolutePath().normalize();
+        Path to = toDirectory.toAbsolutePath().normalize();
+        if (from.equals(to)) {
+            return 0;
+        }
+        int[] moved = {0};
+        update(properties -> {
+            Map<String, String> states = parseInstanceAccounts(
+                    properties.getProperty(INSTANCE_ACCOUNTS_KEY));
+            for (String instanceId : instances) {
+                if (instanceId == null || instanceId.isBlank()) {
+                    continue;
+                }
+                String accountId = states.get(modStateKey(from, instanceId));
+                if (accountId == null || accountId.isBlank()) {
+                    continue;
+                }
+                states.put(modStateKey(to, instanceId), accountId);
+                moved[0]++;
+            }
+            if (!states.isEmpty()) {
+                properties.setProperty(INSTANCE_ACCOUNTS_KEY, GSON.toJson(states));
+            }
+        });
+        return moved[0];
+    }
+
+    /** 键：{@code Base64Url(绝对路径 + "\n" + 实例名)}；解析失败返回 {@code null}。 */
+    private static InstanceAccountBinding decodeBinding(String key, String accountId) {
+        if (key == null || key.isBlank() || accountId == null || accountId.isBlank()) {
+            return null;
+        }
+        try {
+            String decoded = new String(Base64.getUrlDecoder().decode(key), StandardCharsets.UTF_8);
+            int separator = decoded.lastIndexOf('\n');
+            if (separator <= 0 || separator == decoded.length() - 1) {
+                return null;
+            }
+            Path directory;
+            try {
+                directory = Path.of(decoded.substring(0, separator)).toAbsolutePath().normalize();
+            } catch (InvalidPathException e) {
+                return null;
+            }
+            return new InstanceAccountBinding(directory, decoded.substring(separator + 1), accountId);
+        } catch (IllegalArgumentException e) {
+            return null;
+        }
+    }
+
     /** 稳定的 clientToken：第一次使用时生成并持久化，用于 refresh 校验。 */
     public String clientToken() throws IOException {
         String existing = load().getProperty(CLIENT_TOKEN_KEY);
@@ -447,12 +527,10 @@ public final class SettingsService {
         update(properties -> properties.setProperty(CLIENT_TOKEN_KEY, created));
         return created;
     }
-
     /** 用户自定义的 authlib-injector jar；为空表示使用内置固定版本。 */
     public Optional<Path> authlibInjectorPath() throws IOException {
         return parsePath(load().getProperty(AUTHLIB_INJECTOR_KEY));
     }
-
     public void setAuthlibInjectorPath(Path jar) throws IOException {
         update(properties -> {
             if (jar == null) {
@@ -463,7 +541,6 @@ public final class SettingsService {
             }
         });
     }
-
     private static Map<String, String> parseInstanceAccounts(String raw) {
         if (raw == null || raw.isBlank()) {
             return new LinkedHashMap<>();
@@ -475,7 +552,6 @@ public final class SettingsService {
             return new LinkedHashMap<>();
         }
     }
-
     private static Map<String, List<String>> parseDisabledMods(String raw) {
         if (raw == null || raw.isBlank()) {
             return new LinkedHashMap<>();
@@ -486,16 +562,15 @@ public final class SettingsService {
         } catch (RuntimeException ignored) {
             return new LinkedHashMap<>();
         }
-    }
-
-    private static String modStateKey(Path gameDirectory, String instanceId) {
+    }    /** 一条实例账号绑定：所属游戏目录 + 实例名 + 账号 id。 */
+    public record InstanceAccountBinding(Path gameDirectory, String instanceId, String accountId) {
+    }    private static String modStateKey(Path gameDirectory, String instanceId) {
         Objects.requireNonNull(gameDirectory, "gameDirectory");
         Objects.requireNonNull(instanceId, "instanceId");
         String value = gameDirectory.toAbsolutePath().normalize() + "\n" + instanceId;
         return Base64.getUrlEncoder().withoutPadding().encodeToString(
                 value.getBytes(StandardCharsets.UTF_8));
     }
-
     private Properties load() throws IOException {
         synchronized (writeLock) {
             Properties properties = new Properties();
@@ -507,7 +582,6 @@ public final class SettingsService {
             return properties;
         }
     }
-
     private static Optional<Path> parsePath(String raw) {
         if (raw == null || raw.isBlank()) {
             return Optional.empty();
@@ -518,7 +592,6 @@ public final class SettingsService {
             return Optional.empty();
         }
     }
-
     private void update(Consumer<Properties> change) throws IOException {
         synchronized (writeLock) {
             Properties properties = load();
@@ -526,7 +599,6 @@ public final class SettingsService {
             store(properties);
         }
     }
-
     private void store(Properties properties) throws IOException {
         Path parent = settingsFile.toAbsolutePath().getParent();
         Files.createDirectories(parent);

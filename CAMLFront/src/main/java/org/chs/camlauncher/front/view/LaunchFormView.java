@@ -37,10 +37,13 @@ final class LaunchFormView extends BorderPane {
     private final Label saveLocationLabel;
     private final CamlTextField usernameField;
     private final CamlComboBox<String> accountBox;
+    private final Label managedUsernameHint = new Label();
     private final CamlButton launchBtn;
     private final Label statusLabel;
 
+    private javafx.scene.Node usernameFieldRow;
     private List<AccountSummary> accounts = List.of();
+    private String defaultAccountId;
     private GameDirectoryInfo lastGameDirectoryInfo;
     private FrontTask<?> launchTask;
 
@@ -116,10 +119,19 @@ final class LaunchFormView extends BorderPane {
         accountRow.setAlignment(Pos.CENTER_LEFT);
         HBox.setHgrow(accountBox, Priority.ALWAYS);
 
+        // 离线用户名只在“离线用户名”模式下有意义；选择账号时整行隐藏，
+        // 改显示一行说明，避免用户误以为这里填的昵称会生效。
+        usernameFieldRow = ViewSupport.buildField(UiText.tr("home.username"), usernameField, null);
+        managedUsernameHint.getStyleClass().addAll("caml-body-small", "caml-on-surface-muted");
+        managedUsernameHint.setWrapText(true);
+        managedUsernameHint.setVisible(false);
+        managedUsernameHint.setManaged(false);
+
         VBox fields = new VBox(
                 instanceInfo,
                 ViewSupport.buildField(UiText.tr("home.account"), accountRow, null),
-                ViewSupport.buildField(UiText.tr("home.username"), usernameField, null)
+                usernameFieldRow,
+                managedUsernameHint
         );
         fields.getStyleClass().add("app-fields");
 
@@ -184,6 +196,7 @@ final class LaunchFormView extends BorderPane {
             if (newValue != null) {
                 launchSettings.setSelectedAccountChoice(newValue);
             }
+            applyAccountMode();
         });
 
         launchBtn.setOnAction(event -> launchGame());
@@ -235,9 +248,8 @@ final class LaunchFormView extends BorderPane {
         onLaunchStarted.run();
 
         launchTask = controller.startGame(version, username, accountChoice,
-            launchSettings.maxMemoryMb(), gameDirectory,
-            launchSettings.fullVersionIsolation(), launchSettings.jvmArguments());
-
+                launchSettings.maxMemoryMb(), gameDirectory,
+                launchSettings.fullVersionIsolation(), launchSettings.jvmArguments());
     }
 
     private void applyGameDirectoryInfo(GameDirectoryInfo info) {
@@ -314,7 +326,42 @@ final class LaunchFormView extends BorderPane {
         label.getStyleClass().add(error ? "app-instance-info-error" : "app-instance-info-detail");
     }
 
-    private void refreshAccounts() {
+    /**
+     * 用户名输入框只在“离线用户名”模式下出现。
+     *
+     * <p>选择账号（含“跟随默认账号”）时整行隐藏并显示说明，避免用户以为这里
+     * 输入的昵称会覆盖账号；这也和启动时的真实行为一致——账号模式下该字段被忽略。</p>
+     */
+    private void applyAccountMode() {
+        if (usernameFieldRow == null) {
+            return;
+        }
+        String choice = launchSettings.selectedAccountChoice();
+        boolean offline = choice == null || AccountChoice.OFFLINE.equals(choice);
+        usernameFieldRow.setVisible(offline);
+        usernameFieldRow.setManaged(offline);
+        managedUsernameHint.setVisible(!offline);
+        managedUsernameHint.setManaged(!offline);
+        if (!offline) {
+            managedUsernameHint.setText(UiText.tr("home.username.managed", describeChoice(choice)));
+        }
+    }
+    private String describeChoice(String choice) {
+        if (AccountChoice.DEFAULT.equals(choice)) {
+            for (AccountSummary account : accounts) {
+                if (account.id().equals(defaultAccountId)) {
+                    return AccountChoice.label(account);
+                }
+            }
+            return UiText.tr("account.choice.default");
+        }
+        for (AccountSummary account : accounts) {
+            if (account.id().equals(choice)) {
+                return AccountChoice.label(account);
+            }
+        }
+        return choice;
+    }    private void refreshAccounts() {
         accountController.loadAccounts(loaded -> {
             this.accounts = loaded == null ? List.of() : loaded;
             List<String> items = new ArrayList<>();
@@ -325,12 +372,22 @@ final class LaunchFormView extends BorderPane {
             }
             accountBox.getItems().setAll(items);
             accountBox.setValue(launchSettings.selectedAccountChoice());
+            applyAccountMode();
+            loadDefaultAccount();
         }, error -> {
             showStatus(UiText.tr("home.error.loadAccounts", error), true);
             this.accounts = List.of();
             accountBox.getItems().setAll(AccountChoice.DEFAULT, AccountChoice.OFFLINE);
             accountBox.setValue(launchSettings.selectedAccountChoice());
+            applyAccountMode();
         });
+    }
+    /** 读取全局默认账号，用于在"跟随默认账号"时显示具体账号名。 */
+    private void loadDefaultAccount() {
+        accountController.loadDefaultAccountId(id -> {
+            defaultAccountId = id;
+            applyAccountMode();
+        }, error -> { });
     }
 
     /** 账号或实例变化后重新加载账号列表（设置页新增账号后回到主页即可见）。 */

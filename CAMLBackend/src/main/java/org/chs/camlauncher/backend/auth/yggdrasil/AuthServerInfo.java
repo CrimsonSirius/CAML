@@ -27,9 +27,24 @@ public record AuthServerInfo(
         rawMetadata = rawMetadata == null || rawMetadata.isBlank() ? "{}" : rawMetadata;
     }
 
-    /** authlib-injector 的 {@code -Dauthlibinjector.yggdrasil.prefetched} 参数值。 */
+    /**
+     * authlib-injector 的 {@code -Dauthlibinjector.yggdrasil.prefetched} 参数值。
+     *
+     * <p>没有任何真实 metadata 时返回空串，调用方据此跳过该参数：把占位的 {@code {}}
+     * 注入进去会得到一个“空 metadata”，皮肤域名与签名公钥全部缺失，
+     * 而且很难从日志里看出根因。</p>
+     */
     public String prefetchedBase64() {
-        return Base64.getEncoder().encodeToString(rawMetadata.getBytes(StandardCharsets.UTF_8));
+        String raw = rawMetadata == null ? "" : rawMetadata.trim();
+        if (raw.isEmpty() || raw.equals("{}")) {
+            return "";
+        }
+        return Base64.getEncoder().encodeToString(raw.getBytes(StandardCharsets.UTF_8));
+    }
+
+    /** 是否拿到了真实 metadata（而不是占位值）。 */
+    public boolean hasMetadata() {
+        return !prefetchedBase64().isEmpty();
     }
 
     /**
@@ -74,4 +89,3 @@ public record AuthServerInfo(
         return host == null ? apiRoot : host;
     }
 }
-

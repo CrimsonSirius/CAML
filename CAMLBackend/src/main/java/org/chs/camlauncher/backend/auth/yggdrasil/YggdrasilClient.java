@@ -4,6 +4,8 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.chs.camlauncher.backend.error.BackendError;
 import org.chs.camlauncher.backend.error.BackendException;
 
@@ -24,12 +26,21 @@ import java.util.Optional;
  *
  * <p>只实现启动器需要的四个调用：拉取 metadata、authenticate、refresh 和 validate。
  * 全部使用 JDK {@link HttpClient}，与项目的下载链路保持一致，不引入额外依赖。</p>
+ *
+ * <p><b>错误分类</b>：网络失败、超时、5xx 和限流抛出
+ * {@link YggdrasilUnavailableException}，语义是“暂时无法确认凭据状态”，启动流程可以
+ * 继续使用已有的 accessToken；凭据被拒绝（400/401/403）一律转换为
+ * {@code Optional.empty()} 或固定错误码，服务器原文只写日志、不进界面。</p>
  */
 public final class YggdrasilClient {
+    private static final Logger LOGGER = LogManager.getLogger(YggdrasilClient.class);
+
     private static final Duration CONNECT_TIMEOUT = Duration.ofSeconds(15);
     private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(30);
+    private static final String USER_AGENT = "CAML/1.0";
     private static final String AGENT_NAME = "Minecraft";
     private static final int AGENT_VERSION = 1;
+    private static final int HTTP_TOO_MANY_REQUESTS = 429;
 
     private final HttpClient httpClient;
 
@@ -47,21 +58,23 @@ public final class YggdrasilClient {
         HttpRequest request = HttpRequest.newBuilder(URI.create(normalized))
                 .timeout(REQUEST_TIMEOUT)
                 .header("Accept", "application/json")
+                .header("User-Agent", USER_AGENT)
                 .GET()
                 .build();
         HttpResponse<String> response = send(request, normalized);
         if (!isSuccess(response.statusCode())) {
-            throw new BackendException(BackendError.of(
+            // metadata 属于可选扩展：拿不到时调用方会回退到缓存或跳过 prefetched，
+            // 因此统一按“暂时不可用”处理，不让 metadata 阻塞登录。
+            throw new YggdrasilUnavailableException(BackendError.of(
                     "auth.error.metadataUnavailable", normalized, response.statusCode()));
         }
 
         JsonObject root = parseObject(response.body(), normalized);
         String serverName = stringValue(nested(root, "meta", "serverName"));
         List<String> skinDomains = new ArrayList<>();
-        JsonElement domains = root.get("skinDomains");
-        if (domains != null && domains.isJsonArray()) {
-            JsonArray array = domains.getAsJsonArray();
-            for (JsonElement element : array) {
+        JsonArray domains = asArray(root.get("skinDomains"));
+        if (domains != null) {
+            for (JsonElement element : domains) {
                 if (element != null && element.isJsonPrimitive()) {
                     skinDomains.add(element.getAsString());
                 }
@@ -73,7 +86,8 @@ public final class YggdrasilClient {
     /**
      * 用户名 + 密码登录。
      *
-     * @throws BackendException 凭据错误（{@code auth.error.invalidCredentials}）或网络失败
+     * @throws BackendException 凭据错误（{@code auth.error.invalidCredentials}）或限流
+     * @throws YggdrasilUnavailableException 服务器暂时不可用
      */
     public YggdrasilSession authenticate(String apiRoot, String username, String password,
                                          String clientToken)
@@ -92,25 +106,49 @@ public final class YggdrasilClient {
         body.addProperty("requestUser", false);
 
         HttpResponse<String> response = post(normalized + "/authserver/authenticate", body, normalized);
-        if (response.statusCode() == 401 || response.statusCode() == 403) {
-            throw new BackendException(BackendError.of(
-                    "auth.error.invalidCredentials", normalized, errorMessage(response.body())));
+        int status = response.statusCode();
+        if (status == 401 || status == 403) {
+            LOGGER.debug("认证被拒绝（{}）: {}", status, errorMessage(response.body()));
+            throw new BackendException(BackendError.of("auth.error.invalidCredentials", normalized));
         }
-        if (!isSuccess(response.statusCode())) {
-            throw new BackendException(BackendError.of(
-                    "auth.error.requestFailed", normalized, response.statusCode(),
-                    errorMessage(response.body())));
+        if (status == HTTP_TOO_MANY_REQUESTS) {
+            throw new BackendException(BackendError.of("auth.error.tooManyRequests", normalized));
         }
+        if (isServerSideFailure(status)) {
+            throw new YggdrasilUnavailableException(BackendError.of(
+                    "auth.error.requestFailed", normalized, status));
+        }
+        if (!isSuccess(status)) {
+            LOGGER.debug("认证请求失败（{}）: {}", status, errorMessage(response.body()));
+            throw new BackendException(BackendError.of(
+                    "auth.error.requestFailed", normalized, status));
+        }
+
         JsonObject root = parseObject(response.body(), normalized);
         YggdrasilSession session = parseSession(root, normalized, clientToken, true, null, null);
         if (asObject(root.get("selectedProfile")) == null) {
             // 部分服务器（如 LittleSkin）在账号拥有多个角色时只返回 availableProfiles、
             // 不把 token 绑定到任何角色，之后的 validate/refresh 与进入服务器都会被拒绝。
             // Yggdrasil 允许用 refresh + selectedProfile 补一次绑定，这里就地完成。
-            session = refresh(normalized, session.accessToken(), session.clientToken(),
-                    session.profileId(), session.username()).orElse(session);
+            try {
+                session = refresh(normalized, session.accessToken(), session.clientToken(),
+                        session.profileId(), session.username()).orElse(session);
+            } catch (YggdrasilUnavailableException e) {
+                // 绑定失败不影响本次登录：启动时会再尝试一次。
+                LOGGER.warn("登录成功但无法绑定角色，启动时会重试: {}", normalized, e);
+            }
         }
         return session;
+    }
+
+    /**
+     * 用 accessToken 换取新 token。
+     *
+     * @return token 已失效或服务器拒绝时返回空，调用方需要重新输入密码
+     */
+    public Optional<YggdrasilSession> refresh(String apiRoot, String accessToken, String clientToken)
+            throws IOException, InterruptedException {
+        return refresh(apiRoot, accessToken, clientToken, null, null);
     }
 
     /**
@@ -118,9 +156,11 @@ public final class YggdrasilClient {
      *
      * <p>Yggdrasil 允许在 refresh 请求里携带 {@code selectedProfile}。对于“未绑定角色”的
      * accessToken，LittleSkin 等实现会直接返回 400 并提示 {@code please select a profile}，
-     * 因此只要知道角色就应当始终传入。</p>
+     * 因此只要知道角色就应当始终传入。同一个方法也用于切换角色：把 token 重新绑定到
+     * 另一个 availableProfile。</p>
      *
      * @return token 已失效或服务器拒绝绑定角色时返回空，调用方需要重新输入密码
+     * @throws YggdrasilUnavailableException 服务器暂时不可用（5xx、限流、网络失败）
      */
     public Optional<YggdrasilSession> refresh(String apiRoot, String accessToken, String clientToken,
                                               String profileId, String profileName)
@@ -139,16 +179,20 @@ public final class YggdrasilClient {
         }
 
         HttpResponse<String> response = post(normalized + "/authserver/refresh", body, normalized);
-        if (response.statusCode() == 400 || response.statusCode() == 401
-                || response.statusCode() == 403) {
+        int status = response.statusCode();
+        if (status == HTTP_TOO_MANY_REQUESTS) {
+            throw new YggdrasilUnavailableException(BackendError.of(
+                    "auth.error.tooManyRequests", normalized));
+        }
+        if (isServerSideFailure(status)) {
+            throw new YggdrasilUnavailableException(BackendError.of(
+                    "auth.error.requestFailed", normalized, status));
+        }
+        if (!isSuccess(status)) {
             // token 过期、被吊销，或服务器不接受把 token 绑定到该角色：
             // 统一按“需要重新登录”处理，避免把服务器原文直接抛到界面。
+            LOGGER.debug("refresh 被拒绝（{}）: {}", status, errorMessage(response.body()));
             return Optional.empty();
-        }
-        if (!isSuccess(response.statusCode())) {
-            throw new BackendException(BackendError.of(
-                    "auth.error.requestFailed", normalized, response.statusCode(),
-                    errorMessage(response.body())));
         }
         return Optional.of(parseSession(parseObject(response.body(), normalized), normalized,
                 clientToken, false, profileId, profileName));
@@ -163,20 +207,27 @@ public final class YggdrasilClient {
         body.addProperty("clientToken", clientToken);
 
         HttpResponse<String> response = post(normalized + "/authserver/validate", body, normalized);
-        if (response.statusCode() == 204 || isSuccess(response.statusCode())) {
+        int status = response.statusCode();
+        if (status == 204 || isSuccess(status)) {
             return true;
         }
-        if (response.statusCode() == 401 || response.statusCode() == 403 || response.statusCode() == 400) {
+        if (status == 400 || status == 401 || status == 403) {
             return false;
         }
-        throw new BackendException(BackendError.of(
-                "auth.error.requestFailed", normalized, response.statusCode(),
-                errorMessage(response.body())));
+        throw new YggdrasilUnavailableException(BackendError.of(
+                "auth.error.requestFailed", normalized, status));
     }
 
-    private YggdrasilSession parseSession(JsonObject root, String apiRoot, String requestedClientToken,
-                                          boolean requireSelectedProfile,
-                                          String fallbackProfileId, String fallbackProfileName)
+    /**
+     * 解析 authenticate / refresh 的响应体。
+     *
+     * @param login        {@code true} 表示登录请求：完全没有角色时提示“账号没有角色”
+     * @param fallbackId   refresh 响应允许不带角色信息，此时沿用调用方已知的角色
+     * @param fallbackName 同上
+     */
+    private YggdrasilSession parseSession(JsonObject root, String apiRoot,
+                                          String requestedClientToken, boolean login,
+                                          String fallbackId, String fallbackName)
             throws BackendException {
         String accessToken = stringValue(root.get("accessToken"));
         if (accessToken == null || accessToken.isBlank()) {
@@ -187,32 +238,58 @@ public final class YggdrasilClient {
             clientToken = requestedClientToken;
         }
 
-        JsonObject profile = asObject(root.get("selectedProfile"));
-        if (profile == null) {
-            JsonArray available = asArray(root.get("availableProfiles"));
-            if (available != null && !available.isEmpty()) {
-                profile = asObject(available.get(0));
-            }
+        List<YggdrasilProfile> profiles = parseProfiles(root.get("availableProfiles"));
+        YggdrasilProfile selected = parseProfile(root.get("selectedProfile"));
+        if (selected == null) {
+            selected = profiles.stream()
+                    .filter(profile -> profile.sameId(fallbackId))
+                    .findFirst()
+                    .orElse(profiles.isEmpty() ? null : profiles.get(0));
         }
-        if (profile == null) {
-            // refresh 的响应允许不带角色信息，此时沿用调用方已知的角色。
-            if (fallbackProfileId != null && !fallbackProfileId.isBlank()
-                    && fallbackProfileName != null && !fallbackProfileName.isBlank()) {
-                return new YggdrasilSession(fallbackProfileName, fallbackProfileId,
-                        accessToken, clientToken);
-            }
-            if (requireSelectedProfile) {
-                throw new BackendException(BackendError.of("auth.error.noSelectedProfile", apiRoot));
-            }
-            throw new BackendException(BackendError.of("auth.error.responseInvalid", apiRoot));
+        if (selected == null && fallbackId != null && !fallbackId.isBlank()
+                && fallbackName != null && !fallbackName.isBlank()) {
+            selected = new YggdrasilProfile(fallbackId, fallbackName);
         }
+        if (selected == null) {
+            throw new BackendException(BackendError.of(
+                    login ? "auth.error.noSelectedProfile" : "auth.error.responseInvalid", apiRoot));
+        }
+        YggdrasilProfile chosen = selected;
+        if (profiles.stream().noneMatch(profile -> profile.sameId(chosen.id()))) {
+            List<YggdrasilProfile> merged = new ArrayList<>(profiles);
+            merged.add(chosen);
+            profiles = List.copyOf(merged);
+        }
+        return new YggdrasilSession(chosen.name(), chosen.id(), accessToken, clientToken,
+                profiles);
+    }
 
-        String name = stringValue(profile.get("name"));
-        String id = stringValue(profile.get("id"));
-        if (name == null || name.isBlank() || id == null || id.isBlank()) {
-            throw new BackendException(BackendError.of("auth.error.responseInvalid", apiRoot));
+    private static List<YggdrasilProfile> parseProfiles(JsonElement element) {
+        JsonArray array = asArray(element);
+        if (array == null) {
+            return List.of();
         }
-        return new YggdrasilSession(name, id, accessToken, clientToken);
+        List<YggdrasilProfile> profiles = new ArrayList<>(array.size());
+        for (JsonElement item : array) {
+            YggdrasilProfile profile = parseProfile(item);
+            if (profile != null) {
+                profiles.add(profile);
+            }
+        }
+        return List.copyOf(profiles);
+    }
+
+    private static YggdrasilProfile parseProfile(JsonElement element) {
+        JsonObject object = asObject(element);
+        if (object == null) {
+            return null;
+        }
+        String id = stringValue(object.get("id"));
+        if (id == null || id.isBlank()) {
+            return null;
+        }
+        String name = stringValue(object.get("name"));
+        return new YggdrasilProfile(id, name == null ? "" : name);
     }
 
     private HttpResponse<String> post(String url, JsonObject body, String apiRoot)
@@ -221,6 +298,7 @@ public final class YggdrasilClient {
                 .timeout(REQUEST_TIMEOUT)
                 .header("Content-Type", "application/json; charset=utf-8")
                 .header("Accept", "application/json")
+                .header("User-Agent", USER_AGENT)
                 .POST(HttpRequest.BodyPublishers.ofString(body.toString(), StandardCharsets.UTF_8))
                 .build();
         return send(request, apiRoot);
@@ -231,9 +309,13 @@ public final class YggdrasilClient {
         try {
             return httpClient.send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
         } catch (IOException e) {
-            throw new BackendException(BackendError.of(
+            throw new YggdrasilUnavailableException(BackendError.of(
                     "network.requestFailed", apiRoot, request.uri().toString()), e);
         }
+    }
+
+    private static boolean isServerSideFailure(int status) {
+        return status >= 500;
     }
 
     private static boolean isSuccess(int status) {
@@ -252,6 +334,7 @@ public final class YggdrasilClient {
         throw new BackendException(BackendError.of("auth.error.responseInvalid", apiRoot));
     }
 
+    /** 服务器返回的错误描述只用于日志，不进入界面文案。 */
     private static String errorMessage(String body) {
         if (body == null || body.isBlank()) {
             return "";
@@ -298,3 +381,4 @@ public final class YggdrasilClient {
                 .build();
     }
 }
+

@@ -18,6 +18,7 @@ final class AccountTexts {
         put(t, "home.account", "Account");
         put(t, "home.manageAccounts", "Instance accounts");
         put(t, "home.error.loadAccounts", "Failed to load accounts: %s");
+        put(t, "home.username.managed", "The username comes from the selected account: %s");
 
         // 设置页账号分组
         put(t, "settings.section.account", "Accounts");
@@ -29,8 +30,15 @@ final class AccountTexts {
                 "No accounts yet. Add an offline account or sign in to a third-party server.");
         put(t, "account.list.default", "Default");
         put(t, "account.list.remove", "Remove");
+        put(t, "account.list.needsLogin", "Sign-in expired");
+        put(t, "account.list.relogin", "Sign in again");
         put(t, "account.default.saved", "%s is now the default account");
         put(t, "account.removed", "Removed %s");
+
+        // 角色
+        put(t, "account.profile.label", "Profile");
+        put(t, "account.profile.switch", "Switch");
+        put(t, "account.profile.switched", "Profile switched to %s");
 
         put(t, "account.offline.label", "Add offline account");
         put(t, "account.offline.placeholder", "Offline username");
@@ -53,6 +61,8 @@ final class AccountTexts {
         put(t, "account.login.remember", "Keep me signed in");
         put(t, "account.login.submit", "Sign in");
         put(t, "account.login.running", "Signing in...");
+        put(t, "account.login.reloginHint",
+                "Enter the password again for %s. The launcher never stores passwords.");
         put(t, "account.login.success", "Signed in as %s");
         put(t, "account.error.serverRequired",
                 "Please enter the authentication server address");
@@ -76,6 +86,11 @@ final class AccountTexts {
         put(t, "account.instance.count",
                 "%d instances; choose the account used to launch each one");
         put(t, "account.instance.saved", "Account saved for instance %s");
+        put(t, "account.instance.mismatch",
+                "Some instance accounts were bound to %s and no longer apply here (%d instances)");
+        put(t, "account.instance.mismatchApply", "Apply to this game location");
+        put(t, "account.instance.mismatchApplied",
+                "Applied %d instance account bindings to this game location");
 
         // 后台操作名
         put(t, "operation.loadAccounts", "Load accounts");
@@ -87,6 +102,7 @@ final class AccountTexts {
         put(t, "operation.loadInstanceAccount", "Load instance account");
         put(t, "operation.saveInstanceAccount", "Save instance account");
         put(t, "operation.saveInjectorPath", "Save authlib-injector path");
+        put(t, "operation.switchProfile", "Switch account profile");
 
         // 认证错误
         put(t, "auth.error.usernameRequired", "Username is required");
@@ -94,13 +110,16 @@ final class AccountTexts {
         put(t, "auth.error.metadataUnavailable",
                 "Cannot read the authentication server metadata: %s (HTTP %s)");
         put(t, "auth.error.invalidCredentials",
-                "Incorrect username or password for %s %s");
+                "Incorrect username or password for %s");
         put(t, "auth.error.requestFailed",
-                "Authentication request failed: %s (HTTP %s) %s");
+                "Authentication request failed: %s (HTTP %s)");
         put(t, "auth.error.responseInvalid",
                 "The authentication server returned an unexpected response: %s");
         put(t, "auth.error.noSelectedProfile",
                 "This account has no Minecraft profile: %s");
+        put(t, "auth.error.profileMissing", "That profile is no longer available: %s");
+        put(t, "auth.error.tooManyRequests",
+                "Too many requests to %s, please wait a moment and try again");
         put(t, "auth.error.accountMissing", "Account not found: %s");
         put(t, "auth.error.accountRequired", "Please select an account first");
         put(t, "auth.error.loginRequired",
@@ -119,4 +138,3 @@ final class AccountTexts {
         }
     }
 }
-

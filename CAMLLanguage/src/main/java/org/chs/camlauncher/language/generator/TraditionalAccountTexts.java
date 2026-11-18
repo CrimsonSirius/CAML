@@ -17,6 +17,7 @@ public final class TraditionalAccountTexts {
         put(t, "home.account", "帳號");
         put(t, "home.manageAccounts", "實例帳號");
         put(t, "home.error.loadAccounts", "讀取帳號失敗：%s");
+        put(t, "home.username.managed", "使用者名稱由所選帳號決定：%s");
         put(t, "settings.section.account", "帳號");
         put(t, "settings.account.title", "帳號");
         put(t, "settings.account.description",
@@ -24,8 +25,13 @@ public final class TraditionalAccountTexts {
         put(t, "account.list.empty", "還沒有帳號。可以新增離線帳號，或登入第三方認證伺服器。");
         put(t, "account.list.default", "預設");
         put(t, "account.list.remove", "移除");
+        put(t, "account.list.needsLogin", "登入已失效");
+        put(t, "account.list.relogin", "重新登入");
         put(t, "account.default.saved", "%s 已設為預設帳號");
         put(t, "account.removed", "已移除 %s");
+        put(t, "account.profile.label", "角色");
+        put(t, "account.profile.switch", "切換");
+        put(t, "account.profile.switched", "已切換角色為 %s");
         put(t, "account.offline.label", "新增離線帳號");
         put(t, "account.offline.placeholder", "離線使用者名稱");
         put(t, "account.offline.add", "新增");
@@ -43,6 +49,7 @@ public final class TraditionalAccountTexts {
         put(t, "account.login.remember", "記住登入狀態");
         put(t, "account.login.submit", "登入");
         put(t, "account.login.running", "正在登入...");
+        put(t, "account.login.reloginHint", "請重新輸入 %s 的密碼，啟動器不會儲存密碼。");
         put(t, "account.login.success", "已登入為 %s");
         put(t, "account.error.serverRequired", "請填寫認證伺服器位址");
         put(t, "account.error.usernameRequired", "請填寫使用者名稱");
@@ -59,6 +66,9 @@ public final class TraditionalAccountTexts {
         put(t, "account.instance.loading", "正在讀取帳號...");
         put(t, "account.instance.count", "共 %d 個實例，為每個實例選擇啟動時使用的帳號");
         put(t, "account.instance.saved", "已儲存實例 %s 的帳號");
+        put(t, "account.instance.mismatch", "部分實例帳號原本綁定在 %s，目前不生效（共 %d 個實例）");
+        put(t, "account.instance.mismatchApply", "套用到目前遊戲位置");
+        put(t, "account.instance.mismatchApplied", "已將 %d 個實例帳號綁定套用到目前遊戲位置");
         put(t, "operation.loadAccounts", "讀取帳號");
         put(t, "operation.loginAccount", "登入帳號");
         put(t, "operation.addOfflineAccount", "新增離線帳號");
@@ -68,13 +78,16 @@ public final class TraditionalAccountTexts {
         put(t, "operation.loadInstanceAccount", "讀取實例帳號");
         put(t, "operation.saveInstanceAccount", "儲存實例帳號");
         put(t, "operation.saveInjectorPath", "儲存 authlib-injector 路徑");
+        put(t, "operation.switchProfile", "切換帳號角色");
         put(t, "auth.error.usernameRequired", "請填寫使用者名稱");
         put(t, "auth.error.passwordRequired", "請填寫密碼");
         put(t, "auth.error.metadataUnavailable", "無法讀取認證伺服器資訊：%s（HTTP %s）");
-        put(t, "auth.error.invalidCredentials", "%s 的使用者名稱或密碼錯誤 %s");
-        put(t, "auth.error.requestFailed", "認證請求失敗：%s（HTTP %s）%s");
+        put(t, "auth.error.invalidCredentials", "%s 的使用者名稱或密碼錯誤");
+        put(t, "auth.error.requestFailed", "認證請求失敗：%s（HTTP %s）");
         put(t, "auth.error.responseInvalid", "認證伺服器回傳了無法解析的回應：%s");
         put(t, "auth.error.noSelectedProfile", "該帳號沒有 Minecraft 角色：%s");
+        put(t, "auth.error.profileMissing", "該角色已不存在：%s");
+        put(t, "auth.error.tooManyRequests", "對 %s 的請求過於頻繁，請稍後再試");
         put(t, "auth.error.accountMissing", "找不到帳號：%s");
         put(t, "auth.error.accountRequired", "請先選擇帳號");
         put(t, "auth.error.loginRequired", "帳號 %s（%s）沒有儲存的憑證，請重新登入");

@@ -7,6 +7,7 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import org.chs.camlauncher.backend.api.AccountSummary;
+import org.chs.camlauncher.backend.api.InstanceAccountMismatch;
 import org.chs.camlauncher.front.controller.AccountController;
 import org.chs.camlauncher.front.controller.FrontTask;
 import org.chs.camlauncher.front.controller.HomeController;
@@ -30,10 +31,13 @@ final class InstanceAccountView extends VBox implements PageLifecycle {
     private final Path gameDirectory;
     private final Runnable onBack;
     private final Label statusLabel = ViewSupport.hintLabel();
+    private final HBox mismatchRow = new HBox();
+    private final Label mismatchLabel = ViewSupport.hintLabel();
     private final ScrollPane scroll = new ScrollPane();
     private final List<FrontTask<?>> tasks = new ArrayList<>();
 
     private List<AccountSummary> accounts = List.of();
+    private List<String> instances = List.of();
     private boolean disposed;
 
     InstanceAccountView(AccountController accountController, HomeController homeController,
@@ -64,13 +68,25 @@ final class InstanceAccountView extends VBox implements PageLifecycle {
 
         statusLabel.setText(UiText.tr("account.instance.loading"));
 
+        // 修改“游戏位置”后旧绑定不会自动生效：这里显性提示并提供一键套用，
+        // 避免用户以为实例账号设置被吞掉了。
+        CamlButton apply = CamlButton.outlined(UiText.tr("account.instance.mismatchApply"));
+        apply.setOnAction(event -> applyMismatch());
+        mismatchLabel.setWrapText(true);
+        HBox.setHgrow(mismatchLabel, Priority.ALWAYS);
+        mismatchRow.getChildren().setAll(mismatchLabel, apply);
+        mismatchRow.getStyleClass().add("app-settings-row");
+        mismatchRow.setAlignment(Pos.CENTER_LEFT);
+        mismatchRow.setVisible(false);
+        mismatchRow.setManaged(false);
+
         scroll.setFitToWidth(true);
         scroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
         scroll.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
         scroll.getStyleClass().add("app-instance-scroll");
         VBox.setVgrow(scroll, Priority.ALWAYS);
 
-        getChildren().addAll(header, statusLabel, scroll);
+        getChildren().addAll(header, statusLabel, mismatchRow, scroll);
 
         if (gameDirectory == null) {
             statusLabel.setText(UiText.tr("instances.picker.noGameDirectoryHint"));
@@ -103,6 +119,7 @@ final class InstanceAccountView extends VBox implements PageLifecycle {
     }
 
     private void buildRows(List<String> instances) {
+        this.instances = instances;
         VBox list = new VBox();
         list.getStyleClass().add("app-instance-list");
 
@@ -162,9 +179,56 @@ final class InstanceAccountView extends VBox implements PageLifecycle {
 
         scroll.setContent(list);
         statusLabel.setText(UiText.tr("account.instance.count", instances.size()));
+        refreshMismatch();
     }
 
-    @Override
+    /** 查询是否存在“绑定留在旧游戏位置”的实例，并据此显示或隐藏提示行。 */
+    private void refreshMismatch() {
+        if (disposed || gameDirectory == null || instances.isEmpty()) {
+            hideMismatch();
+            return;
+        }
+        tasks.add(accountController.detectInstanceAccountMismatch(gameDirectory, instances,
+                this::applyMismatch, message -> {
+                    hideMismatch();
+                    statusLabel.setText(message);
+                }));
+    }
+    private void applyMismatch(InstanceAccountMismatch mismatch) {
+        if (disposed) {
+            return;
+        }
+        if (mismatch == null || mismatch.isEmpty()) {
+            hideMismatch();
+            return;
+        }
+        mismatchLabel.setText(UiText.tr("account.instance.mismatch",
+                mismatch.previousGameDirectory(), mismatch.count()));
+        mismatchRow.setVisible(true);
+        mismatchRow.setManaged(true);
+    }
+    private void hideMismatch() {
+        mismatchRow.setVisible(false);
+        mismatchRow.setManaged(false);
+    }
+    /** 一键把旧位置的绑定套用到当前游戏位置，成功后重新读取每一行的绑定。 */
+    private void applyMismatch() {
+        if (disposed || gameDirectory == null || instances.isEmpty()) {
+            return;
+        }
+        tasks.add(accountController.reapplyInstanceAccounts(gameDirectory, instances, applied -> {
+            if (disposed) {
+                return;
+            }
+            hideMismatch();
+            statusLabel.setText(UiText.tr("account.instance.mismatchApplied",
+                    applied == null ? 0 : applied));
+            rebuildRows();
+        }, message -> statusLabel.setText(message)));
+    }
+    private void rebuildRows() {
+        buildRows(instances);
+    }    @Override
     public void dispose() {
         disposed = true;
         for (FrontTask<?> task : tasks) {
@@ -175,4 +239,3 @@ final class InstanceAccountView extends VBox implements PageLifecycle {
         tasks.clear();
     }
 }
-

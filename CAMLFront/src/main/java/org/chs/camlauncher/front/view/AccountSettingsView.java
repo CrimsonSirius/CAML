@@ -10,9 +10,7 @@ import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
 import javafx.stage.Window;
 import org.chs.camlauncher.backend.api.AccountSummary;
-import org.chs.camlauncher.backend.auth.yggdrasil.AuthServerInfo;
 import org.chs.camlauncher.front.controller.AccountController;
-import org.chs.camlauncher.front.controller.FrontTask;
 import org.chs.camlauncher.front.text.AccountChoice;
 import org.chs.camlauncher.front.text.UiText;
 import org.chs.camlauncher.ui.control.CamlButton;
@@ -24,6 +22,7 @@ import org.chs.camlauncher.ui.control.CamlTextField;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 设置页 → 账号：全局账号列表、第三方服务器登录与 authlib-injector 覆盖。
@@ -45,6 +44,7 @@ final class AccountSettingsView extends VBox {
     private final CamlButton loginButton;
 
     private List<AccountSummary> accounts = List.of();
+    private Map<String, String> presetNames = Map.of();
     private String defaultAccountId;
     private boolean suppressDefaultEvents;
 
@@ -141,16 +141,71 @@ final class AccountSettingsView extends VBox {
             Label name = new Label(AccountChoice.label(account));
             name.getStyleClass().add("caml-label-medium");
 
+            HBox row = new HBox(name, isDefault);
+            row.getStyleClass().add("app-settings-row");
+            row.setAlignment(Pos.CENTER_LEFT);
+            HBox.setHgrow(name, Priority.ALWAYS);
+
+            if (account.needsLogin()) {
+                // 凭据缺失或已失效：给出明确标记与“重新登录”入口，而不是让用户在启动失败后自己猜。
+                Label expired = new Label(UiText.tr("account.list.needsLogin"));
+                expired.getStyleClass().addAll("caml-label-small", "field-error");
+                CamlButton relogin = CamlButton.outlined(UiText.tr("account.list.relogin"));
+                relogin.setOnAction(event -> prepareRelogin(account));
+                row.getChildren().addAll(expired, relogin);
+            }
+
+            if (account.multiProfile()) {
+                // 多角色账号：允许在账号内切换角色，切换后账号 id 不变。
+                CamlComboBox<String> profileBox = new CamlComboBox<>();
+                for (var profile : account.profiles()) {
+                    profileBox.getItems().add(profile.id());
+                }
+                profileBox.setConverter(new javafx.util.StringConverter<>() {
+                    @Override
+                    public String toString(String value) {
+                        return profileLabel(account, value);
+                    }
+
+                    @Override
+                    public String fromString(String value) {
+                        return profileBox.getItems().stream()
+                                .filter(item -> profileLabel(account, item).equals(value))
+                                .findFirst()
+                                .orElse(null);
+                    }
+                });
+                profileBox.setValue(account.uuid());
+                profileBox.valueProperty().addListener((observable, oldValue, value) -> {
+                    if (value == null || value.equals(oldValue)
+                            || value.equalsIgnoreCase(account.uuid())) {
+                        return;
+                    }
+                    profileBox.setDisable(true);
+                    controller.switchProfile(account.id(), value, switched -> {
+                        profileBox.setDisable(false);
+                        showStatus(UiText.tr("account.profile.switched",
+                                AccountChoice.label(switched)), false);
+                        refresh();
+                    }, message -> {
+                        profileBox.setDisable(false);
+                        profileBox.setValue(oldValue);
+                        showStatus(message, true);
+                    });
+                });
+
+                Label profileLabel = new Label(UiText.tr("account.profile.label"));
+                profileLabel.getStyleClass().add("caml-label-small");
+                row.getChildren().addAll(profileLabel, profileBox);
+            }
+
             CamlButton remove = CamlButton.outlined(UiText.tr("account.list.remove"));
             remove.setOnAction(event -> controller.removeAccount(account.id(), () -> {
                 showStatus(UiText.tr("account.removed", AccountChoice.label(account)), false);
                 refresh();
             }, message -> showStatus(message, true)));
+            row.getChildren().add(remove);
 
-            HBox row = new HBox(name, isDefault, remove);
-            row.getStyleClass().add("app-settings-row");
-            row.setAlignment(Pos.CENTER_LEFT);
-            HBox.setHgrow(name, Priority.ALWAYS);
             rows.getChildren().add(row);
         }
         accountList.getChildren().add(rows);
@@ -160,6 +215,39 @@ final class AccountSettingsView extends VBox {
             defaultAccountId = id;
             selectDefault(id);
         }, message -> showStatus(message, true));
+    }
+
+    private static String profileLabel(AccountSummary account, String profileId) {
+        if (profileId == null) {
+            return "";
+        }
+        return account.profiles().stream()
+                .filter(profile -> profile.sameId(profileId))
+                .map(profile -> profile.name().isBlank() ? profile.id() : profile.name())
+                .findFirst()
+                .orElse(profileId);
+    }
+
+    /**
+     * 重新登录：把认证服务器与用户名填回登录表单，只留密码给用户输入。
+     *
+     * <p>不自动发起请求：密码必须由用户重新输入，启动器从不保存密码。</p>
+     */
+    private void prepareRelogin(AccountSummary account) {
+        if (account.apiRoot().isBlank()) {
+            return;
+        }
+        List<String> presets = controller.presetApiRoots();
+        if (presets.contains(account.apiRoot())) {
+            serverBox.setValue(account.apiRoot());
+        } else {
+            serverBox.setValue(customServerRoot());
+            customServerField.setText(account.apiRoot());
+        }
+        usernameField.setText(account.displayName());
+        passwordField.clear();
+        passwordField.requestFocus();
+        showStatus(UiText.tr("account.login.reloginHint", account.displayName()), false);
     }
 
     private void selectDefault(String accountId) {
@@ -277,6 +365,7 @@ final class AccountSettingsView extends VBox {
     }
 
     private void rebuildServerChoices() {
+        presetNames = controller.presetServerNames();
         List<String> items = new ArrayList<>(controller.presetApiRoots());
         items.add(customServerRoot());
         String previous = serverBox.getValue();
@@ -288,11 +377,13 @@ final class AccountSettingsView extends VBox {
         }
     }
 
+    /** 预设服务器显示名称，取不到时退回地址。 */
     private String serverDisplayName(String apiRoot) {
         if (customServerRoot().equals(apiRoot)) {
             return UiText.tr("account.login.customServerOption");
         }
-        return apiRoot;
+        String name = presetNames.get(apiRoot);
+        return name == null || name.isBlank() ? apiRoot : name;
     }
 
     // ------------------------------------------------------------------ authlib-injector
