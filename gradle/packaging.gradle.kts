@@ -38,7 +38,6 @@ val debOutput = linuxPackageDirectory.resolve("caml-launcher_${packageVersion.ge
 val rpmTopDirectory = linuxPackageDirectory.resolve("rpmbuild")
 val rpmOutput = linuxPackageDirectory.resolve("caml-launcher-${packageVersion.get()}-${packageRelease.get()}.x86_64.rpm")
 val packageJdkHome = project.providers.gradleProperty("camlJdkHome")
-    .orElse(project.providers.environmentVariable("JAVA_HOME"))
 val fallbackJdk = frontJavaToolchains.launcherFor {
     languageVersion.set(JavaLanguageVersion.of(25))
 }
@@ -58,45 +57,144 @@ fun findExecutable(name: String): File? {
         .firstOrNull { it.isFile && it.canExecute() }
 }
 
+fun readJdkRelease(home: File): Pair<String, String>? {
+    val release = File(home, "release")
+    if (!release.isFile) return null
+    val text = release.readText()
+    val implementor = Regex("IMPLEMENTOR=\"([^\"]*)\"")
+        .find(text)?.groupValues?.get(1).orEmpty()
+    val version = Regex("JAVA_VERSION=\"([^\"]*)\"")
+        .find(text)?.groupValues?.get(1).orEmpty()
+    return implementor to version
+}
+
+fun describeJdk(home: File): String {
+    val release = readJdkRelease(home) ?: return "无 release 文件"
+    return "IMPLEMENTOR=\"${release.first}\", JAVA_VERSION=\"${release.second}\""
+}
+
+/** 打包只接受 Zulu 25：既要自带 jpackage，也要满足供应商和版本要求。 */
+fun isPackageJdk(home: File, forWindows: Boolean): Boolean {
+    val jpackage = if (forWindows) File(home, "bin/jpackage.exe") else File(home, "bin/jpackage")
+    if (!jpackage.isFile) return false
+    val release = readJdkRelease(home) ?: return false
+    return release.first.contains("Azul", ignoreCase = true) && release.second.startsWith("25")
+}
+
+/** 在候选根目录下按最多两层查找 JDK（形如 <root>/<vendor>/<jdk> 或 <root>/<jdk>）。 */
+fun jdkCandidatesUnder(root: File): List<File> {
+    if (!root.isDirectory) return emptyList()
+    val result = mutableListOf<File>()
+    root.listFiles().orEmpty().sortedBy { it.name }.forEach { child ->
+        if (!child.isDirectory) return@forEach
+        result += child
+        child.listFiles().orEmpty().sortedBy { it.name }.forEach { grandChild ->
+            if (grandChild.isDirectory) result += grandChild
+        }
+    }
+    return result
+}
+
+/** 常见 JDK 安装位置；用于在 IDE 里直接点任务、拿不到 -PcamlJdkHome 时自动兜底。 */
+fun jdkSearchRoots(): List<File> {
+    val roots = mutableListOf<File>()
+    System.getenv("ZULU_HOME")?.trim()?.takeIf { it.isNotEmpty() }?.let { roots += File(it) }
+    val userHome = File(System.getProperty("user.home"))
+    roots += File(userHome, ".jdks")
+    roots += File(userHome, ".sdkman/candidates/java")
+    roots += File(userHome, ".gradle/jdks")
+    if (isWindowsHost()) {
+        listOf("ProgramFiles", "ProgramFiles(x86)", "LOCALAPPDATA").forEach { name ->
+            System.getenv(name)?.trim()?.takeIf { it.isNotEmpty() }?.let { base ->
+                listOf("Zulu", "Azul", "Programs/Zulu", "Eclipse Adoptium", "Microsoft").forEach {
+                    roots += File(base, it)
+                }
+            }
+        }
+    } else {
+        roots += File("/usr/lib/jvm")
+        roots += File("/usr/lib64/jvm")
+        roots += File("/opt")
+    }
+    return roots
+}
+
+fun discoverPackageJdks(forWindows: Boolean): List<File> = jdkSearchRoots()
+    .flatMap { jdkCandidatesUnder(it) }
+    .distinctBy { it.absolutePath }
+    .filter { isPackageJdk(it, forWindows) }
+
+/**
+ * 隐式候选：显式没有配置 camlJdkHome 时依次尝试。
+ *
+ * <p>在 IDE 里直接点打包任务时无法附加 -PcamlJdkHome，且 Gradle daemon 的 JAVA_HOME
+ * 往往是 IDE 自身的 JDK（可能不是 Zulu 25），因此这里把 PATH 上的 jpackage、
+ * Gradle 工具链和常见安装目录都当作候选，逐个用 isPackageJdk 校验。
+ */
+fun implicitPackageJdkCandidates(forWindows: Boolean): List<Pair<File, String>> {
+    val candidates = mutableListOf<Pair<File, String>>()
+
+    findExecutable(if (forWindows) "jpackage.exe" else "jpackage")?.let { jpackage ->
+        jpackage.parentFile?.parentFile?.let { candidates += it to "PATH 中的 jpackage" }
+    }
+    System.getenv("JAVA_HOME")?.trim()?.takeIf { it.isNotEmpty() }?.let {
+        candidates += File(it) to "JAVA_HOME"
+    }
+    runCatching { fallbackJdk.get().metadata.installationPath.asFile }.getOrNull()?.let {
+        candidates += it to "Gradle 工具链"
+    }
+    discoverPackageJdks(forWindows).forEach { candidates += it to "自动发现" }
+
+    return candidates.distinctBy { it.first.absolutePath }
+}
+
+/**
+ * 解析打包用的 JDK。
+ *
+ * <p>显式 `-PcamlJdkHome` 必须可靠：指向非 Zulu 25 的 JDK 时直接失败，避免打出版权文本
+ * 与运行时不一致的包。没有显式配置时按 implicitPackageJdkCandidates 的顺序挑第一个合格的，
+ * 因此在 IDE 里直接点任务、JAVA_HOME 指向别的 JDK 也能自动找到本机 Zulu 25。
+ */
 fun resolvePackageJdkHome(forWindows: Boolean): File {
     val platformLabel = if (forWindows) "Windows" else "Linux"
     val expectedJdk = "Zulu JDK 25（Azul Systems）"
     val configured = packageJdkHome.orNull?.trim()?.takeIf { it.isNotEmpty() }
-    val home = if (configured != null) {
-        File(configured)
-    } else {
-        fallbackJdk.get().metadata.installationPath.asFile
-    }
 
-    val jpackage = if (forWindows) File(home, "bin/jpackage.exe") else File(home, "bin/jpackage")
-    if (!jpackage.isFile) {
+    if (configured != null) {
+        val home = File(configured)
+        if (isPackageJdk(home, forWindows)) return home
         throw GradleException(
-            "未找到 jpackage：${jpackage.absolutePath}。请把 camlJdkHome 或 JAVA_HOME 指向 $expectedJdk。"
+            "$platformLabel 发布包必须使用 $expectedJdk 构建，" +
+                "避免把不可再分发的 JDK 打进安装包，并保证 packaging/licenses 中的许可文本与实际运行时一致。" +
+                " camlJdkHome 当前指向：${home.absolutePath}（${describeJdk(home)}）。" +
+                " 请改为 -PcamlJdkHome=<Zulu 25 路径>，或在 ~/.gradle/gradle.properties 中设置 camlJdkHome。"
         )
     }
 
-    val releaseText = File(home, "release").takeIf { it.isFile }?.readText().orEmpty()
-    val implementor = Regex("IMPLEMENTOR=\"([^\"]*)\"")
-        .find(releaseText)?.groupValues?.get(1).orEmpty()
-    val vendorMatches = implementor.contains("Azul", ignoreCase = true)
-    if (!vendorMatches) {
-        throw GradleException(
-            "$platformLabel 发布包必须使用 $expectedJdk 构建，避免把不可再分发的 JDK 打进安装包，" +
-                "并保证 packaging/licenses 中的许可文本与实际运行时一致。" +
-                " 当前 JDK：${home}（IMPLEMENTOR=\"$implementor\"）。" +
-                " 请设置 -PcamlJdkHome=<Zulu 25 路径> 或 JAVA_HOME。"
-        )
+    val rejected = mutableListOf<String>()
+    for ((home, origin) in implicitPackageJdkCandidates(forWindows)) {
+        if (isPackageJdk(home, forWindows)) {
+            project.logger.lifecycle("打包使用 $origin 的 JDK：${home.absolutePath}")
+            return home
+        }
+        if (home.isDirectory) {
+            rejected += "  - $origin: ${home.absolutePath}（${describeJdk(home)}）"
+        }
     }
 
-    val javaVersion = Regex("JAVA_VERSION=\"([^\"]*)\"")
-        .find(releaseText)?.groupValues?.get(1).orEmpty()
-    if (!javaVersion.startsWith("25")) {
-        throw GradleException(
-            "发布包必须使用 JDK 25 构建；当前 JAVA_VERSION=\"$javaVersion\"（$home）。"
-        )
-    }
-
-    return home
+    throw GradleException(
+        buildString {
+            appendLine("$platformLabel 发布包必须使用 $expectedJdk 构建，但没有找到可用的 JDK。")
+            if (rejected.isNotEmpty()) {
+                appendLine("已检查：")
+                rejected.forEach { appendLine(it) }
+            }
+            appendLine("解决办法（任选一种）：")
+            appendLine("  - 命令行：-PcamlJdkHome=<Zulu 25 路径>")
+            appendLine("  - IDE 里点任务：在 ~/.gradle/gradle.properties 写入 camlJdkHome=<Zulu 25 路径>")
+            appendLine("  - 或设置环境变量 JAVA_HOME / ZULU_HOME 指向 Zulu 25")
+        }.trimEnd()
+    )
 }
 
 fun validatePackageVersion(version: String) {
@@ -126,6 +224,15 @@ fun copyExecutable(source: File, target: File) {
     Files.copy(source.toPath(), target.toPath(), StandardCopyOption.REPLACE_EXISTING)
     target.setExecutable(true, false)
     target.setReadable(true, false)
+}
+
+/** 删除只读文件：jpackage 产出的 exe/msi 带只读属性，Windows 上直接删除会 AccessDenied。 */
+fun deleteReadOnly(file: File) {
+    if (!file.exists()) return
+    file.setWritable(true)
+    if (file.isFile && !file.delete()) {
+        throw GradleException("无法删除旧产物：${file.absolutePath}")
+    }
 }
 
 fun copyTree(source: File, target: File) {
@@ -746,6 +853,9 @@ val packageWindowsExe = project.tasks.register<Exec>("packageWindowsExe") {
         requireWix()
         val jdkHome = resolvePackageJdkHome(true)
         windowsPackageDirectory.mkdirs()
+        // 旧产物带只读属性，jpackage 无法覆盖，先清掉本次要重新生成的 exe。
+        deleteReadOnly(File(windowsPackageDirectory, "CAML-$version.exe"))
+        deleteReadOnly(windowsExeOutput)
 
         executable = File(jdkHome, "bin/jpackage.exe").absolutePath
         args = listOf(
@@ -785,6 +895,8 @@ val packageWindowsExe = project.tasks.register<Exec>("packageWindowsExe") {
         if (!builtExe.isFile) {
             throw GradleException("jpackage 未生成预期文件：${builtExe.absolutePath}")
         }
+        // jpackage 产出的 exe 带只读属性，Windows 上不能直接覆盖，先删掉旧产物再移动。
+        deleteReadOnly(windowsExeOutput)
         Files.move(
             builtExe.toPath(),
             windowsExeOutput.toPath(),
@@ -837,5 +949,26 @@ val collectPackages = project.tasks.register("collectPackages") {
             } + "\n"
         )
         project.logger.lifecycle("汇总 ${artifacts.size} 个发布包到 ${packagesDirectory.absolutePath}")
+    }
+}
+
+val printPackagingJdk = project.tasks.register("printPackagingJdk") {
+    group = "caml"
+    description = "打印打包会使用的 JDK 和候选清单，用于排查供应商/版本不匹配。"
+
+    doLast {
+        val forWindows = isWindowsHost()
+        logger.lifecycle("平台：${System.getProperty("os.name")}（${System.getProperty("os.arch")}）")
+        logger.lifecycle("显式配置 camlJdkHome：${packageJdkHome.orNull ?: "（未设置）"}")
+        logger.lifecycle("候选清单：")
+        implicitPackageJdkCandidates(forWindows).forEach { (home, origin) ->
+            val status = if (isPackageJdk(home, forWindows)) "可用" else "跳过"
+            logger.lifecycle("  [$status] $origin -> ${home.absolutePath}（${describeJdk(home)}）")
+        }
+        try {
+            logger.lifecycle("打包将使用：${resolvePackageJdkHome(forWindows).absolutePath}")
+        } catch (exception: GradleException) {
+            logger.lifecycle(exception.message.orEmpty())
+        }
     }
 }
