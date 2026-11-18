@@ -120,6 +120,8 @@ jobs:
         with:
           name: caml-windows-packages
           path: packages
+      - name: Rename Windows checksum
+        run: mv packages/SHA256SUMS.txt packages/SHA256SUMS-windows.txt
       - name: Upload release assets
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

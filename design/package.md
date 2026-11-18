@@ -493,6 +493,21 @@ git push origin v1.0.0
 两个 release job 都使用 `gh release view || create || view` 处理并发创建同一个
 Release 的情况。
 
+Release 资产为四个安装文件：
+
+- `caml-launcher_<version>-<release>_amd64.deb`
+- `caml-launcher-<version>-<release>.x86_64.rpm`
+- `caml-launcher-<version>-<release>-windows-x64.exe`
+- `caml-launcher-<version>-<release>-windows-x64-portable.zip`
+
+以及两个平台专用的校验和文件：
+
+- `SHA256SUMS-linux.txt`
+- `SHA256SUMS-windows.txt`
+
+release job 在下载 artifact 后先重命名校验和，避免 Linux 与 Windows 的
+`SHA256SUMS.txt` 同名覆盖。
+
 手动 `workflow_dispatch` 只生成 artifact，不发布 Release；Release job 只在 tag 上运行。
 
 ## 12. 本地命令

@@ -110,6 +110,8 @@ jobs:
         with:
           name: caml-linux-packages
           path: packages
+      - name: Rename Linux checksum
+        run: mv packages/SHA256SUMS.txt packages/SHA256SUMS-linux.txt
       - name: Upload release assets
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
