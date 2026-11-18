@@ -42,66 +42,14 @@ jobs:
 
   linux-packages:
     needs: build
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v5
-      - name: Resolve package identity
-        id: package
-        run: |
-          if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
-            pr="${{ github.event.pull_request.number }}"
-          else
-            message=$(git log -1 --pretty=%B)
-            pr=$(printf '%s\n' "$message" | sed -n 's/.*Merge pull request #\([0-9][0-9]*\).*/\1/p' | head -n 1)
-            if [ -z "$pr" ]; then
-              pr=$(printf '%s\n' "$message" | sed -n 's/.*(#\([0-9][0-9]*\)).*/\1/p' | head -n 1)
-            fi
-          fi
-          if [ -n "$pr" ]; then
-            echo "release=$pr" >> "$GITHUB_OUTPUT"
-            echo "artifact=caml-linux-packages-pr-$pr" >> "$GITHUB_OUTPUT"
-          else
-            echo "release=$GITHUB_RUN_NUMBER" >> "$GITHUB_OUTPUT"
-            echo "artifact=caml-linux-packages-run-$GITHUB_RUN_NUMBER" >> "$GITHUB_OUTPUT"
-          fi
-      - uses: actions/setup-java@v5
-        with:
-          distribution: zulu
-          java-version: '25'
-          cache: gradle
-      - name: Install package tools
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y rpm
-      - name: Make Gradle wrapper executable
-        run: chmod +x gradlew
-      - name: Build Linux packages
-        env:
-          CURSEFORGE_API_KEY: ${{ secrets.CURSEFORGE_API_KEY }}
-        run: |
-          ./gradlew packageLinux \
-            -PcamlJdkHome="$JAVA_HOME" \
-            -PcamlVersion=1.0.0 \
-            -PcamlRelease="${{ steps.package.outputs.release }}" \
-            --no-daemon --stacktrace
-      - name: Inspect packages
-        run: |
-          deb=$(find build/packages/linux -maxdepth 1 -name '*.deb' -print -quit)
-          rpm=$(find build/packages/linux -maxdepth 1 -name '*.rpm' -print -quit)
-          test -n "$deb"
-          test -n "$rpm"
-          dpkg-deb -I "$deb"
-          dpkg-deb -c "$deb" >/dev/null
-          mkdir -p .rpmdb
-          rpm --dbpath "$PWD/.rpmdb" -qpi "$rpm"
-          rpm --dbpath "$PWD/.rpmdb" -qpl "$rpm" >/dev/null
-          cat build/packages/linux/SHA256SUMS.txt
-      - name: Upload Linux packages
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ steps.package.outputs.artifact }}
-          path: |
-            build/packages/linux/*.deb
-            build/packages/linux/*.rpm
-            build/packages/linux/SHA256SUMS.txt
-          if-no-files-found: error
+    permissions:
+      contents: write
+    uses: ./.github/workflows/package-linux.yml
+    secrets: inherit
+
+  windows-packages:
+    needs: build
+    permissions:
+      contents: write
+    uses: ./.github/workflows/package-windows.yml
+    secrets: inherit

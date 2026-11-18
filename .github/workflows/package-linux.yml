@@ -1,6 +1,7 @@
 name: Package Linux
 
 on:
+  workflow_call:
   workflow_dispatch:
     inputs:
       version:
@@ -30,25 +31,50 @@ jobs:
           sudo apt-get install -y rpm
       - name: Make Gradle wrapper executable
         run: chmod +x gradlew
-      - name: Resolve package version
-        id: package_version
+      - name: Resolve package identity
+        id: package
         run: |
           if [ "$GITHUB_REF_TYPE" = "tag" ]; then
             version="${GITHUB_REF_NAME#v}"
-          else
+            release="1"
+            artifact="caml-linux-packages"
+          elif [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
             version="${{ github.event.inputs.version }}"
             if [ -z "$version" ]; then
               version="1.0.0"
             fi
+            release="1"
+            artifact="caml-linux-packages"
+          elif [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
+            version="1.0.0"
+            release="${{ github.event.pull_request.number }}"
+            artifact="caml-linux-packages-pr-$release"
+          else
+            version="1.0.0"
+            message=$(git log -1 --pretty=%B)
+            pr=$(printf '%s\n' "$message" | sed -n 's/.*Merge pull request #\([0-9][0-9]*\).*/\1/p' | head -n 1)
+            if [ -z "$pr" ]; then
+              pr=$(printf '%s\n' "$message" | sed -n 's/.*(#\([0-9][0-9]*\)).*/\1/p' | head -n 1)
+            fi
+            if [ -n "$pr" ]; then
+              release="$pr"
+              artifact="caml-linux-packages-pr-$pr"
+            else
+              release="$GITHUB_RUN_NUMBER"
+              artifact="caml-linux-packages-run-$GITHUB_RUN_NUMBER"
+            fi
           fi
-          echo "value=$version" >> "$GITHUB_OUTPUT"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "release=$release" >> "$GITHUB_OUTPUT"
+          echo "artifact=$artifact" >> "$GITHUB_OUTPUT"
       - name: Build Linux packages
         env:
           CURSEFORGE_API_KEY: ${{ secrets.CURSEFORGE_API_KEY }}
         run: |
           ./gradlew packageLinux \
             -PcamlJdkHome="$JAVA_HOME" \
-            -PcamlVersion="${{ steps.package_version.outputs.value }}" \
+            -PcamlVersion="${{ steps.package.outputs.version }}" \
+            -PcamlRelease="${{ steps.package.outputs.release }}" \
             --no-daemon --stacktrace
       - name: Inspect packages
         run: |
@@ -65,11 +91,12 @@ jobs:
       - name: Upload Linux packages
         uses: actions/upload-artifact@v4
         with:
-          name: caml-linux-packages
+          name: ${{ steps.package.outputs.artifact }}
           path: |
             build/packages/linux/*.deb
             build/packages/linux/*.rpm
             build/packages/linux/SHA256SUMS.txt
+          if-no-files-found: error
 
   release:
     if: startsWith(github.ref, 'refs/tags/')
@@ -83,6 +110,8 @@ jobs:
         with:
           name: caml-linux-packages
           path: packages
+      - name: Rename Linux checksum
+        run: mv packages/SHA256SUMS.txt packages/SHA256SUMS-linux.txt
       - name: Upload release assets
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
