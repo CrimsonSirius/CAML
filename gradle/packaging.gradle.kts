@@ -823,14 +823,18 @@ val collectPackages = project.tasks.register("collectPackages") {
             addAll(windowsPackageDirectory.listFiles().orEmpty().filter {
                 it.isFile && it.extension in setOf("exe", "zip")
             })
-        }.sortedBy { it.name }
+        }.sortedBy { it.relativeTo(packagesDirectory).invariantSeparatorsPath }
         if (artifacts.isEmpty()) {
             throw GradleException(
                 "没有可汇总的发布包。请先运行 packageLinux 或 packageWindowsPortable。"
             )
         }
+        // 条目带上 linux/、windows/ 前缀，才能在 build/packages 下直接 sha256sum -c。
         File(packagesDirectory, "SHA256SUMS.txt").writeText(
-            artifacts.joinToString("\n") { "${digest(it, "SHA-256")}  ${it.name}" } + "\n"
+            artifacts.joinToString("\n") {
+                val relative = it.relativeTo(packagesDirectory).invariantSeparatorsPath
+                "${digest(it, "SHA-256")}  $relative"
+            } + "\n"
         )
         project.logger.lifecycle("汇总 ${artifacts.size} 个发布包到 ${packagesDirectory.absolutePath}")
     }
