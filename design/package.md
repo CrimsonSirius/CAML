@@ -423,22 +423,27 @@ Linux 用户应使用 `SHA256SUMS.txt` 校验下载完整性。
 - `:CAMLBackend:test :CAMLFront:assemble`；
 - 失败时上传测试报告；
 - 上传 `CAML-Debug-Distribution`；
-- `linux-packages` job 构建 Linux deb/rpm。
+- `build` 完成后并行调用 `linux-packages` 和 `windows-packages` 两个 reusable workflow；
+- 两个调用 job 都使用 `secrets: inherit`，并授予 `contents: write` 供 tag release 使用。
 
-Linux PR/分支 artifact 名称：
+PR/分支 artifact 名称：
 
 - `caml-linux-packages-pr-<PR 编号>`；
-- 无法提取 PR 编号时：`caml-linux-packages-run-<run number>`。
+- `caml-windows-packages-pr-<PR 编号>`；
+- 无法提取 PR 编号时分别回退到 `caml-linux-packages-run-<run number>` 和
+  `caml-windows-packages-run-<run number>`。
 
 ### 11.2 `Package Linux`
 
 触发：
 
+- `workflow_call`（由 `Build` 调用）；
 - `workflow_dispatch`；
 - `v*` tag。
 
 行为：
 
+- 被 `Build` 调用时，根据 PR/分支生成 `caml-linux-packages-pr-*` 或 `run-*` artifact；
 - 手动触发生成 `caml-linux-packages` artifact；
 - tag 触发生成 `caml-linux-packages`，并由 release job 上传到 GitHub Release；
 - tag 的版本从 `GITHUB_REF_NAME` 去掉前导 `v` 得到。
@@ -447,14 +452,14 @@ Linux PR/分支 artifact 名称：
 
 触发：
 
+- `workflow_call`（由 `Build` 调用）；
 - `workflow_dispatch`；
-- pull request；
-- 所有分支 push；
 - `v*` tag。
 
 行为：
 
-- PR/分支：`caml-windows-packages-pr-<PR>` 或 `caml-windows-packages-run-<run>`；
+- 被 `Build` 调用时：PR/分支生成 `caml-windows-packages-pr-<PR>` 或
+  `caml-windows-packages-run-<run>`；
 - 手动触发：`caml-windows-packages`；
 - tag：`caml-windows-packages`，release job 上传 EXE、便携 zip 和校验和。
 

@@ -1,16 +1,14 @@
 name: Package Windows
 
 on:
+  workflow_call:
   workflow_dispatch:
     inputs:
       version:
         description: Package version without leading v
         required: false
         default: 1.0.0
-  pull_request:
   push:
-    branches:
-      - '**'
     tags:
       - 'v*'
 
