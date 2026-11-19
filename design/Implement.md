@@ -25,7 +25,7 @@
 → 进程启动/日志
 ```
 
-尚未完成：微软登录、启动错误对话框、停止按钮、崩溃分析、启动器可见性策略和真实客户端验证。
+尚未完成：微软浏览器回调登录、启动错误对话框、停止按钮、崩溃分析、启动器可见性策略和真实客户端验证。
 
 ## 2. 项目结构
 
@@ -125,6 +125,8 @@ CAML
 ### 3.5 账号
 
 - 离线账号登录、稳定离线 UUID、生成 `AuthSession`。
+- 微软设备码登录：OAuth → Xbox Live → XSTS → Minecraft Services，验证 mcstore 许可证和 profile；
+  `userType` 为 `msa`，启动时按过期时间自动 refresh，refresh token 加密保存。
 - 第三方 Yggdrasil 认证服务器登录：`authenticate` 后用 `refresh` + `selectedProfile` 补绑定角色；启动时直接 `refresh`，`userType` 为 `mojang`。
 - 多角色账号：`availableProfiles` 持久化到账号索引，设置页可切换角色（账号 id 不变）。
 - “不记住登录”时 accessToken 只保存在进程内存，重启后要求重新登录。
@@ -465,8 +467,8 @@ PATH=/usr/lib/jvm/zulu-25/bin:$PATH \
 - CAMLFront 停止游戏按钮。
 - 真实 Minecraft 客户端端到端验证。
 - 启动脚本导出。
-- 微软账号登录。
-- token 刷新和安全存储。
+- 微软浏览器回调登录、皮肤/披风上传。
+- 系统凭据库和安全存储迁移。
 - 下载取消和内容寻址缓存。
 - quick play 和服务器直连。
 - 整合包和模组管理。

@@ -37,7 +37,7 @@ CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
 | `instance` | 实例模型、本地版本复用、版本安装和隔离判定 | 已有 |
 | `download` | 下载入口；子包 `model`、`plan`、`source`、`io`、`hash` | 已有 |
 | `mod` | Modrinth/CurseForge 官方 API 搜索、详情、依赖和 Mod 文件下载；WebP 图标转 PNG | 已有 |
-| `auth` | 账号、AuthSession、离线登录、Yggdrasil 第三方登录与 authlib-injector 注入 | 已有离线与第三方能力 |
+| `auth` | 账号、AuthSession、离线登录、微软设备码登录、Yggdrasil 第三方登录与 authlib-injector 注入 | 已有离线、微软与第三方能力 |
 | `runtime` | Java 运行时检测、版本/架构/位数匹配 | 已有 |
 | `launch` | 启动编排；子包 `command`、`classpath`、`prepare`、`process`、`patch` | 已有 |
 | `theme` | 主题目录、默认主题复制和当前主题配置 | 已有 |
@@ -124,6 +124,8 @@ CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
   立即用 `refresh` + `selectedProfile` 补绑定；启动时**直接 `refresh`**（而非先 `validate`），
   这样历史遗留的未绑定 token 会自愈。`userType` 固定为 `mojang`，
   `selectedProfile.id` 的 32 位 ID 转换为标准 UUID。
+- 微软设备码登录：OAuth → Xbox Live → XSTS → Minecraft Services，检查许可证与 profile，
+  `userType` 固定为 `msa`；启动时 access token 未过期则复用，否则自动 refresh。
 - 多角色账号：登录响应里的 `availableProfiles` 一并持久化，设置页可切换角色；
   切换同样走 `refresh` + 目标角色，账号 id 保持不变。
 - “不记住登录”时 accessToken 只留在后端进程内存中：本次运行可启动，重启后要求重新登录。
@@ -361,7 +363,7 @@ CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
 - CAMLFront 停止游戏按钮。
 - 真实 Minecraft 客户端端到端验证。
 - 启动脚本导出。
-- 微软账号登录（第三方 Yggdrasil 登录已实现，详见 [auth.md](auth.md)）。
+- 微软浏览器授权码回调、皮肤/披风上传（设备码登录已实现）。
 - 第三方账号的 2FA / OAuth 登录。
 - 下载取消和内容寻址缓存。
 - 整合包和模组管理。

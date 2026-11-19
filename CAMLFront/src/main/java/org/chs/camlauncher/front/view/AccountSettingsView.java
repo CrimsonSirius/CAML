@@ -4,12 +4,15 @@ import javafx.geometry.Pos;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.ToggleGroup;
+import javafx.scene.input.Clipboard;
+import javafx.scene.input.ClipboardContent;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
 import javafx.stage.Window;
 import org.chs.camlauncher.backend.api.AccountSummary;
+import org.chs.camlauncher.backend.auth.microsoft.MicrosoftDeviceCode;
 import org.chs.camlauncher.front.controller.AccountController;
 import org.chs.camlauncher.front.text.AccountChoice;
 import org.chs.camlauncher.front.text.UiText;
@@ -42,11 +45,22 @@ final class AccountSettingsView extends VBox {
     private final CheckBox rememberBox = new CheckBox(UiText.tr("account.login.remember"));
     private final Label injectorLabel = ViewSupport.hintLabel();
     private final CamlButton loginButton;
+    private final Label microsoftStatus = ViewSupport.hintLabel();
+    private final Label microsoftCode = ViewSupport.hintLabel();
+    private final Label microsoftUrl = ViewSupport.hintLabel();
+    private final CamlButton microsoftLoginButton = CamlButton.filled(
+            UiText.tr("account.microsoft.login"));
+    private final CamlButton microsoftCopyButton = CamlButton.outlined(
+            UiText.tr("account.microsoft.copyCode"));
+    private final CamlButton microsoftCopyUrlButton = CamlButton.outlined(
+            UiText.tr("account.microsoft.copyUrl"));
 
     private List<AccountSummary> accounts = List.of();
     private Map<String, String> presetNames = Map.of();
     private String defaultAccountId;
     private boolean suppressDefaultEvents;
+    private String microsoftUserCode = "";
+    private String microsoftVerificationUri = "";
 
     AccountSettingsView(AccountController controller) {
         this.controller = controller;
@@ -56,7 +70,8 @@ final class AccountSettingsView extends VBox {
 
         loginButton = CamlButton.filled(UiText.tr("account.login.submit"));
 
-        getChildren().addAll(buildAccountsGroup(), buildLoginGroup(), buildInjectorGroup());
+        getChildren().addAll(buildAccountsGroup(), buildMicrosoftGroup(),
+                buildLoginGroup(), buildInjectorGroup());
         refresh();
     }
 
@@ -257,6 +272,115 @@ final class AccountSettingsView extends VBox {
                 .findFirst()
                 .ifPresent(toggle -> toggle.setSelected(true));
         suppressDefaultEvents = false;
+    }
+
+    // ------------------------------------------------------------------ 微软登录
+
+    private VBox buildMicrosoftGroup() {
+        Label heading = new Label(UiText.tr("settings.account.microsoft.title"));
+        heading.getStyleClass().add("app-settings-group-title");
+
+        Label description = new Label(UiText.tr("settings.account.microsoft.description"));
+        description.getStyleClass().addAll("caml-body-medium", "caml-on-surface-muted");
+        description.setWrapText(true);
+
+        microsoftCode.setWrapText(true);
+        microsoftUrl.setWrapText(true);
+        microsoftCode.setVisible(false);
+        microsoftCode.setManaged(false);
+        microsoftUrl.setVisible(false);
+        microsoftUrl.setManaged(false);
+
+        microsoftCopyButton.setOnAction(event -> copyMicrosoftCode());
+        microsoftCopyButton.setDisable(true);
+        microsoftCopyUrlButton.setOnAction(event -> copyMicrosoftVerificationUri());
+        microsoftCopyUrlButton.setDisable(true);
+        microsoftLoginButton.setMaxWidth(Double.MAX_VALUE);
+        microsoftLoginButton.setOnAction(event -> loginMicrosoft());
+
+        HBox actions = new HBox(microsoftCopyButton, microsoftCopyUrlButton);
+        actions.getStyleClass().add("app-settings-row");
+        actions.setAlignment(Pos.CENTER_LEFT);
+
+        VBox group = new VBox(heading, description, microsoftStatus,
+                microsoftCode, microsoftUrl, actions, microsoftLoginButton);
+        group.getStyleClass().add("app-settings-group");
+        group.setMaxWidth(Double.MAX_VALUE);
+
+        return group;
+    }
+
+    private void loginMicrosoft() {
+        microsoftLoginButton.setDisable(true);
+        microsoftCopyButton.setDisable(true);
+        microsoftCopyUrlButton.setDisable(true);
+        microsoftUserCode = "";
+        microsoftVerificationUri = "";
+        microsoftCode.setVisible(false);
+        microsoftCode.setManaged(false);
+        microsoftUrl.setVisible(false);
+        microsoftUrl.setManaged(false);
+        setMicrosoftStatus(UiText.tr("account.microsoft.running"), false);
+
+        controller.loginMicrosoft(this::showMicrosoftDeviceCode,
+                account -> {
+                    microsoftLoginButton.setDisable(false);
+                    microsoftCopyButton.setDisable(true);
+                    microsoftCopyUrlButton.setDisable(true);
+                    microsoftCode.setVisible(false);
+                    microsoftCode.setManaged(false);
+                    microsoftUrl.setVisible(false);
+                    microsoftUrl.setManaged(false);
+                    setMicrosoftStatus(UiText.tr("account.login.success",
+                            AccountChoice.label(account)), false);
+                    refresh();
+                },
+                message -> {
+                    microsoftLoginButton.setDisable(false);
+                    microsoftCopyButton.setDisable(microsoftUserCode.isBlank());
+                    microsoftCopyUrlButton.setDisable(microsoftVerificationUri.isBlank());
+                    setMicrosoftStatus(message, true);
+                });
+    }
+
+    private void showMicrosoftDeviceCode(MicrosoftDeviceCode code) {
+        microsoftUserCode = code.userCode();
+        microsoftVerificationUri = code.verificationUri();
+        copyMicrosoftCode();
+        microsoftCode.setText(UiText.tr("account.microsoft.userCode", code.userCode()));
+        microsoftUrl.setText(UiText.tr("account.microsoft.verificationUri",
+                code.verificationUri()));
+        microsoftCode.setVisible(true);
+        microsoftCode.setManaged(true);
+        microsoftUrl.setVisible(true);
+        microsoftUrl.setManaged(true);
+        microsoftCopyButton.setDisable(false);
+        microsoftCopyUrlButton.setDisable(false);
+        setMicrosoftStatus(UiText.tr("account.microsoft.codeReady"), false);
+    }
+
+    private void copyMicrosoftCode() {
+        if (microsoftUserCode.isBlank()) {
+            return;
+        }
+        ClipboardContent content = new ClipboardContent();
+        content.putString(microsoftUserCode);
+        Clipboard.getSystemClipboard().setContent(content);
+    }
+
+    private void copyMicrosoftVerificationUri() {
+        if (microsoftVerificationUri.isBlank()) {
+            return;
+        }
+        ClipboardContent content = new ClipboardContent();
+        content.putString(microsoftVerificationUri);
+        Clipboard.getSystemClipboard().setContent(content);
+    }
+
+    private void setMicrosoftStatus(String message, boolean error) {
+        microsoftStatus.setText(message == null ? "" : message);
+        microsoftStatus.getStyleClass().removeAll("field-hint", "field-error");
+        microsoftStatus.getStyleClass().add(error ? "field-error" : "field-hint");
     }
 
     // ------------------------------------------------------------------ 登录
