@@ -3,6 +3,7 @@ package org.chs.camlauncher.backend.auth.store;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.chs.camlauncher.backend.auth.AccountType;
+import org.chs.camlauncher.backend.auth.yggdrasil.YggdrasilProfile;
 import org.chs.camlauncher.backend.json.JsonService;
 
 import java.io.IOException;
@@ -19,8 +20,8 @@ import java.util.Optional;
  * 账号索引的持久化：{@code ~/.caml/accounts/accounts.json}。
  *
  * <p>写入遵循项目既有约定：临时文件 + 原子替换，读失败时返回空列表而不是让启动失败。
- * accessToken 由 {@link SecretCipher} 加密后落盘，文件损坏时只丢弃该 token，
- * 账号条目仍保留（用户重新登录即可），不会静默删除用户配置。</p>
+ * accessToken 与 refreshToken 由 {@link SecretCipher} 加密后落盘，文件损坏时只丢弃
+ * 对应 token，账号条目仍保留（用户重新登录即可），不会静默删除用户配置。</p>
  */
 public final class AccountStore {
     private static final Logger LOGGER = LogManager.getLogger(AccountStore.class);
@@ -110,7 +111,8 @@ public final class AccountStore {
                     cipher.decrypt(entry.accessToken),
                     entry.clientToken,
                     cipher.decrypt(entry.refreshToken),
-                    entry.expiresAt));
+                    entry.expiresAt,
+                    readProfiles(entry.profiles)));
         }
         return List.copyOf(accounts);
     }
@@ -131,6 +133,7 @@ public final class AccountStore {
             entry.clientToken = account.clientToken();
             entry.refreshToken = cipher.encrypt(account.refreshToken());
             entry.expiresAt = account.expiresAt();
+            entry.profiles = writeProfiles(account.profiles());
             file.accounts.add(entry);
         }
 
@@ -151,6 +154,34 @@ public final class AccountStore {
         }
     }
 
+    private static List<YggdrasilProfile> readProfiles(List<ProfileEntry> entries) {
+        if (entries == null || entries.isEmpty()) {
+            return List.of();
+        }
+        List<YggdrasilProfile> profiles = new ArrayList<>(entries.size());
+        for (ProfileEntry entry : entries) {
+            if (entry == null || entry.id == null || entry.id.isBlank()) {
+                continue;
+            }
+            profiles.add(new YggdrasilProfile(entry.id, entry.name));
+        }
+        return List.copyOf(profiles);
+    }
+
+    private static List<ProfileEntry> writeProfiles(List<YggdrasilProfile> profiles) {
+        if (profiles == null || profiles.isEmpty()) {
+            return List.of();
+        }
+        List<ProfileEntry> entries = new ArrayList<>(profiles.size());
+        for (YggdrasilProfile profile : profiles) {
+            ProfileEntry entry = new ProfileEntry();
+            entry.id = profile.id();
+            entry.name = profile.name();
+            entries.add(entry);
+        }
+        return entries;
+    }
+
     private static final class AccountsFile {
         private int version = FILE_VERSION;
         private List<AccountEntry> accounts = new ArrayList<>();
@@ -167,6 +198,11 @@ public final class AccountStore {
         private String clientToken;
         private String refreshToken;
         private long expiresAt;
+        private List<ProfileEntry> profiles;
+    }
+
+    private static final class ProfileEntry {
+        private String id;
+        private String name;
     }
 }
-

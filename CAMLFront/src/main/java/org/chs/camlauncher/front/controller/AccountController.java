@@ -2,12 +2,14 @@ package org.chs.camlauncher.front.controller;
 
 import javafx.application.Platform;
 import org.chs.camlauncher.backend.api.AccountSummary;
+import org.chs.camlauncher.backend.api.InstanceAccountMismatch;
 import org.chs.camlauncher.backend.auth.microsoft.MicrosoftDeviceCode;
 import org.chs.camlauncher.backend.auth.yggdrasil.AuthServerInfo;
 import org.chs.camlauncher.front.text.UiText;
 
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.function.Consumer;
 
@@ -34,6 +36,15 @@ public final class AccountController {
             return context.backend().authServerPresets();
         } catch (RuntimeException e) {
             return List.of();
+        }
+    }
+
+    /** 预设服务器地址 → 展示名；失败时退化为空表（下拉框仍显示地址）。 */
+    public Map<String, String> presetServerNames() {
+        try {
+            return context.backend().authServerPresetNames();
+        } catch (RuntimeException e) {
+            return Map.of();
         }
     }
 
@@ -103,6 +114,15 @@ public final class AccountController {
         }, ignored -> run(onRemoved), onError);
     }
 
+    /** 切换账号使用的角色；成功后回调新的账号摘要。 */
+    public FrontTask<AccountSummary> switchProfile(
+            String accountId, String profileId,
+            Consumer<AccountSummary> onSwitched, Consumer<String> onError) {
+        return context.runMetadata(UiText.tr("operation.switchProfile"),
+                () -> context.backend().switchAccountProfile(accountId, profileId),
+                onSwitched, onError);
+    }
+
     public FrontTask<String> loadInstanceAccount(
             Path gameDirectory, String instanceId,
             Consumer<String> onLoaded, Consumer<String> onError) {
@@ -126,29 +146,45 @@ public final class AccountController {
         }, ignored -> run(onSaved), onError);
     }
 
-    public FrontTask<Path> loadInjectorPath(
-            Consumer<Path> onLoaded, Consumer<String> onError) {
-        return context.runSettings(UiText.tr("operation.loadAccounts"), () -> {
-            try {
-                return context.backend().authlibInjectorPath().orElse(null);
-            } catch (java.io.IOException e) {
-                throw e;
-            }
-        }, onLoaded, onError);
+    /** 检测“实例账号绑定留在旧游戏位置”的情况；没有问题时回调 null。 */
+    public FrontTask<InstanceAccountMismatch> detectInstanceAccountMismatch(
+            Path gameDirectory, List<String> instances,
+            Consumer<InstanceAccountMismatch> onLoaded, Consumer<String> onError) {
+        if (gameDirectory == null) {
+            return null;
+        }
+        return context.runSettings(UiText.tr("operation.loadInstanceAccount"),
+                () -> context.backend().staleInstanceAccounts(gameDirectory, instances).orElse(null),
+                onLoaded, onError);
     }
 
+    /** 把旧游戏位置下的实例账号绑定套用到当前目录。 */
+    public FrontTask<Integer> reapplyInstanceAccounts(
+            Path gameDirectory, List<String> instances,
+            Consumer<Integer> onApplied, Consumer<String> onError) {
+        if (gameDirectory == null) {
+            return null;
+        }
+        return context.runSettings(UiText.tr("operation.saveInstanceAccount"),
+                () -> context.backend().reapplyInstanceAccounts(gameDirectory, instances),
+                onApplied, onError);
+    }
+
+    public FrontTask<Path> loadInjectorPath(
+            Consumer<Path> onLoaded, Consumer<String> onError) {
+        return context.runSettings(UiText.tr("operation.loadAccounts"),
+                () -> context.backend().authlibInjectorPath().orElse(null),
+                onLoaded, onError);
+    }
     public FrontTask<Void> saveInjectorPath(
             Path jar, Runnable onSaved, Consumer<String> onError) {
         return context.runSettings(UiText.tr("operation.saveInjectorPath"), () -> {
             context.backend().setAuthlibInjectorPath(jar);
             return null;
         }, ignored -> run(onSaved), onError);
-    }
-
-    private static void run(Runnable action) {
+    }    private static void run(Runnable action) {
         if (action != null) {
             action.run();
         }
     }
 }
-

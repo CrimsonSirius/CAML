@@ -124,4 +124,3 @@ class AccountModelTest {
         assertEquals(AccountType.OFFLINE, AccountType.fromStored("unknown"));
     }
 }
-

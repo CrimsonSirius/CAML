@@ -2,6 +2,8 @@ package org.chs.camlauncher.backend.auth.yggdrasil;
 
 import org.chs.camlauncher.backend.auth.AuthSession;
 
+import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -9,12 +11,16 @@ import java.util.UUID;
  *
  * <p>Yggdrasil 的 {@code selectedProfile.id} 是 32 位无横线十六进制字符串，
  * 而 {@link AuthSession#uuid()} 需要标准 UUID，因此这里统一补横线。</p>
+ *
+ * <p>{@code profiles} 是服务器返回的全部可用角色。部分服务器（如 LittleSkin）在账号
+ * 拥有多个角色时不设置 {@code selectedProfile}，界面需要据此让用户选择角色。</p>
  */
 public record YggdrasilSession(
         String username,
         String profileId,
         String accessToken,
-        String clientToken
+        String clientToken,
+        List<YggdrasilProfile> profiles
 ) {
     public YggdrasilSession {
         if (username == null || username.isBlank()) {
@@ -26,10 +32,29 @@ public record YggdrasilSession(
         if (accessToken == null || accessToken.isBlank()) {
             throw new IllegalArgumentException("accessToken must not be blank");
         }
+        profiles = profiles == null || profiles.isEmpty()
+                ? List.of(new YggdrasilProfile(profileId, username))
+                : List.copyOf(profiles);
+    }
+
+    public YggdrasilSession(String username, String profileId, String accessToken, String clientToken) {
+        this(username, profileId, accessToken, clientToken, List.of());
     }
 
     public UUID uuid() {
         return profileUuid(profileId);
+    }
+
+    /** 当前选中角色在 {@link #profiles()} 中的定义；服务器未返回时按会话信息合成一个。 */
+    public YggdrasilProfile selectedProfile() {
+        return profiles.stream()
+                .filter(profile -> profile.sameId(profileId))
+                .findFirst()
+                .orElseGet(() -> new YggdrasilProfile(profileId, username));
+    }
+
+    public Optional<YggdrasilProfile> profile(String profileId) {
+        return profiles.stream().filter(profile -> profile.sameId(profileId)).findFirst();
     }
 
     /**
@@ -56,4 +81,3 @@ public record YggdrasilSession(
         return UUID.fromString(raw);
     }
 }
-

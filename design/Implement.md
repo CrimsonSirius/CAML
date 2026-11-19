@@ -127,7 +127,10 @@ CAML
 - 离线账号登录、稳定离线 UUID、生成 `AuthSession`。
 - 微软设备码登录：OAuth → Xbox Live → XSTS → Minecraft Services，验证 mcstore 许可证和 profile；
   `userType` 为 `msa`，启动时按过期时间自动 refresh，refresh token 加密保存。
-- 第三方 Yggdrasil 认证服务器登录：`authenticate` / `validate` / `refresh`，`userType` 为 `mojang`。
+- 第三方 Yggdrasil 认证服务器登录：`authenticate` 后用 `refresh` + `selectedProfile` 补绑定角色；启动时直接 `refresh`，`userType` 为 `mojang`。
+- 多角色账号：`availableProfiles` 持久化到账号索引，设置页可切换角色（账号 id 不变）。
+- “不记住登录”时 accessToken 只保存在进程内存，重启后要求重新登录。
+- 认证服务器 metadata 三级缓存（网络 → 内存 → `~/.caml/accounts/servers.json`）。
 - authlib-injector 运行时下载一次（`~/.caml/authlib-injector/<版本>/`），之后每次启动只做 SHA-256 校验，
   以 `-javaagent` 注入，不改动版本 JSON、`libraries` 或 classpath。
 - 设置 → 账号维护全局账号列表与默认账号；主页“实例账号”二级页为每个实例单独指定账号，
@@ -196,7 +199,7 @@ CAML
   异步检查，并通过代际计数丢弃过期结果；检查结果显示在输入框下方，未通过时禁用下载按钮。
 - 点击下载后，`DownloadsView` 切换为 `DownloadProgressView`，左侧显示实时网速，
   右侧显示总进度、当前文件和后端阶段事件；`DownloadTelemetry` 负责聚合跨线程事件。
-- `LaunchSettings` 共享主页和设置页的游戏位置、版本隔离、最大内存值和额外 JVM 参数，`ViewSupport` 提供通用布局工具。
+- `LaunchSettings` 共享主页和设置页的游戏位置、版本隔离和最大内存值，`ViewSupport` 提供通用布局工具。
 - 游戏位置从主页移除；设置页新增“游戏位置”圆角分组，包含路径输入、浏览和保存。
 - 只有点击保存并校验目录存在后，才更新共享位置并写入 `~/.caml/settings.properties`。
 - 主页新增“浏览游戏实例”和“管理实例”按钮；前者打开 `InstancePickerView` 二级列表，
@@ -212,7 +215,7 @@ CAML
 - 当前实例、游戏位置、存档位置以三行信息放入圆角分组，字号放大。
 - “浏览游戏实例”和“管理实例”等宽，并共同占满启动按钮上方一行。
 - 显示存档位置：选择完全版本隔离时提示 `versions/<id>/saves`，否则提示 `.minecraft/saves`。
-- 离线用户名、启动按钮、状态提示和日志窗口；最大内存和额外 JVM 参数位于设置 → 游戏设置。
+- 离线用户名、启动按钮、状态提示和日志窗口；最大内存位于设置 → 游戏设置。
 - `ControllerContext` 用下载线程执行目录探测和下载，用独立设置线程串行保存设置；
   `HomeController` 负责启动派发，`DownloadsController` 负责下载，下载日志每 10% 节流。
 - 主工作区宽屏左右分栏，窄屏上下堆叠；断点为 900px。
@@ -265,8 +268,6 @@ CAML
   可用/已使用数值和灰色叠层宽度。
 - 最大内存保存到 `~/.caml/settings.properties`；启动时由后端加载，滑块停止变化
   约 300ms 后通过后端异步写入。
-- 额外 JVM 参数使用多行文本框编辑，点击保存后写入 `settings.properties` 的
-  `jvmArguments`；启动时由后端解析为参数列表并追加到版本 JSON 参数之后。
 - 导航切换会保留主页已填写的状态。
 - 界面控件来自 `CAMLUI`：`CamlButton`、`CamlComboBox`、`CamlMemorySlider`、`CamlRadioButton`、
   `CamlTextArea`、`CamlTextField`、`CamlTopBar`、`CamlTopNav`、`CamlTopNavItem`、

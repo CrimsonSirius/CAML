@@ -21,7 +21,7 @@ CAML 是一个基于 **Java 25 + JavaFX** 的 Minecraft 启动器，采用前后
 | 下载 | 客户端 jar、libraries、natives、asset index、assets objects 下载计划；镜像源 / 官方源 / 自定义镜像根地址三种下载源，覆盖版本清单、版本 JSON、Fabric/Forge/NeoForge/OptiFine 元数据、加载器 installer/API 和 Fabric Maven 依赖；SHA-1 校验；`.part` 临时文件 + 原子移动；已知大小的大文件使用 HTTP Range 分片下载，`.part.json` 检查点支持断点续传，Range 不可用时回退单流；响应体有 30 秒空闲读超时，元数据请求有总截止时间；显式 `DownloadCancellationToken`，失败或取消时取消剩余任务并等待 worker 收敛；默认总计最多 6 次下载尝试；并发下载数可设 1–256；已有有效文件跳过 |
 | Mod 下载 | 下载页新增 Mod 子页；通过 Modrinth/CurseForge 官方 API 搜索、分页、查看详情、按加载器和游戏版本分组、显示依赖并下载到当前实例 `mods` 目录；不使用镜像源；CurseForge 文件地址为空时按 fileId 回退 CDN，兼容旧 CDN 域名变体并透传 `x-api-key`，SHA-1 缺失时回退 MD5，大小 0 视为未知；Modrinth 的 WebP 图标在后端转换为 PNG 后显示 |
 | 版本安装 | 本地已安装版本直接复用（支持第三方启动器/整合包的自定义版本 ID），下载时可用自定义实例名；官方版本 ID 负责元数据，实例 ID 作为 `versions/<id>` 目录名；支持 Fabric Loader/Fabric API、Quilt Loader/Quilted Fabric API、Forge、NeoForge、OptiFine（仅 Forge）安装；Forge/NeoForge 版本列表优先从 BMCLAPI JSON 接口获取，官方源使用 Maven 元数据和 NeoForge 版本号映射匹配 Minecraft 版本；支持旧式 Forge library、Maven 路径推导和子版本库优先去重；缺失文件自动补齐；兼容 PCL/HMCL 版本隔离布局；基础文件完成后才写入版本 JSON |
-| 账号 | 离线登录、稳定离线 UUID；微软设备码登录，OAuth → Xbox Live → XSTS → Minecraft Services，启动时按过期时间自动 refresh；第三方 Yggdrasil（LittleSkin 等）账密登录，`validate`→`refresh` 自动续期；authlib-injector 运行时按需下载一次、每次启动 SHA-256 校验后以 `-javaagent` 注入；设置页维护全局账号与默认账号，主页二级页为每个实例单独指定账号，未指定时回退默认；accessToken 与 Microsoft refresh token 使用 AES-GCM 加密落盘，密码不保存 |
+| 账号 | 离线登录、稳定离线 UUID；微软设备码登录，OAuth → Xbox Live → XSTS → Minecraft Services，启动时按过期时间自动 refresh；第三方 Yggdrasil（LittleSkin 等）账密登录，启动时 `refresh` 自动续期并自愈未绑定角色的 token；支持多角色切换；authlib-injector 运行时按需下载一次、每次启动 SHA-256 校验后以 `-javaagent` 注入；metadata 三级缓存（网络/内存/磁盘）保证皮肤站不可用时仍能启动；设置页维护全局账号与默认账号，主页二级页为每个实例单独指定账号，未指定时回退默认；accessToken/refresh token 使用 AES-GCM 加密落盘（未勾选“记住登录”时只留在内存），密码不保存 |
 | Java | 扫描 `java.home`、`JAVA_HOME`、`PATH` 及常见 JDK 目录；读取版本、供应商、架构、位数；按版本要求选择运行时；Windows 优先 `javaw.exe` |
 | 启动 | 不可变 `LaunchPlan`、classpath 构建、JVM/游戏参数与 `${...}` 占位符、natives 子目录解压、Log4j 配置、旧版本 virtual assets 重建；NeoForge 26.2 + Vulkan 自动关闭 early window；根据设置选择，`--gameDir` 指向 `versions/<id>` 或 `.minecraft` 根目录 |
 | 进程 | `ProcessBuilder` 启动、工作目录与环境变量、stdout/stderr 转发、Minecraft Log4j XML 转原版日志风格、退出码回调、停止能力；命令行过长时自动回退 `@argfile` / manifest classpath jar；`LaunchException` 分类错误并提供中文提示 |
@@ -351,8 +351,7 @@ C:\Program Files\CAML\runtime\   裁剪后的 Java 运行时
 
 应用图标由 `packaging/icons/caml-512.png` 在构建期缩放生成多尺寸
 `caml.ico`（16/24/32/48/64/128/256），因此仓库里不需要保存二进制图标。
-GitHub Actions 的 `Build` workflow 会在所有 PR 和所有分支 push 时先执行 `build`，随后并行调用可复用的 `package-linux.yml` 和 `package-windows.yml`。Linux artifact 名为 `caml-linux-packages-pr-<PR 编号>`；Windows artifact 名为 `caml-windows-packages-pr-<PR 编号>`，无法提取 PR 编号时都回退到 `run-<run number>`。Windows artifact 本身是 GitHub 提供的 zip，内含安装式 EXE、便携 zip 和 `SHA256SUMS.txt`。`v*` tag 与手动触发仍由 `Package Linux` / `Package Windows` workflow 独立执行；tag 时会把对应产物上传到 GitHub Release。
-Release 中上传的是 `.deb`、`.rpm`、`.exe`、便携 `.zip` 四个安装文件，以及分别命名的 `SHA256SUMS-linux.txt` 和 `SHA256SUMS-windows.txt`，避免两个平台同名覆盖。
+GitHub Actions 的 `Build` workflow 会在所有 PR 和所有分支 push（包括普通分支 push 和合并后的 push）时构建并上传 Linux deb/rpm 与 Windows EXE/便携 ZIP。release 号优先使用 PR 编号，artifact 名称分别为 `caml-linux-packages-pr-<PR 编号>` 和 `caml-windows-packages-pr-<PR 编号>`；无法从合并提交提取 PR 编号时回退到 run number。Windows artifact 本身是 GitHub 提供的 zip，内含安装式 EXE、便携 zip 和 `SHA256SUMS.txt`。`v*` tag 和手动发布继续由 `Package Linux` workflow 处理。
 
 ### CAMLUI 组件库
 
@@ -544,6 +543,7 @@ statusLabel.setText(UiText.tr("home.instance.current", version));
 | 外部语言文件 | `~/.caml/lang/*.json` |
 | 账号索引 | `~/.caml/accounts/accounts.json`（accessToken 加密存储） |
 | authlib-injector | `~/.caml/authlib-injector/<版本>/`（只在首次使用时下载） |
+| 认证服务器 metadata | `~/.caml/accounts/servers.json`（冷启动回退，保证 prefetched 可用） |
 | 游戏数据（Linux / macOS / Windows） | `~/.minecraft`（Windows 为 `%USERPROFILE%\.minecraft`） |
 
 游戏目录在 **设置 → 游戏设置 → 游戏位置** 中修改；输入或浏览后必须点击保存才会生效。
@@ -648,27 +648,26 @@ info.isolatedVersions();
 - [版本下载与启动链路](design/version-download-and-launch.md)
 - [runtime 包](design/runtime.md)
 - [第三方账号登录](design/auth.md)
-- [打包与发布](design/package.md)
 - [当前实现情况](design/Implement.md)
 
 ---
 
 ## 已知问题
 
-以下后端测试在当前 Windows 开发环境下会失败，均与前端和翻译无关：
+以下后端测试在当前 Windows 开发环境下会失败（281 个用例中 3 个），均与账号、前端和翻译无关：
 
 - 使用 POSIX 路径作为断言，Windows 路径分隔符不同：
   - `LaunchCommandBuilderTest#placesMainClassBetweenJvmAndGameArguments`
   - `LaunchArgumentsBuilderTest#buildsJvmArgumentsWithMemoryDefaultsAndClasspath`
-- 端到端/加载器测试依赖子进程，当前 JDK 25 下子进程启动 `FakeForgeInstallerMain` 失败
-  （`LinkageError`），并导致 `GameLaunchServiceTest#installsAndLaunchesFakeClientEndToEnd`
+- 在 JDK 环境异常时，依赖子进程的端到端/加载器测试也可能失败
+  （`LinkageError`），并影响 `GameLaunchServiceTest#installsAndLaunchesFakeClientEndToEnd`
   的退出码断言不符：
   - `ExternalLoaderInstallerTest`（3 个用例）
   - `GameLaunchServiceTest#installsAndLaunchesFakeClientEndToEnd`
 - 文本比较未归一化换行符：
   - `NeoForge262VulkanFixTest#createsFmlConfigWhenMissing`
 
-前端测试（含 `LanguageTest` 与 `DownloadTelemetryTest`）在本环境全部通过。
+账号相关的 `AccountModelTest`、`AccountServiceTest`、`AuthServerStoreTest`、`YggdrasilClientTest` 全部通过；前端测试（含 `LanguageTest` 与 `DownloadTelemetryTest`）也全部通过。
 
 ---
 
