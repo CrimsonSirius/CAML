@@ -6,6 +6,7 @@ import org.chs.camlauncher.backend.auth.AuthSession;
 import org.chs.camlauncher.backend.auth.AccountService;
 import org.chs.camlauncher.backend.auth.OfflineAccount;
 import org.chs.camlauncher.backend.auth.injector.AuthlibInjectorService;
+import org.chs.camlauncher.backend.auth.microsoft.MicrosoftDeviceCode;
 import org.chs.camlauncher.backend.auth.store.AccountStore;
 import org.chs.camlauncher.backend.auth.yggdrasil.AuthServerInfo;
 import org.chs.camlauncher.backend.auth.yggdrasil.AuthServerService;
@@ -114,6 +115,7 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Consumer;
 import java.util.stream.Stream;
 
 public final class CAMLBackend implements AutoCloseable {
@@ -1162,6 +1164,12 @@ public final class CAMLBackend implements AutoCloseable {
                                          boolean remember)
             throws IOException, InterruptedException {
         return accountService.loginYggdrasil(apiRoot, username, password, remember);
+    }
+
+    /** 使用微软设备码登录；设备码和验证地址通过回调交给前端展示。 */
+    public AccountSummary loginMicrosoft(Consumer<MicrosoftDeviceCode> deviceCodeListener)
+            throws IOException, InterruptedException {
+        return accountService.loginMicrosoft(deviceCodeListener);
     }
 
     /** 新增离线账号记录。 */

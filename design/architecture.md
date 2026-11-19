@@ -37,7 +37,7 @@ CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
 | `instance` | 实例模型、本地版本复用、版本安装和隔离判定 | 已有 |
 | `download` | 下载入口；子包 `model`、`plan`、`source`、`io`、`hash` | 已有 |
 | `mod` | Modrinth/CurseForge 官方 API 搜索、详情、依赖和 Mod 文件下载；WebP 图标转 PNG | 已有 |
-| `auth` | 账号、AuthSession、离线登录、Yggdrasil 第三方登录与 authlib-injector 注入 | 已有离线与第三方能力 |
+| `auth` | 账号、AuthSession、离线登录、微软设备码登录、Yggdrasil 第三方登录与 authlib-injector 注入 | 已有离线、微软与第三方能力 |
 | `runtime` | Java 运行时检测、版本/架构/位数匹配 | 已有 |
 | `launch` | 启动编排；子包 `command`、`classpath`、`prepare`、`process`、`patch` | 已有 |
 | `theme` | 主题目录、默认主题复制和当前主题配置 | 已有 |
@@ -122,6 +122,8 @@ CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
 - 离线账号登录、稳定离线 UUID、生成 `AuthSession`。
 - 第三方 Yggdrasil 认证服务器（LittleSkin 等）登录：`authenticate` → `validate` → `refresh` 降级链，
   `userType` 固定为 `mojang`，`selectedProfile.id` 的 32 位 ID 转换为标准 UUID。
+- 微软设备码登录：OAuth → Xbox Live → XSTS → Minecraft Services，检查许可证与 profile，
+  `userType` 固定为 `msa`；启动时 access token 未过期则复用，否则自动 refresh。
 - 启动时通过 authlib-injector 以 `-javaagent` 注入，只增加 JVM 参数，不修改版本 JSON、
   `libraries` 或 classpath。
 - authlib-injector **只下载一次**：落在 `~/.caml/authlib-injector/<版本>/`，之后每次启动只用
@@ -354,7 +356,7 @@ CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
 - CAMLFront 停止游戏按钮。
 - 真实 Minecraft 客户端端到端验证。
 - 启动脚本导出。
-- 微软账号登录（第三方 Yggdrasil 登录已实现，详见 [auth.md](auth.md)）。
+- 微软浏览器授权码回调、皮肤/披风上传（设备码登录已实现）。
 - 第三方账号的 2FA / OAuth 登录。
 - 前端下载取消入口和内容寻址缓存。
 - 整合包导入/导出与管理。

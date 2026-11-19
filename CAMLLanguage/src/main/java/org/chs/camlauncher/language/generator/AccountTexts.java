@@ -26,7 +26,8 @@ final class AccountTexts {
                 "Accounts saved by the launcher. Access tokens are encrypted before being "
                         + "written to disk; passwords are never stored.");
         put(t, "account.list.empty",
-                "No accounts yet. Add an offline account or sign in to a third-party server.");
+                "No accounts yet. Add an offline account, sign in with Microsoft, "
+                        + "or sign in to a third-party server.");
         put(t, "account.list.default", "Default");
         put(t, "account.list.remove", "Remove");
         put(t, "account.default.saved", "%s is now the default account");
@@ -36,6 +37,20 @@ final class AccountTexts {
         put(t, "account.offline.placeholder", "Offline username");
         put(t, "account.offline.add", "Add");
         put(t, "account.offline.added", "Offline account %s added");
+
+        // 微软设备码登录
+        put(t, "settings.account.microsoft.title", "Microsoft account");
+        put(t, "settings.account.microsoft.description",
+                "Sign in with Microsoft using a device code. The password is never entered "
+                        + "into the launcher.");
+        put(t, "account.microsoft.login", "Sign in with Microsoft");
+        put(t, "account.microsoft.running", "Requesting a Microsoft device code...");
+        put(t, "account.microsoft.codeReady",
+                "Open the verification page in a browser and enter the copied code.");
+        put(t, "account.microsoft.userCode", "Device code: %s");
+        put(t, "account.microsoft.verificationUri", "Verification page: %s");
+        put(t, "account.microsoft.copyCode", "Copy code");
+        put(t, "account.microsoft.copyUrl", "Copy verification page");
 
         // 第三方登录
         put(t, "settings.account.login.title", "Third-party sign-in");
@@ -80,6 +95,7 @@ final class AccountTexts {
         // 后台操作名
         put(t, "operation.loadAccounts", "Load accounts");
         put(t, "operation.loginAccount", "Sign in to account");
+        put(t, "operation.loginMicrosoftAccount", "Sign in with Microsoft");
         put(t, "operation.addOfflineAccount", "Add offline account");
         put(t, "operation.fetchAuthServer", "Fetch authentication server");
         put(t, "operation.saveDefaultAccount", "Save default account");
@@ -111,6 +127,44 @@ final class AccountTexts {
                 "No account is configured. Add one in Settings, or use an offline username.");
         put(t, "auth.error.injectorNotFound", "authlib-injector not found: %s");
         put(t, "auth.error.injectorChecksum", "authlib-injector verification failed: %s");
+
+        // 微软认证错误
+        put(t, "auth.microsoft.clientIdMissing",
+                "Microsoft login is not configured: set the CAML Microsoft OAuth client ID.");
+        put(t, "auth.microsoft.requestFailed",
+                "Microsoft authentication request failed at %s (HTTP %s).");
+        put(t, "auth.microsoft.responseInvalid",
+                "Unexpected Microsoft authentication response from %s.");
+        put(t, "auth.microsoft.missingField",
+                "Microsoft authentication response is missing %s.");
+        put(t, "auth.microsoft.loginTimeout", "The Microsoft device code expired. Try again.");
+        put(t, "auth.microsoft.loginDeclined", "Microsoft sign-in was declined.");
+        put(t, "auth.microsoft.loginFailed", "Microsoft sign-in failed: %s.");
+        put(t, "auth.microsoft.loginExpired", "Microsoft sign-in expired. Sign in again.");
+        put(t, "auth.microsoft.wrongVerifyMethod",
+                "Use your password on the Microsoft sign-in page instead of another sign-in method.");
+        put(t, "auth.microsoft.xboxBanned", "This Microsoft account is banned by Xbox Live.");
+        put(t, "auth.microsoft.xboxNoAccount",
+                "This Microsoft account has no Xbox account. Create one and try again.");
+        put(t, "auth.microsoft.xboxRegion",
+                "Xbox Live is not available in the current country or region.");
+        put(t, "auth.microsoft.xboxFamily",
+                "This child account must be added to a Microsoft family first.");
+        put(t, "auth.microsoft.xboxUnknown", "Xbox Live rejected the sign-in (XErr %s).");
+        put(t, "auth.microsoft.tooManyRequests",
+                "Too many sign-in attempts. Wait a few minutes and try again.");
+        put(t, "auth.microsoft.forbidden",
+                "The current network was rejected by Minecraft Services. Try another network.");
+        put(t, "auth.microsoft.serviceUnavailable",
+                "Minecraft Services is temporarily unavailable. Try again later.");
+        put(t, "auth.microsoft.accountSuspended",
+                "This Microsoft account appears to be suspended.");
+        put(t, "auth.microsoft.noLicense",
+                "This account does not own Minecraft: Java Edition or its Game Pass entitlement expired.");
+        put(t, "auth.microsoft.noProfile",
+                "This account has no Minecraft profile. Create one and sign in again.");
+        put(t, "auth.microsoft.profileChanged",
+                "The Minecraft profile changed while refreshing the account. Sign in again.");
     }
 
     private static void put(TranslationTable t, String key, String value) {

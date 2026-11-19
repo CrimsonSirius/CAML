@@ -1,6 +1,8 @@
 package org.chs.camlauncher.front.controller;
 
+import javafx.application.Platform;
 import org.chs.camlauncher.backend.api.AccountSummary;
+import org.chs.camlauncher.backend.auth.microsoft.MicrosoftDeviceCode;
 import org.chs.camlauncher.backend.auth.yggdrasil.AuthServerInfo;
 import org.chs.camlauncher.front.text.UiText;
 
@@ -52,6 +54,18 @@ public final class AccountController {
         return context.runMetadata(UiText.tr("operation.loginAccount"),
                 () -> context.backend().loginYggdrasil(apiRoot, username, password, remember),
                 onLoaded, onError);
+    }
+
+    /** 启动微软设备码登录；设备码事件会切回 JavaFX 线程。 */
+    public FrontTask<AccountSummary> loginMicrosoft(
+            Consumer<MicrosoftDeviceCode> onDeviceCode,
+            Consumer<AccountSummary> onLoaded, Consumer<String> onError) {
+        return context.runMetadata(UiText.tr("operation.loginMicrosoftAccount"),
+                () -> context.backend().loginMicrosoft(code -> {
+                    if (onDeviceCode != null) {
+                        Platform.runLater(() -> onDeviceCode.accept(code));
+                    }
+                }), onLoaded, onError);
     }
 
     public FrontTask<AccountSummary> addOfflineAccount(

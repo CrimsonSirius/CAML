@@ -475,7 +475,7 @@ public final class ZHCNGenerator extends LanguageTranslationGenerator {
         t.put("settings.account.title", "账号");
         t.put("settings.account.description",
                 "启动器保存的账号。accessToken 加密后才写入磁盘，密码不会被保存。");
-        t.put("account.list.empty", "还没有账号。可以添加离线账号，或登录第三方认证服务器。");
+        t.put("account.list.empty", "还没有账号。可以添加离线账号、使用微软登录，或登录第三方认证服务器。");
         t.put("account.list.default", "默认");
         t.put("account.list.remove", "移除");
         t.put("account.default.saved", "%s 已设为默认账号");
@@ -484,6 +484,15 @@ public final class ZHCNGenerator extends LanguageTranslationGenerator {
         t.put("account.offline.placeholder", "离线用户名");
         t.put("account.offline.add", "添加");
         t.put("account.offline.added", "已添加离线账号 %s");
+        t.put("settings.account.microsoft.title", "微软账号");
+        t.put("settings.account.microsoft.description", "使用设备码登录微软账号，启动器不会要求输入密码。");
+        t.put("account.microsoft.login", "使用微软登录");
+        t.put("account.microsoft.running", "正在申请微软设备码...");
+        t.put("account.microsoft.codeReady", "请在浏览器中打开验证页面，并输入已复制的设备码。");
+        t.put("account.microsoft.userCode", "设备码：%s");
+        t.put("account.microsoft.verificationUri", "验证页面：%s");
+        t.put("account.microsoft.copyCode", "复制设备码");
+        t.put("account.microsoft.copyUrl", "复制验证页面");
         t.put("settings.account.login.title", "第三方登录");
         t.put("settings.account.login.description",
                 "使用 Yggdrasil 认证服务器（例如 LittleSkin）的账号登录。");
@@ -513,6 +522,7 @@ public final class ZHCNGenerator extends LanguageTranslationGenerator {
         t.put("account.instance.loading", "正在读取账号...");
         t.put("account.instance.count", "共 %d 个实例，为每个实例选择启动时使用的账号");
         t.put("account.instance.saved", "已保存实例 %s 的账号");
+        t.put("operation.loginMicrosoftAccount", "微软账号登录");
         t.put("operation.loadAccounts", "读取账号");
         t.put("operation.loginAccount", "登录账号");
         t.put("operation.addOfflineAccount", "添加离线账号");
@@ -536,5 +546,26 @@ public final class ZHCNGenerator extends LanguageTranslationGenerator {
         t.put("auth.error.noAccount", "尚未配置账号，请到设置中添加账号，或使用离线用户名。");
         t.put("auth.error.injectorNotFound", "找不到 authlib-injector：%s");
         t.put("auth.error.injectorChecksum", "authlib-injector 校验失败：%s");
+        t.put("auth.microsoft.clientIdMissing", "未配置微软登录 Client ID，请设置 CAML 的 Microsoft OAuth Client ID。");
+        t.put("auth.microsoft.requestFailed", "微软认证请求失败：%s（HTTP %s）");
+        t.put("auth.microsoft.responseInvalid", "微软认证服务器返回了无法解析的响应：%s");
+        t.put("auth.microsoft.missingField", "微软认证响应缺少字段：%s");
+        t.put("auth.microsoft.loginTimeout", "微软设备码已过期，请重试。");
+        t.put("auth.microsoft.loginDeclined", "微软登录已被拒绝。");
+        t.put("auth.microsoft.loginFailed", "微软登录失败：%s");
+        t.put("auth.microsoft.loginExpired", "微软登录已失效，请重新登录。");
+        t.put("auth.microsoft.wrongVerifyMethod", "请在微软登录页面选择使用密码登录，不要使用其他登录方式。");
+        t.put("auth.microsoft.xboxBanned", "该微软账号已被 Xbox Live 封禁。");
+        t.put("auth.microsoft.xboxNoAccount", "该微软账号尚未注册 Xbox 账户，请注册后重试。");
+        t.put("auth.microsoft.xboxRegion", "当前国家或地区无法使用 Xbox Live。");
+        t.put("auth.microsoft.xboxFamily", "该儿童账号需要先加入微软家庭。");
+        t.put("auth.microsoft.xboxUnknown", "Xbox Live 拒绝了登录（XErr %s）。");
+        t.put("auth.microsoft.tooManyRequests", "登录尝试过于频繁，请等待几分钟后重试。");
+        t.put("auth.microsoft.forbidden", "当前网络被 Minecraft Services 拒绝，请更换网络后重试。");
+        t.put("auth.microsoft.serviceUnavailable", "Minecraft Services 暂时不可用，请稍后重试。");
+        t.put("auth.microsoft.accountSuspended", "该微软账号可能已被封禁。");
+        t.put("auth.microsoft.noLicense", "该账号没有 Minecraft Java 版，或 Game Pass 权益已过期。");
+        t.put("auth.microsoft.noProfile", "该账号尚未创建 Minecraft 角色，请创建后重新登录。");
+        t.put("auth.microsoft.profileChanged", "刷新账号时 Minecraft 角色发生变化，请重新登录。");
     }
 }

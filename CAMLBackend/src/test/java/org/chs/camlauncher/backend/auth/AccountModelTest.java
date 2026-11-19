@@ -97,5 +97,31 @@ class AccountModelTest {
         assertEquals(AccountType.OFFLINE, loaded.type());
         assertFalse(loaded.hasToken());
     }
+
+    @Test
+    void microsoftAccountStoreEncryptsRefreshToken(@TempDir Path dataDirectory) throws Exception {
+        AccountStore store = new AccountStore(dataDirectory, new JsonService());
+        StoredAccount account = new StoredAccount("microsoft:abc", AccountType.MICROSOFT,
+                "Steve", "2c1f0b1d4c364f6c8c19ad0b9f77f0a1", "", "Microsoft",
+                "minecraft-access-token", "", "microsoft-refresh-token", 123456789L);
+
+        store.upsert(account);
+
+        StoredAccount loaded = store.find("microsoft:abc").orElseThrow();
+        assertEquals(AccountType.MICROSOFT, loaded.type());
+        assertEquals("microsoft-refresh-token", loaded.refreshToken());
+        assertEquals(123456789L, loaded.expiresAt());
+
+        String raw = Files.readString(store.accountsFile(), StandardCharsets.UTF_8);
+        assertFalse(raw.contains("minecraft-access-token"));
+        assertFalse(raw.contains("microsoft-refresh-token"));
+    }
+
+    @Test
+    void recognisesMicrosoftAccountTypeFromStorage() {
+        assertEquals(AccountType.MICROSOFT, AccountType.fromStored("microsoft"));
+        assertEquals(AccountType.YGGDRASIL, AccountType.fromStored("yggdrasil"));
+        assertEquals(AccountType.OFFLINE, AccountType.fromStored("unknown"));
+    }
 }
 

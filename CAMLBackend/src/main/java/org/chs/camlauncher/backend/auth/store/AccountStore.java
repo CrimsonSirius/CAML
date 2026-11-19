@@ -108,7 +108,9 @@ public final class AccountStore {
                     entry.apiRoot,
                     entry.serverName,
                     cipher.decrypt(entry.accessToken),
-                    entry.clientToken));
+                    entry.clientToken,
+                    cipher.decrypt(entry.refreshToken),
+                    entry.expiresAt));
         }
         return List.copyOf(accounts);
     }
@@ -127,6 +129,8 @@ public final class AccountStore {
             entry.serverName = account.serverName();
             entry.accessToken = cipher.encrypt(account.accessToken());
             entry.clientToken = account.clientToken();
+            entry.refreshToken = cipher.encrypt(account.refreshToken());
+            entry.expiresAt = account.expiresAt();
             file.accounts.add(entry);
         }
 
@@ -161,6 +165,8 @@ public final class AccountStore {
         private String serverName;
         private String accessToken;
         private String clientToken;
+        private String refreshToken;
+        private long expiresAt;
     }
 }
 

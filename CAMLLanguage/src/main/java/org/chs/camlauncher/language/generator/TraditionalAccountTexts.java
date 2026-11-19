@@ -21,7 +21,7 @@ public final class TraditionalAccountTexts {
         put(t, "settings.account.title", "帳號");
         put(t, "settings.account.description",
                 "啟動器儲存的帳號。accessToken 加密後才寫入磁碟，密碼不會被儲存。");
-        put(t, "account.list.empty", "還沒有帳號。可以新增離線帳號，或登入第三方認證伺服器。");
+        put(t, "account.list.empty", "還沒有帳號。可以新增離線帳號、使用微軟登入，或登入第三方認證伺服器。");
         put(t, "account.list.default", "預設");
         put(t, "account.list.remove", "移除");
         put(t, "account.default.saved", "%s 已設為預設帳號");
@@ -30,6 +30,15 @@ public final class TraditionalAccountTexts {
         put(t, "account.offline.placeholder", "離線使用者名稱");
         put(t, "account.offline.add", "新增");
         put(t, "account.offline.added", "已新增離線帳號 %s");
+        put(t, "settings.account.microsoft.title", "微軟帳號");
+        put(t, "settings.account.microsoft.description", "使用裝置碼登入微軟帳號，啟動器不會要求輸入密碼。");
+        put(t, "account.microsoft.login", "使用微軟登入");
+        put(t, "account.microsoft.running", "正在申請微軟裝置碼...");
+        put(t, "account.microsoft.codeReady", "請在瀏覽器開啟驗證頁面，並輸入已複製的裝置碼。");
+        put(t, "account.microsoft.userCode", "裝置碼：%s");
+        put(t, "account.microsoft.verificationUri", "驗證頁面：%s");
+        put(t, "account.microsoft.copyCode", "複製裝置碼");
+        put(t, "account.microsoft.copyUrl", "複製驗證頁面");
         put(t, "settings.account.login.title", "第三方登入");
         put(t, "settings.account.login.description",
                 "使用 Yggdrasil 認證伺服器（例如 LittleSkin）的帳號登入。");
@@ -59,6 +68,7 @@ public final class TraditionalAccountTexts {
         put(t, "account.instance.loading", "正在讀取帳號...");
         put(t, "account.instance.count", "共 %d 個實例，為每個實例選擇啟動時使用的帳號");
         put(t, "account.instance.saved", "已儲存實例 %s 的帳號");
+        put(t, "operation.loginMicrosoftAccount", "微軟帳號登入");
         put(t, "operation.loadAccounts", "讀取帳號");
         put(t, "operation.loginAccount", "登入帳號");
         put(t, "operation.addOfflineAccount", "新增離線帳號");
@@ -82,6 +92,27 @@ public final class TraditionalAccountTexts {
         put(t, "auth.error.noAccount", "尚未設定帳號，請到設定中新增帳號，或使用離線使用者名稱。");
         put(t, "auth.error.injectorNotFound", "找不到 authlib-injector：%s");
         put(t, "auth.error.injectorChecksum", "authlib-injector 驗證失敗：%s");
+        put(t, "auth.microsoft.clientIdMissing", "尚未設定微軟登入 Client ID，請設定 CAML 的 Microsoft OAuth Client ID。");
+        put(t, "auth.microsoft.requestFailed", "微軟認證請求失敗：%s（HTTP %s）");
+        put(t, "auth.microsoft.responseInvalid", "微軟認證伺服器回傳了無法解析的回應：%s");
+        put(t, "auth.microsoft.missingField", "微軟認證回應缺少欄位：%s");
+        put(t, "auth.microsoft.loginTimeout", "微軟裝置碼已過期，請重試。");
+        put(t, "auth.microsoft.loginDeclined", "微軟登入已被拒絕。");
+        put(t, "auth.microsoft.loginFailed", "微軟登入失敗：%s");
+        put(t, "auth.microsoft.loginExpired", "微軟登入已失效，請重新登入。");
+        put(t, "auth.microsoft.wrongVerifyMethod", "請在微軟登入頁面選擇使用密碼登入，不要使用其他登入方式。");
+        put(t, "auth.microsoft.xboxBanned", "該微軟帳號已被 Xbox Live 封鎖。");
+        put(t, "auth.microsoft.xboxNoAccount", "該微軟帳號尚未註冊 Xbox 帳戶，請註冊後重試。");
+        put(t, "auth.microsoft.xboxRegion", "目前國家或地區無法使用 Xbox Live。");
+        put(t, "auth.microsoft.xboxFamily", "該兒童帳號需要先加入微軟家庭。");
+        put(t, "auth.microsoft.xboxUnknown", "Xbox Live 拒絕了登入（XErr %s）。");
+        put(t, "auth.microsoft.tooManyRequests", "登入嘗試過於頻繁，請等待幾分鐘後重試。");
+        put(t, "auth.microsoft.forbidden", "目前網路被 Minecraft Services 拒絕，請更換網路後重試。");
+        put(t, "auth.microsoft.serviceUnavailable", "Minecraft Services 暫時無法使用，請稍後重試。");
+        put(t, "auth.microsoft.accountSuspended", "該微軟帳號可能已被封鎖。");
+        put(t, "auth.microsoft.noLicense", "該帳號沒有 Minecraft Java 版，或 Game Pass 權益已過期。");
+        put(t, "auth.microsoft.noProfile", "該帳號尚未建立 Minecraft 角色，請建立後重新登入。");
+        put(t, "auth.microsoft.profileChanged", "重新整理帳號時 Minecraft 角色發生變化，請重新登入。");
     }
 
     private static void put(TranslationTable t, String key, String value) {
