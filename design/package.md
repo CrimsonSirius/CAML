@@ -203,8 +203,10 @@ packaging/
 │  ├─ copyright                Debian copyright
 │  ├─ postinst                 deb 安装后脚本
 │  └─ postrm                   deb 卸载后脚本
-└─ rpm/
-   └─ caml-launcher.spec       RPM spec 模板
+├─ rpm/
+│  └─ caml-launcher.spec       RPM spec 模板
+└─ smoke/
+   └─ BackendSmoke.java        CI 发布包冒烟校验（不进入安装包）
 ```
 
 另有根目录 `LICENSE`，以 `CAML-GPL-3.0-only.txt` 复制进安装包。
@@ -425,6 +427,10 @@ Linux 用户应使用 `SHA256SUMS.txt` 校验下载完整性。
 - 上传 `CAML-Debug-Distribution`；
 - `build` 完成后并行调用 `linux-packages` 和 `windows-packages` 两个 reusable workflow；
 - 两个调用 job 都使用 `secrets: inherit`，并授予 `contents: write` 供 tag release 使用。
+- 使用 `concurrency` 按 ref 分组：同一分支连续推送时取消旧运行，避免多个打包任务并行抢占 runner；
+  两个打包 workflow 自身使用 `cancel-in-progress: false`，避免中断正在进行的发布构建。
+- 超时：`build` 30 分钟、`Package Linux` 45 分钟、`Package Windows` 60 分钟、release job 15 分钟。
+- 打包产物只在冒烟校验通过后才上传 artifact（见 11.5）。
 
 PR/分支 artifact 名称：
 
@@ -465,11 +471,13 @@ PR/分支 artifact 名称：
 
 CI 会在 Windows runner 上：
 
-1. 安装或定位 WiX Toolset 3.14；
-2. 把 WiX `bin` 传给构建 step；
-3. 校验 `candle.exe` 可用；
-4. 执行 `packageWindows`；
-5. 验证 EXE、便携 zip 和 `SHA256SUMS.txt` 都存在。
+1. 依次查找 `%ProgramFiles(x86)%\WiX Toolset v3.14\bin`、`%ProgramFiles%\WiX Toolset v3.14\bin`、
+   `%ProgramFiles(x86)%\WiX Toolset v3.11\bin`；都不存在时才执行
+   `choco install wixtoolset --version=3.14.1`，安装后重新查找；
+2. 校验 `candle.exe` 和 `light.exe` 都存在，并把 WiX `bin` 传给构建 step；
+3. 执行 `packageWindows`；
+4. 验证 EXE、便携 zip 和 `SHA256SUMS.txt` 都存在；
+5. 用安装包的模块布局启动后端做冒烟校验（见 11.5），失败则不上传 artifact。
 
 PowerShell 中 `-PcamlVersion=1.0.0` 必须整体加引号：
 
@@ -509,6 +517,29 @@ release job 在下载 artifact 后先重命名校验和，避免 Linux 与 Windo
 `SHA256SUMS.txt` 同名覆盖。
 
 手动 `workflow_dispatch` 只生成 artifact，不发布 Release；Release job 只在 tag 上运行。
+
+### 11.5 发布包冒烟校验
+
+两个打包 workflow 在构建完成后都会运行 `packaging/smoke/BackendSmoke.java`（该文件不进入安装包）：
+
+```
+javac -encoding UTF-8 -d classes -cp "<app>/*" packaging/smoke/BackendSmoke.java
+java --module-path "<app>" --add-modules=javafx.controls,javafx.fxml \
+     -cp "classes:<app>/*" BackendSmoke <dataDir> <gameDir>
+```
+
+`<app>` 是 app-image 内 jar 所在目录（Linux `lib/app`，Windows `app`）。校验三件事：
+
+1. `CAMLBackend` 必须以**命名模块**加载，否则说明本次运行没有复现安装包布局，校验没有意义；
+2. `CAMLBackend.start()` 必须成功；
+3. 内置语言数量为 11，且 `lang/zh_cn.json` 已同步到数据目录。
+
+这一步不初始化 JavaFX 工具包，不需要图形环境，可以在两个 runner 上稳定执行；也不会访问网络，
+只会在 `RUNNER_TEMP` 下创建一个临时数据目录。
+
+为什么必须有它：1.0.0 安装包因 CAMLBackend 读取 CAMLLanguage 的 `lang/*.json` 失败而启动即退出，
+而 `:CAMLBackend:test` 运行在类路径模式下，jar 处于无名模块，跨模块资源可以互相读取，
+这类问题在单元测试中不会出现。
 
 ## 12. 本地命令
 
@@ -600,7 +631,8 @@ rpm --dbpath /tmp/caml-rpmdb -qpl build/packages/linux/*.rpm | less
 - `CAML/runtime/` 存在；
 - 安装后开始菜单、桌面快捷方式、升级和卸载行为正常。
 
-CI 至少检查 EXE、便携 zip 和校验和都存在；安装器交互仍需人工或 Windows 端到端测试。
+CI 会检查 EXE、便携 zip 和校验和都存在，并对 app-image 执行后端冒烟校验（见 11.5）；
+安装器交互仍需人工或 Windows 端到端测试。
 
 ## 14. 常见故障
 
