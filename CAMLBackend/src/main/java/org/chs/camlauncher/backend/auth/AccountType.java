@@ -7,7 +7,9 @@ public enum AccountType {
     /** 离线账号：用户名决定 UUID，不访问任何服务器。 */
     OFFLINE,
     /** 第三方 Yggdrasil 认证服务器账号（如 LittleSkin）。 */
-    YGGDRASIL;
+    YGGDRASIL,
+    /** Microsoft/Xbox 正版账号。 */
+    MICROSOFT;
 
     public String storedName() {
         return name().toLowerCase(Locale.ROOT);
@@ -17,7 +19,11 @@ public enum AccountType {
         if (value == null) {
             return OFFLINE;
         }
-        return "yggdrasil".equalsIgnoreCase(value.trim()) ? YGGDRASIL : OFFLINE;
+        return switch (value.trim().toLowerCase(Locale.ROOT)) {
+            case "yggdrasil" -> YGGDRASIL;
+            case "microsoft" -> MICROSOFT;
+            default -> OFFLINE;
+        };
     }
 }
 

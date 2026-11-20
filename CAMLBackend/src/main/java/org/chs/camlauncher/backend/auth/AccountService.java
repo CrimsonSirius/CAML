@@ -6,6 +6,9 @@ import org.chs.camlauncher.backend.api.AccountSummary;
 import org.chs.camlauncher.backend.api.InstanceAccountMismatch;
 import org.chs.camlauncher.backend.auth.injector.AuthlibInjector;
 import org.chs.camlauncher.backend.auth.injector.AuthlibInjectorService;
+import org.chs.camlauncher.backend.auth.microsoft.MicrosoftAuthService;
+import org.chs.camlauncher.backend.auth.microsoft.MicrosoftDeviceCode;
+import org.chs.camlauncher.backend.auth.microsoft.MicrosoftSession;
 import org.chs.camlauncher.backend.auth.store.AccountStore;
 import org.chs.camlauncher.backend.auth.store.StoredAccount;
 import org.chs.camlauncher.backend.auth.yggdrasil.AuthServerInfo;
@@ -29,6 +32,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Consumer;
 
 /**
  * 账号编排：账号列表、Yggdrasil 登录、角色切换，以及“实例账号 → 全局账号”的解析。
@@ -47,6 +51,7 @@ public final class AccountService {
     private final AuthlibInjectorService injectors;
     private final SettingsService settings;
     private final YggdrasilClient client;
+    private final MicrosoftAuthService microsoft;
     /** 未持久化凭据的会话：账号 id → 带 token 的账号。 */
     private final Map<String, StoredAccount> transientSessions = new ConcurrentHashMap<>();
 
@@ -54,7 +59,8 @@ public final class AccountService {
                           AuthServerService servers,
                           AuthlibInjectorService injectors,
                           SettingsService settings) {
-        this(store, servers, injectors, settings, new YggdrasilClient());
+        this(store, servers, injectors, settings, new YggdrasilClient(),
+                new MicrosoftAuthService());
     }
 
     public AccountService(AccountStore store,
@@ -62,11 +68,21 @@ public final class AccountService {
                           AuthlibInjectorService injectors,
                           SettingsService settings,
                           YggdrasilClient client) {
+        this(store, servers, injectors, settings, client, new MicrosoftAuthService());
+    }
+
+    public AccountService(AccountStore store,
+                          AuthServerService servers,
+                          AuthlibInjectorService injectors,
+                          SettingsService settings,
+                          YggdrasilClient client,
+                          MicrosoftAuthService microsoft) {
         this.store = Objects.requireNonNull(store, "store");
         this.servers = Objects.requireNonNull(servers, "servers");
         this.injectors = Objects.requireNonNull(injectors, "injectors");
         this.settings = Objects.requireNonNull(settings, "settings");
         this.client = Objects.requireNonNull(client, "client");
+        this.microsoft = Objects.requireNonNull(microsoft, "microsoft");
     }
 
     // ------------------------------------------------------------------ 查询
@@ -240,6 +256,28 @@ public final class AccountService {
         return summary(account);
     }
 
+    /** 使用微软设备码登录，并把 refresh token 加密保存到账号索引。 */
+    public AccountSummary loginMicrosoft(Consumer<MicrosoftDeviceCode> deviceCodeListener)
+            throws IOException, InterruptedException {
+        MicrosoftSession session = microsoft.login(deviceCodeListener);
+        String uuid = normalizeUuid(session.profileId().toString());
+        StoredAccount account = new StoredAccount(
+                "microsoft:" + uuid,
+                AccountType.MICROSOFT,
+                session.profileName(),
+                uuid,
+                "",
+                "Microsoft",
+                session.accessToken(),
+                "",
+                session.refreshToken(),
+                session.expiresAt());
+        store.upsert(account);
+        transientSessions.remove(account.id());
+        LOGGER.info("已登录微软账号 {}", session.profileName());
+        return summary(account);
+    }
+
     /** 新增离线账号（仅名称，不访问网络）。 */
     public AccountSummary addOfflineAccount(String username) throws IOException {
         if (username == null || username.isBlank()) {
@@ -344,13 +382,18 @@ public final class AccountService {
         StoredAccount account = store.find(accountId).orElseThrow(() -> new BackendException(
                 BackendError.of("auth.error.accountMissing", accountId)));
         // 未记住登录的账号只在内存里有 token，这里取出完整会话。
-        StoredAccount effective = transientSessions.getOrDefault(account.id(), account);
-        if (effective.type() == AccountType.OFFLINE) {
-            return new ResolvedAccount(
-                    new OfflineAccount(effective.displayName()).login(), Optional.empty(),
-                    summary(effective));
-        }
-        return resolveYggdrasil(effective);
+        return resolveStored(transientSessions.getOrDefault(account.id(), account));
+    }
+
+    private ResolvedAccount resolveStored(StoredAccount account)
+            throws IOException, InterruptedException {
+        return switch (account.type()) {
+            case OFFLINE -> new ResolvedAccount(
+                    new OfflineAccount(account.displayName()).login(), Optional.empty(),
+                    summary(account));
+            case YGGDRASIL -> resolveYggdrasil(account);
+            case MICROSOFT -> resolveMicrosoft(account);
+        };
     }
 
     private ResolvedAccount resolveYggdrasil(StoredAccount account)
@@ -414,6 +457,46 @@ public final class AccountService {
         } else {
             store.upsert(updated);
         }
+    }
+
+    private ResolvedAccount resolveMicrosoft(StoredAccount account)
+            throws IOException, InterruptedException {
+        String accessToken = account.accessToken();
+        boolean expired = accessToken.isBlank()
+                || System.currentTimeMillis() >= account.expiresAt();
+        if (expired) {
+            if (account.refreshToken().isBlank()) {
+                throw new BackendException(BackendError.of(
+                        "auth.error.loginExpired", account.displayName(), account.serverName()));
+            }
+            MicrosoftSession refreshed;
+            try {
+                refreshed = microsoft.refresh(account.refreshToken());
+            } catch (BackendException e) {
+                if ("auth.microsoft.loginExpired".equals(e.error().code())) {
+                    throw new BackendException(BackendError.of(
+                            "auth.error.loginExpired", account.displayName(), account.serverName()), e);
+                }
+                throw e;
+            }
+            if (!normalizeUuid(refreshed.profileId().toString()).equals(account.uuid())) {
+                throw new BackendException(BackendError.of("auth.microsoft.profileChanged"));
+            }
+            account = account.withMicrosoftTokens(
+                    refreshed.profileName(), refreshed.accessToken(),
+                    refreshed.refreshToken(), refreshed.expiresAt());
+            store.upsert(account);
+            accessToken = refreshed.accessToken();
+            LOGGER.info("已刷新微软账号 {} 的凭据", refreshed.profileName());
+        }
+
+        AuthSession session = new AuthSession(
+                account.displayName(),
+                YggdrasilSession.profileUuid(account.uuid()),
+                accessToken,
+                "msa",
+                "{}");
+        return new ResolvedAccount(session, Optional.empty(), summary(account));
     }
 
     // ------------------------------------------------------------------ 工具

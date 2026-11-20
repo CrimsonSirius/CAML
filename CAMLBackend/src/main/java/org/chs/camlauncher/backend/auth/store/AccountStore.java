@@ -20,8 +20,8 @@ import java.util.Optional;
  * 账号索引的持久化：{@code ~/.caml/accounts/accounts.json}。
  *
  * <p>写入遵循项目既有约定：临时文件 + 原子替换，读失败时返回空列表而不是让启动失败。
- * accessToken 由 {@link SecretCipher} 加密后落盘，文件损坏时只丢弃该 token，
- * 账号条目仍保留（用户重新登录即可），不会静默删除用户配置。</p>
+ * accessToken 与 refreshToken 由 {@link SecretCipher} 加密后落盘，文件损坏时只丢弃
+ * 对应 token，账号条目仍保留（用户重新登录即可），不会静默删除用户配置。</p>
  */
 public final class AccountStore {
     private static final Logger LOGGER = LogManager.getLogger(AccountStore.class);
@@ -110,6 +110,8 @@ public final class AccountStore {
                     entry.serverName,
                     cipher.decrypt(entry.accessToken),
                     entry.clientToken,
+                    cipher.decrypt(entry.refreshToken),
+                    entry.expiresAt,
                     readProfiles(entry.profiles)));
         }
         return List.copyOf(accounts);
@@ -129,6 +131,8 @@ public final class AccountStore {
             entry.serverName = account.serverName();
             entry.accessToken = cipher.encrypt(account.accessToken());
             entry.clientToken = account.clientToken();
+            entry.refreshToken = cipher.encrypt(account.refreshToken());
+            entry.expiresAt = account.expiresAt();
             entry.profiles = writeProfiles(account.profiles());
             file.accounts.add(entry);
         }
@@ -192,6 +196,8 @@ public final class AccountStore {
         private String serverName;
         private String accessToken;
         private String clientToken;
+        private String refreshToken;
+        private long expiresAt;
         private List<ProfileEntry> profiles;
     }
 
