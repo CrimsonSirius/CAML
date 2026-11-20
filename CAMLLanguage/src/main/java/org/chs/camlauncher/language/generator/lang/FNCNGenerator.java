@@ -375,6 +375,14 @@ public final class FNCNGenerator extends LanguageTranslationGenerator {
         t.put("shaders.search.failed", "光影包翻不开：%s");
         t.put("shaders.list.meta", "版本：%s · 下载 %s · 更新 %s");
         t.put("shaders.detail.loading", "正在瞅光影包详情...");
+        t.put("resourcepacks.nav", "贴图包");
+        t.put("resourcepacks.search.title", "找贴图包");
+        t.put("resourcepacks.search.nameHint", "写上贴图包名");
+        t.put("resourcepacks.search.loading", "正在翻找贴图包...");
+        t.put("resourcepacks.search.empty", "没找着合适的贴图包");
+        t.put("resourcepacks.search.failed", "贴图包翻不开：%s");
+        t.put("resourcepacks.list.meta", "版本：%s · 下载 %s · 更新 %s");
+        t.put("resourcepacks.detail.loading", "正在瞅贴图包详情...");
         t.put("mods.search.title", "翻找零件");
         t.put("mods.search.name", "名号");
         t.put("mods.search.nameHint", "把零件名号塞进去");
@@ -467,6 +475,9 @@ public final class FNCNGenerator extends LanguageTranslationGenerator {
         t.put("operation.searchShaders", "翻找光影包：%s");
         t.put("operation.fetchShaderProject", "拿来光影包工程：%s");
         t.put("operation.downloadShader", "向下装载光影包：%s");
+        t.put("operation.searchResourcePacks", "翻找贴图包：%s");
+        t.put("operation.fetchResourcePackProject", "拿来贴图包工程：%s");
+        t.put("operation.downloadResourcePack", "向下装载贴图包：%s");
         t.put("operation.loadModIcon", "揪出零件图案");
         t.put("operation.saveLastInstance", "拯救最后发射的事例");
         t.put("operation.launchGame", "发射比赛 %s");

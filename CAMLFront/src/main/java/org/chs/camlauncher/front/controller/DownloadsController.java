@@ -62,9 +62,9 @@ public final class DownloadsController {
             ModSearchQuery query,
             Consumer<ModSearchPage> onLoaded,
             Consumer<String> onError) {
-        String operation = UiText.tr(query.type() == ModContentType.SHADER
-                ? "operation.searchShaders"
-                : "operation.searchMods", query.text());
+        String operation = UiText.tr(contentOperation(query.type(),
+                "operation.searchMods", "operation.searchShaders",
+                "operation.searchResourcePacks"), query.text());
         return context.runMetadata(operation,
                 () -> context.backend().searchMods(query), onLoaded, onError);
     }
@@ -84,9 +84,9 @@ public final class DownloadsController {
             String projectId,
             Consumer<ModProjectDetail> onLoaded,
             Consumer<String> onError) {
-        return context.runMetadata(UiText.tr(type == ModContentType.SHADER
-                        ? "operation.fetchShaderProject"
-                        : "operation.fetchModProject", projectId),
+        return context.runMetadata(UiText.tr(contentOperation(type,
+                        "operation.fetchModProject", "operation.fetchShaderProject",
+                        "operation.fetchResourcePackProject"), projectId),
                 () -> context.backend().fetchModProject(source, projectId), onLoaded, onError);
     }
 
@@ -138,9 +138,9 @@ public final class DownloadsController {
             DownloadListener listener,
             Consumer<ModDownloadResult> onSuccess,
             Consumer<String> onError) {
-        return context.runDownload(UiText.tr(type == ModContentType.SHADER
-                        ? "operation.downloadShader"
-                        : "operation.downloadMod", file.name()),
+        return context.runDownload(UiText.tr(contentOperation(type,
+                        "operation.downloadMod", "operation.downloadShader",
+                        "operation.downloadResourcePack"), file.name()),
                 () -> context.backend().downloadContent(
                         type,
                         file,
@@ -153,6 +153,16 @@ public final class DownloadsController {
                 ),
                 onSuccess,
                 onError);
+    }
+
+    private static String contentOperation(ModContentType type,
+                                           String modKey, String shaderKey,
+                                           String resourcePackKey) {
+        return switch (type) {
+            case MOD -> modKey;
+            case SHADER -> shaderKey;
+            case RESOURCE_PACK -> resourcePackKey;
+        };
     }
 
     public FrontTask<InstanceNameCheck> checkInstanceName(Path gameDirectory, String instanceId,

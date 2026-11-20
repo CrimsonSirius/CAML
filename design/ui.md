@@ -32,6 +32,8 @@
   （逻辑宽度约 `1280`）会落在按因子缩小后的上限，而不是假设存在 `1920×1080` 的逻辑空间。
 - 光影包子页位于模组下方，复用搜索、分页、结果行和详情页；搜索表单去掉加载器筛选，
   详情页按游戏版本分组，下载写入实例 `shaderpacks`。
+- 资源包子页位于光影下方，同样复用搜索与详情；Modrinth 使用 `project_type:resourcepack`，
+  CurseForge 使用 `classId=12`，下载写入实例 `resourcepacks`。
 - 模组子页尺寸全部集中在 `ModDownloadLayout`；断点按内容区宽度（已扣除左侧导航）判断，
   内容区左右留白 `40`、上下 `32`，搜索卡与详情卡内边距 `24`、内部间距 `18`，
   标题“搜索 Mod”位于卡片左上。
@@ -104,6 +106,7 @@
 | Mod 结果列表 | `CamlButton` 行 + `88px` 图标 + 行尾来源标签 + 随内容滚动的分页 |
 | Mod 详情 | 圆角卡 + 版本/加载器 `CamlComboBox` + 可折叠版本组 + `CamlButton` 下载 |
 | 光影包搜索与详情 | 复用 Mod 搜索/详情组件；来源为 Modrinth `project_type:shader` 或 CurseForge `classId=6552`，结果下载到 `shaderpacks` |
+| 资源包搜索与详情 | 复用 Mod 搜索/详情组件；来源为 Modrinth `project_type:resourcepack` 或 CurseForge `classId=12`，结果下载到 `resourcepacks` |
 | 浏览游戏实例 | outlined `CamlButton` → `InstancePickerView` |
 | 管理实例 | outlined `CamlButton` → `InstanceManagementView`；Mod / 资源包分别进入 `ManageInstancesView` / `InstanceResourcePackManagementView` |
 | 当前实例信息 | 圆角 `VBox`，三行标签 |

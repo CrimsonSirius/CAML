@@ -64,7 +64,7 @@ final class ModDetailView extends VBox implements PageLifecycle {
         this.type = type;
         this.summary = summary;
         this.onBack = onBack;
-        statusLabel.setText(text("mods.detail.loading", "shaders.detail.loading"));
+        statusLabel.setText(text("detail.loading"));
         getStyleClass().add("app-download-content");
         setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
 
@@ -147,7 +147,7 @@ final class ModDetailView extends VBox implements PageLifecycle {
     }
 
     private Pane buildFilterLayout(ModDownloadLayout.Plan plan) {
-        if (type == ModContentType.SHADER) {
+        if (type != ModContentType.MOD) {
             return switch (plan.mode()) {
                 case INLINE -> ModViewSupport.inlineField(
                         plan, "mods.detail.versionFilter", versionBox);
@@ -218,8 +218,8 @@ final class ModDetailView extends VBox implements PageLifecycle {
         }
         String versionFilter = selectedValue(versionBox);
         String loaderFilter = selectedValue(loaderBox);
-        Map<String, List<ModFile>> groups = type == ModContentType.SHADER
-                ? shaderGroups(versionFilter)
+        Map<String, List<ModFile>> groups = type != ModContentType.MOD
+                ? versionGroups(versionFilter)
                 : modGroups(versionFilter, loaderFilter);
         groupsBox.getChildren().clear();
         if (groups.isEmpty()) {
@@ -232,7 +232,7 @@ final class ModDetailView extends VBox implements PageLifecycle {
                         groupCard(entry.getKey(), entry.getValue())));
     }
 
-    private Map<String, List<ModFile>> shaderGroups(String versionFilter) {
+    private Map<String, List<ModFile>> versionGroups(String versionFilter) {
         Map<String, List<ModFile>> groups = new LinkedHashMap<>();
         for (ModFile file : files) {
             List<String> versions = file.gameVersions().isEmpty()
@@ -373,7 +373,7 @@ final class ModDetailView extends VBox implements PageLifecycle {
         download.setDisable(!file.hasDownloadUri());
         download.setOnAction(event -> startDownload(file, download));
         HBox actions;
-        if (type == ModContentType.SHADER) {
+        if (type != ModContentType.MOD) {
             actions = new HBox(download);
         } else {
             Label dependencies = new Label(dependencyText(file.dependencies()));
@@ -419,7 +419,7 @@ final class ModDetailView extends VBox implements PageLifecycle {
                 },
                 message -> {
                     button.setDisable(false);
-                    setStatus(text("mods.search.failed", "shaders.search.failed", message), true);
+                    setStatus(text("search.failed", message), true);
                 }
         );
     }
@@ -446,8 +446,13 @@ final class ModDetailView extends VBox implements PageLifecycle {
         setStatus(UiText.tr("mods.detail.failed", message), true);
     }
 
-    private String text(String modKey, String shaderKey, Object... arguments) {
-        return UiText.tr(type == ModContentType.SHADER ? shaderKey : modKey, arguments);
+    private String text(String suffix, Object... arguments) {
+        String prefix = switch (type) {
+            case MOD -> "mods";
+            case SHADER -> "shaders";
+            case RESOURCE_PACK -> "resourcepacks";
+        };
+        return UiText.tr(prefix + "." + suffix, arguments);
     }
 
     private void setStatus(String text, boolean error) {

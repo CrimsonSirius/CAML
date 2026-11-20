@@ -381,6 +381,14 @@ public final class ZHTWGenerator extends LanguageTranslationGenerator {
         t.put("shaders.search.failed", "載入光影包失敗：%s");
         t.put("shaders.list.meta", "版本：%s · 下載 %s · 更新 %s");
         t.put("shaders.detail.loading", "正在載入光影包詳情...");
+        t.put("resourcepacks.nav", "資源包");
+        t.put("resourcepacks.search.title", "搜尋資源包");
+        t.put("resourcepacks.search.nameHint", "輸入資源包名稱");
+        t.put("resourcepacks.search.loading", "正在搜尋資源包...");
+        t.put("resourcepacks.search.empty", "沒有找到符合的資源包");
+        t.put("resourcepacks.search.failed", "載入資源包失敗：%s");
+        t.put("resourcepacks.list.meta", "版本：%s · 下載 %s · 更新 %s");
+        t.put("resourcepacks.detail.loading", "正在載入資源包詳情...");
         t.put("mods.search.title", "搜尋 Mod");
         t.put("mods.search.name", "名稱");
         t.put("mods.search.nameHint", "輸入 Mod 名稱");
@@ -473,6 +481,9 @@ public final class ZHTWGenerator extends LanguageTranslationGenerator {
         t.put("operation.searchShaders", "搜尋光影包：%s");
         t.put("operation.fetchShaderProject", "取得光影包專案：%s");
         t.put("operation.downloadShader", "下載光影包：%s");
+        t.put("operation.searchResourcePacks", "搜尋資源包：%s");
+        t.put("operation.fetchResourcePackProject", "取得資源包專案：%s");
+        t.put("operation.downloadResourcePack", "下載資源包：%s");
         t.put("operation.loadModIcon", "載入 Mod 圖示");
         t.put("operation.saveLastInstance", "儲存最後啟動實例");
         t.put("operation.launchGame", "啟動遊戲 %s");

@@ -374,6 +374,14 @@ public final class JAJPGenerator extends LanguageTranslationGenerator {
         t.put("shaders.search.failed", "シェーダーの読み込みに失敗しました：%s");
         t.put("shaders.list.meta", "バージョン：%s · ダウンロード %s · 更新 %s");
         t.put("shaders.detail.loading", "シェーダーの詳細を読み込み中...");
+        t.put("resourcepacks.nav", "リソースパック");
+        t.put("resourcepacks.search.title", "リソースパックを検索");
+        t.put("resourcepacks.search.nameHint", "リソースパック名を入力");
+        t.put("resourcepacks.search.loading", "リソースパックを検索中...");
+        t.put("resourcepacks.search.empty", "一致するリソースパックが見つかりません");
+        t.put("resourcepacks.search.failed", "リソースパックの読み込みに失敗しました：%s");
+        t.put("resourcepacks.list.meta", "バージョン：%s · ダウンロード %s · 更新 %s");
+        t.put("resourcepacks.detail.loading", "リソースパックの詳細を読み込み中...");
         t.put("mods.search.title", "MOD を検索");
         t.put("mods.search.name", "名前");
         t.put("mods.search.nameHint", "MOD 名を入力");
@@ -466,6 +474,9 @@ public final class JAJPGenerator extends LanguageTranslationGenerator {
         t.put("operation.searchShaders", "シェーダーを検索：%s");
         t.put("operation.fetchShaderProject", "シェーダープロジェクトを取得：%s");
         t.put("operation.downloadShader", "シェーダーをダウンロード：%s");
+        t.put("operation.searchResourcePacks", "リソースパックを検索：%s");
+        t.put("operation.fetchResourcePackProject", "リソースパックプロジェクトを取得：%s");
+        t.put("operation.downloadResourcePack", "リソースパックをダウンロード：%s");
         t.put("operation.loadModIcon", "MOD アイコンを読み込む");
         t.put("operation.saveLastInstance", "最後に起動したインスタンスを保存");
         t.put("operation.launchGame", "ゲーム %s を起動");
