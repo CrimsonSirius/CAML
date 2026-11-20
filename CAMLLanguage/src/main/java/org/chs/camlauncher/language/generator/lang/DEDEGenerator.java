@@ -348,9 +348,32 @@ public final class DEDEGenerator extends LanguageTranslationGenerator {
         t.put("instances.manage.mods.updateFailed", "Mod konnte nicht aktualisiert werden: %s");
         t.put("instances.manage.mods.enabled", "Aktiviert");
         t.put("instances.manage.mods.disabled", "Deaktiviert");
+        t.put("instances.manage.mods.pageTitle", "Mods verwalten");
+        t.put("instances.manage.scanning", "Instanzinformationen werden gelesen...");
+        t.put("instances.manage.scanFailed", "Instanzinformationen konnten nicht gelesen werden: %s");
+        t.put("instances.manage.summary", "%d Mods, %d Ressourcenpakete");
+        t.put("instances.manage.manageMods", "Mods verwalten");
+        t.put("instances.manage.manageResourcePacks", "Ressourcenpakete verwalten");
+        t.put("instances.manage.resourcePacks.pageTitle", "Ressourcenpakete verwalten");
+        t.put("instances.manage.resourcePacks.scanning", "Ressourcenpaketliste wird gelesen...");
+        t.put("instances.manage.resourcePacks.count", "%d Ressourcenpakete");
+        t.put("instances.manage.resourcePacks.empty", "Diese Instanz hat keine Ressourcenpakete");
+        t.put("instances.manage.resourcePacks.scanFailed", "Ressourcenpaketliste konnte nicht gelesen werden: %s");
+        t.put("instances.manage.resourcePacks.toggleFailed", "Status des Ressourcenpakets konnte nicht geändert werden: %s");
+        t.put("instances.manage.resourcePacks.enabled", "Aktiviert");
+        t.put("instances.manage.resourcePacks.disabled", "Deaktiviert");
+        t.put("instances.manage.resourcePacks.version", "Version: %s");
 
         // Mod-Downloads
         t.put("mods.nav", "Mods");
+        t.put("shaders.nav", "Shader");
+        t.put("shaders.search.title", "Shader suchen");
+        t.put("shaders.search.nameHint", "Shader-Namen eingeben");
+        t.put("shaders.search.loading", "Shader werden gesucht...");
+        t.put("shaders.search.empty", "Keine passenden Shader gefunden");
+        t.put("shaders.search.failed", "Shader konnten nicht geladen werden: %s");
+        t.put("shaders.list.meta", "Versionen: %s · Downloads %s · Aktualisiert %s");
+        t.put("shaders.detail.loading", "Shader-Details werden geladen...");
         t.put("mods.search.title", "Mods suchen");
         t.put("mods.search.name", "Name");
         t.put("mods.search.nameHint", "Mod-Namen eingeben");
@@ -411,6 +434,7 @@ public final class DEDEGenerator extends LanguageTranslationGenerator {
         t.put("operation.openInstanceFolder", "Instanzordner öffnen");
         t.put("operation.loadInstanceModIcon", "Mod-Symbol laden");
         t.put("operation.setModDisabled", "Mod-Status ändern");
+        t.put("operation.setResourcePackDisabled", "Ressourcenpaketstatus ändern");
         t.put("operation.checkModUpdates", "Mod-Updates prüfen");
         t.put("operation.updateMod", "Mod %s aktualisieren");
         t.put("operation.checkInstanceName", "Instanznamen prüfen");
@@ -439,6 +463,9 @@ public final class DEDEGenerator extends LanguageTranslationGenerator {
         t.put("operation.searchMods", "Mods suchen: %s");
         t.put("operation.fetchModProject", "Mod-Projekt abrufen: %s");
         t.put("operation.downloadMod", "Mod herunterladen: %s");
+        t.put("operation.searchShaders", "Shader suchen: %s");
+        t.put("operation.fetchShaderProject", "Shader-Projekt abrufen: %s");
+        t.put("operation.downloadShader", "Shader herunterladen: %s");
         t.put("operation.loadModIcon", "Mod-Symbol laden");
         t.put("operation.saveLastInstance", "Zuletzt gestartete Instanz speichern");
         t.put("operation.launchGame", "Spiel %s starten");

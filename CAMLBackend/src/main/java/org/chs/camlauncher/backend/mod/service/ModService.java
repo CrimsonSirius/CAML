@@ -15,6 +15,7 @@ import org.chs.camlauncher.backend.instance.InstanceNameRules;
 import org.chs.camlauncher.backend.instance.VersionIsolationMode;
 import org.chs.camlauncher.backend.io.SafePaths;
 import org.chs.camlauncher.backend.mod.model.ModDownloadResult;
+import org.chs.camlauncher.backend.mod.model.ModContentType;
 import org.chs.camlauncher.backend.mod.model.ModFile;
 import org.chs.camlauncher.backend.mod.model.ModProjectDetail;
 import org.chs.camlauncher.backend.mod.model.ModProjectSummary;
@@ -95,14 +96,29 @@ public final class ModService {
             VersionIsolationMode isolationMode,
             DownloadListener listener
     ) throws IOException, InterruptedException {
+        return download(file, ModContentType.MOD, gameDirectory, instanceId,
+                isolationMode, listener);
+    }
+
+    public ModDownloadResult download(
+            ModFile file,
+            ModContentType type,
+            Path gameDirectory,
+            String instanceId,
+            VersionIsolationMode isolationMode,
+            DownloadListener listener
+    ) throws IOException, InterruptedException {
         Objects.requireNonNull(file, "file");
+        Objects.requireNonNull(type, "type");
         Objects.requireNonNull(isolationMode, "isolationMode");
         if (!file.hasDownloadUri()) {
             throw new BackendException(BackendError.of("mod.error.downloadUrlMissing", file.name()));
         }
         String instance = InstanceNameRules.validate(instanceId);
-        Path mods = modsDirectory(gameDirectory, instance, isolationMode);
-        Path destination = SafePaths.resolveChild(mods, file.fileName(), "mod file");
+        Path contentDirectory = contentDirectory(
+                gameDirectory, instance, isolationMode, type);
+        Path destination = SafePaths.resolveChild(
+                contentDirectory, file.fileName(), type.directoryName() + " file");
         Map<String, String> headers = file.source() == ModSource.CURSEFORGE
                 ? curseForge.downloadHeaders()
                 : Map.of();
@@ -116,7 +132,8 @@ public final class ModService {
         );
         DownloadValidator validator = md5Validator(file);
         fileDownloader.download(item, listener, validator, new DownloadCancellationToken());
-        LOGGER.info("Mod 下载完成: {} -> {}", file.name(), destination);
+        LOGGER.info("{} 下载完成: {} -> {}", type == ModContentType.SHADER
+                ? "光影包" : "Mod", file.name(), destination);
         return new ModDownloadResult(destination, file);
     }
 
@@ -137,13 +154,19 @@ public final class ModService {
 
     public Path modsDirectory(Path gameDirectory, String instanceId,
                               VersionIsolationMode isolationMode) {
+        return contentDirectory(gameDirectory, instanceId, isolationMode, ModContentType.MOD);
+    }
+
+    public Path contentDirectory(Path gameDirectory, String instanceId,
+                                 VersionIsolationMode isolationMode, ModContentType type) {
         Objects.requireNonNull(gameDirectory, "gameDirectory");
         Objects.requireNonNull(isolationMode, "isolationMode");
+        Objects.requireNonNull(type, "type");
         String instance = InstanceNameRules.validate(instanceId);
         Path versionDirectory = SafePaths.resolveChild(
                 gameDirectory.resolve("versions"), instance, "instance id");
         Path dataDirectory = GameDataLayout.resolve(gameDirectory, versionDirectory, isolationMode);
-        return dataDirectory.resolve("mods");
+        return dataDirectory.resolve(type.directoryName());
     }
 
     private ModSearchPage searchAll(ModSearchQuery query) throws IOException, InterruptedException {
@@ -151,7 +174,7 @@ public final class ModService {
         int perSource = curseConfigured ? Math.max(1, query.pageSize() / 2) : query.pageSize();
         ModSearchQuery sourceQuery = new ModSearchQuery(
                 query.text(), null, query.gameVersion(), query.loader(),
-                query.pageIndex(), perSource);
+                query.pageIndex(), perSource, query.type());
         ModSearchPage modrinthPage = modrinth.search(sourceQuery);
         ModSearchPage cursePage = null;
         if (curseConfigured) {
@@ -180,7 +203,8 @@ public final class ModService {
                 query.gameVersion() == null ? "" : query.gameVersion().trim(),
                 query.loader(),
                 Math.max(0, query.pageIndex()),
-                Math.max(1, Math.min(50, query.pageSize()))
+                Math.max(1, Math.min(50, query.pageSize())),
+                query.type()
         );
     }
 }

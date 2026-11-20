@@ -30,6 +30,8 @@
 - 模组子页与版本列表共用左侧导航：侧边栏宽度取窗口宽度的 `1/6`，并限制在 `180–260`
   设计像素（实际宽度再乘以 UI 缩放因子）。比例按逻辑像素计算，因此 150% 缩放的 1080p 屏幕
   （逻辑宽度约 `1280`）会落在按因子缩小后的上限，而不是假设存在 `1920×1080` 的逻辑空间。
+- 光影包子页位于模组下方，复用搜索、分页、结果行和详情页；搜索表单去掉加载器筛选，
+  详情页按游戏版本分组，下载写入实例 `shaderpacks`。
 - 模组子页尺寸全部集中在 `ModDownloadLayout`；断点按内容区宽度（已扣除左侧导航）判断，
   内容区左右留白 `40`、上下 `32`，搜索卡与详情卡内边距 `24`、内部间距 `18`，
   标题“搜索 Mod”位于卡片左上。
@@ -101,8 +103,9 @@
 | Mod 搜索 | `CamlTextField` × 2 + `CamlComboBox` × 2 + 搜索/重置 `CamlButton`（方向按内容宽度在“两行两列 `2:1` / 两行两列 / 单列”间切换） |
 | Mod 结果列表 | `CamlButton` 行 + `88px` 图标 + 行尾来源标签 + 随内容滚动的分页 |
 | Mod 详情 | 圆角卡 + 版本/加载器 `CamlComboBox` + 可折叠版本组 + `CamlButton` 下载 |
+| 光影包搜索与详情 | 复用 Mod 搜索/详情组件；来源为 Modrinth `project_type:shader` 或 CurseForge `classId=6552`，结果下载到 `shaderpacks` |
 | 浏览游戏实例 | outlined `CamlButton` → `InstancePickerView` |
-| 管理实例 | outlined `CamlButton` → `ManageInstancesView` |
+| 管理实例 | outlined `CamlButton` → `InstanceManagementView`；Mod / 资源包分别进入 `ManageInstancesView` / `InstanceResourcePackManagementView` |
 | 当前实例信息 | 圆角 `VBox`，三行标签 |
 | 游戏实例 | outlined `CamlButton` → `InstancePickerView` |
 | 离线用户名 | `CamlTextField` |

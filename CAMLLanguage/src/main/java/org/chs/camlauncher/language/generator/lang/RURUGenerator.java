@@ -348,9 +348,32 @@ public final class RURUGenerator extends LanguageTranslationGenerator {
         t.put("instances.manage.mods.updateFailed", "Не удалось обновить мод: %s");
         t.put("instances.manage.mods.enabled", "Включён");
         t.put("instances.manage.mods.disabled", "Отключён");
+        t.put("instances.manage.mods.pageTitle", "Управление модами");
+        t.put("instances.manage.scanning", "Чтение информации о сборке...");
+        t.put("instances.manage.scanFailed", "Не удалось прочитать информацию о сборке: %s");
+        t.put("instances.manage.summary", "Модов: %d, наборов ресурсов: %d");
+        t.put("instances.manage.manageMods", "Управление модами");
+        t.put("instances.manage.manageResourcePacks", "Управление наборами ресурсов");
+        t.put("instances.manage.resourcePacks.pageTitle", "Управление наборами ресурсов");
+        t.put("instances.manage.resourcePacks.scanning", "Чтение списка наборов ресурсов...");
+        t.put("instances.manage.resourcePacks.count", "Наборов ресурсов: %d");
+        t.put("instances.manage.resourcePacks.empty", "В этой сборке нет наборов ресурсов");
+        t.put("instances.manage.resourcePacks.scanFailed", "Не удалось прочитать список наборов ресурсов: %s");
+        t.put("instances.manage.resourcePacks.toggleFailed", "Не удалось изменить состояние набора ресурсов: %s");
+        t.put("instances.manage.resourcePacks.enabled", "Включён");
+        t.put("instances.manage.resourcePacks.disabled", "Отключён");
+        t.put("instances.manage.resourcePacks.version", "Версия: %s");
 
         // Загрузка модов
         t.put("mods.nav", "Моды");
+        t.put("shaders.nav", "Шейдеры");
+        t.put("shaders.search.title", "Поиск шейдеров");
+        t.put("shaders.search.nameHint", "Введите название шейдера");
+        t.put("shaders.search.loading", "Поиск шейдеров...");
+        t.put("shaders.search.empty", "Подходящие шейдеры не найдены");
+        t.put("shaders.search.failed", "Не удалось загрузить шейдеры: %s");
+        t.put("shaders.list.meta", "Версии: %s · Загрузки %s · Обновлено %s");
+        t.put("shaders.detail.loading", "Загрузка сведений о шейдере...");
         t.put("mods.search.title", "Поиск модов");
         t.put("mods.search.name", "Название");
         t.put("mods.search.nameHint", "Введите название мода");
@@ -411,6 +434,7 @@ public final class RURUGenerator extends LanguageTranslationGenerator {
         t.put("operation.openInstanceFolder", "Открыть папку сборки");
         t.put("operation.loadInstanceModIcon", "Загрузить значок мода");
         t.put("operation.setModDisabled", "Изменить состояние мода");
+        t.put("operation.setResourcePackDisabled", "Изменить состояние набора ресурсов");
         t.put("operation.checkModUpdates", "Проверить обновления модов");
         t.put("operation.updateMod", "Обновить мод %s");
         t.put("operation.checkInstanceName", "Проверка названия сборки");
@@ -439,6 +463,9 @@ public final class RURUGenerator extends LanguageTranslationGenerator {
         t.put("operation.searchMods", "Поиск модов: %s");
         t.put("operation.fetchModProject", "Получение проекта мода: %s");
         t.put("operation.downloadMod", "Загрузка мода: %s");
+        t.put("operation.searchShaders", "Поиск шейдеров: %s");
+        t.put("operation.fetchShaderProject", "Получить проект шейдера: %s");
+        t.put("operation.downloadShader", "Скачать шейдер: %s");
         t.put("operation.loadModIcon", "Загрузка значка мода");
         t.put("operation.saveLastInstance", "Сохранение последней запущенной сборки");
         t.put("operation.launchGame", "Запуск игры %s");

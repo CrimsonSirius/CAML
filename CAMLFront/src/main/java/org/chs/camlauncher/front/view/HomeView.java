@@ -68,8 +68,20 @@ final class HomeView extends StackPane implements PageLifecycle {
     }
 
     private void showManageInstances() {
+        setSubPage(new InstanceManagementView(controller, launchSettings.gameDirectory(),
+                launchSettings.selectedVersion(), this::showWorkspace,
+                this::showInstanceMods, this::showInstanceResourcePacks));
+    }
+
+    private void showInstanceMods() {
         setSubPage(new ManageInstancesView(controller, launchSettings.gameDirectory(),
-                launchSettings.selectedVersion(), this::showWorkspace));
+                launchSettings.selectedVersion(), this::showManageInstances));
+    }
+
+    private void showInstanceResourcePacks() {
+        setSubPage(new InstanceResourcePackManagementView(controller,
+                launchSettings.gameDirectory(), launchSettings.selectedVersion(),
+                this::showManageInstances));
     }
 
     /** 主页二级页：为每个实例指定账号（未指定时回退到全局默认账号）。 */

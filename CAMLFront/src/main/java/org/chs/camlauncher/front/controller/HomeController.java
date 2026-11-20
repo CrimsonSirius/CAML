@@ -210,6 +210,23 @@ public FrontTask<GameLaunch> startGame(String version, String username, String a
         }, onError);
     }
 
+    public FrontTask<Void> setResourcePackDisabled(
+            Path gameDirectory, String instanceId, String fileName, boolean disabled,
+            Runnable onSuccess, Consumer<String> onError) {
+        if (gameDirectory == null) {
+            return null;
+        }
+        return context.runSettings(UiText.tr("operation.setResourcePackDisabled"), () -> {
+            context.backend().setResourcePackDisabled(
+                    gameDirectory, instanceId, fileName, disabled);
+            return null;
+        }, ignored -> {
+            if (onSuccess != null) {
+                onSuccess.run();
+            }
+        }, onError);
+    }
+
     public FrontTask<List<InstanceModUpdate>> checkInstanceModUpdates(
             Path gameDirectory, String instanceId,
             Consumer<List<InstanceModUpdate>> onLoaded, Consumer<String> onError) {

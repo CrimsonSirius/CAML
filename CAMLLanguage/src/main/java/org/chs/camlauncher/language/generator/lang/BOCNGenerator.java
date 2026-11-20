@@ -348,9 +348,32 @@ public final class BOCNGenerator extends LanguageTranslationGenerator {
         t.put("instances.manage.mods.updateFailed", "Failed to update mod: %s");
         t.put("instances.manage.mods.enabled", "Enabled");
         t.put("instances.manage.mods.disabled", "Disabled");
+        t.put("instances.manage.mods.pageTitle", "Manage mods");
+        t.put("instances.manage.scanning", "Reading instance information...");
+        t.put("instances.manage.scanFailed", "Failed to read instance information: %s");
+        t.put("instances.manage.summary", "%d mods, %d resource packs");
+        t.put("instances.manage.manageMods", "Manage mods");
+        t.put("instances.manage.manageResourcePacks", "Manage resource packs");
+        t.put("instances.manage.resourcePacks.pageTitle", "Manage resource packs");
+        t.put("instances.manage.resourcePacks.scanning", "Reading resource pack list...");
+        t.put("instances.manage.resourcePacks.count", "%d resource packs");
+        t.put("instances.manage.resourcePacks.empty", "This instance has no resource packs");
+        t.put("instances.manage.resourcePacks.scanFailed", "Failed to read resource pack list: %s");
+        t.put("instances.manage.resourcePacks.toggleFailed", "Failed to toggle resource pack state: %s");
+        t.put("instances.manage.resourcePacks.enabled", "Enabled");
+        t.put("instances.manage.resourcePacks.disabled", "Disabled");
+        t.put("instances.manage.resourcePacks.version", "Version: %s");
 
         // MOD ཕབ་ལེན
         t.put("mods.nav", "MOD");
+        t.put("shaders.nav", "Shaders");
+        t.put("shaders.search.title", "Search shaders");
+        t.put("shaders.search.nameHint", "Enter a shader pack name");
+        t.put("shaders.search.loading", "Searching shaders...");
+        t.put("shaders.search.empty", "No matching shader packs found");
+        t.put("shaders.search.failed", "Failed to load shader packs: %s");
+        t.put("shaders.list.meta", "Versions: %s · Downloads %s · Updated %s");
+        t.put("shaders.detail.loading", "Loading shader pack details...");
         t.put("mods.search.title", "MOD འཚོལ");
         t.put("mods.search.name", "མིང");
         t.put("mods.search.nameHint", "MOD ཀྱི་མིང་འབྲིས");
@@ -411,6 +434,7 @@ public final class BOCNGenerator extends LanguageTranslationGenerator {
         t.put("operation.openInstanceFolder", "Open instance folder");
         t.put("operation.loadInstanceModIcon", "Load mod icon");
         t.put("operation.setModDisabled", "Toggle mod state");
+        t.put("operation.setResourcePackDisabled", "Toggle resource pack state");
         t.put("operation.checkModUpdates", "Check mod updates");
         t.put("operation.updateMod", "Update mod %s");
         t.put("operation.checkInstanceName", "བཟོ་བཅོས་ཀྱི་མིང་ཞིབ་བཤེར");
@@ -439,6 +463,9 @@ public final class BOCNGenerator extends LanguageTranslationGenerator {
         t.put("operation.searchMods", "MOD འཚོལ: %s");
         t.put("operation.fetchModProject", "MOD ལས་གཞི་ལེན: %s");
         t.put("operation.downloadMod", "MOD ཕབ་ལེན: %s");
+        t.put("operation.searchShaders", "Search shaders: %s");
+        t.put("operation.fetchShaderProject", "Fetch shader project: %s");
+        t.put("operation.downloadShader", "Download shader pack: %s");
         t.put("operation.loadModIcon", "MOD རྟགས་མ་ལེན");
         t.put("operation.saveLastInstance", "མཐའ་མའི་འགོ་འཛུགས་བཟོ་བཅོས་ཉར་ཚགས");
         t.put("operation.launchGame", "རྩེད་མོ %s འགོ་འཛུགས");

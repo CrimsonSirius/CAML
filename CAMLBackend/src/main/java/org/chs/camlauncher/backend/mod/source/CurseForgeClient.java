@@ -7,6 +7,7 @@ import org.chs.camlauncher.backend.error.BackendError;
 import org.chs.camlauncher.backend.error.BackendException;
 import org.chs.camlauncher.backend.mod.model.ModDependency;
 import org.chs.camlauncher.backend.mod.model.ModDependencyType;
+import org.chs.camlauncher.backend.mod.model.ModContentType;
 import org.chs.camlauncher.backend.mod.model.ModFile;
 import org.chs.camlauncher.backend.mod.model.ModLoader;
 import org.chs.camlauncher.backend.mod.model.ModProjectDetail;
@@ -35,7 +36,6 @@ import java.util.Set;
 public final class CurseForgeClient {
     private static final URI DEFAULT_BASE = URI.create("https://api.curseforge.com/v1/");
     private static final int MINECRAFT_GAME_ID = 432;
-    private static final int MOD_CLASS_ID = 6;
     private static final int FILE_PAGE_SIZE = 50;
 
     private static final String BUNDLED_KEY_RESOURCE = "/caml.properties";
@@ -81,7 +81,7 @@ public final class CurseForgeClient {
         int index = Math.max(0, query.pageIndex()) * limit;
         StringBuilder uri = new StringBuilder(base.resolve("mods/search").toString())
                 .append("?gameId=").append(MINECRAFT_GAME_ID)
-                .append("&classId=").append(MOD_CLASS_ID)
+                .append("&classId=").append(query.type().curseForgeClassId())
                 .append("&index=").append(index)
                 .append("&pageSize=").append(limit)
                 .append("&sortField=2&sortOrder=desc");
@@ -91,7 +91,7 @@ public final class CurseForgeClient {
         if (query.gameVersion() != null && !query.gameVersion().isBlank()) {
             uri.append("&gameVersion=").append(encode(query.gameVersion().trim()));
         }
-        if (query.loader() != null) {
+        if (query.type() == ModContentType.MOD && query.loader() != null) {
             uri.append("&modLoaderType=").append(query.loader().curseForgeType());
         }
 

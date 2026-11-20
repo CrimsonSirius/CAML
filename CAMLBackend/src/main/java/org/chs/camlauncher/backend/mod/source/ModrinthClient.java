@@ -5,6 +5,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import org.chs.camlauncher.backend.mod.model.ModDependency;
 import org.chs.camlauncher.backend.mod.model.ModDependencyType;
+import org.chs.camlauncher.backend.mod.model.ModContentType;
 import org.chs.camlauncher.backend.mod.model.ModFile;
 import org.chs.camlauncher.backend.mod.model.ModLoader;
 import org.chs.camlauncher.backend.mod.model.ModProjectDetail;
@@ -249,11 +250,11 @@ public final class ModrinthClient {
 
     private static String facets(ModSearchQuery query) {
         JsonArray groups = new JsonArray();
-        groups.add(array("project_type:mod"));
+        groups.add(array("project_type:" + query.type().modrinthProjectType()));
         if (query.gameVersion() != null && !query.gameVersion().isBlank()) {
             groups.add(array("versions:" + query.gameVersion().trim()));
         }
-        if (query.loader() != null) {
+        if (query.type() == ModContentType.MOD && query.loader() != null) {
             groups.add(array("categories:" + query.loader().apiName()));
         }
         return groups.toString();

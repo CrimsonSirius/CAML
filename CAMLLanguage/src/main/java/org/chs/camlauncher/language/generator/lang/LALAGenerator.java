@@ -348,9 +348,32 @@ public final class LALAGenerator extends LanguageTranslationGenerator {
         t.put("instances.manage.mods.updateFailed", "Modum renovare non potuit: %s");
         t.put("instances.manage.mods.enabled", "Activatus");
         t.put("instances.manage.mods.disabled", "Inactivatus");
+        t.put("instances.manage.mods.pageTitle", "Modos administrare");
+        t.put("instances.manage.scanning", "Informationes instantiae leguntur...");
+        t.put("instances.manage.scanFailed", "Informationes instantiae legi non potuerunt: %s");
+        t.put("instances.manage.summary", "Modi %d, fasciculi opum %d");
+        t.put("instances.manage.manageMods", "Modos administrare");
+        t.put("instances.manage.manageResourcePacks", "Fasciculos opum administrare");
+        t.put("instances.manage.resourcePacks.pageTitle", "Fasciculos opum administrare");
+        t.put("instances.manage.resourcePacks.scanning", "Index fasciculorum opum legitur...");
+        t.put("instances.manage.resourcePacks.count", "Fasciculi opum %d");
+        t.put("instances.manage.resourcePacks.empty", "Haec instantia fasciculos opum non habet");
+        t.put("instances.manage.resourcePacks.scanFailed", "Index fasciculorum opum legi non potuit: %s");
+        t.put("instances.manage.resourcePacks.toggleFailed", "Status fasciculi opum mutari non potuit: %s");
+        t.put("instances.manage.resourcePacks.enabled", "Activatus");
+        t.put("instances.manage.resourcePacks.disabled", "Inactivatus");
+        t.put("instances.manage.resourcePacks.version", "Versio: %s");
 
         // Deposita modorum
         t.put("mods.nav", "Modi");
+        t.put("shaders.nav", "Umbrae");
+        t.put("shaders.search.title", "Umbras quaerere");
+        t.put("shaders.search.nameHint", "Nomen umbrae inscribe");
+        t.put("shaders.search.loading", "Umbrae quaeruntur...");
+        t.put("shaders.search.empty", "Nullae umbrae congruentes inventae sunt");
+        t.put("shaders.search.failed", "Umbrae legi non potuerunt: %s");
+        t.put("shaders.list.meta", "Versiones: %s · Depositiones %s · Renovatae %s");
+        t.put("shaders.detail.loading", "Singula umbrae leguntur...");
         t.put("mods.search.title", "Modos quaerere");
         t.put("mods.search.name", "Nomen");
         t.put("mods.search.nameHint", "Nomen modi scribe");
@@ -411,6 +434,7 @@ public final class LALAGenerator extends LanguageTranslationGenerator {
         t.put("operation.openInstanceFolder", "Directorium instantiae aperire");
         t.put("operation.loadInstanceModIcon", "Iconem modi legere");
         t.put("operation.setModDisabled", "Statum modi mutare");
+        t.put("operation.setResourcePackDisabled", "Statum fasciculi opum mutare");
         t.put("operation.checkModUpdates", "Renovationes modorum inspicere");
         t.put("operation.updateMod", "Modum %s renovare");
         t.put("operation.checkInstanceName", "Nomen instantiae inspicere");
@@ -439,6 +463,9 @@ public final class LALAGenerator extends LanguageTranslationGenerator {
         t.put("operation.searchMods", "Modos quaerere: %s");
         t.put("operation.fetchModProject", "Propositum modi petere: %s");
         t.put("operation.downloadMod", "Modum deponere: %s");
+        t.put("operation.searchShaders", "Umbras quaerere: %s");
+        t.put("operation.fetchShaderProject", "Propositum umbrae accipere: %s");
+        t.put("operation.downloadShader", "Umbram deponere: %s");
         t.put("operation.loadModIcon", "Iconem modi legere");
         t.put("operation.saveLastInstance", "Ultimam instantiam deducendam servare");
         t.put("operation.launchGame", "Ludum %s deducere");

@@ -15,6 +15,7 @@ import javafx.scene.layout.VBox;
 import javafx.util.Duration;
 import org.chs.camlauncher.backend.download.DownloadListener;
 import org.chs.camlauncher.backend.mod.model.ModDependency;
+import org.chs.camlauncher.backend.mod.model.ModContentType;
 import org.chs.camlauncher.backend.mod.model.ModFile;
 import org.chs.camlauncher.backend.mod.model.ModLoader;
 import org.chs.camlauncher.backend.mod.model.ModProjectDetail;
@@ -34,13 +35,14 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-/** 单个 Mod 的详情、依赖和版本下载页面。 */
+/** 单个 Mod 或光影包的详情、依赖和版本下载页面。 */
 final class ModDetailView extends VBox implements PageLifecycle {
     private final DownloadsController controller;
     private final LaunchSettings launchSettings;
+    private final ModContentType type;
     private final ModProjectSummary summary;
     private final Runnable onBack;
-    private final Label statusLabel = new Label(UiText.tr("mods.detail.loading"));
+    private final Label statusLabel = new Label();
     private final Label titleLabel = new Label();
     private final Label metaLabel = new Label();
     private final Label summaryLabel = new Label();
@@ -56,11 +58,13 @@ final class ModDetailView extends VBox implements PageLifecycle {
     private List<ModFile> files = List.of();
 
     ModDetailView(DownloadsController controller, LaunchSettings launchSettings,
-                  ModProjectSummary summary, Runnable onBack) {
+                  ModContentType type, ModProjectSummary summary, Runnable onBack) {
         this.controller = controller;
         this.launchSettings = launchSettings;
+        this.type = type;
         this.summary = summary;
         this.onBack = onBack;
+        statusLabel.setText(text("mods.detail.loading", "shaders.detail.loading"));
         getStyleClass().add("app-download-content");
         setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
 
@@ -143,6 +147,14 @@ final class ModDetailView extends VBox implements PageLifecycle {
     }
 
     private Pane buildFilterLayout(ModDownloadLayout.Plan plan) {
+        if (type == ModContentType.SHADER) {
+            return switch (plan.mode()) {
+                case INLINE -> ModViewSupport.inlineField(
+                        plan, "mods.detail.versionFilter", versionBox);
+                case GRID, STACKED -> ModViewSupport.stackedField(
+                        "mods.detail.versionFilter", versionBox);
+            };
+        }
         return switch (plan.mode()) {
             case INLINE -> ModViewSupport.weightedRow(plan,
                     ModViewSupport.inlineField(plan, "mods.detail.versionFilter", versionBox),
@@ -160,7 +172,7 @@ final class ModDetailView extends VBox implements PageLifecycle {
     }
 
     private void loadProject() {
-        loadTask = controller.fetchModProject(summary.source(), summary.projectId(),
+        loadTask = controller.fetchContentProject(type, summary.source(), summary.projectId(),
                 this::showProject, this::showError);
     }
 
@@ -191,10 +203,13 @@ final class ModDetailView extends VBox implements PageLifecycle {
                 new ModChoice<>(version, version)));
         versionBox.setValue(versionBox.getItems().getFirst());
 
-        loaderBox.getItems().setAll(new ModChoice<>(UiText.tr("mods.detail.allLoaders"), null));
-        sortedLoaders.forEach(loader -> loaderBox.getItems().add(
-                new ModChoice<>(ModViewSupport.loaderLabel(loader), loader)));
-        loaderBox.setValue(loaderBox.getItems().getFirst());
+        if (type == ModContentType.MOD) {
+            loaderBox.getItems().setAll(new ModChoice<>(
+                    UiText.tr("mods.detail.allLoaders"), null));
+            sortedLoaders.forEach(loader -> loaderBox.getItems().add(
+                    new ModChoice<>(ModViewSupport.loaderLabel(loader), loader)));
+            loaderBox.setValue(loaderBox.getItems().getFirst());
+        }
     }
 
     private void rebuildGroups() {
@@ -203,6 +218,37 @@ final class ModDetailView extends VBox implements PageLifecycle {
         }
         String versionFilter = selectedValue(versionBox);
         String loaderFilter = selectedValue(loaderBox);
+        Map<String, List<ModFile>> groups = type == ModContentType.SHADER
+                ? shaderGroups(versionFilter)
+                : modGroups(versionFilter, loaderFilter);
+        groupsBox.getChildren().clear();
+        if (groups.isEmpty()) {
+            groupsBox.getChildren().add(new Label(UiText.tr("mods.detail.empty")));
+            return;
+        }
+        groups.entrySet().stream()
+                .sorted(Map.Entry.comparingByKey(Comparator.reverseOrder()))
+                .forEach(entry -> groupsBox.getChildren().add(
+                        groupCard(entry.getKey(), entry.getValue())));
+    }
+
+    private Map<String, List<ModFile>> shaderGroups(String versionFilter) {
+        Map<String, List<ModFile>> groups = new LinkedHashMap<>();
+        for (ModFile file : files) {
+            List<String> versions = file.gameVersions().isEmpty()
+                    ? List.of(UiText.tr("mods.value.unknown"))
+                    : file.gameVersions();
+            for (String version : versions) {
+                if (versionFilter != null && !versionFilter.equals(version)) {
+                    continue;
+                }
+                groups.computeIfAbsent(version, ignored -> new ArrayList<>()).add(file);
+            }
+        }
+        return groups;
+    }
+
+    private Map<String, List<ModFile>> modGroups(String versionFilter, String loaderFilter) {
         boolean showQuilt = shouldShowQuilt(loaderFilter, files);
         Map<String, List<ModFile>> groups = new LinkedHashMap<>();
         for (ModFile file : files) {
@@ -229,16 +275,7 @@ final class ModDetailView extends VBox implements PageLifecycle {
                 }
             }
         }
-        groupsBox.getChildren().clear();
-        if (groups.isEmpty()) {
-            groupsBox.getChildren().add(new Label(UiText.tr("mods.detail.empty")));
-            return;
-        }
-        groups.entrySet().stream()
-                .sorted(Map.Entry.comparingByKey(Comparator.reverseOrder()))
-                .forEach(entry -> {
-                    groupsBox.getChildren().add(groupCard(entry.getKey(), entry.getValue()));
-                });
+        return groups;
     }
 
     /**
@@ -326,9 +363,6 @@ final class ModDetailView extends VBox implements PageLifecycle {
                 file.fileName()));
         meta.getStyleClass().add("app-mod-meta");
         meta.setWrapText(true);
-        Label dependencies = new Label(dependencyText(file.dependencies()));
-        dependencies.getStyleClass().add("app-mod-dependency");
-        dependencies.setWrapText(true);
         HBox top = new HBox(title, meta);
         top.getStyleClass().add("app-mod-version-top");
         top.setAlignment(Pos.CENTER_LEFT);
@@ -338,10 +372,18 @@ final class ModDetailView extends VBox implements PageLifecycle {
         download.setMinWidth(plan().paginationButtonWidth());
         download.setDisable(!file.hasDownloadUri());
         download.setOnAction(event -> startDownload(file, download));
-        HBox actions = new HBox(dependencies, download);
+        HBox actions;
+        if (type == ModContentType.SHADER) {
+            actions = new HBox(download);
+        } else {
+            Label dependencies = new Label(dependencyText(file.dependencies()));
+            dependencies.getStyleClass().add("app-mod-dependency");
+            dependencies.setWrapText(true);
+            actions = new HBox(dependencies, download);
+            HBox.setHgrow(dependencies, Priority.ALWAYS);
+        }
         actions.getStyleClass().add("app-mod-version-actions");
         actions.setAlignment(Pos.CENTER_LEFT);
-        HBox.setHgrow(dependencies, Priority.ALWAYS);
 
         VBox row = new VBox(top, actions);
         row.getStyleClass().add("app-mod-version-row");
@@ -364,7 +406,8 @@ final class ModDetailView extends VBox implements PageLifecycle {
         }
         button.setDisable(true);
         setStatus(UiText.tr("mods.detail.downloading", file.name()), false);
-        controller.downloadMod(
+        controller.downloadContent(
+                type,
                 file,
                 launchSettings.gameDirectory(),
                 instance,
@@ -376,7 +419,7 @@ final class ModDetailView extends VBox implements PageLifecycle {
                 },
                 message -> {
                     button.setDisable(false);
-                    setStatus(UiText.tr("mods.search.failed", message), true);
+                    setStatus(text("mods.search.failed", "shaders.search.failed", message), true);
                 }
         );
     }
@@ -401,6 +444,10 @@ final class ModDetailView extends VBox implements PageLifecycle {
             return;
         }
         setStatus(UiText.tr("mods.detail.failed", message), true);
+    }
+
+    private String text(String modKey, String shaderKey, Object... arguments) {
+        return UiText.tr(type == ModContentType.SHADER ? shaderKey : modKey, arguments);
     }
 
     private void setStatus(String text, boolean error) {

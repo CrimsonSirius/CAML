@@ -348,9 +348,32 @@ public final class ZHCNGenerator extends LanguageTranslationGenerator {
         t.put("instances.manage.mods.updateFailed", "更新 Mod 失败：%s");
         t.put("instances.manage.mods.enabled", "已启用");
         t.put("instances.manage.mods.disabled", "已禁用");
+        t.put("instances.manage.mods.pageTitle", "管理 Mod");
+        t.put("instances.manage.scanning", "正在读取实例信息...");
+        t.put("instances.manage.scanFailed", "读取实例信息失败：%s");
+        t.put("instances.manage.summary", "共 %d 个 Mod，%d 个资源包");
+        t.put("instances.manage.manageMods", "管理 Mod");
+        t.put("instances.manage.manageResourcePacks", "管理资源包");
+        t.put("instances.manage.resourcePacks.pageTitle", "管理资源包");
+        t.put("instances.manage.resourcePacks.scanning", "正在读取资源包列表...");
+        t.put("instances.manage.resourcePacks.count", "共 %d 个资源包");
+        t.put("instances.manage.resourcePacks.empty", "该实例没有资源包");
+        t.put("instances.manage.resourcePacks.scanFailed", "读取资源包列表失败：%s");
+        t.put("instances.manage.resourcePacks.toggleFailed", "切换资源包状态失败：%s");
+        t.put("instances.manage.resourcePacks.enabled", "已启用");
+        t.put("instances.manage.resourcePacks.disabled", "已禁用");
+        t.put("instances.manage.resourcePacks.version", "版本：%s");
 
         // Mod 下载
         t.put("mods.nav", "模组");
+        t.put("shaders.nav", "光影包");
+        t.put("shaders.search.title", "搜索光影包");
+        t.put("shaders.search.nameHint", "输入光影包名称");
+        t.put("shaders.search.loading", "正在搜索光影包...");
+        t.put("shaders.search.empty", "没有找到匹配的光影包");
+        t.put("shaders.search.failed", "加载光影包失败：%s");
+        t.put("shaders.list.meta", "版本：%s · 下载 %s · 更新 %s");
+        t.put("shaders.detail.loading", "正在加载光影包详情...");
         t.put("mods.search.title", "搜索 Mod");
         t.put("mods.search.name", "名称");
         t.put("mods.search.nameHint", "输入 Mod 名称");
@@ -411,6 +434,7 @@ public final class ZHCNGenerator extends LanguageTranslationGenerator {
         t.put("operation.openInstanceFolder", "打开实例文件夹");
         t.put("operation.loadInstanceModIcon", "加载 Mod 图标");
         t.put("operation.setModDisabled", "切换 Mod 状态");
+        t.put("operation.setResourcePackDisabled", "切换资源包状态");
         t.put("operation.checkModUpdates", "检查 Mod 更新");
         t.put("operation.updateMod", "更新 Mod %s");
         t.put("operation.checkInstanceName", "检查实例名");
@@ -439,6 +463,9 @@ public final class ZHCNGenerator extends LanguageTranslationGenerator {
         t.put("operation.searchMods", "搜索 Mod：%s");
         t.put("operation.fetchModProject", "获取 Mod 项目：%s");
         t.put("operation.downloadMod", "下载 Mod：%s");
+        t.put("operation.searchShaders", "搜索光影包：%s");
+        t.put("operation.fetchShaderProject", "获取光影包项目：%s");
+        t.put("operation.downloadShader", "下载光影包：%s");
         t.put("operation.loadModIcon", "加载 Mod 图标");
         t.put("operation.saveLastInstance", "保存最后启动实例");
         t.put("operation.launchGame", "启动游戏 %s");

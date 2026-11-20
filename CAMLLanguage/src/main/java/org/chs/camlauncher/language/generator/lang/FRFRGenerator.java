@@ -348,9 +348,32 @@ public final class FRFRGenerator extends LanguageTranslationGenerator {
         t.put("instances.manage.mods.updateFailed", "Impossible de mettre à jour le mod : %s");
         t.put("instances.manage.mods.enabled", "Activé");
         t.put("instances.manage.mods.disabled", "Désactivé");
+        t.put("instances.manage.mods.pageTitle", "Gérer les mods");
+        t.put("instances.manage.scanning", "Lecture des informations de l'instance...");
+        t.put("instances.manage.scanFailed", "Impossible de lire les informations de l'instance : %s");
+        t.put("instances.manage.summary", "%d mods, %d packs de ressources");
+        t.put("instances.manage.manageMods", "Gérer les mods");
+        t.put("instances.manage.manageResourcePacks", "Gérer les packs de ressources");
+        t.put("instances.manage.resourcePacks.pageTitle", "Gérer les packs de ressources");
+        t.put("instances.manage.resourcePacks.scanning", "Lecture de la liste des packs de ressources...");
+        t.put("instances.manage.resourcePacks.count", "%d packs de ressources");
+        t.put("instances.manage.resourcePacks.empty", "Cette instance n'a aucun pack de ressources");
+        t.put("instances.manage.resourcePacks.scanFailed", "Impossible de lire la liste des packs de ressources : %s");
+        t.put("instances.manage.resourcePacks.toggleFailed", "Impossible de changer l'état du pack de ressources : %s");
+        t.put("instances.manage.resourcePacks.enabled", "Activé");
+        t.put("instances.manage.resourcePacks.disabled", "Désactivé");
+        t.put("instances.manage.resourcePacks.version", "Version : %s");
 
         // Téléchargement de mods
         t.put("mods.nav", "Mods");
+        t.put("shaders.nav", "Shaders");
+        t.put("shaders.search.title", "Rechercher des shaders");
+        t.put("shaders.search.nameHint", "Saisir le nom d'un shader");
+        t.put("shaders.search.loading", "Recherche des shaders...");
+        t.put("shaders.search.empty", "Aucun shader correspondant trouvé");
+        t.put("shaders.search.failed", "Impossible de charger les shaders : %s");
+        t.put("shaders.list.meta", "Versions : %s · Téléchargements %s · Mis à jour %s");
+        t.put("shaders.detail.loading", "Chargement des détails du shader...");
         t.put("mods.search.title", "Rechercher des mods");
         t.put("mods.search.name", "Nom");
         t.put("mods.search.nameHint", "Saisissez un nom de mod");
@@ -411,6 +434,7 @@ public final class FRFRGenerator extends LanguageTranslationGenerator {
         t.put("operation.openInstanceFolder", "Ouvrir le dossier de l'instance");
         t.put("operation.loadInstanceModIcon", "Charger l'icône du mod");
         t.put("operation.setModDisabled", "Changer l'état du mod");
+        t.put("operation.setResourcePackDisabled", "Changer l'état du pack de ressources");
         t.put("operation.checkModUpdates", "Vérifier les mises à jour des mods");
         t.put("operation.updateMod", "Mettre à jour le mod %s");
         t.put("operation.checkInstanceName", "Vérifier le nom de l’instance");
@@ -439,6 +463,9 @@ public final class FRFRGenerator extends LanguageTranslationGenerator {
         t.put("operation.searchMods", "Rechercher des mods : %s");
         t.put("operation.fetchModProject", "Récupérer le projet de mod : %s");
         t.put("operation.downloadMod", "Télécharger le mod : %s");
+        t.put("operation.searchShaders", "Rechercher des shaders : %s");
+        t.put("operation.fetchShaderProject", "Récupérer le projet de shader : %s");
+        t.put("operation.downloadShader", "Télécharger le shader : %s");
         t.put("operation.loadModIcon", "Charger l’icône du mod");
         t.put("operation.saveLastInstance", "Enregistrer la dernière instance lancée");
         t.put("operation.launchGame", "Lancer le jeu %s");
