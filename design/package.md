@@ -614,8 +614,7 @@ CI 至少检查 EXE、便携 zip 和校验和都存在；安装器交互仍需�
 | `未找到 WiX Toolset` | WiX 未安装或 PATH 不含 bin | 安装 WiX 3.14/4.0.4+，或只构建便携包 |
 | Windows CLI 报 `.0.0` 任务不存在 | PowerShell 拆分未加引号的 `-PcamlVersion=1.0.0` | 把整个 `-P...` 参数加双引号 |
 | Windows EXE 覆盖失败 | jpackage 产物带只读属性 | 使用脚本内置 `deleteReadOnly`，或先运行 `cleanWindowsPackages` |
-| tag 推送后没有 Release | tag 不以 `v` 开头、workflow 未更新或权限不足 | 使用 `v*` tag，检查 Actions 和 `contents: write` |
-| Release job 上传失败 | `GITHUB_TOKEN` 无写权限或 Release 已存在且创建竞争 | 检查 Workflow permissions；release job 已处理 create/view 竞争 |
+| 安装后双击闪退，stderr 报 `缺少内置语言资源: /lang/xx.json` | app 目录下 jar 全部位于 `--module-path`，成为命名（自动）模块；命名模块只能看到自身资源 | 资源必须由所属模块的类去读，见 §15 维护规则 |
 
 ## 15. 维护规则
 
@@ -626,7 +625,13 @@ CI 至少检查 EXE、便携 zip 和校验和都存在；安装器交互仍需�
 - 新增第三方运行时组件时，必须更新许可证清单并确认可再分发。
 - 新增安装位置或文件时，同步更新 deb/rpm 文件清单、校验说明和卸载行为。
 - 不要把 Minecraft 客户端、assets 或游戏 libraries 打进发布包。
+- 新增跨模块资源（例如 A 模块读取 B 模块里的 `*.json`/`*.css`）时，必须用**资源所属模块**的类
+  作为定位锚点（`SomeClassInOwnerModule.class.getResourceAsStream(...)`），并保留类加载器兜底；
+  安装包里 `app/` 下所有 jar 都在 `--module-path` 上，命名模块读不到其他模块的资源，
+  单元测试（类路径模式）无法覆盖这种情况。
 - 发布前至少执行一次 `./gradlew build`、对应平台的 `package*` 和目标包内容检查。
+- 修改资源加载后，至少手动启动一次安装包内的 `CAML.exe`（或在 Linux 上运行 `/opt/caml-launcher/bin/CAML`），
+  确认 `~/.caml/logs/latest.log` 出现 `CAML backend ... started`。
 
 ## 16. 相关文档
 
