@@ -18,6 +18,7 @@ import javafx.scene.layout.VBox;
 import javafx.scene.shape.Rectangle;
 import javafx.util.Duration;
 import org.chs.camlauncher.backend.mod.model.ModLoader;
+import org.chs.camlauncher.backend.mod.model.ModContentType;
 import org.chs.camlauncher.backend.mod.model.ModProjectSummary;
 import org.chs.camlauncher.backend.mod.model.ModSearchPage;
 import org.chs.camlauncher.backend.mod.model.ModSearchQuery;
@@ -57,6 +58,7 @@ final class ModSearchView extends VBox implements PageLifecycle {
     private static final byte[] EMPTY_ICON = new byte[0];
 
     private final DownloadsController controller;
+    private final ModContentType type;
     private final Consumer<ModProjectSummary> onProjectSelected;
     private final CamlTextField queryField = new CamlTextField();
     private final CamlTextField gameVersionField = new CamlTextField();
@@ -64,7 +66,7 @@ final class ModSearchView extends VBox implements PageLifecycle {
     private final CamlComboBox<ModChoice<ModLoader>> loaderBox = new CamlComboBox<>();
     private final CamlButton searchButton;
     private final CamlButton resetButton;
-    private final Label statusLabel = new Label(UiText.tr("mods.search.loading"));
+    private final Label statusLabel = new Label();
     private final VBox formHost = new VBox();
     private final VBox searchCard;
     private final VBox resultsBox = new VBox();
@@ -86,17 +88,21 @@ final class ModSearchView extends VBox implements PageLifecycle {
     private final List<PauseTransition> iconTimeouts = new ArrayList<>();
     private long iconGeneration;
 
-    ModSearchView(DownloadsController controller, Consumer<ModProjectSummary> onProjectSelected) {
+    ModSearchView(DownloadsController controller, ModContentType type,
+                  Consumer<ModProjectSummary> onProjectSelected) {
         this.controller = controller;
+        this.type = type;
         this.onProjectSelected = onProjectSelected;
         getStyleClass().add("app-download-content");
         setFocusTraversable(true);
         setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
 
-        Label title = new Label(UiText.tr("mods.search.title"));
+        statusLabel.setText(text("mods.search.loading", "shaders.search.loading"));
+
+        Label title = new Label(text("mods.search.title", "shaders.search.title"));
         title.getStyleClass().add("app-mod-search-title");
 
-        queryField.setPromptText(UiText.tr("mods.search.nameHint"));
+        queryField.setPromptText(text("mods.search.nameHint", "shaders.search.nameHint"));
         gameVersionField.setPromptText(UiText.tr("mods.search.versionHint"));
         sourceBox.getItems().setAll(
                 new ModChoice<>(UiText.tr("mods.search.allSources"), null),
@@ -211,6 +217,9 @@ final class ModSearchView extends VBox implements PageLifecycle {
     }
 
     private Pane buildForm(ModDownloadLayout.Plan plan) {
+        if (type == ModContentType.SHADER) {
+            return buildShaderForm(plan);
+        }
         return switch (plan.mode()) {
             case INLINE -> {
                 VBox rows = new VBox(plan.formGap(),
@@ -244,6 +253,37 @@ final class ModSearchView extends VBox implements PageLifecycle {
         };
     }
 
+    private Pane buildShaderForm(ModDownloadLayout.Plan plan) {
+        return switch (plan.mode()) {
+            case INLINE -> {
+                VBox rows = new VBox(plan.formGap(),
+                        ModViewSupport.weightedRow(plan,
+                                ModViewSupport.inlineField(plan, "mods.search.name", queryField),
+                                ModViewSupport.inlineField(plan, "mods.search.source", sourceBox)),
+                        ModViewSupport.inlineField(plan, "mods.search.gameVersion", gameVersionField));
+                rows.getStyleClass().add("app-mod-search-form");
+                yield rows;
+            }
+            case GRID -> {
+                GridPane grid = ModViewSupport.evenGrid(plan, 2);
+                grid.add(ModViewSupport.stackedField("mods.search.name", queryField), 0, 0);
+                grid.add(ModViewSupport.stackedField("mods.search.source", sourceBox), 1, 0);
+                grid.add(ModViewSupport.stackedField(
+                        "mods.search.gameVersion", gameVersionField), 0, 1, 2, 1);
+                grid.getStyleClass().add("app-mod-search-form");
+                yield grid;
+            }
+            case STACKED -> {
+                VBox form = new VBox(plan.formGap(),
+                        ModViewSupport.stackedField("mods.search.name", queryField),
+                        ModViewSupport.stackedField("mods.search.source", sourceBox),
+                        ModViewSupport.stackedField("mods.search.gameVersion", gameVersionField));
+                form.getStyleClass().add("app-mod-search-form");
+                yield form;
+            }
+        };
+    }
+
     private void searchFirstPage() {
         pageIndex = 0;
         loadPage();
@@ -268,14 +308,15 @@ final class ModSearchView extends VBox implements PageLifecycle {
         iconGeneration++;
         loading = true;
         setControlsDisabled(true);
-        setStatus(UiText.tr("mods.search.loading"), false);
+        setStatus(text("mods.search.loading", "shaders.search.loading"), false);
         ModSearchQuery query = new ModSearchQuery(
                 queryField.getText(),
                 sourceBox.getValue() == null ? null : sourceBox.getValue().value(),
                 gameVersionField.getText(),
                 loaderBox.getValue() == null ? null : loaderBox.getValue().value(),
                 pageIndex,
-                PAGE_SIZE
+                PAGE_SIZE,
+                type
         );
         loadTask = controller.searchMods(query, this::showPage, this::showError);
     }
@@ -292,7 +333,7 @@ final class ModSearchView extends VBox implements PageLifecycle {
         long generation = iconGeneration;
         List<IconTarget> iconTargets = new ArrayList<>();
         if (page.items().isEmpty()) {
-            setStatus(UiText.tr("mods.search.empty"), false);
+            setStatus(text("mods.search.empty", "shaders.search.empty"), false);
         } else {
             setStatus(UiText.tr("mods.search.count", page.totalCount()), false);
             for (ModProjectSummary project : page.items()) {
@@ -349,11 +390,16 @@ final class ModSearchView extends VBox implements PageLifecycle {
         summary.setTextOverrun(OverrunStyle.ELLIPSIS);
         summary.setMinWidth(0);
         summary.setMaxWidth(Double.MAX_VALUE);
-        Label meta = new Label(UiText.tr("mods.list.meta",
-                ModViewSupport.joinLoaders(project.loaders()),
-                ModViewSupport.joinVersions(project.gameVersions()),
-                ModViewSupport.downloads(project.downloads()),
-                ViewSupport.releaseDate(project.updatedAt())));
+        Label meta = new Label(type == ModContentType.SHADER
+                ? UiText.tr("shaders.list.meta",
+                        ModViewSupport.joinVersions(project.gameVersions()),
+                        ModViewSupport.downloads(project.downloads()),
+                        ViewSupport.releaseDate(project.updatedAt()))
+                : UiText.tr("mods.list.meta",
+                        ModViewSupport.joinLoaders(project.loaders()),
+                        ModViewSupport.joinVersions(project.gameVersions()),
+                        ModViewSupport.downloads(project.downloads()),
+                        ViewSupport.releaseDate(project.updatedAt())));
         meta.getStyleClass().add("app-mod-meta");
         meta.setWrapText(false);
         meta.setTextOverrun(OverrunStyle.ELLIPSIS);
@@ -543,7 +589,11 @@ final class ModSearchView extends VBox implements PageLifecycle {
         }
         loading = false;
         setControlsDisabled(false);
-        setStatus(UiText.tr("mods.search.failed", message), true);
+        setStatus(text("mods.search.failed", "shaders.search.failed", message), true);
+    }
+
+    private String text(String modKey, String shaderKey, Object... arguments) {
+        return UiText.tr(type == ModContentType.SHADER ? shaderKey : modKey, arguments);
     }
 
     private void setStatus(String text, boolean error) {

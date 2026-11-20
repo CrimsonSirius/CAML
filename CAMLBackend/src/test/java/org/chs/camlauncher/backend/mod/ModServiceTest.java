@@ -8,6 +8,7 @@ import org.chs.camlauncher.backend.download.hash.HashVerifier;
 import org.chs.camlauncher.backend.error.BackendException;
 import org.chs.camlauncher.backend.instance.VersionIsolationMode;
 import org.chs.camlauncher.backend.mod.model.ModDependencyType;
+import org.chs.camlauncher.backend.mod.model.ModContentType;
 import org.chs.camlauncher.backend.mod.model.ModFile;
 import org.chs.camlauncher.backend.mod.model.ModProjectDetail;
 import org.chs.camlauncher.backend.mod.model.ModSearchPage;
@@ -301,6 +302,83 @@ class ModServiceTest {
 
             assertEquals(gameDirectory.resolve("mods/test.jar"), result.path());
             assertArrayEquals(content, Files.readAllBytes(result.path()));
+        } finally {
+            server.stop(0);
+        }
+    }
+
+    @Test
+    void searchesShadersWithSourceSpecificFilters() throws Exception {
+        HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        server.createContext("/v2/search", exchange -> {
+            assertTrue(exchange.getRequestURI().getRawQuery()
+                    .contains("project_type%3Ashader"));
+            respond(exchange, """
+                    {"hits":[{"project_id":"bsl","slug":"bsl","title":"BSL Shaders",
+                    "description":"Shader pack","categories":["iris"],"versions":["1.20.1"],
+                    "downloads":100,"date_modified":"2026-01-01T00:00:00Z"}],
+                    "offset":0,"limit":20,"total_hits":1}
+                    """);
+        });
+        server.createContext("/v1/mods/search", exchange -> {
+            assertTrue(exchange.getRequestURI().getRawQuery().contains("classId=6552"));
+            respond(exchange, """
+                    {"data":[{"id":123,"name":"BSL Shaders","slug":"bsl-shaders",
+                    "summary":"Shader pack","downloadCount":100,
+                    "dateModified":"2026-01-01T00:00:00Z","links":{},"authors":[],
+                    "categories":[],"latestFilesIndexes":[]}],
+                    "pagination":{"totalCount":1}}
+                    """);
+        });
+        server.start();
+
+        try {
+            String base = serverRoot(server);
+            ModService service = service(base + "v2/", base + "v1/", "test-key");
+
+            ModSearchPage modrinth = service.search(new ModSearchQuery(
+                    "bsl", ModSource.MODRINTH, "1.20.1", null, 0, 20,
+                    ModContentType.SHADER));
+            ModSearchPage curseForge = service.search(new ModSearchQuery(
+                    "bsl", ModSource.CURSEFORGE, "1.20.1", null, 0, 20,
+                    ModContentType.SHADER));
+
+            assertEquals("BSL Shaders", modrinth.items().getFirst().name());
+            assertEquals("BSL Shaders", curseForge.items().getFirst().name());
+        } finally {
+            server.stop(0);
+        }
+    }
+
+    @Test
+    void downloadsShaderIntoInstanceShaderpacksDirectory() throws Exception {
+        byte[] content = "shader-content".getBytes(StandardCharsets.UTF_8);
+        HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        server.createContext("/shaders/bsl.zip", exchange -> {
+            exchange.sendResponseHeaders(200, content.length);
+            try (var output = exchange.getResponseBody()) {
+                output.write(content);
+            }
+        });
+        server.start();
+
+        try {
+            Path gameDirectory = tempDirectory.resolve("shader-game");
+            ModFile file = new ModFile(
+                    ModSource.MODRINTH, "project", "version", "BSL Shaders", "1.0",
+                    "bsl.zip", List.of(URI.create(serverRoot(server) + "shaders/bsl.zip")),
+                    HashVerifier.sha1(content), null, content.length,
+                    List.of("1.20.1"), List.of(), List.of(), "", 1
+            );
+            ModService service = service("https://example.invalid/v2/",
+                    "https://example.invalid/v1/", "");
+
+            var result = service.download(file, ModContentType.SHADER, gameDirectory,
+                    "instance", VersionIsolationMode.NONE, DownloadListener.NONE);
+
+            assertEquals(gameDirectory.resolve("shaderpacks/bsl.zip"), result.path());
+            assertArrayEquals(content, Files.readAllBytes(result.path()));
+            assertFalse(Files.exists(gameDirectory.resolve("mods/bsl.zip")));
         } finally {
             server.stop(0);
         }

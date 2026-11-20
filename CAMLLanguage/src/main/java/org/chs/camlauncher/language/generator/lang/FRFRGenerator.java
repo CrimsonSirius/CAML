@@ -366,6 +366,14 @@ public final class FRFRGenerator extends LanguageTranslationGenerator {
 
         // Téléchargement de mods
         t.put("mods.nav", "Mods");
+        t.put("shaders.nav", "Shaders");
+        t.put("shaders.search.title", "Rechercher des shaders");
+        t.put("shaders.search.nameHint", "Saisir le nom d'un shader");
+        t.put("shaders.search.loading", "Recherche des shaders...");
+        t.put("shaders.search.empty", "Aucun shader correspondant trouvé");
+        t.put("shaders.search.failed", "Impossible de charger les shaders : %s");
+        t.put("shaders.list.meta", "Versions : %s · Téléchargements %s · Mis à jour %s");
+        t.put("shaders.detail.loading", "Chargement des détails du shader...");
         t.put("mods.search.title", "Rechercher des mods");
         t.put("mods.search.name", "Nom");
         t.put("mods.search.nameHint", "Saisissez un nom de mod");
@@ -455,6 +463,9 @@ public final class FRFRGenerator extends LanguageTranslationGenerator {
         t.put("operation.searchMods", "Rechercher des mods : %s");
         t.put("operation.fetchModProject", "Récupérer le projet de mod : %s");
         t.put("operation.downloadMod", "Télécharger le mod : %s");
+        t.put("operation.searchShaders", "Rechercher des shaders : %s");
+        t.put("operation.fetchShaderProject", "Récupérer le projet de shader : %s");
+        t.put("operation.downloadShader", "Télécharger le shader : %s");
         t.put("operation.loadModIcon", "Charger l’icône du mod");
         t.put("operation.saveLastInstance", "Enregistrer la dernière instance lancée");
         t.put("operation.launchGame", "Lancer le jeu %s");

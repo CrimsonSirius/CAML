@@ -75,6 +75,7 @@ import org.chs.camlauncher.backend.metadata.MetadataService;
 import org.chs.camlauncher.backend.metadata.model.VersionManifest;
 import org.chs.camlauncher.backend.metadata.VersionManifestService;
 import org.chs.camlauncher.backend.mod.model.ModDownloadResult;
+import org.chs.camlauncher.backend.mod.model.ModContentType;
 import org.chs.camlauncher.backend.mod.model.ModFile;
 import org.chs.camlauncher.backend.mod.model.ModProjectDetail;
 import org.chs.camlauncher.backend.mod.model.ModSearchPage;
@@ -599,6 +600,17 @@ public final class CAMLBackend implements AutoCloseable {
             DownloadListener listener
     ) throws IOException, InterruptedException {
         return modService.download(file, gameDirectory, instanceId, isolationMode, listener);
+    }
+
+    public ModDownloadResult downloadContent(
+            ModContentType type,
+            ModFile file,
+            Path gameDirectory,
+            String instanceId,
+            VersionIsolationMode isolationMode,
+            DownloadListener listener
+    ) throws IOException, InterruptedException {
+        return modService.download(file, type, gameDirectory, instanceId, isolationMode, listener);
     }
 
     public boolean curseForgeConfigured() {

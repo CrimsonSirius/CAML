@@ -18,6 +18,7 @@ import org.chs.camlauncher.backend.loader.quilt.QuiltLoaderVersion;
 import org.chs.camlauncher.backend.metadata.model.VersionManifest;
 import org.chs.camlauncher.backend.mod.model.ModDownloadResult;
 import org.chs.camlauncher.backend.mod.model.ModFile;
+import org.chs.camlauncher.backend.mod.model.ModContentType;
 import org.chs.camlauncher.backend.mod.model.ModProjectDetail;
 import org.chs.camlauncher.backend.mod.model.ModSearchPage;
 import org.chs.camlauncher.backend.mod.model.ModSearchQuery;
@@ -61,7 +62,10 @@ public final class DownloadsController {
             ModSearchQuery query,
             Consumer<ModSearchPage> onLoaded,
             Consumer<String> onError) {
-        return context.runMetadata(UiText.tr("operation.searchMods", query.text()),
+        String operation = UiText.tr(query.type() == ModContentType.SHADER
+                ? "operation.searchShaders"
+                : "operation.searchMods", query.text());
+        return context.runMetadata(operation,
                 () -> context.backend().searchMods(query), onLoaded, onError);
     }
 
@@ -71,6 +75,18 @@ public final class DownloadsController {
             Consumer<ModProjectDetail> onLoaded,
             Consumer<String> onError) {
         return context.runMetadata(UiText.tr("operation.fetchModProject", projectId),
+                () -> context.backend().fetchModProject(source, projectId), onLoaded, onError);
+    }
+
+    public FrontTask<ModProjectDetail> fetchContentProject(
+            ModContentType type,
+            ModSource source,
+            String projectId,
+            Consumer<ModProjectDetail> onLoaded,
+            Consumer<String> onError) {
+        return context.runMetadata(UiText.tr(type == ModContentType.SHADER
+                        ? "operation.fetchShaderProject"
+                        : "operation.fetchModProject", projectId),
                 () -> context.backend().fetchModProject(source, projectId), onLoaded, onError);
     }
 
@@ -101,6 +117,32 @@ public final class DownloadsController {
             Consumer<String> onError) {
         return context.runDownload(UiText.tr("operation.downloadMod", file.name()),
                 () -> context.backend().downloadMod(
+                        file,
+                        gameDirectory,
+                        instanceId,
+                        fullVersionIsolation
+                                ? VersionIsolationMode.FULL
+                                : VersionIsolationMode.NONE,
+                        listener
+                ),
+                onSuccess,
+                onError);
+    }
+
+    public FrontTask<ModDownloadResult> downloadContent(
+            ModContentType type,
+            ModFile file,
+            Path gameDirectory,
+            String instanceId,
+            boolean fullVersionIsolation,
+            DownloadListener listener,
+            Consumer<ModDownloadResult> onSuccess,
+            Consumer<String> onError) {
+        return context.runDownload(UiText.tr(type == ModContentType.SHADER
+                        ? "operation.downloadShader"
+                        : "operation.downloadMod", file.name()),
+                () -> context.backend().downloadContent(
+                        type,
                         file,
                         gameDirectory,
                         instanceId,

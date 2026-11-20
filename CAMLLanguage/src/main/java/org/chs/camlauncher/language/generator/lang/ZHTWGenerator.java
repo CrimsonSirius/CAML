@@ -373,6 +373,14 @@ public final class ZHTWGenerator extends LanguageTranslationGenerator {
 
         // Mod 下載
         t.put("mods.nav", "模組");
+        t.put("shaders.nav", "光影包");
+        t.put("shaders.search.title", "搜尋光影包");
+        t.put("shaders.search.nameHint", "輸入光影包名稱");
+        t.put("shaders.search.loading", "正在搜尋光影包...");
+        t.put("shaders.search.empty", "沒有找到符合的光影包");
+        t.put("shaders.search.failed", "載入光影包失敗：%s");
+        t.put("shaders.list.meta", "版本：%s · 下載 %s · 更新 %s");
+        t.put("shaders.detail.loading", "正在載入光影包詳情...");
         t.put("mods.search.title", "搜尋 Mod");
         t.put("mods.search.name", "名稱");
         t.put("mods.search.nameHint", "輸入 Mod 名稱");
@@ -462,6 +470,9 @@ public final class ZHTWGenerator extends LanguageTranslationGenerator {
         t.put("operation.searchMods", "搜尋 Mod：%s");
         t.put("operation.fetchModProject", "取得 Mod 專案：%s");
         t.put("operation.downloadMod", "下載 Mod：%s");
+        t.put("operation.searchShaders", "搜尋光影包：%s");
+        t.put("operation.fetchShaderProject", "取得光影包專案：%s");
+        t.put("operation.downloadShader", "下載光影包：%s");
         t.put("operation.loadModIcon", "載入 Mod 圖示");
         t.put("operation.saveLastInstance", "儲存最後啟動實例");
         t.put("operation.launchGame", "啟動遊戲 %s");

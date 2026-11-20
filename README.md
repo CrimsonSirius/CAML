@@ -20,6 +20,7 @@ CAML 是一个基于 **Java 25 + JavaFX** 的 Minecraft 启动器，采用前后
 | 远程元数据 | 拉取版本清单与单版本 JSON，本地缓存，网络失败时回退缓存；请求地址遵循下载源设置 |
 | 下载 | 客户端 jar、libraries、natives、asset index、assets objects 下载计划；镜像源 / 官方源 / 自定义镜像根地址三种下载源，覆盖版本清单、版本 JSON、Fabric/Forge/NeoForge/OptiFine 元数据、加载器 installer/API 和 Fabric Maven 依赖；SHA-1 校验；`.part` 临时文件 + 原子移动；已知大小的大文件使用 HTTP Range 分片下载，`.part.json` 检查点支持断点续传，Range 不可用时回退单流；响应体有 30 秒空闲读超时，元数据请求有总截止时间；显式 `DownloadCancellationToken`，失败或取消时取消剩余任务并等待 worker 收敛；默认总计最多 6 次下载尝试；并发下载数可设 1–256；已有有效文件跳过 |
 | Mod 下载 | 下载页新增 Mod 子页；通过 Modrinth/CurseForge 官方 API 搜索、分页、查看详情、按加载器和游戏版本分组、显示依赖并下载到当前实例 `mods` 目录；不使用镜像源；CurseForge 文件地址为空时按 fileId 回退 CDN，兼容旧 CDN 域名变体并透传 `x-api-key`，SHA-1 缺失时回退 MD5，大小 0 视为未知；Modrinth 的 WebP 图标在后端转换为 PNG 后显示 |
+| 光影包下载 | 下载页在 Mod 子页下方新增光影包子页；复用搜索、分页、详情和图标链路，Modrinth 使用 `project_type:shader`，CurseForge 使用 `classId=6552`，按游戏版本筛选并下载到当前实例 `shaderpacks` 目录 |
 | 实例管理 | “管理实例”提供 Mod 与资源包两个入口；Mod 显示本地版本、支持启停和更新检查；资源包扫描实例 `resourcepacks` 中的 zip/目录，读取 `pack.mcmeta` 的 `pack_format` 显示版本，并用 `.disabled` 后缀切换启用状态 |
 | 版本安装 | 本地已安装版本直接复用（支持第三方启动器/整合包的自定义版本 ID），下载时可用自定义实例名；官方版本 ID 负责元数据，实例 ID 作为 `versions/<id>` 目录名；支持 Fabric Loader/Fabric API、Quilt Loader/Quilted Fabric API、Forge、NeoForge、OptiFine（仅 Forge）安装；Forge/NeoForge 版本列表优先从 BMCLAPI JSON 接口获取，官方源使用 Maven 元数据和 NeoForge 版本号映射匹配 Minecraft 版本；支持旧式 Forge library、Maven 路径推导和子版本库优先去重；缺失文件自动补齐；兼容 PCL/HMCL 版本隔离布局；基础文件完成后才写入版本 JSON |
 | 账号 | 离线登录、稳定离线 UUID；微软设备码登录，OAuth → Xbox Live → XSTS → Minecraft Services，启动时按过期时间自动 refresh；第三方 Yggdrasil（LittleSkin 等）账密登录，启动时 `refresh` 自动续期并自愈未绑定角色的 token；支持多角色切换；authlib-injector 运行时按需下载一次、每次启动 SHA-256 校验后以 `-javaagent` 注入；metadata 三级缓存（网络/内存/磁盘）保证皮肤站不可用时仍能启动；设置页维护全局账号与默认账号，主页二级页为每个实例单独指定账号，未指定时回退默认；accessToken/refresh token 使用 AES-GCM 加密落盘（未勾选“记住登录”时只留在内存），密码不保存 |
@@ -455,6 +456,10 @@ statusLabel.setText(UiText.tr("home.instance.current", version));
   `LanguageTest` 会校验 `BUNDLED_LOCALES`、生成器与已提交 JSON 三者一一对应。
 
 ### Mod 下载
+
+光影包与 Mod 共用同一套下载页和详情页，但来源筛选不同：Modrinth 使用
+`project_type:shader`，CurseForge 使用 `classId=6552`；文件写入实例实际数据目录下的
+`shaderpacks`，版本隔离规则与 Mod 相同。
 
 - Modrinth 使用 `https://api.modrinth.com/v2` 官方 API，无需额外配置。
 - CurseForge 使用 `https://api.curseforge.com/v1` 官方 API，必须配置 API Key。

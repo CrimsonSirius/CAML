@@ -366,6 +366,14 @@ public final class RURUGenerator extends LanguageTranslationGenerator {
 
         // Загрузка модов
         t.put("mods.nav", "Моды");
+        t.put("shaders.nav", "Шейдеры");
+        t.put("shaders.search.title", "Поиск шейдеров");
+        t.put("shaders.search.nameHint", "Введите название шейдера");
+        t.put("shaders.search.loading", "Поиск шейдеров...");
+        t.put("shaders.search.empty", "Подходящие шейдеры не найдены");
+        t.put("shaders.search.failed", "Не удалось загрузить шейдеры: %s");
+        t.put("shaders.list.meta", "Версии: %s · Загрузки %s · Обновлено %s");
+        t.put("shaders.detail.loading", "Загрузка сведений о шейдере...");
         t.put("mods.search.title", "Поиск модов");
         t.put("mods.search.name", "Название");
         t.put("mods.search.nameHint", "Введите название мода");
@@ -455,6 +463,9 @@ public final class RURUGenerator extends LanguageTranslationGenerator {
         t.put("operation.searchMods", "Поиск модов: %s");
         t.put("operation.fetchModProject", "Получение проекта мода: %s");
         t.put("operation.downloadMod", "Загрузка мода: %s");
+        t.put("operation.searchShaders", "Поиск шейдеров: %s");
+        t.put("operation.fetchShaderProject", "Получить проект шейдера: %s");
+        t.put("operation.downloadShader", "Скачать шейдер: %s");
         t.put("operation.loadModIcon", "Загрузка значка мода");
         t.put("operation.saveLastInstance", "Сохранение последней запущенной сборки");
         t.put("operation.launchGame", "Запуск игры %s");

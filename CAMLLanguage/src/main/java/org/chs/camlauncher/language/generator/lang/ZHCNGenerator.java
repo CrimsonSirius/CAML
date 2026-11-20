@@ -366,6 +366,14 @@ public final class ZHCNGenerator extends LanguageTranslationGenerator {
 
         // Mod 下载
         t.put("mods.nav", "模组");
+        t.put("shaders.nav", "光影包");
+        t.put("shaders.search.title", "搜索光影包");
+        t.put("shaders.search.nameHint", "输入光影包名称");
+        t.put("shaders.search.loading", "正在搜索光影包...");
+        t.put("shaders.search.empty", "没有找到匹配的光影包");
+        t.put("shaders.search.failed", "加载光影包失败：%s");
+        t.put("shaders.list.meta", "版本：%s · 下载 %s · 更新 %s");
+        t.put("shaders.detail.loading", "正在加载光影包详情...");
         t.put("mods.search.title", "搜索 Mod");
         t.put("mods.search.name", "名称");
         t.put("mods.search.nameHint", "输入 Mod 名称");
@@ -455,6 +463,9 @@ public final class ZHCNGenerator extends LanguageTranslationGenerator {
         t.put("operation.searchMods", "搜索 Mod：%s");
         t.put("operation.fetchModProject", "获取 Mod 项目：%s");
         t.put("operation.downloadMod", "下载 Mod：%s");
+        t.put("operation.searchShaders", "搜索光影包：%s");
+        t.put("operation.fetchShaderProject", "获取光影包项目：%s");
+        t.put("operation.downloadShader", "下载光影包：%s");
         t.put("operation.loadModIcon", "加载 Mod 图标");
         t.put("operation.saveLastInstance", "保存最后启动实例");
         t.put("operation.launchGame", "启动游戏 %s");

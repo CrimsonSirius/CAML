@@ -366,6 +366,14 @@ public final class LALAGenerator extends LanguageTranslationGenerator {
 
         // Deposita modorum
         t.put("mods.nav", "Modi");
+        t.put("shaders.nav", "Umbrae");
+        t.put("shaders.search.title", "Umbras quaerere");
+        t.put("shaders.search.nameHint", "Nomen umbrae inscribe");
+        t.put("shaders.search.loading", "Umbrae quaeruntur...");
+        t.put("shaders.search.empty", "Nullae umbrae congruentes inventae sunt");
+        t.put("shaders.search.failed", "Umbrae legi non potuerunt: %s");
+        t.put("shaders.list.meta", "Versiones: %s · Depositiones %s · Renovatae %s");
+        t.put("shaders.detail.loading", "Singula umbrae leguntur...");
         t.put("mods.search.title", "Modos quaerere");
         t.put("mods.search.name", "Nomen");
         t.put("mods.search.nameHint", "Nomen modi scribe");
@@ -455,6 +463,9 @@ public final class LALAGenerator extends LanguageTranslationGenerator {
         t.put("operation.searchMods", "Modos quaerere: %s");
         t.put("operation.fetchModProject", "Propositum modi petere: %s");
         t.put("operation.downloadMod", "Modum deponere: %s");
+        t.put("operation.searchShaders", "Umbras quaerere: %s");
+        t.put("operation.fetchShaderProject", "Propositum umbrae accipere: %s");
+        t.put("operation.downloadShader", "Umbram deponere: %s");
         t.put("operation.loadModIcon", "Iconem modi legere");
         t.put("operation.saveLastInstance", "Ultimam instantiam deducendam servare");
         t.put("operation.launchGame", "Ludum %s deducere");
