@@ -132,8 +132,12 @@ public final class ModService {
         );
         DownloadValidator validator = md5Validator(file);
         fileDownloader.download(item, listener, validator, new DownloadCancellationToken());
-        LOGGER.info("{} 下载完成: {} -> {}", type == ModContentType.SHADER
-                ? "光影包" : "Mod", file.name(), destination);
+        String contentType = switch (type) {
+            case MOD -> "Mod";
+            case SHADER -> "光影包";
+            case RESOURCE_PACK -> "资源包";
+        };
+        LOGGER.info("{} 下载完成: {} -> {}", contentType, file.name(), destination);
         return new ModDownloadResult(destination, file);
     }
 

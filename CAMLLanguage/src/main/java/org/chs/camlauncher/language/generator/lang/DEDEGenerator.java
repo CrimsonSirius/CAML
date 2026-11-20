@@ -374,6 +374,14 @@ public final class DEDEGenerator extends LanguageTranslationGenerator {
         t.put("shaders.search.failed", "Shader konnten nicht geladen werden: %s");
         t.put("shaders.list.meta", "Versionen: %s · Downloads %s · Aktualisiert %s");
         t.put("shaders.detail.loading", "Shader-Details werden geladen...");
+        t.put("resourcepacks.nav", "Ressourcenpakete");
+        t.put("resourcepacks.search.title", "Ressourcenpakete suchen");
+        t.put("resourcepacks.search.nameHint", "Ressourcenpaketnamen eingeben");
+        t.put("resourcepacks.search.loading", "Ressourcenpakete werden gesucht...");
+        t.put("resourcepacks.search.empty", "Keine passenden Ressourcenpakete gefunden");
+        t.put("resourcepacks.search.failed", "Ressourcenpakete konnten nicht geladen werden: %s");
+        t.put("resourcepacks.list.meta", "Versionen: %s · Downloads %s · Aktualisiert %s");
+        t.put("resourcepacks.detail.loading", "Ressourcenpaket-Details werden geladen...");
         t.put("mods.search.title", "Mods suchen");
         t.put("mods.search.name", "Name");
         t.put("mods.search.nameHint", "Mod-Namen eingeben");
@@ -466,6 +474,9 @@ public final class DEDEGenerator extends LanguageTranslationGenerator {
         t.put("operation.searchShaders", "Shader suchen: %s");
         t.put("operation.fetchShaderProject", "Shader-Projekt abrufen: %s");
         t.put("operation.downloadShader", "Shader herunterladen: %s");
+        t.put("operation.searchResourcePacks", "Ressourcenpakete suchen: %s");
+        t.put("operation.fetchResourcePackProject", "Ressourcenpaket-Projekt abrufen: %s");
+        t.put("operation.downloadResourcePack", "Ressourcenpaket herunterladen: %s");
         t.put("operation.loadModIcon", "Mod-Symbol laden");
         t.put("operation.saveLastInstance", "Zuletzt gestartete Instanz speichern");
         t.put("operation.launchGame", "Spiel %s starten");

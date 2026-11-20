@@ -374,6 +374,14 @@ public final class FRFRGenerator extends LanguageTranslationGenerator {
         t.put("shaders.search.failed", "Impossible de charger les shaders : %s");
         t.put("shaders.list.meta", "Versions : %s · Téléchargements %s · Mis à jour %s");
         t.put("shaders.detail.loading", "Chargement des détails du shader...");
+        t.put("resourcepacks.nav", "Packs de ressources");
+        t.put("resourcepacks.search.title", "Rechercher des packs de ressources");
+        t.put("resourcepacks.search.nameHint", "Saisir le nom d'un pack de ressources");
+        t.put("resourcepacks.search.loading", "Recherche des packs de ressources...");
+        t.put("resourcepacks.search.empty", "Aucun pack de ressources correspondant trouvé");
+        t.put("resourcepacks.search.failed", "Impossible de charger les packs de ressources : %s");
+        t.put("resourcepacks.list.meta", "Versions : %s · Téléchargements %s · Mis à jour %s");
+        t.put("resourcepacks.detail.loading", "Chargement des détails du pack de ressources...");
         t.put("mods.search.title", "Rechercher des mods");
         t.put("mods.search.name", "Nom");
         t.put("mods.search.nameHint", "Saisissez un nom de mod");
@@ -466,6 +474,9 @@ public final class FRFRGenerator extends LanguageTranslationGenerator {
         t.put("operation.searchShaders", "Rechercher des shaders : %s");
         t.put("operation.fetchShaderProject", "Récupérer le projet de shader : %s");
         t.put("operation.downloadShader", "Télécharger le shader : %s");
+        t.put("operation.searchResourcePacks", "Rechercher des packs de ressources : %s");
+        t.put("operation.fetchResourcePackProject", "Récupérer le projet de pack de ressources : %s");
+        t.put("operation.downloadResourcePack", "Télécharger le pack de ressources : %s");
         t.put("operation.loadModIcon", "Charger l’icône du mod");
         t.put("operation.saveLastInstance", "Enregistrer la dernière instance lancée");
         t.put("operation.launchGame", "Lancer le jeu %s");

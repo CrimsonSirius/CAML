@@ -3,7 +3,8 @@ package org.chs.camlauncher.backend.mod.model;
 /** 下载页可搜索并安装到实例的内容类型。 */
 public enum ModContentType {
     MOD("mod", 6, "mods"),
-    SHADER("shader", 6552, "shaderpacks");
+    SHADER("shader", 6552, "shaderpacks"),
+    RESOURCE_PACK("resourcepack", 12, "resourcepacks");
 
     private final String modrinthProjectType;
     private final int curseForgeClassId;

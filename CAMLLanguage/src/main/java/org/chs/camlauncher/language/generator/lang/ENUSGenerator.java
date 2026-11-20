@@ -374,6 +374,14 @@ public final class ENUSGenerator extends LanguageTranslationGenerator {
         t.put("shaders.search.failed", "Failed to load shader packs: %s");
         t.put("shaders.list.meta", "Versions: %s · Downloads %s · Updated %s");
         t.put("shaders.detail.loading", "Loading shader pack details...");
+        t.put("resourcepacks.nav", "Resource packs");
+        t.put("resourcepacks.search.title", "Search resource packs");
+        t.put("resourcepacks.search.nameHint", "Enter a resource pack name");
+        t.put("resourcepacks.search.loading", "Searching resource packs...");
+        t.put("resourcepacks.search.empty", "No matching resource packs found");
+        t.put("resourcepacks.search.failed", "Failed to load resource packs: %s");
+        t.put("resourcepacks.list.meta", "Versions: %s · Downloads %s · Updated %s");
+        t.put("resourcepacks.detail.loading", "Loading resource pack details...");
         t.put("mods.search.title", "Search mods");
         t.put("mods.search.name", "Name");
         t.put("mods.search.nameHint", "Enter a mod name");
@@ -466,6 +474,9 @@ public final class ENUSGenerator extends LanguageTranslationGenerator {
         t.put("operation.searchShaders", "Search shaders: %s");
         t.put("operation.fetchShaderProject", "Fetch shader project: %s");
         t.put("operation.downloadShader", "Download shader pack: %s");
+        t.put("operation.searchResourcePacks", "Search resource packs: %s");
+        t.put("operation.fetchResourcePackProject", "Fetch resource pack project: %s");
+        t.put("operation.downloadResourcePack", "Download resource pack: %s");
         t.put("operation.loadModIcon", "Load mod icon");
         t.put("operation.saveLastInstance", "Save last launched instance");
         t.put("operation.launchGame", "Launch game %s");

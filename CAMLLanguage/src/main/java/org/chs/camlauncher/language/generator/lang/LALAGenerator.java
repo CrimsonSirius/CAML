@@ -374,6 +374,14 @@ public final class LALAGenerator extends LanguageTranslationGenerator {
         t.put("shaders.search.failed", "Umbrae legi non potuerunt: %s");
         t.put("shaders.list.meta", "Versiones: %s · Depositiones %s · Renovatae %s");
         t.put("shaders.detail.loading", "Singula umbrae leguntur...");
+        t.put("resourcepacks.nav", "Fasciculi opum");
+        t.put("resourcepacks.search.title", "Fasciculos opum quaerere");
+        t.put("resourcepacks.search.nameHint", "Nomen fasciculi opum inscribe");
+        t.put("resourcepacks.search.loading", "Fasciculi opum quaeruntur...");
+        t.put("resourcepacks.search.empty", "Nulli fasciculi opum congruentes inventi sunt");
+        t.put("resourcepacks.search.failed", "Fasciculi opum legi non potuerunt: %s");
+        t.put("resourcepacks.list.meta", "Versiones: %s · Depositiones %s · Renovatae %s");
+        t.put("resourcepacks.detail.loading", "Singula fasciculi opum leguntur...");
         t.put("mods.search.title", "Modos quaerere");
         t.put("mods.search.name", "Nomen");
         t.put("mods.search.nameHint", "Nomen modi scribe");
@@ -466,6 +474,9 @@ public final class LALAGenerator extends LanguageTranslationGenerator {
         t.put("operation.searchShaders", "Umbras quaerere: %s");
         t.put("operation.fetchShaderProject", "Propositum umbrae accipere: %s");
         t.put("operation.downloadShader", "Umbram deponere: %s");
+        t.put("operation.searchResourcePacks", "Fasciculos opum quaerere: %s");
+        t.put("operation.fetchResourcePackProject", "Propositum fasciculi opum accipere: %s");
+        t.put("operation.downloadResourcePack", "Fasciculum opum deponere: %s");
         t.put("operation.loadModIcon", "Iconem modi legere");
         t.put("operation.saveLastInstance", "Ultimam instantiam deducendam servare");
         t.put("operation.launchGame", "Ludum %s deducere");

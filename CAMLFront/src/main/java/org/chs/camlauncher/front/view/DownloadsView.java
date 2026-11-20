@@ -31,6 +31,7 @@ final class DownloadsView extends HBox implements SidebarPage, PageLifecycle {
     private PageLifecycle activeContentPage;
     private ModSearchView modsView;
     private ModSearchView shadersView;
+    private ModSearchView resourcePacksView;
     private boolean disposed;
 
     DownloadsView(DownloadsController controller, LaunchSettings launchSettings) {
@@ -48,11 +49,13 @@ final class DownloadsView extends HBox implements SidebarPage, PageLifecycle {
         CamlSideNavItem oldItem = new CamlSideNavItem(VersionCategory.OLD.label());
         CamlSideNavItem modItem = new CamlSideNavItem(UiText.tr("mods.nav"));
         CamlSideNavItem shaderItem = new CamlSideNavItem(UiText.tr("shaders.nav"));
+        CamlSideNavItem resourcePackItem = new CamlSideNavItem(UiText.tr("resourcepacks.nav"));
         sidebar.addItem(releaseItem);
         sidebar.addItem(snapshotItem);
         sidebar.addItem(oldItem);
         sidebar.addItem(modItem);
         sidebar.addItem(shaderItem);
+        sidebar.addItem(resourcePackItem);
         sidebar.select(releaseItem);
 
         DownloadVersionsView initialView = versionsView(VersionCategory.RELEASE);
@@ -70,6 +73,7 @@ final class DownloadsView extends HBox implements SidebarPage, PageLifecycle {
                 event -> showVersions(VersionCategory.OLD));
         modItem.addEventHandler(ActionEvent.ACTION, event -> showMods());
         shaderItem.addEventHandler(ActionEvent.ACTION, event -> showShaders());
+        resourcePackItem.addEventHandler(ActionEvent.ACTION, event -> showResourcePacks());
 
         getChildren().addAll(sidebar, contentHost);
         getStyleClass().add("app-download-page");
@@ -135,6 +139,16 @@ final class DownloadsView extends HBox implements SidebarPage, PageLifecycle {
         setContentPage(shadersView);
     }
 
+    private void showResourcePacks() {
+        setDownloadNavigationVisible(true);
+        showingVersionList = false;
+        if (resourcePacksView == null) {
+            resourcePacksView = new ModSearchView(controller, ModContentType.RESOURCE_PACK,
+                    this::showResourcePackDetail);
+        }
+        setContentPage(resourcePacksView);
+    }
+
     private void showModDetail(ModProjectSummary project) {
         setDownloadNavigationVisible(true);
         showingVersionList = false;
@@ -156,6 +170,18 @@ final class DownloadsView extends HBox implements SidebarPage, PageLifecycle {
                 ModContentType.SHADER,
                 project,
                 this::showShaders
+        ));
+    }
+
+    private void showResourcePackDetail(ModProjectSummary project) {
+        setDownloadNavigationVisible(true);
+        showingVersionList = false;
+        setContentPage(new ModDetailView(
+                controller,
+                launchSettings,
+                ModContentType.RESOURCE_PACK,
+                project,
+                this::showResourcePacks
         ));
     }
 
@@ -257,6 +283,10 @@ final class DownloadsView extends HBox implements SidebarPage, PageLifecycle {
         if (shadersView != null) {
             shadersView.dispose();
             shadersView = null;
+        }
+        if (resourcePacksView != null) {
+            resourcePacksView.dispose();
+            resourcePacksView = null;
         }
     }
 

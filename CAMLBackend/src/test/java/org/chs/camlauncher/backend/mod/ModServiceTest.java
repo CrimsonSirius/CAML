@@ -384,6 +384,82 @@ class ModServiceTest {
         }
     }
 
+    @Test
+    void searchesResourcePacksWithSourceSpecificFilters() throws Exception {
+        HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        server.createContext("/v2/search", exchange -> {
+            assertTrue(exchange.getRequestURI().getRawQuery()
+                    .contains("project_type%3Aresourcepack"));
+            respond(exchange, """
+                    {"hits":[{"project_id":"fresh","slug":"fresh","title":"Fresh",
+                    "description":"Fresh textures","categories":["16x"],"versions":["1.21"],
+                    "downloads":100,"date_modified":"2026-01-01T00:00:00Z"}],
+                    "offset":0,"limit":20,"total_hits":1}
+                    """);
+        });
+        server.createContext("/v1/mods/search", exchange -> {
+            assertTrue(exchange.getRequestURI().getRawQuery().contains("classId=12"));
+            respond(exchange, """
+                    {"data":[{"id":123,"name":"Fresh","slug":"fresh","summary":"Fresh textures",
+                    "downloadCount":100,"dateModified":"2026-01-01T00:00:00Z","links":{},
+                    "authors":[],"categories":[],"latestFilesIndexes":[]}],
+                    "pagination":{"totalCount":1}}
+                    """);
+        });
+        server.start();
+
+        try {
+            String base = serverRoot(server);
+            ModService service = service(base + "v2/", base + "v1/", "test-key");
+
+            ModSearchPage modrinth = service.search(new ModSearchQuery(
+                    "fresh", ModSource.MODRINTH, "1.21", null, 0, 20,
+                    ModContentType.RESOURCE_PACK));
+            ModSearchPage curseForge = service.search(new ModSearchQuery(
+                    "fresh", ModSource.CURSEFORGE, "1.21", null, 0, 20,
+                    ModContentType.RESOURCE_PACK));
+
+            assertEquals("Fresh", modrinth.items().getFirst().name());
+            assertEquals("Fresh", curseForge.items().getFirst().name());
+        } finally {
+            server.stop(0);
+        }
+    }
+
+    @Test
+    void downloadsResourcePackIntoInstanceResourcepacksDirectory() throws Exception {
+        byte[] content = "resource-pack-content".getBytes(StandardCharsets.UTF_8);
+        HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        server.createContext("/packs/fresh.zip", exchange -> {
+            exchange.sendResponseHeaders(200, content.length);
+            try (var output = exchange.getResponseBody()) {
+                output.write(content);
+            }
+        });
+        server.start();
+
+        try {
+            Path gameDirectory = tempDirectory.resolve("resource-pack-game");
+            ModFile file = new ModFile(
+                    ModSource.MODRINTH, "project", "version", "Fresh", "1.0",
+                    "fresh.zip", List.of(URI.create(serverRoot(server) + "packs/fresh.zip")),
+                    HashVerifier.sha1(content), null, content.length,
+                    List.of("1.21"), List.of(), List.of(), "", 1
+            );
+            ModService service = service("https://example.invalid/v2/",
+                    "https://example.invalid/v1/", "");
+
+            var result = service.download(file, ModContentType.RESOURCE_PACK, gameDirectory,
+                    "instance", VersionIsolationMode.NONE, DownloadListener.NONE);
+
+            assertEquals(gameDirectory.resolve("resourcepacks/fresh.zip"), result.path());
+            assertArrayEquals(content, Files.readAllBytes(result.path()));
+            assertFalse(Files.exists(gameDirectory.resolve("mods/fresh.zip")));
+        } finally {
+            server.stop(0);
+        }
+    }
+
     private ModService service(String modrinthBase, String curseBase, String curseKey) {
         HttpClient client = HttpClient.newBuilder()
                 .followRedirects(HttpClient.Redirect.NORMAL)

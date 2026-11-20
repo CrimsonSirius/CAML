@@ -97,12 +97,12 @@ final class ModSearchView extends VBox implements PageLifecycle {
         setFocusTraversable(true);
         setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
 
-        statusLabel.setText(text("mods.search.loading", "shaders.search.loading"));
+        statusLabel.setText(text("search.loading"));
 
-        Label title = new Label(text("mods.search.title", "shaders.search.title"));
+        Label title = new Label(text("search.title"));
         title.getStyleClass().add("app-mod-search-title");
 
-        queryField.setPromptText(text("mods.search.nameHint", "shaders.search.nameHint"));
+        queryField.setPromptText(text("search.nameHint"));
         gameVersionField.setPromptText(UiText.tr("mods.search.versionHint"));
         sourceBox.getItems().setAll(
                 new ModChoice<>(UiText.tr("mods.search.allSources"), null),
@@ -217,8 +217,8 @@ final class ModSearchView extends VBox implements PageLifecycle {
     }
 
     private Pane buildForm(ModDownloadLayout.Plan plan) {
-        if (type == ModContentType.SHADER) {
-            return buildShaderForm(plan);
+        if (type != ModContentType.MOD) {
+            return buildVersionOnlyForm(plan);
         }
         return switch (plan.mode()) {
             case INLINE -> {
@@ -253,7 +253,7 @@ final class ModSearchView extends VBox implements PageLifecycle {
         };
     }
 
-    private Pane buildShaderForm(ModDownloadLayout.Plan plan) {
+    private Pane buildVersionOnlyForm(ModDownloadLayout.Plan plan) {
         return switch (plan.mode()) {
             case INLINE -> {
                 VBox rows = new VBox(plan.formGap(),
@@ -308,7 +308,7 @@ final class ModSearchView extends VBox implements PageLifecycle {
         iconGeneration++;
         loading = true;
         setControlsDisabled(true);
-        setStatus(text("mods.search.loading", "shaders.search.loading"), false);
+        setStatus(text("search.loading"), false);
         ModSearchQuery query = new ModSearchQuery(
                 queryField.getText(),
                 sourceBox.getValue() == null ? null : sourceBox.getValue().value(),
@@ -333,7 +333,7 @@ final class ModSearchView extends VBox implements PageLifecycle {
         long generation = iconGeneration;
         List<IconTarget> iconTargets = new ArrayList<>();
         if (page.items().isEmpty()) {
-            setStatus(text("mods.search.empty", "shaders.search.empty"), false);
+            setStatus(text("search.empty"), false);
         } else {
             setStatus(UiText.tr("mods.search.count", page.totalCount()), false);
             for (ModProjectSummary project : page.items()) {
@@ -390,13 +390,13 @@ final class ModSearchView extends VBox implements PageLifecycle {
         summary.setTextOverrun(OverrunStyle.ELLIPSIS);
         summary.setMinWidth(0);
         summary.setMaxWidth(Double.MAX_VALUE);
-        Label meta = new Label(type == ModContentType.SHADER
-                ? UiText.tr("shaders.list.meta",
+        Label meta = new Label(type == ModContentType.MOD
+                ? UiText.tr("mods.list.meta",
+                        ModViewSupport.joinLoaders(project.loaders()),
                         ModViewSupport.joinVersions(project.gameVersions()),
                         ModViewSupport.downloads(project.downloads()),
                         ViewSupport.releaseDate(project.updatedAt()))
-                : UiText.tr("mods.list.meta",
-                        ModViewSupport.joinLoaders(project.loaders()),
+                : text("list.meta",
                         ModViewSupport.joinVersions(project.gameVersions()),
                         ModViewSupport.downloads(project.downloads()),
                         ViewSupport.releaseDate(project.updatedAt())));
@@ -589,11 +589,16 @@ final class ModSearchView extends VBox implements PageLifecycle {
         }
         loading = false;
         setControlsDisabled(false);
-        setStatus(text("mods.search.failed", "shaders.search.failed", message), true);
+        setStatus(text("search.failed", message), true);
     }
 
-    private String text(String modKey, String shaderKey, Object... arguments) {
-        return UiText.tr(type == ModContentType.SHADER ? shaderKey : modKey, arguments);
+    private String text(String suffix, Object... arguments) {
+        String prefix = switch (type) {
+            case MOD -> "mods";
+            case SHADER -> "shaders";
+            case RESOURCE_PACK -> "resourcepacks";
+        };
+        return UiText.tr(prefix + "." + suffix, arguments);
     }
 
     private void setStatus(String text, boolean error) {

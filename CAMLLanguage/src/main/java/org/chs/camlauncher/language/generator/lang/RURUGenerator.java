@@ -374,6 +374,14 @@ public final class RURUGenerator extends LanguageTranslationGenerator {
         t.put("shaders.search.failed", "Не удалось загрузить шейдеры: %s");
         t.put("shaders.list.meta", "Версии: %s · Загрузки %s · Обновлено %s");
         t.put("shaders.detail.loading", "Загрузка сведений о шейдере...");
+        t.put("resourcepacks.nav", "Наборы ресурсов");
+        t.put("resourcepacks.search.title", "Поиск наборов ресурсов");
+        t.put("resourcepacks.search.nameHint", "Введите название набора ресурсов");
+        t.put("resourcepacks.search.loading", "Поиск наборов ресурсов...");
+        t.put("resourcepacks.search.empty", "Подходящие наборы ресурсов не найдены");
+        t.put("resourcepacks.search.failed", "Не удалось загрузить наборы ресурсов: %s");
+        t.put("resourcepacks.list.meta", "Версии: %s · Загрузки %s · Обновлено %s");
+        t.put("resourcepacks.detail.loading", "Загрузка сведений о наборе ресурсов...");
         t.put("mods.search.title", "Поиск модов");
         t.put("mods.search.name", "Название");
         t.put("mods.search.nameHint", "Введите название мода");
@@ -466,6 +474,9 @@ public final class RURUGenerator extends LanguageTranslationGenerator {
         t.put("operation.searchShaders", "Поиск шейдеров: %s");
         t.put("operation.fetchShaderProject", "Получить проект шейдера: %s");
         t.put("operation.downloadShader", "Скачать шейдер: %s");
+        t.put("operation.searchResourcePacks", "Поиск наборов ресурсов: %s");
+        t.put("operation.fetchResourcePackProject", "Получить проект набора ресурсов: %s");
+        t.put("operation.downloadResourcePack", "Скачать набор ресурсов: %s");
         t.put("operation.loadModIcon", "Загрузка значка мода");
         t.put("operation.saveLastInstance", "Сохранение последней запущенной сборки");
         t.put("operation.launchGame", "Запуск игры %s");
