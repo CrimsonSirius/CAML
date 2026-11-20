@@ -348,6 +348,21 @@ public final class ZHCNGenerator extends LanguageTranslationGenerator {
         t.put("instances.manage.mods.updateFailed", "更新 Mod 失败：%s");
         t.put("instances.manage.mods.enabled", "已启用");
         t.put("instances.manage.mods.disabled", "已禁用");
+        t.put("instances.manage.mods.pageTitle", "管理 Mod");
+        t.put("instances.manage.scanning", "正在读取实例信息...");
+        t.put("instances.manage.scanFailed", "读取实例信息失败：%s");
+        t.put("instances.manage.summary", "共 %d 个 Mod，%d 个资源包");
+        t.put("instances.manage.manageMods", "管理 Mod");
+        t.put("instances.manage.manageResourcePacks", "管理资源包");
+        t.put("instances.manage.resourcePacks.pageTitle", "管理资源包");
+        t.put("instances.manage.resourcePacks.scanning", "正在读取资源包列表...");
+        t.put("instances.manage.resourcePacks.count", "共 %d 个资源包");
+        t.put("instances.manage.resourcePacks.empty", "该实例没有资源包");
+        t.put("instances.manage.resourcePacks.scanFailed", "读取资源包列表失败：%s");
+        t.put("instances.manage.resourcePacks.toggleFailed", "切换资源包状态失败：%s");
+        t.put("instances.manage.resourcePacks.enabled", "已启用");
+        t.put("instances.manage.resourcePacks.disabled", "已禁用");
+        t.put("instances.manage.resourcePacks.version", "版本：%s");
 
         // Mod 下载
         t.put("mods.nav", "模组");
@@ -411,6 +426,7 @@ public final class ZHCNGenerator extends LanguageTranslationGenerator {
         t.put("operation.openInstanceFolder", "打开实例文件夹");
         t.put("operation.loadInstanceModIcon", "加载 Mod 图标");
         t.put("operation.setModDisabled", "切换 Mod 状态");
+        t.put("operation.setResourcePackDisabled", "切换资源包状态");
         t.put("operation.checkModUpdates", "检查 Mod 更新");
         t.put("operation.updateMod", "更新 Mod %s");
         t.put("operation.checkInstanceName", "检查实例名");

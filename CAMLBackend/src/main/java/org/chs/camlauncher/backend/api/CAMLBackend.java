@@ -975,6 +975,35 @@ public final class CAMLBackend implements AutoCloseable {
         }
     }
 
+    /** 通过 .disabled 后缀切换实例资源包的启用状态。 */
+    public void setResourcePackDisabled(Path gameDirectory, String instanceId, String fileName,
+                                        boolean disabled) throws IOException {
+        Path normalizedGameDirectory = Objects.requireNonNull(gameDirectory, "gameDirectory")
+                .toAbsolutePath()
+                .normalize();
+        String instance = InstanceNameRules.validate(instanceId);
+        String baseName = normalizeResourcePackFileName(fileName);
+        Path resourcePacksDirectory = InstanceInspector.dataDirectory(
+                normalizedGameDirectory, instance).resolve("resourcepacks");
+        Path enabledPath = SafePaths.resolveChild(
+                resourcePacksDirectory, baseName, "resource pack");
+        Path disabledPath = SafePaths.resolveChild(
+                resourcePacksDirectory, baseName + ".disabled", "disabled resource pack");
+
+        Path source = disabled ? enabledPath : disabledPath;
+        Path target = disabled ? disabledPath : enabledPath;
+        if (!Files.exists(source)) {
+            if (Files.exists(target)) {
+                return;
+            }
+            throw new IOException("资源包不存在: " + source);
+        }
+        if (Files.exists(target)) {
+            throw new IOException("目标资源包已存在: " + target);
+        }
+        move(source, target);
+    }
+
     /** 从本地 mod jar 读取图标；没有图标时返回空数组。 */
     public byte[] loadInstanceModIcon(Path gameDirectory, String instanceId, String fileName) {
         return InstanceModIconService.load(gameDirectory, instanceId, fileName);
@@ -1120,6 +1149,17 @@ public final class CAMLBackend implements AutoCloseable {
         }
         if (!value.toLowerCase(java.util.Locale.ROOT).endsWith(".jar")) {
             throw new IllegalArgumentException("不是有效的 Mod jar: " + fileName);
+        }
+        return value;
+    }
+
+    private static String normalizeResourcePackFileName(String fileName) {
+        String value = Objects.requireNonNull(fileName, "fileName").trim();
+        if (value.endsWith(".disabled")) {
+            value = value.substring(0, value.length() - ".disabled".length());
+        }
+        if (value.isBlank()) {
+            throw new IllegalArgumentException("资源包文件名不能为空");
         }
         return value;
     }

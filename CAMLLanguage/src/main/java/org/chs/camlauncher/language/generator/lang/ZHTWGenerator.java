@@ -355,6 +355,21 @@ public final class ZHTWGenerator extends LanguageTranslationGenerator {
         t.put("instances.manage.mods.updateFailed", "更新 Mod 失敗：%s");
         t.put("instances.manage.mods.enabled", "已啟用");
         t.put("instances.manage.mods.disabled", "已停用");
+        t.put("instances.manage.mods.pageTitle", "管理 Mod");
+        t.put("instances.manage.scanning", "正在讀取實例資訊...");
+        t.put("instances.manage.scanFailed", "讀取實例資訊失敗：%s");
+        t.put("instances.manage.summary", "共 %d 個 Mod，%d 個資源包");
+        t.put("instances.manage.manageMods", "管理 Mod");
+        t.put("instances.manage.manageResourcePacks", "管理資源包");
+        t.put("instances.manage.resourcePacks.pageTitle", "管理資源包");
+        t.put("instances.manage.resourcePacks.scanning", "正在讀取資源包列表...");
+        t.put("instances.manage.resourcePacks.count", "共 %d 個資源包");
+        t.put("instances.manage.resourcePacks.empty", "此實例沒有資源包");
+        t.put("instances.manage.resourcePacks.scanFailed", "讀取資源包列表失敗：%s");
+        t.put("instances.manage.resourcePacks.toggleFailed", "切換資源包狀態失敗：%s");
+        t.put("instances.manage.resourcePacks.enabled", "已啟用");
+        t.put("instances.manage.resourcePacks.disabled", "已停用");
+        t.put("instances.manage.resourcePacks.version", "版本：%s");
 
         // Mod 下載
         t.put("mods.nav", "模組");
@@ -418,6 +433,7 @@ public final class ZHTWGenerator extends LanguageTranslationGenerator {
         t.put("operation.openInstanceFolder", "開啟實例資料夾");
         t.put("operation.loadInstanceModIcon", "載入 Mod 圖示");
         t.put("operation.setModDisabled", "切換 Mod 狀態");
+        t.put("operation.setResourcePackDisabled", "切換資源包狀態");
         t.put("operation.checkModUpdates", "檢查 Mod 更新");
         t.put("operation.updateMod", "更新 Mod %s");
         t.put("operation.checkInstanceName", "檢查實例名稱");

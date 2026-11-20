@@ -6,6 +6,9 @@ import org.junit.jupiter.api.io.TempDir;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.charset.StandardCharsets;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -57,8 +60,45 @@ class InstanceInspectorTest {
     }
 
     @Test
+    void readsResourcePacksAndPackFormat() throws Exception {
+        Path game = root.resolve("game");
+        Path version = game.resolve("versions").resolve("1.21.4-test");
+        Path resourcePacks = version.resolve("resourcepacks");
+        Files.createDirectories(resourcePacks);
+        writeResourcePack(resourcePacks.resolve("Vanilla.zip"), 34);
+        writeResourcePack(resourcePacks.resolve("Old.zip.disabled"), 15);
+        Path folderPack = resourcePacks.resolve("FolderPack");
+        Files.createDirectories(folderPack);
+        Files.writeString(folderPack.resolve("pack.mcmeta"),
+                "{\"pack\":{\"pack_format\":22}}", StandardCharsets.UTF_8);
+        Files.writeString(resourcePacks.resolve("readme.txt"), "ignored");
+
+        InstanceDetails details = InstanceInspector.inspect(game, "1.21.4-test");
+
+        assertEquals(resourcePacks, details.resourcePacksDirectory());
+        assertEquals(3, details.resourcePackCount());
+        assertEquals("FolderPack", details.resourcePacks().get(0).fileName());
+        assertEquals("22", details.resourcePacks().get(0).version());
+        assertEquals("Old.zip", details.resourcePacks().get(1).fileName());
+        assertEquals("15", details.resourcePacks().get(1).version());
+        assertFalse(details.resourcePacks().get(1).enabled());
+        assertEquals("Vanilla.zip", details.resourcePacks().get(2).fileName());
+        assertEquals("34", details.resourcePacks().get(2).version());
+        assertTrue(details.resourcePacks().get(2).enabled());
+    }
+
+    @Test
     void rejectsInvalidInstanceId() {
         assertThrows(InstanceNameException.class,
                 () -> InstanceInspector.inspect(root.resolve("game"), "../escape"));
+    }
+
+    private static void writeResourcePack(Path path, int packFormat) throws Exception {
+        try (ZipOutputStream output = new ZipOutputStream(Files.newOutputStream(path))) {
+            output.putNextEntry(new ZipEntry("pack.mcmeta"));
+            output.write(("{\"pack\":{\"pack_format\":" + packFormat + "}}")
+                    .getBytes(StandardCharsets.UTF_8));
+            output.closeEntry();
+        }
     }
 }

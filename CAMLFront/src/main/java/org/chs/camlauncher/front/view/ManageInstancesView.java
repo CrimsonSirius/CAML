@@ -28,7 +28,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Locale;
 
-/** 管理实例二级页：显示实例 mods 列表并打开实例数据目录。 */
+/** 实例 Mod 管理页：显示实例 mods 列表并打开实例数据目录。 */
 final class ManageInstancesView extends VBox implements PageLifecycle {
     private final HomeController controller;
     private final Path gameDirectory;
@@ -58,7 +58,7 @@ final class ManageInstancesView extends VBox implements PageLifecycle {
 
         CamlButton backButton = ViewSupport.backButton(onBack);
 
-        Label title = new Label(UiText.tr("instances.manage.title"));
+        Label title = new Label(UiText.tr("instances.manage.mods.pageTitle"));
         title.getStyleClass().add("caml-headline-small");
 
         instanceLabel.getStyleClass().addAll("caml-body-medium", "caml-on-surface-muted");

@@ -348,6 +348,21 @@ public final class LALAGenerator extends LanguageTranslationGenerator {
         t.put("instances.manage.mods.updateFailed", "Modum renovare non potuit: %s");
         t.put("instances.manage.mods.enabled", "Activatus");
         t.put("instances.manage.mods.disabled", "Inactivatus");
+        t.put("instances.manage.mods.pageTitle", "Modos administrare");
+        t.put("instances.manage.scanning", "Informationes instantiae leguntur...");
+        t.put("instances.manage.scanFailed", "Informationes instantiae legi non potuerunt: %s");
+        t.put("instances.manage.summary", "Modi %d, fasciculi opum %d");
+        t.put("instances.manage.manageMods", "Modos administrare");
+        t.put("instances.manage.manageResourcePacks", "Fasciculos opum administrare");
+        t.put("instances.manage.resourcePacks.pageTitle", "Fasciculos opum administrare");
+        t.put("instances.manage.resourcePacks.scanning", "Index fasciculorum opum legitur...");
+        t.put("instances.manage.resourcePacks.count", "Fasciculi opum %d");
+        t.put("instances.manage.resourcePacks.empty", "Haec instantia fasciculos opum non habet");
+        t.put("instances.manage.resourcePacks.scanFailed", "Index fasciculorum opum legi non potuit: %s");
+        t.put("instances.manage.resourcePacks.toggleFailed", "Status fasciculi opum mutari non potuit: %s");
+        t.put("instances.manage.resourcePacks.enabled", "Activatus");
+        t.put("instances.manage.resourcePacks.disabled", "Inactivatus");
+        t.put("instances.manage.resourcePacks.version", "Versio: %s");
 
         // Deposita modorum
         t.put("mods.nav", "Modi");
@@ -411,6 +426,7 @@ public final class LALAGenerator extends LanguageTranslationGenerator {
         t.put("operation.openInstanceFolder", "Directorium instantiae aperire");
         t.put("operation.loadInstanceModIcon", "Iconem modi legere");
         t.put("operation.setModDisabled", "Statum modi mutare");
+        t.put("operation.setResourcePackDisabled", "Statum fasciculi opum mutare");
         t.put("operation.checkModUpdates", "Renovationes modorum inspicere");
         t.put("operation.updateMod", "Modum %s renovare");
         t.put("operation.checkInstanceName", "Nomen instantiae inspicere");

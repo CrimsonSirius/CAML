@@ -348,6 +348,21 @@ public final class KOKRGenerator extends LanguageTranslationGenerator {
         t.put("instances.manage.mods.updateFailed", "모드 업데이트에 실패했습니다: %s");
         t.put("instances.manage.mods.enabled", "사용");
         t.put("instances.manage.mods.disabled", "사용 안 함");
+        t.put("instances.manage.mods.pageTitle", "모드 관리");
+        t.put("instances.manage.scanning", "인스턴스 정보를 읽는 중...");
+        t.put("instances.manage.scanFailed", "인스턴스 정보를 읽지 못했습니다: %s");
+        t.put("instances.manage.summary", "모드 %d개, 리소스 팩 %d개");
+        t.put("instances.manage.manageMods", "모드 관리");
+        t.put("instances.manage.manageResourcePacks", "리소스 팩 관리");
+        t.put("instances.manage.resourcePacks.pageTitle", "리소스 팩 관리");
+        t.put("instances.manage.resourcePacks.scanning", "리소스 팩 목록을 읽는 중...");
+        t.put("instances.manage.resourcePacks.count", "리소스 팩 %d개");
+        t.put("instances.manage.resourcePacks.empty", "이 인스턴스에는 리소스 팩이 없습니다");
+        t.put("instances.manage.resourcePacks.scanFailed", "리소스 팩 목록을 읽지 못했습니다: %s");
+        t.put("instances.manage.resourcePacks.toggleFailed", "리소스 팩 상태를 변경하지 못했습니다: %s");
+        t.put("instances.manage.resourcePacks.enabled", "사용 중");
+        t.put("instances.manage.resourcePacks.disabled", "사용 안 함");
+        t.put("instances.manage.resourcePacks.version", "버전: %s");
 
         // 모드 다운로드
         t.put("mods.nav", "모드");
@@ -411,6 +426,7 @@ public final class KOKRGenerator extends LanguageTranslationGenerator {
         t.put("operation.openInstanceFolder", "인스턴스 폴더 열기");
         t.put("operation.loadInstanceModIcon", "모드 아이콘 불러오기");
         t.put("operation.setModDisabled", "모드 상태 전환");
+        t.put("operation.setResourcePackDisabled", "리소스 팩 상태 전환");
         t.put("operation.checkModUpdates", "모드 업데이트 확인");
         t.put("operation.updateMod", "모드 %s 업데이트");
         t.put("operation.checkInstanceName", "인스턴스 이름 확인");

@@ -348,6 +348,21 @@ public final class DEDEGenerator extends LanguageTranslationGenerator {
         t.put("instances.manage.mods.updateFailed", "Mod konnte nicht aktualisiert werden: %s");
         t.put("instances.manage.mods.enabled", "Aktiviert");
         t.put("instances.manage.mods.disabled", "Deaktiviert");
+        t.put("instances.manage.mods.pageTitle", "Mods verwalten");
+        t.put("instances.manage.scanning", "Instanzinformationen werden gelesen...");
+        t.put("instances.manage.scanFailed", "Instanzinformationen konnten nicht gelesen werden: %s");
+        t.put("instances.manage.summary", "%d Mods, %d Ressourcenpakete");
+        t.put("instances.manage.manageMods", "Mods verwalten");
+        t.put("instances.manage.manageResourcePacks", "Ressourcenpakete verwalten");
+        t.put("instances.manage.resourcePacks.pageTitle", "Ressourcenpakete verwalten");
+        t.put("instances.manage.resourcePacks.scanning", "Ressourcenpaketliste wird gelesen...");
+        t.put("instances.manage.resourcePacks.count", "%d Ressourcenpakete");
+        t.put("instances.manage.resourcePacks.empty", "Diese Instanz hat keine Ressourcenpakete");
+        t.put("instances.manage.resourcePacks.scanFailed", "Ressourcenpaketliste konnte nicht gelesen werden: %s");
+        t.put("instances.manage.resourcePacks.toggleFailed", "Status des Ressourcenpakets konnte nicht geändert werden: %s");
+        t.put("instances.manage.resourcePacks.enabled", "Aktiviert");
+        t.put("instances.manage.resourcePacks.disabled", "Deaktiviert");
+        t.put("instances.manage.resourcePacks.version", "Version: %s");
 
         // Mod-Downloads
         t.put("mods.nav", "Mods");
@@ -411,6 +426,7 @@ public final class DEDEGenerator extends LanguageTranslationGenerator {
         t.put("operation.openInstanceFolder", "Instanzordner öffnen");
         t.put("operation.loadInstanceModIcon", "Mod-Symbol laden");
         t.put("operation.setModDisabled", "Mod-Status ändern");
+        t.put("operation.setResourcePackDisabled", "Ressourcenpaketstatus ändern");
         t.put("operation.checkModUpdates", "Mod-Updates prüfen");
         t.put("operation.updateMod", "Mod %s aktualisieren");
         t.put("operation.checkInstanceName", "Instanznamen prüfen");

@@ -102,7 +102,7 @@
 | Mod 结果列表 | `CamlButton` 行 + `88px` 图标 + 行尾来源标签 + 随内容滚动的分页 |
 | Mod 详情 | 圆角卡 + 版本/加载器 `CamlComboBox` + 可折叠版本组 + `CamlButton` 下载 |
 | 浏览游戏实例 | outlined `CamlButton` → `InstancePickerView` |
-| 管理实例 | outlined `CamlButton` → `ManageInstancesView` |
+| 管理实例 | outlined `CamlButton` → `InstanceManagementView`；Mod / 资源包分别进入 `ManageInstancesView` / `InstanceResourcePackManagementView` |
 | 当前实例信息 | 圆角 `VBox`，三行标签 |
 | 游戏实例 | outlined `CamlButton` → `InstancePickerView` |
 | 离线用户名 | `CamlTextField` |

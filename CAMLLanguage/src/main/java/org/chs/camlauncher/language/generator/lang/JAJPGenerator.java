@@ -348,6 +348,21 @@ public final class JAJPGenerator extends LanguageTranslationGenerator {
         t.put("instances.manage.mods.updateFailed", "MOD の更新に失敗しました：%s");
         t.put("instances.manage.mods.enabled", "有効");
         t.put("instances.manage.mods.disabled", "無効");
+        t.put("instances.manage.mods.pageTitle", "Mod の管理");
+        t.put("instances.manage.scanning", "インスタンス情報を読み込み中...");
+        t.put("instances.manage.scanFailed", "インスタンス情報の読み込みに失敗しました：%s");
+        t.put("instances.manage.summary", "Mod %d 個、リソースパック %d 個");
+        t.put("instances.manage.manageMods", "Mod を管理");
+        t.put("instances.manage.manageResourcePacks", "リソースパックを管理");
+        t.put("instances.manage.resourcePacks.pageTitle", "リソースパックの管理");
+        t.put("instances.manage.resourcePacks.scanning", "リソースパック一覧を読み込み中...");
+        t.put("instances.manage.resourcePacks.count", "リソースパック %d 個");
+        t.put("instances.manage.resourcePacks.empty", "このインスタンスにはリソースパックがありません");
+        t.put("instances.manage.resourcePacks.scanFailed", "リソースパック一覧の読み込みに失敗しました：%s");
+        t.put("instances.manage.resourcePacks.toggleFailed", "リソースパックの状態変更に失敗しました：%s");
+        t.put("instances.manage.resourcePacks.enabled", "有効");
+        t.put("instances.manage.resourcePacks.disabled", "無効");
+        t.put("instances.manage.resourcePacks.version", "バージョン：%s");
 
         // MOD ダウンロード
         t.put("mods.nav", "MOD");
@@ -411,6 +426,7 @@ public final class JAJPGenerator extends LanguageTranslationGenerator {
         t.put("operation.openInstanceFolder", "インスタンスフォルダーを開く");
         t.put("operation.loadInstanceModIcon", "MOD アイコンを読み込む");
         t.put("operation.setModDisabled", "MOD の状態を切り替える");
+        t.put("operation.setResourcePackDisabled", "リソースパックの状態を切り替える");
         t.put("operation.checkModUpdates", "MOD の更新を確認");
         t.put("operation.updateMod", "MOD %s を更新");
         t.put("operation.checkInstanceName", "インスタンス名を確認");

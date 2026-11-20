@@ -348,6 +348,21 @@ public final class ENUSGenerator extends LanguageTranslationGenerator {
         t.put("instances.manage.mods.updateFailed", "Failed to update mod: %s");
         t.put("instances.manage.mods.enabled", "Enabled");
         t.put("instances.manage.mods.disabled", "Disabled");
+        t.put("instances.manage.mods.pageTitle", "Manage mods");
+        t.put("instances.manage.scanning", "Reading instance information...");
+        t.put("instances.manage.scanFailed", "Failed to read instance information: %s");
+        t.put("instances.manage.summary", "%d mods, %d resource packs");
+        t.put("instances.manage.manageMods", "Manage mods");
+        t.put("instances.manage.manageResourcePacks", "Manage resource packs");
+        t.put("instances.manage.resourcePacks.pageTitle", "Manage resource packs");
+        t.put("instances.manage.resourcePacks.scanning", "Reading resource pack list...");
+        t.put("instances.manage.resourcePacks.count", "%d resource packs");
+        t.put("instances.manage.resourcePacks.empty", "This instance has no resource packs");
+        t.put("instances.manage.resourcePacks.scanFailed", "Failed to read resource pack list: %s");
+        t.put("instances.manage.resourcePacks.toggleFailed", "Failed to toggle resource pack state: %s");
+        t.put("instances.manage.resourcePacks.enabled", "Enabled");
+        t.put("instances.manage.resourcePacks.disabled", "Disabled");
+        t.put("instances.manage.resourcePacks.version", "Version: %s");
 
         // Mod downloads
         t.put("mods.nav", "Mods");
@@ -411,6 +426,7 @@ public final class ENUSGenerator extends LanguageTranslationGenerator {
         t.put("operation.openInstanceFolder", "Open instance folder");
         t.put("operation.loadInstanceModIcon", "Load mod icon");
         t.put("operation.setModDisabled", "Toggle mod state");
+        t.put("operation.setResourcePackDisabled", "Toggle resource pack state");
         t.put("operation.checkModUpdates", "Check mod updates");
         t.put("operation.updateMod", "Update mod %s");
         t.put("operation.checkInstanceName", "Check instance name");
