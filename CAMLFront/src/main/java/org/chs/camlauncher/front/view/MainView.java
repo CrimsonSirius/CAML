@@ -17,9 +17,9 @@ import org.chs.camlauncher.front.controller.SettingsController;
 import org.chs.camlauncher.front.text.UiText;
 import org.chs.camlauncher.ui.control.CamlIcon;
 import org.chs.camlauncher.ui.control.CamlPageHost;
-import org.chs.camlauncher.ui.control.CamlSideNav;
-import org.chs.camlauncher.ui.control.CamlSideNavItem;
 import org.chs.camlauncher.ui.control.CamlTopBar;
+import org.chs.camlauncher.ui.control.CamlTopNav;
+import org.chs.camlauncher.ui.control.CamlTopNavItem;
 
 import java.nio.file.Path;
 import java.util.List;
@@ -43,8 +43,8 @@ public final class MainView extends BorderPane {
     private final DownloadsView downloadsView;
     private final SettingsView settingsView;
     private final CamlPageHost pageHost;
-    private CamlSideNav navigation;
-    private CamlSideNavItem settingsNavItem;
+    private CamlTopNav navigation;
+    private CamlTopNavItem settingsNavItem;
     private PageLifecycle activePage;
     private LanguageSelectionMode languageMode;
     private String language;
@@ -137,7 +137,6 @@ public final class MainView extends BorderPane {
         homeView.onShow();
 
         setTop(buildTopBar());
-        setLeft(buildNavigationRail());
         setCenter(pageHost);
         setBottom(buildFooter());
 
@@ -166,22 +165,19 @@ public final class MainView extends BorderPane {
     private CamlTopBar buildTopBar() {
         CamlTopBar bar = new CamlTopBar("CAML", UiText.tr("app.subtitle"));
         bar.getStyleClass().add("app-top-bar");
+        bar.addNavigation(buildTopNavigation());
         return bar;
     }
 
-    private CamlSideNav buildNavigationRail() {
-        navigation = new CamlSideNav();
-        navigation.getStyleClass().add("app-global-nav");
-        navigation.setMaxHeight(Double.MAX_VALUE);
-        CamlSideNavItem home = new CamlSideNavItem(
+    private CamlTopNav buildTopNavigation() {
+        navigation = new CamlTopNav();
+        navigation.getStyleClass().add("app-top-nav");
+        CamlTopNavItem home = navigation.addItem(
                 new CamlIcon(CamlIcon.Glyph.HOME), UiText.tr("nav.home"));
-        CamlSideNavItem downloads = new CamlSideNavItem(
+        CamlTopNavItem downloads = navigation.addItem(
                 new CamlIcon(CamlIcon.Glyph.DOWNLOAD), UiText.tr("nav.downloads"));
-        settingsNavItem = new CamlSideNavItem(
+        settingsNavItem = navigation.addItem(
                 new CamlIcon(CamlIcon.Glyph.SETTINGS), UiText.tr("nav.settings"));
-        navigation.addItem(home);
-        navigation.addItem(downloads);
-        navigation.addItem(settingsNavItem);
         navigation.select(home);
         navigation.selectedItemProperty().addListener((observable, oldValue, selected) -> {
             if (selected == home) {

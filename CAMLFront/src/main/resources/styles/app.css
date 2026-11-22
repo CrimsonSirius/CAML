@@ -21,22 +21,6 @@
     -fx-border-width: 0 0 1 0;
 }
 
-.app-global-nav {
-    -fx-background-color: -caml-surface-container;
-    -fx-padding: 1em 0.75em;
-    -fx-spacing: 0.25em;
-    -fx-pref-width: 10.75em;
-    -fx-min-width: 10em;
-    -fx-max-width: 12em;
-    -fx-border-color: transparent -caml-border-subtle transparent transparent;
-    -fx-border-width: 0 1 0 0;
-}
-
-.app-global-nav .caml-side-nav-item {
-    -fx-padding: 0.75em 1em;
-    -fx-min-height: 3em;
-}
-
 .app-settings-page {
     -fx-background-color: -caml-surface;
 }
