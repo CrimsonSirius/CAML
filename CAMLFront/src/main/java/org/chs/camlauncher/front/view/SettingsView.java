@@ -39,6 +39,7 @@ final class SettingsView extends VBox implements SidebarPage, PageLifecycle {
     private final CamlSideNavItem launcherItem;
     private final CamlSideNavItem accountItem;
     private final ScrollPane contentScroll = new ScrollPane();
+    private final Label saveErrorLabel = new Label();
     private final StackPane contentHost;
     private Node currentContent;
     private FadeTransition contentTransition;
@@ -96,7 +97,16 @@ final class SettingsView extends VBox implements SidebarPage, PageLifecycle {
         contentScroll.setContent(gameSettings);
         currentContent = gameSettings;
 
-        contentHost = new StackPane(contentScroll);
+        saveErrorLabel.getStyleClass().addAll("caml-body-small", "app-settings-save-error");
+        saveErrorLabel.setWrapText(true);
+        saveErrorLabel.setMaxWidth(Double.MAX_VALUE);
+        saveErrorLabel.setVisible(false);
+        saveErrorLabel.setManaged(false);
+        VBox contentColumn = new VBox(saveErrorLabel, contentScroll);
+        contentColumn.getStyleClass().add("app-settings-content-column");
+        VBox.setVgrow(contentScroll, Priority.ALWAYS);
+
+        contentHost = new StackPane(contentColumn);
         contentHost.getStyleClass().add("app-settings-content-host");
         contentHost.setAlignment(Pos.TOP_LEFT);
         contentHost.setMaxHeight(Double.MAX_VALUE);
@@ -129,6 +139,8 @@ final class SettingsView extends VBox implements SidebarPage, PageLifecycle {
         setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
         getStyleClass().add("app-settings-page");
         getChildren().add(body);
+        controller.setOnSaveFailed(this::showSaveError);
+        controller.setOnSaveSucceeded(this::clearSaveError);
     }
 
     void configureThemes(List<ThemeInfo> themes, ThemeInfo active, Consumer<ThemeInfo> onSelected) {
@@ -203,5 +215,16 @@ final class SettingsView extends VBox implements SidebarPage, PageLifecycle {
         next.setOpacity(1);
         contentScroll.setContent(next);
         contentScroll.setVvalue(0);
+    }
+
+    private void showSaveError(String message) {
+        saveErrorLabel.setText(message == null ? "" : message);
+        saveErrorLabel.setVisible(true);
+        saveErrorLabel.setManaged(true);
+    }
+
+    private void clearSaveError() {
+        saveErrorLabel.setVisible(false);
+        saveErrorLabel.setManaged(false);
     }
 }

@@ -95,6 +95,20 @@ class DownloadTelemetryTest {
     }
 
     @Test
+    void recordsCancellationWithoutMarkingFailure() {
+        DownloadTelemetry telemetry = new DownloadTelemetry();
+        telemetry.onStage(DownloadStage.of("version.downloadFiles"));
+
+        telemetry.markCancelled();
+
+        DownloadTelemetry.Snapshot snapshot = telemetry.snapshot();
+        assertTrue(snapshot.cancelled());
+        assertFalse(snapshot.failed());
+        assertFalse(snapshot.finished());
+        assertEquals(UiText.tr("download.progress.failedHint"), snapshot.currentStage());
+    }
+
+    @Test
     void accumulatesProgressAcrossDownloadPlans() {
         DownloadTelemetry telemetry = new DownloadTelemetry();
         telemetry.onSummary(new DownloadListener.DownloadSummary(0, 100, 0, 1));

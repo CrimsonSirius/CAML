@@ -38,6 +38,7 @@ final class DownloadTelemetry implements DownloadListener {
     private boolean hasPlanSummary;
     private boolean finished;
     private boolean failed;
+    private boolean cancelled;
     private String failureMessage = "";
 
     DownloadTelemetry() {
@@ -48,7 +49,7 @@ final class DownloadTelemetry implements DownloadListener {
     public void onProgress(DownloadProgress progress) {
         long now = System.nanoTime();
         synchronized (lock) {
-            if (finished || failed) {
+            if (finished || failed || cancelled) {
                 return;
             }
             currentFile = progress.label();
@@ -75,7 +76,7 @@ final class DownloadTelemetry implements DownloadListener {
     @Override
     public void onSummary(DownloadSummary summary) {
         synchronized (lock) {
-            if (finished || failed) {
+            if (finished || failed || cancelled) {
                 return;
             }
             if (hasPlanSummary && startsNewPlan(summary)) {
@@ -102,7 +103,7 @@ final class DownloadTelemetry implements DownloadListener {
             return;
         }
         synchronized (lock) {
-            if (finished || failed) {
+            if (finished || failed || cancelled) {
                 return;
             }
             if (stages.add(stage)) {
@@ -129,6 +130,7 @@ final class DownloadTelemetry implements DownloadListener {
             }
             finished = true;
             failed = false;
+            cancelled = false;
             currentFile = "";
             currentFileDownloaded = 0;
             currentFileTotal = 0;
@@ -144,15 +146,31 @@ final class DownloadTelemetry implements DownloadListener {
 
     void markFailed(String message) {
         synchronized (lock) {
-            if (finished || failed) {
+            if (finished || failed || cancelled) {
                 return;
             }
             failed = true;
+            cancelled = false;
             failureMessage = message == null ? UiText.tr("download.stage.unknownError") : message;
             currentFile = "";
             currentFileDownloaded = 0;
             currentFileTotal = 0;
             currentStage = UiText.tr("download.stage.failed");
+            stages.add(currentStage);
+            speedSamples.clear();
+        }
+    }
+
+    void markCancelled() {
+        synchronized (lock) {
+            if (finished || failed || cancelled) {
+                return;
+            }
+            cancelled = true;
+            currentFile = "";
+            currentFileDownloaded = 0;
+            currentFileTotal = 0;
+            currentStage = UiText.tr("download.progress.failedHint");
             stages.add(currentStage);
             speedSamples.clear();
         }
@@ -167,7 +185,7 @@ final class DownloadTelemetry implements DownloadListener {
             }
 
             long bytesPerSecond = 0;
-            if (!finished && !failed && !speedSamples.isEmpty()) {
+            if (!finished && !failed && !cancelled && !speedSamples.isEmpty()) {
                 long bytes = speedSamples.stream().mapToLong(SpeedSample::bytes).sum();
                 double seconds = Math.max(
                         MIN_SPEED_WINDOW_SECONDS,
@@ -189,6 +207,7 @@ final class DownloadTelemetry implements DownloadListener {
                     bytesPerSecond,
                     finished,
                     failed,
+                    cancelled,
                     failureMessage
             );
         }
@@ -215,6 +234,7 @@ final class DownloadTelemetry implements DownloadListener {
             long bytesPerSecond,
             boolean finished,
             boolean failed,
+            boolean cancelled,
             String failureMessage
     ) {
     }

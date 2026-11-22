@@ -2,6 +2,7 @@ package org.chs.camlauncher.front.controller;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.chs.camlauncher.backend.download.DownloadCancellationToken;
 import org.chs.camlauncher.backend.download.DownloadListener;
 import org.chs.camlauncher.backend.download.source.DownloadSourceFactory;
 import org.chs.camlauncher.backend.download.source.DownloadSourceMode;
@@ -214,11 +215,13 @@ public final class DownloadsController {
             String instanceId,
             Path gameDirectory,
             DownloadListener listener,
+            DownloadCancellationToken token,
             Runnable onSuccess,
             Consumer<String> onError) {
         Objects.requireNonNull(gameDirectory, "gameDirectory");
         return context.runDownload(UiText.tr("operation.installVanilla", instanceId),
-                () -> context.backend().installVersion(versionId, instanceId, gameDirectory, listener),
+                () -> context.backend().installVersion(
+                        versionId, instanceId, gameDirectory, listener, token),
                 installed -> {
                     LOGGER.info("官方原版实例安装完成: {} / {} -> {}",
                             instanceId, versionId, installed.gameDirectory());
@@ -253,6 +256,7 @@ public final class DownloadsController {
             FabricApiVersion apiVersion,
             Path gameDirectory,
             DownloadListener listener,
+            DownloadCancellationToken token,
             Runnable onSuccess,
             Consumer<String> onError) {
         Objects.requireNonNull(gameDirectory, "gameDirectory");
@@ -263,7 +267,8 @@ public final class DownloadsController {
                         loaderVersion,
                         apiVersion,
                         gameDirectory,
-                        listener
+                        listener,
+                        token
                 ),
                 installed -> {
                     LOGGER.info("Fabric 实例安装完成: {} / {} -> {}",
@@ -300,6 +305,7 @@ public final class DownloadsController {
             QuiltApiVersion apiVersion,
             Path gameDirectory,
             DownloadListener listener,
+            DownloadCancellationToken token,
             Runnable onSuccess,
             Consumer<String> onError) {
         Objects.requireNonNull(gameDirectory, "gameDirectory");
@@ -310,7 +316,8 @@ public final class DownloadsController {
                         loaderVersion,
                         apiVersion,
                         gameDirectory,
-                        listener
+                        listener,
+                        token
                 ),
                 installed -> {
                     LOGGER.info("Quilt 实例安装完成: {} / {} -> {}",
@@ -355,11 +362,12 @@ public final class DownloadsController {
             ForgeVersion version,
             Path gameDirectory,
             DownloadListener listener,
+            DownloadCancellationToken token,
             Runnable onSuccess,
             Consumer<String> onError) {
         return downloadExternalLoaderVersion("Forge", instanceId, gameDirectory,
                 () -> context.backend().installForgeVersion(gameVersion, instanceId, version,
-                        gameDirectory, listener),
+                        gameDirectory, listener, token),
                 onSuccess, onError);
     }
 
@@ -369,11 +377,12 @@ public final class DownloadsController {
             NeoForgeVersion version,
             Path gameDirectory,
             DownloadListener listener,
+            DownloadCancellationToken token,
             Runnable onSuccess,
             Consumer<String> onError) {
         return downloadExternalLoaderVersion("NeoForge", instanceId, gameDirectory,
                 () -> context.backend().installNeoForgeVersion(gameVersion, instanceId, version,
-                        gameDirectory, listener),
+                        gameDirectory, listener, token),
                 onSuccess, onError);
     }
 
@@ -384,12 +393,13 @@ public final class DownloadsController {
             OptiFineVersion optiFineVersion,
             Path gameDirectory,
             DownloadListener listener,
+            DownloadCancellationToken token,
             Runnable onSuccess,
             Consumer<String> onError) {
         return downloadExternalLoaderVersion("Forge + OptiFine", instanceId, gameDirectory,
                 () -> context.backend().installForgeOptiFineVersion(
                         gameVersion, instanceId, forgeVersion, optiFineVersion,
-                        gameDirectory, listener),
+                        gameDirectory, listener, token),
                 onSuccess, onError);
     }
 

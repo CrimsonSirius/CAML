@@ -259,12 +259,20 @@ final class ControllerContext {
     }
 
     void executeSettings(String operation, IoAction task) {
+        executeSettings(operation, task, null, null);
+    }
+
+    void executeSettings(String operation, IoAction task,
+                         Runnable onSuccess, Consumer<String> onError) {
         try {
             settingsExecutor.execute(() -> {
                 try {
                     task.run();
+                    if (onSuccess != null) {
+                        Platform.runLater(onSuccess);
+                    }
                 } catch (IOException | RuntimeException e) {
-                    reportError(operation, e, false, null);
+                    reportError(operation, e, false, onError);
                 }
             });
         } catch (RejectedExecutionException ignored) {

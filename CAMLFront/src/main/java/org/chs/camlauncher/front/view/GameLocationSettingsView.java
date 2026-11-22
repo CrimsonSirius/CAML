@@ -129,10 +129,12 @@ final class GameLocationSettingsView extends VBox {
                 showStatus(UiText.tr("settings.game.location.missing", path), true);
                 return;
             }
-            launchSettings.setGameDirectory(path);
-            controller.saveGameDirectoryAsync(path);
             pathField.setText(path.toString());
-            showStatus(UiText.tr("settings.game.location.saved"), false);
+            showStatus(UiText.tr("settings.game.location.notSaved"), false);
+            controller.saveGameDirectoryAsync(path, () -> {
+                launchSettings.setGameDirectory(path);
+                showStatus(UiText.tr("settings.game.location.saved"), false);
+            });
         }, message -> {
             saveButton.setDisable(false);
             showStatus(UiText.tr("settings.game.location.checkFailed", message), true);

@@ -417,8 +417,8 @@ final class AccountSettingsView extends VBox {
 
     private void setMicrosoftStatus(String message, boolean error) {
         microsoftStatus.setText(message == null ? "" : message);
-        microsoftStatus.getStyleClass().removeAll("field-hint", "field-error");
-        microsoftStatus.getStyleClass().add(error ? "field-error" : "field-hint");
+        microsoftStatus.getStyleClass().removeAll("field-hint", "field-hint-error");
+        microsoftStatus.getStyleClass().add(error ? "field-hint-error" : "field-hint");
     }
 
     // ------------------------------------------------------------------ 登录
@@ -604,8 +604,8 @@ final class AccountSettingsView extends VBox {
 
     private void showStatus(String message, boolean error) {
         statusLabel.setText(message == null ? "" : message);
-        statusLabel.getStyleClass().removeAll("field-hint", "field-error");
-        statusLabel.getStyleClass().add(error ? "field-error" : "field-hint");
+        statusLabel.getStyleClass().removeAll("field-hint", "field-hint-error");
+        statusLabel.getStyleClass().add(error ? "field-hint-error" : "field-hint");
     }
 
     /** 重新加载账号列表，供设置页重新显示该子页时调用。 */

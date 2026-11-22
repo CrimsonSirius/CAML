@@ -153,6 +153,8 @@ final class DownloadProgressView extends VBox implements PageLifecycle {
         if (snapshot.failed()) {
             stageLabel.setText(UiText.tr("download.progress.failed", snapshot.failureMessage()));
             stageLabel.getStyleClass().add("app-download-status-error");
+        } else if (snapshot.cancelled()) {
+            stageLabel.setText(UiText.tr("download.progress.failedHint"));
         } else if (snapshot.finished()) {
             stageLabel.setText(UiText.tr("download.progress.completed"));
             stageLabel.getStyleClass().add("app-download-status-success");
@@ -178,6 +180,10 @@ final class DownloadProgressView extends VBox implements PageLifecycle {
             return;
         }
         if (snapshot.failed()) {
+            progressDetail.setText(UiText.tr("download.progress.failedHint"));
+            return;
+        }
+        if (snapshot.cancelled()) {
             progressDetail.setText(UiText.tr("download.progress.failedHint"));
             return;
         }
@@ -234,8 +240,10 @@ final class DownloadProgressView extends VBox implements PageLifecycle {
             row.getStyleClass().removeAll(STAGE_STATE_CLASSES);
 
             boolean done = snapshot.finished() || index < currentIndex;
-            boolean active = !snapshot.finished() && !snapshot.failed() && index == currentIndex;
+            boolean active = !snapshot.finished() && !snapshot.failed()
+                    && !snapshot.cancelled() && index == currentIndex;
             boolean failed = snapshot.failed() && index == currentIndex;
+            boolean cancelled = snapshot.cancelled() && index == currentIndex;
             if (done) {
                 marker.setText("✓");
                 row.getStyleClass().add("app-download-stage-done");
@@ -245,6 +253,8 @@ final class DownloadProgressView extends VBox implements PageLifecycle {
             } else if (failed) {
                 marker.setText("!");
                 row.getStyleClass().add("app-download-stage-failed");
+            } else if (cancelled) {
+                marker.setText("×");
             } else {
                 marker.setText("○");
             }

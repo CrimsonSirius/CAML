@@ -218,7 +218,7 @@
     -fx-min-height: 3em;
     -fx-background-color: -caml-surface-container;
     -fx-background-radius: 0.5em 0.5em 0 0;
-    -fx-border-color: transparent transparent -caml-border-subtle transparent;
+    -fx-border-color: transparent transparent -caml-border transparent;
     -fx-border-width: 0 0 1 0;
     -fx-text-fill: -caml-on-surface;
     -fx-prompt-text-fill: -caml-on-surface-muted;
@@ -242,7 +242,7 @@
     -fx-min-height: 2.75em;
     -fx-background-color: -caml-surface-container;
     -fx-background-radius: 0.5em;
-    -fx-border-color: -caml-border-subtle;
+    -fx-border-color: -caml-border;
     -fx-border-width: 1;
     -fx-border-radius: 0.5em;
     -fx-padding: 0.125em 0.25em;
@@ -307,7 +307,7 @@
     -fx-min-height: 2.5em;
     -fx-background-color: -caml-surface-highest;
     -fx-background-radius: 0.25em;
-    -fx-border-color: -caml-border-subtle;
+    -fx-border-color: -caml-border;
     -fx-border-radius: 0.25em;
 }
 
@@ -337,7 +337,7 @@
     -fx-min-height: 13.333333em;
     -fx-background-color: -caml-surface-lowest;
     -fx-background-radius: 0.333333em;
-    -fx-border-color: -caml-border-subtle;
+    -fx-border-color: -caml-border;
     -fx-border-width: 1;
     -fx-border-radius: 0.333333em;
     -fx-text-fill: -caml-on-surface;
