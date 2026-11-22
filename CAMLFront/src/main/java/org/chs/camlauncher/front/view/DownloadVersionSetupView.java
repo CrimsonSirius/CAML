@@ -21,7 +21,7 @@ import org.chs.camlauncher.backend.loader.quilt.QuiltApiVersion;
 import org.chs.camlauncher.backend.loader.quilt.QuiltLoaderVersion;
 import org.chs.camlauncher.backend.metadata.model.VersionManifest;
 import org.chs.camlauncher.front.controller.DownloadsController;
-import org.chs.camlauncher.front.controller.FrontTask;
+import org.chs.camlauncher.front.task.AsyncTaskHandle;
 import org.chs.camlauncher.front.text.UiText;
 import org.chs.camlauncher.ui.control.CamlButton;
 import org.chs.camlauncher.ui.control.CamlComboBox;
@@ -55,8 +55,8 @@ final class DownloadVersionSetupView extends VBox implements PageLifecycle {
     private String lastAutoName;
     private String availableInstanceName = "";
     private int instanceNameCheckGeneration;
-    private final List<FrontTask<?>> loaderTasks = new ArrayList<>();
-    private FrontTask<?> instanceNameTask;
+    private final List<AsyncTaskHandle<?>> loaderTasks = new ArrayList<>();
+    private AsyncTaskHandle<?> instanceNameTask;
     private boolean disposed;
 
     DownloadVersionSetupView(VersionManifest.Version version, DownloadsController controller,
@@ -515,7 +515,7 @@ final class DownloadVersionSetupView extends VBox implements PageLifecycle {
     }
 
     private void cancelLoaderTasks() {
-        for (FrontTask<?> task : loaderTasks) {
+        for (AsyncTaskHandle<?> task : loaderTasks) {
             task.cancel();
         }
         loaderTasks.clear();

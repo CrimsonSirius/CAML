@@ -1,4 +1,4 @@
-package org.chs.camlauncher.front.controller;
+package org.chs.camlauncher.front.task;
 
 import org.junit.jupiter.api.Test;
 
@@ -8,12 +8,12 @@ import java.util.concurrent.FutureTask;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-class FrontTaskTest {
+class AsyncTaskHandleTest {
     @Test
     void cancelsRunningTaskAndCompletion() {
         CompletableFuture<String> completion = new CompletableFuture<>();
         FutureTask<Void> running = new FutureTask<>(() -> null);
-        FrontTask<String> task = new FrontTask<>(completion, running);
+        AsyncTaskHandle<String> task = new AsyncTaskHandle<>(completion, running);
 
         assertFalse(task.isDone());
         assertTrue(task.cancel());
@@ -26,7 +26,7 @@ class FrontTaskTest {
     void cannotCancelCompletedTask() {
         CompletableFuture<String> completion = new CompletableFuture<>();
         FutureTask<Void> running = new FutureTask<>(() -> null);
-        FrontTask<String> task = new FrontTask<>(completion, running);
+        AsyncTaskHandle<String> task = new AsyncTaskHandle<>(completion, running);
         completion.complete("done");
 
         assertTrue(task.isDone());

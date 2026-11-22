@@ -385,6 +385,14 @@ public final class CAMLBackend implements AutoCloseable {
         settingsService.setGameDirectory(directory);
     }
 
+    public Optional<WindowState> savedWindowState() throws IOException {
+        return settingsService.windowState();
+    }
+
+    public void saveWindowState(WindowState state) throws IOException {
+        settingsService.setWindowState(state);
+    }
+
     public VersionIsolationMode versionIsolationMode() throws IOException {
         return settingsService.versionIsolationMode();
     }
@@ -599,7 +607,20 @@ public final class CAMLBackend implements AutoCloseable {
             VersionIsolationMode isolationMode,
             DownloadListener listener
     ) throws IOException, InterruptedException {
-        return modService.download(file, gameDirectory, instanceId, isolationMode, listener);
+        return downloadMod(file, gameDirectory, instanceId, isolationMode, listener,
+                new DownloadCancellationToken());
+    }
+
+    public ModDownloadResult downloadMod(
+            ModFile file,
+            Path gameDirectory,
+            String instanceId,
+            VersionIsolationMode isolationMode,
+            DownloadListener listener,
+            DownloadCancellationToken token
+    ) throws IOException, InterruptedException {
+        return modService.download(file, ModContentType.MOD, gameDirectory, instanceId,
+                isolationMode, listener, token);
     }
 
     public ModDownloadResult downloadContent(
@@ -610,7 +631,20 @@ public final class CAMLBackend implements AutoCloseable {
             VersionIsolationMode isolationMode,
             DownloadListener listener
     ) throws IOException, InterruptedException {
-        return modService.download(file, type, gameDirectory, instanceId, isolationMode, listener);
+        return downloadContent(type, file, gameDirectory, instanceId, isolationMode, listener,
+                new DownloadCancellationToken());
+    }
+
+    public ModDownloadResult downloadContent(
+            ModContentType type,
+            ModFile file,
+            Path gameDirectory,
+            String instanceId,
+            VersionIsolationMode isolationMode,
+            DownloadListener listener,
+            DownloadCancellationToken token
+    ) throws IOException, InterruptedException {
+        return modService.download(file, type, gameDirectory, instanceId, isolationMode, listener, token);
     }
 
     public boolean curseForgeConfigured() {

@@ -1,5 +1,6 @@
 package org.chs.camlauncher.backend.settings;
 
+import org.chs.camlauncher.backend.api.WindowState;
 import org.chs.camlauncher.backend.instance.VersionIsolationMode;
 import org.chs.camlauncher.backend.download.source.DownloadSourceMode;
 import org.chs.camlauncher.backend.runtime.JavaSelectionMode;
@@ -325,6 +326,28 @@ class SettingsServiceTest {
         assertTrue(service.autoGameLanguage());
         service.setAutoGameLanguage(false);
         assertFalse(new SettingsService(dataDirectory).autoGameLanguage());
+    }
+
+    @Test
+    void persistsWindowState() throws Exception {
+        SettingsService service = new SettingsService(dataDirectory);
+
+        service.setWindowState(new WindowState(120, 80, 1280, 720, true));
+
+        WindowState loaded = new SettingsService(dataDirectory).windowState().orElseThrow();
+        assertEquals(120, loaded.x());
+        assertEquals(80, loaded.y());
+        assertEquals(1280, loaded.width());
+        assertEquals(720, loaded.height());
+        assertTrue(loaded.maximized());
+    }
+
+    @Test
+    void ignoresInvalidWindowState() throws Exception {
+        Files.writeString(dataDirectory.resolve("settings.properties"),
+                "windowX=bad\nwindowY=80\nwindowWidth=1280\nwindowHeight=720\n");
+
+        assertTrue(new SettingsService(dataDirectory).windowState().isEmpty());
     }
 
     @Test

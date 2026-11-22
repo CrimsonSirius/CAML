@@ -461,6 +461,7 @@ public final class BOCNGenerator extends LanguageTranslationGenerator {
         t.put("operation.saveMaxMemory", "དྲན་ཤེས་མང་ཤོས་ཀྱི་སྒྲིག་བཀོད་ཉར་ཚགས");
         t.put("operation.saveJvmArguments", "JVM ཚད་སྒྲིག་ཉར་ཚགས");
         t.put("operation.saveGameDirectory", "རྩེད་མོའི་སྣེའུ་ཉར་ཚགས");
+        t.put("operation.saveWindowState", "སྒེའུ་ཁུང་གི་གནས་ཚུལ་ཉར་ཚགས");
         t.put("operation.saveVersionIsolation", "པར་གཞི་ལོགས་བཀར་གྱི་སྒྲིག་བཀོད་ཉར་ཚགས");
         t.put("operation.saveAutoGameLanguage", "རྩེད་མོའི་སྐད་ཡིག་རང་བཞིན་སྒྲིག་བཀོད་ཉར་ཚགས");
         t.put("operation.saveDownloadConcurrency", "ཕབ་ལེན་མཉམ་སྒྲུབ་ཨང་གྲངས་ཉར་ཚགས");

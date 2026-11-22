@@ -10,8 +10,8 @@ import javafx.scene.layout.VBox;
 
 /** CAML 顶部栏。 */
 public final class CamlTopBar extends HBox {
-    private final HBox actions = new HBox(8);
-    private final HBox navigation = new HBox(4);
+    private final HBox actions = new HBox();
+    private final HBox navigation = new HBox();
 
     public CamlTopBar(String title) {
         this(title, null);
@@ -20,12 +20,12 @@ public final class CamlTopBar extends HBox {
     public CamlTopBar(String title, String subtitle) {
         getStyleClass().add("caml-top-bar");
         setAlignment(Pos.CENTER_LEFT);
-        setSpacing(16);
 
         Label titleLabel = new Label(title);
         titleLabel.getStyleClass().add("caml-title-large");
 
-        VBox titles = new VBox(2, titleLabel);
+        VBox titles = new VBox(titleLabel);
+        titles.getStyleClass().add("caml-top-bar-titles");
         if (subtitle != null && !subtitle.isBlank()) {
             Label subtitleLabel = new Label(subtitle);
             subtitleLabel.getStyleClass().addAll("caml-body-small", "caml-on-surface-muted");
@@ -34,6 +34,8 @@ public final class CamlTopBar extends HBox {
 
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
+        actions.getStyleClass().add("caml-top-bar-actions");
+        navigation.getStyleClass().add("caml-top-bar-navigation");
         actions.setAlignment(Pos.CENTER_RIGHT);
         navigation.setAlignment(Pos.CENTER_LEFT);
         getChildren().addAll(titles, navigation, spacer, actions);

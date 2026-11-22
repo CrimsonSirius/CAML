@@ -24,7 +24,7 @@ import org.chs.camlauncher.backend.mod.model.ModSearchPage;
 import org.chs.camlauncher.backend.mod.model.ModSearchQuery;
 import org.chs.camlauncher.backend.mod.model.ModSource;
 import org.chs.camlauncher.front.controller.DownloadsController;
-import org.chs.camlauncher.front.controller.FrontTask;
+import org.chs.camlauncher.front.task.AsyncTaskHandle;
 import org.chs.camlauncher.front.text.UiText;
 import org.chs.camlauncher.ui.control.CamlButton;
 import org.chs.camlauncher.ui.control.CamlComboBox;
@@ -82,9 +82,9 @@ final class ModSearchView extends VBox implements PageLifecycle {
     private boolean hasNext;
     private boolean loading;
     private boolean disposed;
-    private FrontTask<ModSearchPage> loadTask;
-    private final List<FrontTask<byte[]>> iconTasks = new ArrayList<>();
-    private final List<FrontTask<byte[]>> iconRetryTasks = new ArrayList<>();
+    private AsyncTaskHandle<ModSearchPage> loadTask;
+    private final List<AsyncTaskHandle<byte[]>> iconTasks = new ArrayList<>();
+    private final List<AsyncTaskHandle<byte[]>> iconRetryTasks = new ArrayList<>();
     private final List<PauseTransition> iconTimeouts = new ArrayList<>();
     private long iconGeneration;
 
@@ -94,7 +94,6 @@ final class ModSearchView extends VBox implements PageLifecycle {
         this.type = type;
         this.onProjectSelected = onProjectSelected;
         getStyleClass().add("app-download-content");
-        setFocusTraversable(true);
         setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
 
         statusLabel.setText(text("search.loading"));
@@ -431,7 +430,7 @@ final class ModSearchView extends VBox implements PageLifecycle {
 
     private void startIcon(IconBatch batch, int index) {
         IconTarget target = batch.targets.get(index);
-        FrontTask<byte[]> task = controller.loadModIcon(target.url(),
+        AsyncTaskHandle<byte[]> task = controller.loadModIcon(target.url(),
                 bytes -> settleIcon(batch, index, bytes),
                 ignored -> onIconFailed(batch, index));
         batch.tasks.put(index, task);
@@ -443,7 +442,7 @@ final class ModSearchView extends VBox implements PageLifecycle {
             if (!isCurrent(batch.generation) || batch.settled.contains(index)) {
                 return;
             }
-            FrontTask<byte[]> running = batch.tasks.remove(index);
+            AsyncTaskHandle<byte[]> running = batch.tasks.remove(index);
             if (running != null) {
                 running.cancel();
             }
@@ -488,7 +487,7 @@ final class ModSearchView extends VBox implements PageLifecycle {
             return;
         }
         IconTarget target = batch.targets.get(index);
-        FrontTask<byte[]> task = controller.retryModIcon(
+        AsyncTaskHandle<byte[]> task = controller.retryModIcon(
                 target.url(),
                 ICON_RETRY_DELAY_MILLIS,
                 bytes -> onIconRetryLoaded(batch, index, bytes),
@@ -509,11 +508,11 @@ final class ModSearchView extends VBox implements PageLifecycle {
     }
 
     private void cancelIconTasks() {
-        for (FrontTask<byte[]> task : iconTasks) {
+        for (AsyncTaskHandle<byte[]> task : iconTasks) {
             task.cancel();
         }
         iconTasks.clear();
-        for (FrontTask<byte[]> task : iconRetryTasks) {
+        for (AsyncTaskHandle<byte[]> task : iconRetryTasks) {
             task.cancel();
         }
         iconRetryTasks.clear();
@@ -574,12 +573,12 @@ final class ModSearchView extends VBox implements PageLifecycle {
         nextButton.setDisable(disabled || !hasNext);
     }
 
-    /** 避免被禁用的分页/搜索按钮把焦点弹回顶部导航，触发导航项的焦点发光。 */
+    /** 把焦点移到仍可用的名称输入框，避免焦点留在即将被禁用的控件上。 */
     private void releaseFocusBeforeDisabling() {
         if (searchButton.isFocused() || resetButton.isFocused()
                 || sourceBox.isFocused() || loaderBox.isFocused()
                 || previousButton.isFocused() || nextButton.isFocused()) {
-            requestFocus();
+            queryField.requestFocus();
         }
     }
 
@@ -624,7 +623,7 @@ final class ModSearchView extends VBox implements PageLifecycle {
         private final List<IconTarget> targets;
         private final long generation;
         private final Map<Integer, byte[]> completed = new HashMap<>();
-        private final Map<Integer, FrontTask<byte[]>> tasks = new HashMap<>();
+        private final Map<Integer, AsyncTaskHandle<byte[]>> tasks = new HashMap<>();
         private final Map<Integer, PauseTransition> timeouts = new HashMap<>();
         private final Set<Integer> settled = new HashSet<>();
         private final int[] nextToDisplay = {0};

@@ -461,6 +461,7 @@ public final class DEDEGenerator extends LanguageTranslationGenerator {
         t.put("operation.saveMaxMemory", "Maximalen Arbeitsspeicher speichern");
         t.put("operation.saveJvmArguments", "JVM-Argumente speichern");
         t.put("operation.saveGameDirectory", "Spielverzeichnis speichern");
+        t.put("operation.saveWindowState", "Fensterstatus speichern");
         t.put("operation.saveVersionIsolation", "Versionsisolierung speichern");
         t.put("operation.saveAutoGameLanguage", "Automatische Spielsprache speichern");
         t.put("operation.saveDownloadConcurrency", "Download-Parallelität speichern");

@@ -33,8 +33,8 @@ final class WorkspaceLayout {
     private static final double WIDE_LOG_AREA_PREF_HEIGHT = 460;
     private static final double COMPACT_LOG_AREA_PREF_HEIGHT = 260;
     /** 分隔条位置：宽屏表单略宽于日志，堆叠时表单约占六成高度。 */
-    private static final double WIDE_DIVIDER_POSITION = 0.56;
-    private static final double COMPACT_DIVIDER_POSITION = 0.62;
+    private static final double WIDE_DIVIDER_POSITION = 0.68;
+    private static final double COMPACT_DIVIDER_POSITION = 0.64;
 
     /** 首帧宽度和缩放尚未确定时使用的宽屏规则。 */
     static final Plan WIDE = plan(COMPACT_BREAKPOINT, UiScale.DEFAULT_FACTOR);

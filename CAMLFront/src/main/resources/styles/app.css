@@ -13,6 +13,14 @@
     -fx-background-color: -caml-background;
 }
 
+/* 应用壳层 */
+.app-top-bar {
+    -fx-background-color: -caml-surface;
+    -fx-padding: 0.75em 2em;
+    -fx-border-color: transparent transparent -caml-border-subtle transparent;
+    -fx-border-width: 0 0 1 0;
+}
+
 .app-settings-page {
     -fx-background-color: -caml-surface;
 }
@@ -112,7 +120,7 @@
 .app-download-concurrency-value {
     -fx-font-size: 1em;
     -fx-font-weight: bold;
-    -fx-text-fill: -caml-accent-text;
+    -fx-text-fill: -caml-on-surface;
     -fx-padding: 0 0 0.25em 0;
 }
 
@@ -123,9 +131,38 @@
 }
 
 .app-download-progress-heading {
-    -fx-font-size: 1.875em;
+    -fx-font-size: 1.5em;
     -fx-font-weight: bold;
     -fx-text-fill: -caml-on-surface;
+}
+
+.app-download-task-bar {
+    -fx-background-color: -caml-surface-container;
+    -fx-border-color: transparent transparent -caml-border-subtle transparent;
+    -fx-border-width: 0 0 1 0;
+    -fx-padding: 0.75em 2.5em;
+    -fx-spacing: 0.75em;
+}
+
+.app-download-task-title {
+    -fx-font-size: 0.875em;
+    -fx-font-weight: bold;
+    -fx-text-fill: -caml-on-surface;
+}
+
+.app-download-task-row {
+    -fx-spacing: 0.75em;
+    -fx-alignment: center-left;
+}
+
+.app-download-task-text {
+    -fx-spacing: 0.125em;
+}
+
+.app-download-task-progress {
+    -fx-min-width: 6em;
+    -fx-pref-width: 12em;
+    -fx-max-width: 12em;
 }
 
 /* 模组页卡片的几何由 ModDownloadLayout 给出；这里的内边距与它的 CARD_PADDING 相同，
@@ -140,7 +177,7 @@
 }
 
 .app-download-card-title {
-    -fx-font-size: 1.125em;
+    -fx-font-size: 1em;
     -fx-font-weight: bold;
     -fx-text-fill: -caml-on-surface;
 }
@@ -151,7 +188,7 @@
 }
 
 .app-download-speed-value {
-    -fx-font-size: 2.5em;
+    -fx-font-size: 2em;
     -fx-font-weight: bold;
     -fx-text-fill: -caml-accent-text;
 }
@@ -215,7 +252,7 @@
 
 .app-sidebar,
 .app-settings-sidebar {
-    -fx-background-color: transparent;
+    -fx-background-color: -caml-surface;
     -fx-border-color: transparent -caml-border-subtle transparent transparent;
     -fx-border-width: 0 1 0 0;
 }
@@ -236,13 +273,20 @@
     -fx-padding: 0.625em 1em;
 }
 
-.app-settings-body {
-    -fx-padding: 0;
-    -fx-spacing: 1.5em;
-}
-
 .app-settings-content-host {
     -fx-padding: 2em 2.5em;
+    -fx-max-width: 100em;
+}
+
+.app-settings-content-column {
+    -fx-spacing: 0.75em;
+}
+
+.app-settings-save-error {
+    -fx-background-color: -caml-danger-container;
+    -fx-text-fill: -caml-on-danger-container;
+    -fx-background-radius: 0.5em;
+    -fx-padding: 0.5em 0.75em;
 }
 
 .app-settings-content {
@@ -250,15 +294,21 @@
     -fx-spacing: 1.25em;
 }
 
-/* 分组内部统一使用 1em 间距（设计值 16px），标题、说明、选项列表和辅助文字因此等比缩放。 */
+/* 设置页使用扁平分组卡：有清晰边界，但不加阴影，避免卡片过重。 */
 .app-settings-group {
     -fx-background-color: -caml-surface-low;
     -fx-background-radius: 0.75em;
     -fx-border-color: -caml-border-subtle;
     -fx-border-width: 1;
     -fx-border-radius: 0.75em;
-    -fx-padding: 1.5em;
-    -fx-spacing: 1em;
+    -fx-padding: 1.25em;
+    -fx-spacing: 0.875em;
+}
+
+.app-settings-group-title {
+    -fx-font-size: 1.0625em;
+    -fx-font-weight: bold;
+    -fx-text-fill: -caml-on-surface;
 }
 
 /* 分组内部的间距梯度：选项列表 12px、滑块块 10px、单选行 18px、工具按钮行与字段行 8~10px。 */
@@ -271,7 +321,102 @@
 }
 
 .app-settings-row {
-    -fx-spacing: 1.125em;
+    -fx-spacing: 0.75em;
+}
+
+/* 账号列表 */
+.app-account-list {
+    -fx-spacing: 0;
+}
+
+.app-account-row {
+    -fx-spacing: 0.875em;
+    -fx-padding: 0.75em 0;
+    -fx-border-color: transparent transparent -caml-border-subtle transparent;
+    -fx-border-width: 0 0 1 0;
+}
+
+.app-account-avatar {
+    -fx-min-width: 2.5em;
+    -fx-min-height: 2.5em;
+    -fx-pref-width: 2.5em;
+    -fx-pref-height: 2.5em;
+    -fx-max-width: 2.5em;
+    -fx-max-height: 2.5em;
+    -fx-background-radius: 100;
+}
+
+.app-account-avatar-offline {
+    -fx-background-color: -caml-surface-high;
+}
+
+.app-account-avatar-yggdrasil {
+    -fx-background-color: -caml-neutral-container;
+}
+
+.app-account-avatar-microsoft {
+    -fx-background-color: -caml-accent-container;
+}
+
+.app-account-avatar-text {
+    -fx-font-size: 1em;
+    -fx-font-weight: bold;
+    -fx-text-fill: -caml-on-surface;
+}
+
+.app-account-avatar-yggdrasil .app-account-avatar-text {
+    -fx-text-fill: -caml-on-neutral-container;
+}
+
+.app-account-avatar-microsoft .app-account-avatar-text {
+    -fx-text-fill: -caml-on-accent-container;
+}
+
+.app-account-info {
+    -fx-spacing: 0.15em;
+}
+
+.app-account-name {
+    -fx-font-size: 1em;
+    -fx-font-weight: bold;
+    -fx-text-fill: -caml-on-surface;
+}
+
+.app-account-meta {
+    -fx-font-size: 0.75em;
+    -fx-text-fill: -caml-on-surface-muted;
+}
+
+.app-account-meta-error {
+    -fx-text-fill: -caml-danger;
+}
+
+.app-account-controls {
+    -fx-spacing: 0.5em;
+}
+
+.app-account-profile {
+    -fx-pref-width: 10.5em;
+    -fx-max-width: 10.5em;
+}
+
+.app-destructive-action {
+    -fx-text-fill: -caml-danger;
+    -fx-border-color: -caml-danger-container;
+}
+
+.app-destructive-action:hover {
+    -fx-background-color: -caml-danger-container;
+}
+
+.app-empty-state {
+    -fx-padding: 1.5em 1em;
+    -fx-alignment: center-left;
+    -fx-background-color: -caml-surface-low;
+    -fx-background-radius: 0.75em;
+    -fx-border-color: -caml-border-subtle;
+    -fx-border-width: 1;
+    -fx-border-radius: 0.75em;
 }
 
 .app-settings-inline {
@@ -342,11 +487,34 @@
 }
 
 .app-instance-item:hover {
-    -fx-background-color: -caml-accent-container;
+    -fx-background-color: -caml-surface-high;
 }
 
 .app-instance-item:pressed {
-    -fx-background-color: derive(-caml-accent-container, -6%);
+    -fx-background-color: -caml-surface-highest;
+}
+
+.app-instance-row {
+    -fx-font-size: 1em;
+    -fx-min-height: 3.25em;
+    -fx-padding: 0.75em 1em;
+    -fx-background-color: -caml-surface-low;
+    -fx-border-color: -caml-border-subtle;
+    -fx-border-radius: 0.625em;
+    -fx-background-radius: 0.625em;
+    -fx-text-fill: -caml-on-surface;
+}
+
+.app-instance-row .caml-icon-fill {
+    -fx-fill: -caml-on-surface-muted;
+}
+
+.app-instance-row .caml-icon-stroke {
+    -fx-stroke: -caml-on-surface-muted;
+}
+
+.app-instance-row:hover {
+    -fx-background-color: -caml-surface-high;
 }
 
 .app-instance-info-group {
@@ -362,6 +530,54 @@
     -fx-text-fill: -caml-on-surface;
     -fx-font-size: 1.25em;
     -fx-font-weight: bold;
+}
+
+/* 主页当前实例 Hero */
+.app-home-hero {
+    -fx-background-color: -caml-surface-low;
+    -fx-background-radius: 1em;
+    -fx-border-color: -caml-border-subtle;
+    -fx-border-width: 1;
+    -fx-border-radius: 1em;
+    -fx-padding: 1.25em;
+}
+
+.app-home-hero-header {
+    -fx-spacing: 1em;
+}
+
+.app-home-hero-icon {
+    -fx-min-width: 4em;
+    -fx-min-height: 4em;
+    -fx-pref-width: 4em;
+    -fx-pref-height: 4em;
+    -fx-max-width: 4em;
+    -fx-max-height: 4em;
+    -fx-background-color: -caml-accent-container;
+    -fx-background-radius: 0.875em;
+}
+
+.app-home-hero-icon .caml-icon-fill {
+    -fx-fill: -caml-on-accent-container;
+}
+
+.app-home-hero-copy {
+    -fx-spacing: 0.35em;
+}
+
+.app-home-instance-title {
+    -fx-font-size: 1.5em;
+    -fx-font-weight: bold;
+    -fx-text-fill: -caml-on-surface;
+}
+
+.app-home-meta {
+    -fx-font-size: 0.875em;
+}
+
+.app-launch-button {
+    -fx-font-size: 1em;
+    -fx-min-height: 3em;
 }
 
 .app-instance-info-detail {
@@ -410,8 +626,37 @@
 
 .app-log-pane {
     -fx-background-color: -caml-surface-container;
-    -fx-padding: 2em;
-    -fx-spacing: 1em;
+    -fx-padding: 1.5em;
+    -fx-spacing: 0.75em;
+    -fx-background-radius: 1em;
+}
+
+.app-log-header {
+    -fx-spacing: 0.75em;
+}
+
+.app-log-toggle {
+    -fx-font-size: 0.75em;
+    -fx-padding: 0.35em 0.65em;
+    -fx-min-height: 2.25em;
+}
+
+.app-log-preview {
+    -fx-background-color: -caml-surface-lowest;
+    -fx-background-radius: 0.5em;
+    -fx-border-color: -caml-border-subtle;
+    -fx-border-width: 1;
+    -fx-border-radius: 0.5em;
+    -fx-padding: 0.75em 1em;
+    -fx-font-family: "Monospaced";
+    -fx-font-size: 0.75em;
+    -fx-text-fill: -caml-on-surface-muted;
+    -fx-max-height: 9em;
+}
+
+.app-download-version-main {
+    -fx-spacing: 0.625em;
+    -fx-alignment: center-left;
 }
 
 /* 日志文本区的高度由 MainView 按断点设置：CSS 声明会覆盖代码设置，因此此处不写 -fx-min-height / -fx-pref-height。 */
@@ -468,11 +713,11 @@
 }
 
 .app-mod-item:hover {
-    -fx-background-color: -caml-accent-container;
+    -fx-background-color: -caml-surface-high;
 }
 
 .app-mod-item:pressed {
-    -fx-background-color: derive(-caml-accent-container, -6%);
+    -fx-background-color: -caml-surface-highest;
 }
 
 .app-mod-accent {
@@ -499,14 +744,14 @@
 
 .app-mod-title,
 .app-mod-detail-title {
-    -fx-font-size: 1.25em;
+    -fx-font-size: 1.125em;
     -fx-font-weight: bold;
     -fx-text-fill: -caml-on-surface;
 }
 
 .app-mod-source {
     -fx-font-size: 0.9375em;
-    -fx-text-fill: -caml-accent-text;
+    -fx-text-fill: -caml-on-surface-muted;
 }
 
 .app-mod-summary {
@@ -693,6 +938,10 @@
 .app-instance-mod-toggle:selected {
     -fx-background-color: -caml-accent-container;
     -fx-text-fill: -caml-on-accent-container;
+}
+
+.app-instance-mod-toggle:focused {
+    -fx-effect: dropshadow(gaussian, -caml-on-surface, 4, 0.65, 0, 0);
 }
 
 .app-instance-mod-title-row {

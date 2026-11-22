@@ -461,6 +461,7 @@ public final class RURUGenerator extends LanguageTranslationGenerator {
         t.put("operation.saveMaxMemory", "Сохранение максимальной памяти");
         t.put("operation.saveJvmArguments", "Сохранение аргументов JVM");
         t.put("operation.saveGameDirectory", "Сохранение каталога игры");
+        t.put("operation.saveWindowState", "Сохранить состояние окна");
         t.put("operation.saveVersionIsolation", "Сохранение настройки изоляции версий");
         t.put("operation.saveAutoGameLanguage", "Сохранение настройки языка игры");
         t.put("operation.saveDownloadConcurrency", "Сохранение параллельных загрузок");

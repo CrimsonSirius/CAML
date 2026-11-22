@@ -1,5 +1,6 @@
 package org.chs.camlauncher.front.view;
 
+import javafx.beans.binding.DoubleBinding;
 import javafx.geometry.Pos;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
@@ -15,10 +16,11 @@ import org.chs.camlauncher.backend.api.InstanceDetails;
 import org.chs.camlauncher.backend.api.InstanceMod;
 import org.chs.camlauncher.backend.api.InstanceModUpdate;
 import org.chs.camlauncher.backend.download.DownloadListener;
-import org.chs.camlauncher.front.controller.FrontTask;
+import org.chs.camlauncher.front.task.AsyncTaskHandle;
 import org.chs.camlauncher.front.controller.HomeController;
 import org.chs.camlauncher.front.text.UiText;
 import org.chs.camlauncher.ui.control.CamlButton;
+import org.chs.camlauncher.ui.theme.CamlMetrics;
 
 import java.io.ByteArrayInputStream;
 import java.nio.file.Path;
@@ -40,10 +42,10 @@ final class ManageInstancesView extends VBox implements PageLifecycle {
     private final ScrollPane modsScroll = new ScrollPane(modsList);
     private final CamlButton openFolderButton =
             CamlButton.outlined(UiText.tr("instances.manage.openFolder"));
-    private final List<FrontTask<byte[]>> iconTasks = new ArrayList<>();
+    private final List<AsyncTaskHandle<byte[]>> iconTasks = new ArrayList<>();
     private final Map<String, ModRow> modRows = new LinkedHashMap<>();
-    private FrontTask<?> inspectTask;
-    private FrontTask<?> updateTask;
+    private AsyncTaskHandle<?> inspectTask;
+    private AsyncTaskHandle<?> updateTask;
     private int lastModCount;
     private boolean disposed;
 
@@ -135,7 +137,8 @@ final class ManageInstancesView extends VBox implements PageLifecycle {
         lastModCount = details.modCount();
         if (details.mods().isEmpty()) {
             Label empty = new Label(UiText.tr("instances.manage.mods.empty"));
-            empty.getStyleClass().addAll("caml-body-medium", "caml-on-surface-muted");
+            empty.getStyleClass().addAll(
+                    "caml-body-medium", "caml-on-surface-muted", "app-empty-state");
             modsList.getChildren().add(empty);
             setStatus(UiText.tr("instances.manage.mods.empty"), false);
             return;
@@ -144,21 +147,17 @@ final class ManageInstancesView extends VBox implements PageLifecycle {
         for (InstanceMod mod : details.mods()) {
             StackPane iconFrame = new StackPane();
             iconFrame.getStyleClass().add("app-mod-icon-frame");
-            iconFrame.setMinSize(36, 36);
-            iconFrame.setPrefSize(36, 36);
-            iconFrame.setMaxSize(36, 36);
+            bindSquare(iconFrame, 36);
 
             Label initial = new Label(initialOf(mod.fileName()));
             initial.getStyleClass().add("app-mod-icon-text");
             initial.setStyle("-fx-font-size: 1.05em;");
             StackPane placeholder = new StackPane(initial);
             placeholder.getStyleClass().add("app-mod-icon-placeholder");
-            placeholder.setMinSize(36, 36);
-            placeholder.setPrefSize(36, 36);
-            placeholder.setMaxSize(36, 36);
+            bindSquare(placeholder, 36);
             iconFrame.getChildren().add(placeholder);
 
-            FrontTask<byte[]> iconTask = controller.loadInstanceModIcon(
+            AsyncTaskHandle<byte[]> iconTask = controller.loadInstanceModIcon(
                     gameDirectory, instanceId, mod.fileName(),
                     bytes -> applyModIcon(iconFrame, bytes),
                     ignored -> {
@@ -357,20 +356,32 @@ final class ManageInstancesView extends VBox implements PageLifecycle {
         if (bytes == null || bytes.length == 0) {
             return;
         }
-        Image image = new Image(new ByteArrayInputStream(bytes), 36, 36, true, true);
+        double decodeSize = CamlMetrics.size(36);
+        Image image = new Image(new ByteArrayInputStream(bytes), decodeSize, decodeSize, true, true);
         if (image.isError() || image.getWidth() <= 0) {
             return;
         }
         ImageView view = new ImageView(image);
-        view.setFitWidth(36);
-        view.setFitHeight(36);
+        DoubleBinding size = CamlMetrics.scaleProperty().multiply(36);
+        view.fitWidthProperty().bind(size);
+        view.fitHeightProperty().bind(size);
         view.setPreserveRatio(true);
         view.setSmooth(true);
         frame.getChildren().setAll(view);
     }
 
+    private static void bindSquare(Region region, double designPx) {
+        DoubleBinding size = CamlMetrics.scaleProperty().multiply(designPx);
+        region.minWidthProperty().bind(size);
+        region.minHeightProperty().bind(size);
+        region.prefWidthProperty().bind(size);
+        region.prefHeightProperty().bind(size);
+        region.maxWidthProperty().bind(size);
+        region.maxHeightProperty().bind(size);
+    }
+
     private void cancelIconTasks() {
-        for (FrontTask<byte[]> task : iconTasks) {
+        for (AsyncTaskHandle<byte[]> task : iconTasks) {
             task.cancel();
         }
         iconTasks.clear();

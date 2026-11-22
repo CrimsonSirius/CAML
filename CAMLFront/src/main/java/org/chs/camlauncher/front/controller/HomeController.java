@@ -1,5 +1,7 @@
 package org.chs.camlauncher.front.controller;
 
+import org.chs.camlauncher.front.task.AsyncTaskHandle;
+
 import javafx.application.Platform;
 import org.chs.camlauncher.backend.api.GameDirectoryInfo;
 import org.chs.camlauncher.backend.api.InstanceDetails;
@@ -56,7 +58,7 @@ public final class HomeController {
      * <p>这里只负责组装参数和派发后台任务；真正的安装、登录、Java 选择和进程启动
      * 都由 {@code CAMLBackend#launchGame} 在后端完成。</p>
      */
-    public FrontTask<GameLaunch> startGame(String version, String username, int memoryMb,
+    public AsyncTaskHandle<GameLaunch> startGame(String version, String username, int memoryMb,
                                        Path gameDirectory, boolean fullVersionIsolation,
                                        String jvmArguments) {
     return startGame(version, username, AccountChoice.OFFLINE, memoryMb,
@@ -70,7 +72,7 @@ public final class HomeController {
  *                      {@link AccountChoice#DEFAULT} 走“实例账号 → 全局账号”。
  *                      其他值作为账号 id 直接使用
  */
-public FrontTask<GameLaunch> startGame(String version, String username, String accountChoice,
+public AsyncTaskHandle<GameLaunch> startGame(String version, String username, String accountChoice,
                                        int memoryMb, Path gameDirectory,
                                        boolean fullVersionIsolation, String jvmArguments) {
         Objects.requireNonNull(gameDirectory, "gameDirectory");
@@ -142,21 +144,21 @@ public FrontTask<GameLaunch> startGame(String version, String username, String a
         }
     }
 
-    public FrontTask<GameDirectoryInfo> inspectGameDirectory(Path directory) {
+    public AsyncTaskHandle<GameDirectoryInfo> inspectGameDirectory(Path directory) {
         return inspectGameDirectory(directory, onGameDirectoryInspected);
     }
 
-    public FrontTask<GameDirectoryInfo> inspectGameDirectory(
+    public AsyncTaskHandle<GameDirectoryInfo> inspectGameDirectory(
             Path directory, Consumer<GameDirectoryInfo> callback) {
         return context.inspectGameDirectory(directory, callback);
     }
 
-    public FrontTask<GameDirectoryInfo> inspectGameDirectory(
+    public AsyncTaskHandle<GameDirectoryInfo> inspectGameDirectory(
             Path directory, Consumer<GameDirectoryInfo> callback, Consumer<String> onError) {
         return context.inspectGameDirectory(directory, callback, onError);
     }
 
-    public FrontTask<InstanceDetails> inspectInstance(
+    public AsyncTaskHandle<InstanceDetails> inspectInstance(
             Path gameDirectory, String instanceId,
             Consumer<InstanceDetails> callback, Consumer<String> onError) {
         if (gameDirectory == null) {
@@ -167,7 +169,7 @@ public FrontTask<GameLaunch> startGame(String version, String username, String a
                 callback, onError);
     }
 
-    public FrontTask<Void> openInstanceFolder(
+    public AsyncTaskHandle<Void> openInstanceFolder(
             Path gameDirectory, String instanceId,
             Runnable onOpened, Consumer<String> onError) {
         if (gameDirectory == null) {
@@ -183,7 +185,7 @@ public FrontTask<GameLaunch> startGame(String version, String username, String a
         }, onError);
     }
 
-    public FrontTask<byte[]> loadInstanceModIcon(
+    public AsyncTaskHandle<byte[]> loadInstanceModIcon(
             Path gameDirectory, String instanceId, String fileName,
             Consumer<byte[]> onLoaded, Consumer<String> onError) {
         if (gameDirectory == null) {
@@ -194,7 +196,7 @@ public FrontTask<GameLaunch> startGame(String version, String username, String a
                 onLoaded, onError);
     }
 
-    public FrontTask<Void> setModDisabled(
+    public AsyncTaskHandle<Void> setModDisabled(
             Path gameDirectory, String instanceId, String fileName, boolean disabled,
             Runnable onSuccess, Consumer<String> onError) {
         if (gameDirectory == null) {
@@ -210,7 +212,7 @@ public FrontTask<GameLaunch> startGame(String version, String username, String a
         }, onError);
     }
 
-    public FrontTask<Void> setResourcePackDisabled(
+    public AsyncTaskHandle<Void> setResourcePackDisabled(
             Path gameDirectory, String instanceId, String fileName, boolean disabled,
             Runnable onSuccess, Consumer<String> onError) {
         if (gameDirectory == null) {
@@ -227,7 +229,7 @@ public FrontTask<GameLaunch> startGame(String version, String username, String a
         }, onError);
     }
 
-    public FrontTask<List<InstanceModUpdate>> checkInstanceModUpdates(
+    public AsyncTaskHandle<List<InstanceModUpdate>> checkInstanceModUpdates(
             Path gameDirectory, String instanceId,
             Consumer<List<InstanceModUpdate>> onLoaded, Consumer<String> onError) {
         if (gameDirectory == null) {
@@ -238,7 +240,7 @@ public FrontTask<GameLaunch> startGame(String version, String username, String a
                 onLoaded, onError);
     }
 
-    public FrontTask<ModDownloadResult> updateInstanceMod(
+    public AsyncTaskHandle<ModDownloadResult> updateInstanceMod(
             Path gameDirectory, String instanceId, String currentFileName, ModFile latestFile,
             DownloadListener listener,
             Consumer<ModDownloadResult> onSuccess, Consumer<String> onError) {

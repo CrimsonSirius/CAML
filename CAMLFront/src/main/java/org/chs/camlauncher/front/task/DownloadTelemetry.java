@@ -1,4 +1,4 @@
-package org.chs.camlauncher.front.view;
+package org.chs.camlauncher.front.task;
 
 import org.chs.camlauncher.backend.download.DownloadListener;
 import org.chs.camlauncher.backend.download.DownloadStage;
@@ -12,7 +12,7 @@ import java.util.List;
 import java.util.Map;
 
 /** 把后端下载事件聚合为进度页需要的阶段、总进度和网速。 */
-final class DownloadTelemetry implements DownloadListener {
+public final class DownloadTelemetry implements DownloadListener {
     private static final long SPEED_WINDOW_NANOS = 1_000_000_000L;
     private static final double MIN_SPEED_WINDOW_SECONDS = 0.25;
 
@@ -38,9 +38,10 @@ final class DownloadTelemetry implements DownloadListener {
     private boolean hasPlanSummary;
     private boolean finished;
     private boolean failed;
+    private boolean cancelled;
     private String failureMessage = "";
 
-    DownloadTelemetry() {
+    public DownloadTelemetry() {
         stages.add(currentStage);
     }
 
@@ -48,7 +49,7 @@ final class DownloadTelemetry implements DownloadListener {
     public void onProgress(DownloadProgress progress) {
         long now = System.nanoTime();
         synchronized (lock) {
-            if (finished || failed) {
+            if (finished || failed || cancelled) {
                 return;
             }
             currentFile = progress.label();
@@ -75,7 +76,7 @@ final class DownloadTelemetry implements DownloadListener {
     @Override
     public void onSummary(DownloadSummary summary) {
         synchronized (lock) {
-            if (finished || failed) {
+            if (finished || failed || cancelled) {
                 return;
             }
             if (hasPlanSummary && startsNewPlan(summary)) {
@@ -102,7 +103,7 @@ final class DownloadTelemetry implements DownloadListener {
             return;
         }
         synchronized (lock) {
-            if (finished || failed) {
+            if (finished || failed || cancelled) {
                 return;
             }
             if (stages.add(stage)) {
@@ -122,13 +123,14 @@ final class DownloadTelemetry implements DownloadListener {
         onStage(label);
     }
 
-    void markCompleted() {
+    public void markCompleted() {
         synchronized (lock) {
-            if (finished) {
+            if (finished || failed || cancelled) {
                 return;
             }
             finished = true;
             failed = false;
+            cancelled = false;
             currentFile = "";
             currentFileDownloaded = 0;
             currentFileTotal = 0;
@@ -142,12 +144,13 @@ final class DownloadTelemetry implements DownloadListener {
         }
     }
 
-    void markFailed(String message) {
+    public void markFailed(String message) {
         synchronized (lock) {
-            if (finished || failed) {
+            if (finished || failed || cancelled) {
                 return;
             }
             failed = true;
+            cancelled = false;
             failureMessage = message == null ? UiText.tr("download.stage.unknownError") : message;
             currentFile = "";
             currentFileDownloaded = 0;
@@ -158,7 +161,22 @@ final class DownloadTelemetry implements DownloadListener {
         }
     }
 
-    Snapshot snapshot() {
+    public void markCancelled() {
+        synchronized (lock) {
+            if (finished || failed || cancelled) {
+                return;
+            }
+            cancelled = true;
+            currentFile = "";
+            currentFileDownloaded = 0;
+            currentFileTotal = 0;
+            currentStage = UiText.tr("download.progress.failedHint");
+            stages.add(currentStage);
+            speedSamples.clear();
+        }
+    }
+
+    public Snapshot snapshot() {
         synchronized (lock) {
             long now = System.nanoTime();
             long cutoff = now - SPEED_WINDOW_NANOS;
@@ -167,7 +185,7 @@ final class DownloadTelemetry implements DownloadListener {
             }
 
             long bytesPerSecond = 0;
-            if (!finished && !failed && !speedSamples.isEmpty()) {
+            if (!finished && !failed && !cancelled && !speedSamples.isEmpty()) {
                 long bytes = speedSamples.stream().mapToLong(SpeedSample::bytes).sum();
                 double seconds = Math.max(
                         MIN_SPEED_WINDOW_SECONDS,
@@ -189,6 +207,7 @@ final class DownloadTelemetry implements DownloadListener {
                     bytesPerSecond,
                     finished,
                     failed,
+                    cancelled,
                     failureMessage
             );
         }
@@ -202,7 +221,7 @@ final class DownloadTelemetry implements DownloadListener {
                 || summary.totalItems() != lastPlanTotalItems);
     }
 
-    record Snapshot(
+    public record Snapshot(
             List<String> stages,
             String currentStage,
             String currentFile,
@@ -215,6 +234,7 @@ final class DownloadTelemetry implements DownloadListener {
             long bytesPerSecond,
             boolean finished,
             boolean failed,
+            boolean cancelled,
             String failureMessage
     ) {
     }

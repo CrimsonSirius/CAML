@@ -4,6 +4,7 @@ import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.event.ActionEvent;
 import javafx.geometry.Pos;
+import javafx.scene.Node;
 import javafx.scene.layout.HBox;
 
 import java.util.ArrayList;
@@ -18,12 +19,15 @@ public final class CamlTopNav extends HBox {
 
     public CamlTopNav() {
         getStyleClass().add("caml-top-nav");
-        setSpacing(2);
         setAlignment(Pos.CENTER_LEFT);
     }
 
     public CamlTopNavItem addItem(String text) {
-        CamlTopNavItem item = new CamlTopNavItem(text);
+        return addItem(null, text);
+    }
+
+    public CamlTopNavItem addItem(Node icon, String text) {
+        CamlTopNavItem item = new CamlTopNavItem(icon, text);
         items.add(item);
         getChildren().add(item);
         item.addEventHandler(ActionEvent.ACTION, event -> {

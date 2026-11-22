@@ -13,7 +13,7 @@ import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import javafx.util.Duration;
-import org.chs.camlauncher.backend.download.DownloadListener;
+import org.chs.camlauncher.backend.download.DownloadCancellationToken;
 import org.chs.camlauncher.backend.mod.model.ModDependency;
 import org.chs.camlauncher.backend.mod.model.ModContentType;
 import org.chs.camlauncher.backend.mod.model.ModFile;
@@ -21,13 +21,15 @@ import org.chs.camlauncher.backend.mod.model.ModLoader;
 import org.chs.camlauncher.backend.mod.model.ModProjectDetail;
 import org.chs.camlauncher.backend.mod.model.ModProjectSummary;
 import org.chs.camlauncher.front.controller.DownloadsController;
-import org.chs.camlauncher.front.controller.FrontTask;
+import org.chs.camlauncher.front.task.AsyncTaskHandle;
 import org.chs.camlauncher.front.text.UiText;
+import org.chs.camlauncher.front.task.DownloadTask;
+import org.chs.camlauncher.front.task.DownloadTelemetry;
 import org.chs.camlauncher.ui.control.CamlButton;
 import org.chs.camlauncher.ui.control.CamlComboBox;
+import org.chs.camlauncher.ui.theme.CamlMotion;
 
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -52,9 +54,10 @@ final class ModDetailView extends VBox implements PageLifecycle {
     private final VBox filterHost = new VBox();
     private final VBox groupsBox = new VBox();
     private final ScrollPane scroll = new ScrollPane(groupsBox);
+    private final Map<DownloadTask, Runnable> downloadTaskListeners = new LinkedHashMap<>();
     private ModDownloadLayout.Plan appliedPlan;
     private boolean disposed;
-    private FrontTask<ModProjectDetail> loadTask;
+    private AsyncTaskHandle<ModProjectDetail> loadTask;
     private List<ModFile> files = List.of();
 
     ModDetailView(DownloadsController controller, LaunchSettings launchSettings,
@@ -194,7 +197,7 @@ final class ModDetailView extends VBox implements PageLifecycle {
             loaders.addAll(file.loaders());
         }
         List<String> sortedVersions = new ArrayList<>(versions);
-        sortedVersions.sort(Comparator.reverseOrder());
+        sortedVersions.sort(MinecraftVersionComparator.NEWEST_FIRST);
         List<String> sortedLoaders = new ArrayList<>(loaders);
         sortedLoaders.sort(String::compareTo);
 
@@ -227,7 +230,7 @@ final class ModDetailView extends VBox implements PageLifecycle {
             return;
         }
         groups.entrySet().stream()
-                .sorted(Map.Entry.comparingByKey(Comparator.reverseOrder()))
+                .sorted(Map.Entry.comparingByKey(MinecraftVersionComparator.GROUP_NEWEST_FIRST))
                 .forEach(entry -> groupsBox.getChildren().add(
                         groupCard(entry.getKey(), entry.getValue())));
     }
@@ -340,7 +343,7 @@ final class ModDetailView extends VBox implements PageLifecycle {
             content.setManaged(expanded[0]);
             content.setVisible(expanded[0]);
             arrow.setText(expanded[0] ? "▼" : "▶");
-            if (expanded[0]) {
+            if (expanded[0] && !CamlMotion.reduceMotion()) {
                 FadeTransition fade = new FadeTransition(Duration.millis(120), content);
                 fade.setFromValue(0.25);
                 fade.setToValue(1);
@@ -404,24 +407,60 @@ final class ModDetailView extends VBox implements PageLifecycle {
             setStatus(UiText.tr("mods.detail.noInstance"), true);
             return;
         }
+
+        DownloadTelemetry telemetry = new DownloadTelemetry();
+        DownloadCancellationToken token = new DownloadCancellationToken();
+        String titleKey = switch (type) {
+            case MOD -> "operation.downloadMod";
+            case SHADER -> "operation.downloadShader";
+            case RESOURCE_PACK -> "operation.downloadResourcePack";
+        };
+        DownloadTask task = new DownloadTask(
+                titleKey,
+                new Object[]{file.name()},
+                file.name(),
+                telemetry,
+                token
+        );
+        controller.registerDownloadTask(task);
+        Runnable listener = () -> {
+            if (disposed) {
+                return;
+            }
+            button.setDisable(false);
+            if (task.snapshot().cancelled()) {
+                setStatus(UiText.tr("download.progress.failedHint"), false);
+            }
+        };
+        task.addListener(listener);
+        downloadTaskListeners.put(task, listener);
+
         button.setDisable(true);
         setStatus(UiText.tr("mods.detail.downloading", file.name()), false);
-        controller.downloadContent(
+        AsyncTaskHandle<?> running = controller.downloadContent(
                 type,
                 file,
                 launchSettings.gameDirectory(),
                 instance,
                 launchSettings.fullVersionIsolation(),
-                DownloadListener.NONE,
+                telemetry,
+                token,
                 result -> {
-                    button.setDisable(false);
+                    task.complete();
+                    if (disposed) {
+                        return;
+                    }
                     setStatus(UiText.tr("mods.detail.downloaded", result.path()), false);
                 },
                 message -> {
-                    button.setDisable(false);
+                    task.fail(message);
+                    if (disposed) {
+                        return;
+                    }
                     setStatus(text("search.failed", message), true);
                 }
         );
+        task.attach(running::cancel);
     }
 
     private static String dependencyText(List<ModDependency> dependencies) {
@@ -464,6 +503,10 @@ final class ModDetailView extends VBox implements PageLifecycle {
     @Override
     public void dispose() {
         disposed = true;
+        for (Map.Entry<DownloadTask, Runnable> entry : downloadTaskListeners.entrySet()) {
+            entry.getKey().removeListener(entry.getValue());
+        }
+        downloadTaskListeners.clear();
         if (loadTask != null) {
             loadTask.cancel();
             loadTask = null;

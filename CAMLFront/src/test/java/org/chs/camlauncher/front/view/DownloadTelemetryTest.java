@@ -5,6 +5,7 @@ import org.chs.camlauncher.backend.download.DownloadStage;
 import org.chs.camlauncher.backend.language.LanguageService;
 import org.chs.camlauncher.backend.settings.SettingsService;
 import org.chs.camlauncher.front.text.UiText;
+import org.chs.camlauncher.front.task.DownloadTelemetry;
 import org.chs.camlauncher.language.contract.LanguageSelectionMode;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -92,6 +93,24 @@ class DownloadTelemetryTest {
         assertTrue(snapshot.failed());
         assertEquals(UiText.tr("download.stage.failed"), snapshot.currentStage());
         assertEquals("网络中断", snapshot.failureMessage());
+    }
+
+    @Test
+    void recordsCancellationWithoutMarkingFailure() {
+        DownloadTelemetry telemetry = new DownloadTelemetry();
+        telemetry.onStage(DownloadStage.of("version.downloadFiles"));
+
+        telemetry.markCancelled();
+
+        DownloadTelemetry.Snapshot snapshot = telemetry.snapshot();
+        assertTrue(snapshot.cancelled());
+        assertFalse(snapshot.failed());
+        assertFalse(snapshot.finished());
+        assertEquals(UiText.tr("download.progress.failedHint"), snapshot.currentStage());
+
+        telemetry.markCompleted();
+        assertTrue(telemetry.snapshot().cancelled());
+        assertFalse(telemetry.snapshot().finished());
     }
 
     @Test

@@ -39,15 +39,16 @@
 
 .caml-headline-small {
     -fx-font-size: 1.5em;
+    -fx-font-weight: bold;
 }
 
 .caml-title-large {
-    -fx-font-size: 1.375em;
+    -fx-font-size: 1.25em;
     -fx-font-weight: bold;
 }
 
 .caml-title-medium {
-    -fx-font-size: 1.125em;
+    -fx-font-size: 1.0625em;
     -fx-font-weight: bold;
 }
 
@@ -57,7 +58,7 @@
 }
 
 .caml-body-large {
-    -fx-font-size: 1.125em;
+    -fx-font-size: 1em;
 }
 
 .caml-body-medium {
@@ -80,7 +81,7 @@
 
 .caml-label-small {
     -fx-font-size: 0.6875em;
-    -fx-font-weight: bold;
+    -fx-font-weight: normal;
 }
 
 .caml-on-surface-muted {
@@ -94,11 +95,12 @@
 /* Buttons（设计字号 14px，几何值按 14px 折算）。 */
 .caml-button {
     -fx-background-insets: 0;
-    -fx-background-radius: 0.285714em;
+    -fx-background-radius: 0.5em;
     -fx-min-height: 3.142857em;
-    -fx-padding: 0.714286em 1.714286em;
+    -fx-padding: 0.714286em 1.428571em;
     -fx-font-size: 0.875em;
     -fx-font-weight: bold;
+    -fx-graphic-text-gap: 0.571429em;
     -fx-cursor: hand;
     -fx-focus-color: -caml-accent;
     -fx-faint-focus-color: transparent;
@@ -107,7 +109,7 @@
 .caml-button:focused {
     -fx-border-color: -caml-on-surface;
     -fx-border-width: 2;
-    -fx-border-radius: 0.285714em;
+    -fx-border-radius: 0.5em;
 }
 
 .caml-button-filled {
@@ -116,11 +118,11 @@
 }
 
 .caml-button-filled:hover {
-    -fx-background-color: derive(-caml-accent, 10%);
+    -fx-background-color: derive(-caml-accent, 6%);
 }
 
 .caml-button-filled:pressed {
-    -fx-background-color: derive(-caml-accent, -10%);
+    -fx-background-color: derive(-caml-accent, -8%);
 }
 
 .caml-button-tonal {
@@ -129,19 +131,27 @@
 }
 
 .caml-button-tonal:hover {
-    -fx-background-color: derive(-caml-neutral-container, 8%);
+    -fx-background-color: derive(-caml-neutral-container, 4%);
+}
+
+.caml-button-tonal:pressed {
+    -fx-background-color: derive(-caml-neutral-container, -6%);
 }
 
 .caml-button-outlined {
     -fx-background-color: transparent;
     -fx-border-color: -caml-border;
     -fx-border-width: 1;
-    -fx-border-radius: 0.285714em;
+    -fx-border-radius: 0.5em;
     -fx-text-fill: -caml-accent-text;
 }
 
 .caml-button-outlined:hover {
     -fx-background-color: -caml-surface-high;
+}
+
+.caml-button-outlined:pressed {
+    -fx-background-color: -caml-surface-highest;
 }
 
 .caml-button-text {
@@ -154,25 +164,30 @@
     -fx-background-color: -caml-surface-high;
 }
 
+.caml-button-text:pressed {
+    -fx-background-color: -caml-surface-highest;
+}
+
 .caml-button-elevated {
-    -fx-background-color: -caml-surface-low;
+    -fx-background-color: -caml-surface-container;
     -fx-text-fill: -caml-accent-text;
-    -fx-effect: dropshadow(gaussian, -caml-shadow-color, 8, 0, 0, 2);
 }
 
 .caml-button-elevated:hover {
-    -fx-background-color: -caml-surface-container;
+    -fx-background-color: -caml-surface-high;
 }
 
 .caml-button:disabled {
     -fx-opacity: 0.38;
+    -fx-cursor: default;
 }
 
 /* Cards. */
 .caml-card {
     -fx-background-color: -caml-surface-container;
-    -fx-background-radius: 0.5em;
+    -fx-background-radius: 0.75em;
     -fx-padding: 1.5em;
+    -fx-spacing: 1em;
 }
 
 .caml-card-elevated {
@@ -202,17 +217,21 @@
 
 /* Text field（设计字号 14px）。 */
 .caml-text-field {
-    -fx-min-height: 2.857143em;
-    -fx-background-color: -caml-surface-highest;
-    -fx-background-radius: 0.285714em 0.285714em 0 0;
-    -fx-border-color: transparent transparent -caml-on-surface-muted transparent;
+    -fx-min-height: 3em;
+    -fx-background-color: -caml-surface-container;
+    -fx-background-radius: 0.5em 0.5em 0 0;
+    -fx-border-color: transparent transparent -caml-border transparent;
     -fx-border-width: 0 0 1 0;
     -fx-text-fill: -caml-on-surface;
     -fx-prompt-text-fill: -caml-on-surface-muted;
     -fx-highlight-fill: -caml-accent;
     -fx-highlight-text-fill: -caml-on-accent;
     -fx-padding: 0.857143em 1.142857em;
-    -fx-font-size: 0.875em;
+    -fx-font-size: 1em;
+}
+
+.caml-text-field:hover {
+    -fx-border-color: transparent transparent -caml-on-surface-muted transparent;
 }
 
 .caml-text-field:focused {
@@ -223,17 +242,22 @@
 /* Combo box（不单独设字号，沿用根字号 16px）。 */
 .caml-combo-box {
     -fx-min-height: 2.75em;
-    -fx-background-color: -caml-surface-highest;
-    -fx-background-radius: 0.25em;
-    -fx-border-color: -caml-border-subtle;
+    -fx-background-color: -caml-surface-container;
+    -fx-background-radius: 0.5em;
+    -fx-border-color: -caml-border;
     -fx-border-width: 1;
-    -fx-border-radius: 0.25em;
+    -fx-border-radius: 0.5em;
     -fx-padding: 0.125em 0.25em;
 }
 
 .caml-combo-box:focused {
     -fx-border-color: -caml-accent;
     -fx-border-width: 2;
+}
+
+.caml-text-field:disabled,
+.caml-combo-box:disabled {
+    -fx-opacity: 0.55;
 }
 
 /* 纵向内边距保持较小，给 CJK 字形底部留出空间；外框高度由 min-height 保证。 */
@@ -285,7 +309,7 @@
     -fx-min-height: 2.5em;
     -fx-background-color: -caml-surface-highest;
     -fx-background-radius: 0.25em;
-    -fx-border-color: -caml-border-subtle;
+    -fx-border-color: -caml-border;
     -fx-border-radius: 0.25em;
 }
 
@@ -315,7 +339,7 @@
     -fx-min-height: 13.333333em;
     -fx-background-color: -caml-surface-lowest;
     -fx-background-radius: 0.333333em;
-    -fx-border-color: -caml-border-subtle;
+    -fx-border-color: -caml-border;
     -fx-border-width: 1;
     -fx-border-radius: 0.333333em;
     -fx-text-fill: -caml-on-surface;
@@ -388,6 +412,11 @@
     -fx-background-color: -caml-on-accent;
 }
 
+.caml-check-box:focused .box {
+    -fx-border-color: -caml-on-surface;
+    -fx-effect: dropshadow(gaussian, -caml-accent, 4, 0.6, 0, 0);
+}
+
 /* Radio button. */
 .caml-radio-button {
     -fx-text-fill: -caml-on-surface;
@@ -395,8 +424,7 @@
     -fx-cursor: hand;
 }
 
-.caml-radio-button > .radio,
-.caml-radio-button:focused > .radio {
+.caml-radio-button > .radio {
     -fx-background-color: transparent;
     -fx-background-insets: 0;
     -fx-background-radius: 100;
@@ -407,9 +435,13 @@
 }
 
 .caml-radio-button:hover > .radio,
-.caml-radio-button:selected > .radio,
-.caml-radio-button:focused > .radio {
+.caml-radio-button:selected > .radio {
     -fx-border-color: -caml-accent;
+}
+
+.caml-radio-button:focused > .radio {
+    -fx-border-color: -caml-on-surface;
+    -fx-effect: dropshadow(gaussian, -caml-accent, 4, 0.6, 0, 0);
 }
 
 .caml-radio-button > .radio > .dot {
@@ -426,8 +458,6 @@
 /* Integer slider（设计高度 28px）。 */
 .caml-slider {
     -fx-cursor: hand;
-    -fx-min-height: 1.75em;
-    -fx-pref-height: 1.75em;
 }
 
 .caml-slider .caml-slider-track {
@@ -452,8 +482,6 @@
 /* Memory slider: two-tone bold track（设计高度 28px）。 */
 .caml-memory-slider {
     -fx-padding: 0.25em 0;
-    -fx-min-height: 1.75em;
-    -fx-pref-height: 1.75em;
     -fx-cursor: hand;
 }
 
@@ -501,53 +529,57 @@
 .caml-side-nav {
     -fx-background-color: -caml-surface-low;
     -fx-padding: 0.75em 0.5em;
+    -fx-spacing: 0.25em;
 }
 
 .caml-side-nav-item {
     -fx-background-color: transparent;
     -fx-background-radius: 100;
-    -fx-border-color: -caml-accent;
+    -fx-border-color: transparent;
     -fx-border-width: 2;
     -fx-border-radius: 100;
-    -fx-text-fill: -caml-accent;
+    -fx-text-fill: -caml-on-surface-muted;
     -fx-font-size: 1em;
     -fx-font-weight: bold;
+    -fx-graphic-text-gap: 0.5em;
     -fx-padding: 0.625em 1em;
-    -fx-min-height: 2.5em;
+    -fx-min-height: 2.75em;
     -fx-cursor: hand;
     -fx-focus-color: transparent;
     -fx-faint-focus-color: transparent;
 }
 
 .caml-side-nav-item:hover {
-    -fx-background-color: transparent;
+    -fx-background-color: -caml-surface-high;
 }
 
 .caml-side-nav-item:selected {
-    -fx-background-color: -caml-accent;
-    -fx-border-color: -caml-accent;
-    -fx-text-fill: -caml-inverse-on-surface;
+    -fx-background-color: -caml-accent-container;
+    -fx-border-color: -caml-on-surface;
+    -fx-text-fill: -caml-on-accent-container;
 }
 
 .caml-side-nav-item:focused {
-    -fx-effect: dropshadow(gaussian, -caml-accent, 4, 0.4, 0, 0);
+    -fx-border-color: -caml-accent;
+    -fx-effect: dropshadow(gaussian, -caml-accent, 4, 0.75, 0, 0);
 }
 
 /* Top navigation. */
 .caml-top-nav {
-    -fx-spacing: 0.25em;
+    -fx-spacing: 0.125em;
     -fx-alignment: center-left;
 }
 
 .caml-top-nav-item {
     -fx-background-color: transparent;
     -fx-background-radius: 100;
-    -fx-border-color: -caml-accent;
+    -fx-border-color: transparent;
     -fx-border-width: 2;
     -fx-border-radius: 100;
-    -fx-text-fill: -caml-accent;
+    -fx-text-fill: -caml-on-surface-muted;
     -fx-font-size: 1em;
     -fx-font-weight: bold;
+    -fx-graphic-text-gap: 0.4375em;
     -fx-padding: 0.625em 1.5em;
     -fx-min-width: 5.75em;
     -fx-min-height: 2.75em;
@@ -557,17 +589,69 @@
 }
 
 .caml-top-nav-item:hover {
-    -fx-background-color: transparent;
+    -fx-background-color: -caml-surface-high;
 }
 
 .caml-top-nav-item:selected {
-    -fx-background-color: -caml-accent;
-    -fx-border-color: -caml-accent;
-    -fx-text-fill: -caml-inverse-on-surface;
+    -fx-background-color: -caml-accent-container;
+    -fx-border-color: -caml-on-surface;
+    -fx-text-fill: -caml-on-accent-container;
 }
 
 .caml-top-nav-item:focused {
-    -fx-effect: dropshadow(gaussian, -caml-accent, 4, 0.4, 0, 0);
+    -fx-border-color: -caml-accent;
+    -fx-effect: dropshadow(gaussian, -caml-accent, 4, 0.75, 0, 0);
+}
+
+/* Vector icons. */
+.caml-icon-fill {
+    -fx-fill: -caml-on-surface-muted;
+}
+
+.caml-icon-stroke {
+    -fx-fill: transparent;
+    -fx-stroke: -caml-on-surface-muted;
+    -fx-stroke-width: 2;
+    -fx-stroke-line-cap: round;
+    -fx-stroke-line-join: round;
+}
+
+.caml-top-nav-item:selected .caml-icon-fill,
+.caml-side-nav-item:selected .caml-icon-fill {
+    -fx-fill: -caml-on-accent-container;
+}
+
+.caml-top-nav-item:selected .caml-icon-stroke,
+.caml-side-nav-item:selected .caml-icon-stroke {
+    -fx-stroke: -caml-on-accent-container;
+}
+
+.caml-button-filled .caml-icon-fill {
+    -fx-fill: -caml-on-accent;
+}
+
+.caml-button-filled .caml-icon-stroke {
+    -fx-stroke: -caml-on-accent;
+}
+
+.caml-button-tonal .caml-icon-fill {
+    -fx-fill: -caml-on-neutral-container;
+}
+
+.caml-button-tonal .caml-icon-stroke {
+    -fx-stroke: -caml-on-neutral-container;
+}
+
+.caml-button-outlined .caml-icon-fill,
+.caml-button-text .caml-icon-fill,
+.caml-button-elevated .caml-icon-fill {
+    -fx-fill: -caml-accent-text;
+}
+
+.caml-button-outlined .caml-icon-stroke,
+.caml-button-text .caml-icon-stroke,
+.caml-button-elevated .caml-icon-stroke {
+    -fx-stroke: -caml-accent-text;
 }
 
 .caml-page-host {
@@ -578,8 +662,21 @@
 .caml-top-bar {
     -fx-background-color: transparent;
     -fx-padding: 1em 1.5em;
+    -fx-spacing: 1em;
     -fx-border-color: transparent transparent -caml-border-subtle transparent;
     -fx-border-width: 0 0 1 0;
+}
+
+.caml-top-bar-titles {
+    -fx-spacing: 0.125em;
+}
+
+.caml-top-bar-actions {
+    -fx-spacing: 0.5em;
+}
+
+.caml-top-bar-navigation {
+    -fx-spacing: 0.25em;
 }
 
 /* Scroll pane and scrollbar. */

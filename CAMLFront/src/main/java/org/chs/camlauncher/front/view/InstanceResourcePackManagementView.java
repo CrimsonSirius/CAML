@@ -10,7 +10,7 @@ import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import org.chs.camlauncher.backend.api.InstanceDetails;
 import org.chs.camlauncher.backend.api.InstanceResourcePack;
-import org.chs.camlauncher.front.controller.FrontTask;
+import org.chs.camlauncher.front.task.AsyncTaskHandle;
 import org.chs.camlauncher.front.controller.HomeController;
 import org.chs.camlauncher.front.text.UiText;
 import org.chs.camlauncher.ui.control.CamlButton;
@@ -30,7 +30,7 @@ final class InstanceResourcePackManagementView extends VBox implements PageLifec
     private final ScrollPane scroll = new ScrollPane(resourcePackList);
     private final CamlButton openFolderButton =
             CamlButton.outlined(UiText.tr("instances.manage.openFolder"));
-    private FrontTask<?> inspectTask;
+    private AsyncTaskHandle<?> inspectTask;
     private int lastCount;
     private boolean disposed;
 

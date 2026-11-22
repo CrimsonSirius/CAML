@@ -15,10 +15,12 @@ import org.chs.camlauncher.front.controller.HomeController;
 import org.chs.camlauncher.front.controller.MainController;
 import org.chs.camlauncher.front.controller.SettingsController;
 import org.chs.camlauncher.front.text.UiText;
+import org.chs.camlauncher.ui.control.CamlIcon;
 import org.chs.camlauncher.ui.control.CamlPageHost;
 import org.chs.camlauncher.ui.control.CamlTopBar;
 import org.chs.camlauncher.ui.control.CamlTopNav;
 import org.chs.camlauncher.ui.control.CamlTopNavItem;
+import org.chs.camlauncher.ui.theme.CamlMetrics;
 
 import java.nio.file.Path;
 import java.util.List;
@@ -43,6 +45,8 @@ public final class MainView extends BorderPane {
     private final SettingsView settingsView;
     private final CamlPageHost pageHost;
     private CamlTopNav navigation;
+    private CamlTopNavItem homeNavItem;
+    private CamlTopNavItem downloadsNavItem;
     private CamlTopNavItem settingsNavItem;
     private PageLifecycle activePage;
     private LanguageSelectionMode languageMode;
@@ -50,6 +54,25 @@ public final class MainView extends BorderPane {
     private LanguageFallbackMode languageFallbackMode;
     private String languageFallbackLocale;
     private double appliedFontPx = -1;
+
+    private enum Page {
+        HOME,
+        DOWNLOADS,
+        SETTINGS
+    }
+
+    public static final class State {
+        private final Page page;
+        private final SettingsView.Section settingsSection;
+        private final VersionCategory downloadCategory;
+
+        private State(Page page, SettingsView.Section settingsSection,
+                      VersionCategory downloadCategory) {
+            this.page = page;
+            this.settingsSection = settingsSection;
+            this.downloadCategory = downloadCategory;
+        }
+    }
 
     public MainView(MainController controller, int initialMaxMemoryMb,
                     SystemMemoryInfo systemMemory, Path initialGameDirectory,
@@ -163,23 +186,31 @@ public final class MainView extends BorderPane {
 
     private CamlTopBar buildTopBar() {
         CamlTopBar bar = new CamlTopBar("CAML", UiText.tr("app.subtitle"));
+        bar.getStyleClass().add("app-top-bar");
+        bar.addNavigation(buildTopNavigation());
+        return bar;
+    }
 
+    private CamlTopNav buildTopNavigation() {
         navigation = new CamlTopNav();
-        CamlTopNavItem home = navigation.addItem(UiText.tr("nav.home"));
-        CamlTopNavItem downloads = navigation.addItem(UiText.tr("nav.downloads"));
-        settingsNavItem = navigation.addItem(UiText.tr("nav.settings"));
-        navigation.select(home);
+        navigation.getStyleClass().add("app-top-nav");
+        homeNavItem = navigation.addItem(
+                new CamlIcon(CamlIcon.Glyph.HOME), UiText.tr("nav.home"));
+        downloadsNavItem = navigation.addItem(
+                new CamlIcon(CamlIcon.Glyph.DOWNLOAD), UiText.tr("nav.downloads"));
+        settingsNavItem = navigation.addItem(
+                new CamlIcon(CamlIcon.Glyph.SETTINGS), UiText.tr("nav.settings"));
+        navigation.select(homeNavItem);
         navigation.selectedItemProperty().addListener((observable, oldValue, selected) -> {
-            if (selected == home) {
+            if (selected == homeNavItem) {
                 showPage(homeView);
-            } else if (selected == downloads) {
+            } else if (selected == downloadsNavItem) {
                 showPage(downloadsView);
             } else if (selected == settingsNavItem) {
                 showPage(settingsView);
             }
         });
-        bar.addNavigation(navigation);
-        return bar;
+        return navigation;
     }
 
     private void showPage(Node page) {
@@ -218,10 +249,24 @@ public final class MainView extends BorderPane {
         settingsView.flushPendingSettings();
     }
 
-    /** 语言切换重建后回到设置页的外观分组。 */
-    public void showSettingsPage() {
-        navigation.select(settingsNavItem);
-        settingsView.showAppearanceSection();
+    public State snapshotState() {
+        Page page = activePage == downloadsView
+                ? Page.DOWNLOADS
+                : activePage == settingsView ? Page.SETTINGS : Page.HOME;
+        return new State(page, settingsView.currentSection(), downloadsView.currentCategory());
+    }
+
+    public void restoreState(State state) {
+        State target = state == null
+                ? new State(Page.HOME, SettingsView.Section.GAME, VersionCategory.RELEASE)
+                : state;
+        navigation.select(switch (target.page) {
+            case HOME -> homeNavItem;
+            case DOWNLOADS -> downloadsNavItem;
+            case SETTINGS -> settingsNavItem;
+        });
+        settingsView.showSection(target.settingsSection);
+        downloadsView.showCategory(target.downloadCategory);
     }
 
     public void dispose() {
@@ -250,6 +295,7 @@ public final class MainView extends BorderPane {
             return;
         }
         appliedFontPx = fontPx;
+        CamlMetrics.setScale(fontPx / UiScale.BASE_FONT_PX);
         setStyle("-fx-font-size: " + (int) fontPx + "px;");
     }
 

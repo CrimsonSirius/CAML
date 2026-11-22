@@ -8,10 +8,12 @@ import javafx.scene.input.Clipboard;
 import javafx.scene.input.ClipboardContent;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
+import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
 import javafx.stage.Window;
 import org.chs.camlauncher.backend.api.AccountSummary;
+import org.chs.camlauncher.backend.auth.AccountType;
 import org.chs.camlauncher.backend.auth.microsoft.MicrosoftDeviceCode;
 import org.chs.camlauncher.front.controller.AccountController;
 import org.chs.camlauncher.front.text.AccountChoice;
@@ -131,6 +133,7 @@ final class AccountSettingsView extends VBox {
         accountList.getChildren().clear();
         if (accounts.isEmpty()) {
             Label empty = ViewSupport.hintLabel();
+            empty.getStyleClass().add("app-empty-state");
             empty.setText(UiText.tr("account.list.empty"));
             accountList.getChildren().add(empty);
             return;
@@ -140,7 +143,19 @@ final class AccountSettingsView extends VBox {
         defaultGroup.getToggles().clear();
         defaultAccountId = null;
         VBox rows = new VBox();
+        rows.getStyleClass().add("app-account-list");
         for (AccountSummary account : accounts) {
+            Label initial = new Label(account.displayName().isBlank()
+                    ? "?"
+                    : account.displayName().substring(0, 1).toUpperCase());
+            initial.getStyleClass().add("app-account-avatar-text");
+            StackPane avatar = new StackPane(initial);
+            avatar.getStyleClass().addAll("app-account-avatar", switch (account.type()) {
+                case OFFLINE -> "app-account-avatar-offline";
+                case YGGDRASIL -> "app-account-avatar-yggdrasil";
+                case MICROSOFT -> "app-account-avatar-microsoft";
+            });
+
             CamlRadioButton isDefault = new CamlRadioButton(UiText.tr("account.list.default"));
             isDefault.setToggleGroup(defaultGroup);
             isDefault.setUserData(account.id());
@@ -154,20 +169,28 @@ final class AccountSettingsView extends VBox {
             });
 
             Label name = new Label(AccountChoice.label(account));
-            name.getStyleClass().add("caml-label-medium");
+            name.getStyleClass().add("app-account-name");
+            Label meta = new Label(accountMeta(account));
+            meta.getStyleClass().add("app-account-meta");
+            if (account.needsLogin()) {
+                meta.getStyleClass().add("app-account-meta-error");
+            }
+            VBox info = new VBox(name, meta);
+            info.getStyleClass().add("app-account-info");
 
-            HBox row = new HBox(name, isDefault);
-            row.getStyleClass().add("app-settings-row");
+            HBox controls = new HBox(isDefault);
+            controls.getStyleClass().add("app-account-controls");
+            controls.setAlignment(Pos.CENTER_RIGHT);
+
+            HBox row = new HBox(avatar, info, controls);
+            row.getStyleClass().add("app-account-row");
             row.setAlignment(Pos.CENTER_LEFT);
-            HBox.setHgrow(name, Priority.ALWAYS);
+            HBox.setHgrow(info, Priority.ALWAYS);
 
             if (account.needsLogin()) {
-                // 凭据缺失或已失效：给出明确标记与“重新登录”入口，而不是让用户在启动失败后自己猜。
-                Label expired = new Label(UiText.tr("account.list.needsLogin"));
-                expired.getStyleClass().addAll("caml-label-small", "field-error");
                 CamlButton relogin = CamlButton.outlined(UiText.tr("account.list.relogin"));
                 relogin.setOnAction(event -> prepareRelogin(account));
-                row.getChildren().addAll(expired, relogin);
+                controls.getChildren().add(relogin);
             }
 
             if (account.multiProfile()) {
@@ -211,15 +234,17 @@ final class AccountSettingsView extends VBox {
 
                 Label profileLabel = new Label(UiText.tr("account.profile.label"));
                 profileLabel.getStyleClass().add("caml-label-small");
-                row.getChildren().addAll(profileLabel, profileBox);
+                profileBox.getStyleClass().add("app-account-profile");
+                controls.getChildren().addAll(profileLabel, profileBox);
             }
 
             CamlButton remove = CamlButton.outlined(UiText.tr("account.list.remove"));
+            remove.getStyleClass().add("app-destructive-action");
             remove.setOnAction(event -> controller.removeAccount(account.id(), () -> {
                 showStatus(UiText.tr("account.removed", AccountChoice.label(account)), false);
                 refresh();
             }, message -> showStatus(message, true)));
-            row.getChildren().add(remove);
+            controls.getChildren().add(remove);
 
             rows.getChildren().add(row);
         }
@@ -241,6 +266,19 @@ final class AccountSettingsView extends VBox {
                 .map(profile -> profile.name().isBlank() ? profile.id() : profile.name())
                 .findFirst()
                 .orElse(profileId);
+    }
+
+    private static String accountMeta(AccountSummary account) {
+        String kind = switch (account.type()) {
+            case OFFLINE -> UiText.tr("account.choice.offline");
+            case YGGDRASIL -> account.serverName().isBlank()
+                    ? UiText.tr("settings.account.login.title")
+                    : account.serverName();
+            case MICROSOFT -> UiText.tr("settings.account.microsoft.title");
+        };
+        return account.needsLogin()
+                ? kind + " · " + UiText.tr("account.list.needsLogin")
+                : kind;
     }
 
     /**
@@ -379,8 +417,8 @@ final class AccountSettingsView extends VBox {
 
     private void setMicrosoftStatus(String message, boolean error) {
         microsoftStatus.setText(message == null ? "" : message);
-        microsoftStatus.getStyleClass().removeAll("field-hint", "field-error");
-        microsoftStatus.getStyleClass().add(error ? "field-error" : "field-hint");
+        microsoftStatus.getStyleClass().removeAll("field-hint", "field-hint-error");
+        microsoftStatus.getStyleClass().add(error ? "field-hint-error" : "field-hint");
     }
 
     // ------------------------------------------------------------------ 登录
@@ -566,8 +604,8 @@ final class AccountSettingsView extends VBox {
 
     private void showStatus(String message, boolean error) {
         statusLabel.setText(message == null ? "" : message);
-        statusLabel.getStyleClass().removeAll("field-hint", "field-error");
-        statusLabel.getStyleClass().add(error ? "field-error" : "field-hint");
+        statusLabel.getStyleClass().removeAll("field-hint", "field-hint-error");
+        statusLabel.getStyleClass().add(error ? "field-hint-error" : "field-hint");
     }
 
     /** 重新加载账号列表，供设置页重新显示该子页时调用。 */
