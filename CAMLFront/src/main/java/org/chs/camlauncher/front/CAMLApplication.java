@@ -3,11 +3,13 @@ package org.chs.camlauncher.front;
 import javafx.application.Application;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.Scene;
+import javafx.scene.image.Image;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.chs.camlauncher.backend.api.CAMLBackend;
+import org.chs.camlauncher.backend.api.WindowState;
 import org.chs.camlauncher.backend.config.BackendConfig;
 import org.chs.camlauncher.backend.instance.VersionIsolationMode;
 import org.chs.camlauncher.backend.runtime.JavaSelectionMode;
@@ -37,6 +39,7 @@ public final class CAMLApplication extends Application {
     private MainController controller;
     private MainView view;
     private Scene scene;
+    private Stage stage;
     private Logger logger;
     private List<ThemeInfo> themes = List.of();
     private ThemeInfo activeTheme;
@@ -56,6 +59,7 @@ public final class CAMLApplication extends Application {
     private String languageFallbackLocale = UiText.DEFAULT_LOCALE;
     private long languageChangeGeneration;
     private long languageFallbackChangeGeneration;
+    private WindowState savedWindowState;
     private volatile boolean stopping;
 
     @Override
@@ -121,6 +125,11 @@ public final class CAMLApplication extends Application {
         } catch (IOException e) {
             logger.warn("无法读取 Java 选择设置，使用自动选择", e);
         }
+        try {
+            savedWindowState = backend.savedWindowState().orElse(null);
+        } catch (IOException e) {
+            logger.warn("无法读取窗口状态，使用默认窗口位置", e);
+        }
         systemMemory = backend.systemMemory();
 
         logger.info("CAML frontend initialized");
@@ -128,6 +137,7 @@ public final class CAMLApplication extends Application {
 
     @Override
     public void start(Stage stage) {
+        this.stage = stage;
         // 2. 组装 Controller 和 View
         controller = new MainController(backend);
         view = new MainView(
@@ -138,11 +148,22 @@ public final class CAMLApplication extends Application {
                 languageFallbackMode, languageFallbackLocale,
                 this::changeLanguage, this::changeLanguageFallback);
 
-        // 3. 按主屏幕可用区域决定窗口尺寸：小屏不溢出，大屏不过小，默认居中
+        // 3. 优先恢复上次窗口状态；状态失效时按主屏幕可用区域计算默认尺寸。
         Rectangle2D screen = Screen.getPrimary().getVisualBounds();
         WindowSizePlanner.WindowMetrics metrics = WindowSizePlanner.compute(
                 screen.getMinX(), screen.getMinY(), screen.getWidth(), screen.getHeight());
         WindowSizePlanner.WindowGeometry window = metrics.window();
+        boolean restoreMaximized = false;
+        if (savedWindowState != null) {
+            Screen restoredScreen = screenFor(savedWindowState);
+            if (restoredScreen != null) {
+                screen = restoredScreen.getVisualBounds();
+                metrics = WindowSizePlanner.compute(
+                        screen.getMinX(), screen.getMinY(), screen.getWidth(), screen.getHeight());
+                window = clampToScreen(savedWindowState, screen, metrics);
+                restoreMaximized = savedWindowState.maximized();
+            }
+        }
 
         // 4. 设置场景：结构样式内置，配色来自 <data>/themes/*.css
         Scene scene = new Scene(view, window.width(), window.height());
@@ -167,6 +188,7 @@ public final class CAMLApplication extends Application {
         }
 
         stage.setTitle("CAML");
+        applyStageIcon(stage);
         stage.setMinWidth(metrics.minWidth());
         stage.setMinHeight(metrics.minHeight());
         stage.setScene(scene);
@@ -175,6 +197,9 @@ public final class CAMLApplication extends Application {
         stage.setX(window.x());
         stage.setY(window.y());
         stage.show();
+        if (restoreMaximized) {
+            stage.setMaximized(true);
+        }
 
         logger.info("窗口尺寸 {}x{}（屏幕可用区域 {}x{}）",
                 (long) window.width(), (long) window.height(),
@@ -191,6 +216,43 @@ public final class CAMLApplication extends Application {
         }
 
         controller.settingsController().saveThemeAsync(theme.id());
+    }
+
+    private static Screen screenFor(WindowState state) {
+        Screen best = null;
+        double bestArea = 0;
+        for (Screen candidate : Screen.getScreens()) {
+            Rectangle2D bounds = candidate.getVisualBounds();
+            double width = Math.max(0, Math.min(state.x() + state.width(), bounds.getMaxX())
+                    - Math.max(state.x(), bounds.getMinX()));
+            double height = Math.max(0, Math.min(state.y() + state.height(), bounds.getMaxY())
+                    - Math.max(state.y(), bounds.getMinY()));
+            double area = width * height;
+            if (area > bestArea) {
+                bestArea = area;
+                best = candidate;
+            }
+        }
+        return bestArea >= 64 * 64 ? best : null;
+    }
+
+    private static WindowSizePlanner.WindowGeometry clampToScreen(
+            WindowState state, Rectangle2D screen, WindowSizePlanner.WindowMetrics metrics) {
+        double width = Math.clamp(state.width(), metrics.minWidth(), screen.getWidth());
+        double height = Math.clamp(state.height(), metrics.minHeight(), screen.getHeight());
+        double x = Math.clamp(state.x(), screen.getMinX(), screen.getMaxX() - width);
+        double y = Math.clamp(state.y(), screen.getMinY(), screen.getMaxY() - height);
+        return new WindowSizePlanner.WindowGeometry(x, y, width, height);
+    }
+
+    private void applyStageIcon(Stage stage) {
+        try (var stream = CAMLApplication.class.getResourceAsStream("/icons/caml.png")) {
+            if (stream != null) {
+                stage.getIcons().add(new Image(stream));
+            }
+        } catch (IOException | RuntimeException e) {
+            logger.warn("无法加载窗口图标", e);
+        }
     }
 
     private void changeLanguage(LanguageSelectionMode mode, String locale) {
@@ -250,6 +312,15 @@ public final class CAMLApplication extends Application {
     public void stop() {
         stopping = true;
         // 5. 清理资源：先提交最后一次设置，再排空设置线程并关闭后端
+        if (stage != null && controller != null) {
+            try {
+                controller.settingsController().saveWindowStateAsync(new WindowState(
+                        stage.getX(), stage.getY(), stage.getWidth(), stage.getHeight(),
+                        stage.isMaximized()));
+            } catch (RuntimeException e) {
+                logger.warn("无法保存窗口状态", e);
+            }
+        }
         if (view != null) {
             view.flushPendingSettings();
             view.dispose();

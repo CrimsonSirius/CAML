@@ -2,6 +2,7 @@ package org.chs.camlauncher.front.controller;
 
 import javafx.application.Platform;
 import org.chs.camlauncher.backend.api.GameDirectoryInfo;
+import org.chs.camlauncher.backend.api.WindowState;
 import org.chs.camlauncher.backend.download.source.DownloadSourceMode;
 import org.chs.camlauncher.backend.instance.VersionIsolationMode;
 import org.chs.camlauncher.backend.language.LanguageSnapshot;
@@ -113,6 +114,12 @@ public final class SettingsController {
     public void saveGameDirectoryAsync(Path gameDirectory, Runnable onSaved) {
         save(UiText.tr("operation.saveGameDirectory"),
                 () -> context.backend().setGameDirectory(gameDirectory), onSaved);
+    }
+
+    public void saveWindowStateAsync(WindowState state) {
+        Objects.requireNonNull(state, "state");
+        context.executeSettings(UiText.tr("operation.saveWindowState"),
+                () -> context.backend().saveWindowState(state));
     }
 
     /** 异步保存版本隔离选择，避免在 JavaFX Application Thread 上写文件。 */

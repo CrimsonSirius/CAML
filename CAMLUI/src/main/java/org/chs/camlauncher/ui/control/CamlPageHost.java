@@ -9,8 +9,11 @@ import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.SplitPane;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
 import javafx.scene.layout.StackPane;
 import javafx.util.Duration;
+import org.chs.camlauncher.ui.theme.CamlMotion;
 
 import java.util.Objects;
 
@@ -30,10 +33,9 @@ public final class CamlPageHost extends StackPane {
     private static final double SIDEBAR_ENTER_OFFSET_X = -16;
     private static final double SIDEBAR_EXIT_OFFSET_Y = 4;
     private static final double SIDEBAR_ENTER_OFFSET_Y = 12;
-    private static final boolean REDUCE_MOTION = Boolean.getBoolean("caml.reduceMotion");
-
     private Node currentPage;
     private Node currentSidebar;
+    private Node currentContainer;
     private ParallelTransition running;
 
     public CamlPageHost(Node initialPage) {
@@ -59,7 +61,7 @@ public final class CamlPageHost extends StackPane {
         if (page == currentPage && sidebar == currentSidebar) {
             return;
         }
-        if (REDUCE_MOTION) {
+        if (CamlMotion.reduceMotion()) {
             if (running != null) {
                 running.stop();
                 running = null;
@@ -72,13 +74,14 @@ public final class CamlPageHost extends StackPane {
         if (running != null) {
             running.stop();
             running = null;
-            getChildren().setAll(currentPage);
+            getChildren().setAll(currentContainer);
             reset(currentPage);
             resetSidebar(currentSidebar);
         }
 
         Node previous = currentPage;
         Node previousSidebar = currentSidebar;
+        Node previousContainer = currentContainer;
         previous.setMouseTransparent(true);
 
         page.setOpacity(0);
@@ -88,7 +91,8 @@ public final class CamlPageHost extends StackPane {
             sidebar.setTranslateX(SIDEBAR_ENTER_OFFSET_X);
             sidebar.setTranslateY(SIDEBAR_ENTER_OFFSET_Y);
         }
-        getChildren().add(page);
+        Node container = createContainer(page, sidebar);
+        getChildren().add(container);
 
         FadeTransition pageFadeOut = new FadeTransition(EXIT_DURATION, previous);
         pageFadeOut.setToValue(0);
@@ -145,12 +149,17 @@ public final class CamlPageHost extends StackPane {
         running = new ParallelTransition(exit, enter);
         running.setOnFinished(event -> {
             boolean focusWasLost = scene != null && focusInsideHost
-                    && (scene.getFocusOwner() == null || containsFocus(previous, scene));
-            getChildren().remove(previous);
+                    && (scene.getFocusOwner() == null
+                    || containsFocus(previous, scene)
+                    || containsFocus(previousSidebar, scene));
+            if (previousContainer != null) {
+                getChildren().remove(previousContainer);
+            }
             reset(page);
             resetSidebar(sidebar);
             currentPage = page;
             currentSidebar = sidebar;
+            currentContainer = container;
             running = null;
             if (focusWasLost) {
                 focusFirstControl(page);
@@ -161,17 +170,33 @@ public final class CamlPageHost extends StackPane {
 
     private void setPageImmediately(Node page, Node sidebar) {
         Node previous = currentPage;
+        Node previousSidebar = currentSidebar;
         Scene scene = getScene();
         boolean focusInsideHost = containsFocus(this, scene);
+        Node container = createContainer(page, sidebar);
         currentPage = page;
         currentSidebar = sidebar;
-        getChildren().setAll(page);
+        currentContainer = container;
+        getChildren().setAll(container);
         reset(page);
         resetSidebar(sidebar);
         if (scene != null && focusInsideHost
-                && (scene.getFocusOwner() == null || containsFocus(previous, scene))) {
+                && (scene.getFocusOwner() == null
+                || containsFocus(previous, scene)
+                || containsFocus(previousSidebar, scene))) {
             focusFirstControl(page);
         }
+    }
+
+    private static Node createContainer(Node page, Node sidebar) {
+        if (sidebar == null) {
+            return page;
+        }
+        HBox container = new HBox(sidebar, page);
+        container.setFillHeight(true);
+        container.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
+        HBox.setHgrow(page, Priority.ALWAYS);
+        return container;
     }
 
     private static boolean containsFocus(Node container, Scene scene) {

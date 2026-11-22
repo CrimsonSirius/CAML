@@ -243,7 +243,7 @@
 
 .app-sidebar,
 .app-settings-sidebar {
-    -fx-background-color: transparent;
+    -fx-background-color: -caml-surface;
     -fx-border-color: transparent -caml-border-subtle transparent transparent;
     -fx-border-width: 0 1 0 0;
 }
@@ -262,11 +262,6 @@
 .app-settings-sidebar .caml-side-nav-item {
     -fx-alignment: center-left;
     -fx-padding: 0.625em 1em;
-}
-
-.app-settings-body {
-    -fx-padding: 0;
-    -fx-spacing: 1.5em;
 }
 
 .app-settings-content-host {

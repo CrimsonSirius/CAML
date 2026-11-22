@@ -438,6 +438,7 @@
   "operation.saveMaxMemory": "Сохранение максимальной памяти",
   "operation.saveTheme": "Сохранение выбора темы",
   "operation.saveVersionIsolation": "Сохранение настройки изоляции версий",
+  "operation.saveWindowState": "Сохранить состояние окна",
   "operation.scanJava": "Сканирование Java",
   "operation.searchMods": "Поиск модов: %s",
   "operation.searchResourcePacks": "Поиск наборов ресурсов: %s",

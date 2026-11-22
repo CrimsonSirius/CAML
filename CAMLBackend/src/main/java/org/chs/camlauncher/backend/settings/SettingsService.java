@@ -2,6 +2,7 @@ package org.chs.camlauncher.backend.settings;
 
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
+import org.chs.camlauncher.backend.api.WindowState;
 import org.chs.camlauncher.backend.download.DownloadConcurrency;
 import org.chs.camlauncher.backend.download.source.DownloadSourceMode;
 import org.chs.camlauncher.backend.instance.VersionIsolationMode;
@@ -59,6 +60,11 @@ public final class SettingsService {
     private static final String LANGUAGE_FALLBACK_MODE_KEY = "languageFallbackMode";
     private static final String LANGUAGE_FALLBACK_LOCALE_KEY = "languageFallbackLocale";
     private static final String AUTO_GAME_LANGUAGE_KEY = "autoGameLanguage";
+    private static final String WINDOW_X_KEY = "windowX";
+    private static final String WINDOW_Y_KEY = "windowY";
+    private static final String WINDOW_WIDTH_KEY = "windowWidth";
+    private static final String WINDOW_HEIGHT_KEY = "windowHeight";
+    private static final String WINDOW_MAXIMIZED_KEY = "windowMaximized";
     private static final String DISABLED_MODS_KEY = "disabledMods";
     private static final String DEFAULT_ACCOUNT_KEY = "defaultAccountId";
     private static final String INSTANCE_ACCOUNTS_KEY = "instanceAccounts";
@@ -131,6 +137,39 @@ public final class SettingsService {
         Objects.requireNonNull(directory, "directory");
         update(properties -> properties.setProperty(GAME_DIRECTORY_KEY,
                 directory.toAbsolutePath().normalize().toString()));
+    }
+
+    public Optional<WindowState> windowState() throws IOException {
+        Properties properties = load();
+        String x = properties.getProperty(WINDOW_X_KEY);
+        String y = properties.getProperty(WINDOW_Y_KEY);
+        String width = properties.getProperty(WINDOW_WIDTH_KEY);
+        String height = properties.getProperty(WINDOW_HEIGHT_KEY);
+        if (x == null || y == null || width == null || height == null) {
+            return Optional.empty();
+        }
+        try {
+            return Optional.of(new WindowState(
+                    Double.parseDouble(x.trim()),
+                    Double.parseDouble(y.trim()),
+                    Double.parseDouble(width.trim()),
+                    Double.parseDouble(height.trim()),
+                    Boolean.parseBoolean(properties.getProperty(WINDOW_MAXIMIZED_KEY, "false"))
+            ));
+        } catch (IllegalArgumentException ignored) {
+            return Optional.empty();
+        }
+    }
+
+    public void setWindowState(WindowState state) throws IOException {
+        Objects.requireNonNull(state, "state");
+        update(properties -> {
+            properties.setProperty(WINDOW_X_KEY, Double.toString(state.x()));
+            properties.setProperty(WINDOW_Y_KEY, Double.toString(state.y()));
+            properties.setProperty(WINDOW_WIDTH_KEY, Double.toString(state.width()));
+            properties.setProperty(WINDOW_HEIGHT_KEY, Double.toString(state.height()));
+            properties.setProperty(WINDOW_MAXIMIZED_KEY, Boolean.toString(state.maximized()));
+        });
     }
 
     public VersionIsolationMode versionIsolationMode() throws IOException {

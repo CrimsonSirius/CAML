@@ -438,6 +438,7 @@
   "operation.saveMaxMemory": "儲存最大記憶體設定",
   "operation.saveTheme": "儲存主題選擇",
   "operation.saveVersionIsolation": "儲存版本隔離設定",
+  "operation.saveWindowState": "儲存視窗狀態",
   "operation.scanJava": "掃描 Java",
   "operation.searchMods": "搜尋 Mod：%s",
   "operation.searchResourcePacks": "搜尋資源包：%s",

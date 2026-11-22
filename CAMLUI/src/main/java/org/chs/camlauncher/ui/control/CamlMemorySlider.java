@@ -9,6 +9,7 @@ import javafx.scene.input.KeyCode;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.Region;
 import javafx.util.Duration;
+import org.chs.camlauncher.ui.theme.CamlMotion;
 
 /**
  * CAML 内存分配滑块。
@@ -22,8 +23,6 @@ public final class CamlMemorySlider extends Pane {
     private static final double THIN_BAR_HEIGHT = 2;
     private static final double THUMB_SIZE = 18;
     private static final double PRESS_SCALE = 0.84;
-    private static final boolean REDUCE_MOTION = Boolean.getBoolean("caml.reduceMotion");
-
     private final int min;
     private final int max;
     private final int step;
@@ -156,7 +155,7 @@ public final class CamlMemorySlider extends Pane {
     }
 
     private void animateThumb(double target, Duration duration) {
-        if (REDUCE_MOTION) {
+        if (CamlMotion.reduceMotion()) {
             return;
         }
         if (thumbScale != null) {

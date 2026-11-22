@@ -461,6 +461,7 @@ public final class JAJPGenerator extends LanguageTranslationGenerator {
         t.put("operation.saveMaxMemory", "最大メモリ設定を保存");
         t.put("operation.saveJvmArguments", "JVM 引数を保存");
         t.put("operation.saveGameDirectory", "ゲームディレクトリを保存");
+        t.put("operation.saveWindowState", "ウィンドウ状態を保存");
         t.put("operation.saveVersionIsolation", "バージョン分離設定を保存");
         t.put("operation.saveAutoGameLanguage", "ゲーム言語の自動設定を保存");
         t.put("operation.saveDownloadConcurrency", "ダウンロードの並列数を保存");

@@ -5,7 +5,6 @@ import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
-import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
@@ -20,6 +19,7 @@ import org.chs.camlauncher.front.text.UiText;
 import org.chs.camlauncher.ui.control.CamlIcon;
 import org.chs.camlauncher.ui.control.CamlSideNav;
 import org.chs.camlauncher.ui.control.CamlSideNavItem;
+import org.chs.camlauncher.ui.theme.CamlMotion;
 
 import java.util.List;
 import java.util.function.BiConsumer;
@@ -28,8 +28,6 @@ import java.util.function.IntConsumer;
 
 /** 设置页：左侧子导航，右侧游戏/下载/外观设置内容。 */
 final class SettingsView extends VBox implements SidebarPage, PageLifecycle {
-    private static final boolean REDUCE_MOTION = Boolean.getBoolean("caml.reduceMotion");
-
     private final GameSettingsView gameSettings;
     private final DownloadSettingsView downloadSettings;
     private final LauncherSettingsView launcherSettings;
@@ -110,7 +108,6 @@ final class SettingsView extends VBox implements SidebarPage, PageLifecycle {
         contentHost.getStyleClass().add("app-settings-content-host");
         contentHost.setAlignment(Pos.TOP_LEFT);
         contentHost.setMaxHeight(Double.MAX_VALUE);
-        HBox.setHgrow(contentHost, Priority.ALWAYS);
         // 内容列宽度跟随滚动视口并铺满可用宽度；各设置视图显式允许横向拉伸。
         contentScroll.viewportBoundsProperty().addListener((observable, oldValue, newValue) -> {
             double innerWidth = Math.max(0, newValue.getWidth());
@@ -131,14 +128,11 @@ final class SettingsView extends VBox implements SidebarPage, PageLifecycle {
             }
         });
 
-        HBox body = new HBox(sideNav, contentHost);
-        body.getStyleClass().add("app-settings-body");
-        body.setAlignment(Pos.TOP_LEFT);
-
         setAlignment(Pos.TOP_LEFT);
         setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
         getStyleClass().add("app-settings-page");
-        getChildren().add(body);
+        VBox.setVgrow(contentHost, Priority.ALWAYS);
+        getChildren().add(contentHost);
         controller.setOnSaveFailed(this::showSaveError);
         controller.setOnSaveSucceeded(this::clearSaveError);
     }
@@ -187,7 +181,7 @@ final class SettingsView extends VBox implements SidebarPage, PageLifecycle {
         if (currentContent == next) {
             return;
         }
-        if (REDUCE_MOTION) {
+        if (CamlMotion.reduceMotion()) {
             setContent(next);
             return;
         }

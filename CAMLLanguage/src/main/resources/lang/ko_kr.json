@@ -438,6 +438,7 @@
   "operation.saveMaxMemory": "최대 메모리 설정 저장",
   "operation.saveTheme": "테마 선택 저장",
   "operation.saveVersionIsolation": "버전 격리 설정 저장",
+  "operation.saveWindowState": "창 상태 저장",
   "operation.scanJava": "Java 검색",
   "operation.searchMods": "모드 검색: %s",
   "operation.searchResourcePacks": "리소스 팩 검색: %s",

@@ -470,6 +470,7 @@ public final class ZHTWGenerator extends LanguageTranslationGenerator {
         t.put("operation.saveMaxMemory", "儲存最大記憶體設定");
         t.put("operation.saveJvmArguments", "儲存 JVM 參數");
         t.put("operation.saveGameDirectory", "儲存遊戲位置");
+        t.put("operation.saveWindowState", "儲存視窗狀態");
         t.put("operation.saveVersionIsolation", "儲存版本隔離設定");
         t.put("operation.saveAutoGameLanguage", "儲存自動遊戲語言設定");
         t.put("operation.saveDownloadConcurrency", "儲存下載並行數");

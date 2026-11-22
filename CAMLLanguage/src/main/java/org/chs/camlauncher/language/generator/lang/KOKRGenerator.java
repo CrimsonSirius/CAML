@@ -461,6 +461,7 @@ public final class KOKRGenerator extends LanguageTranslationGenerator {
         t.put("operation.saveMaxMemory", "최대 메모리 설정 저장");
         t.put("operation.saveJvmArguments", "JVM 인수 저장");
         t.put("operation.saveGameDirectory", "게임 디렉터리 저장");
+        t.put("operation.saveWindowState", "창 상태 저장");
         t.put("operation.saveVersionIsolation", "버전 격리 설정 저장");
         t.put("operation.saveAutoGameLanguage", "게임 언어 자동 설정 저장");
         t.put("operation.saveDownloadConcurrency", "다운로드 동시 수 저장");

@@ -25,9 +25,9 @@ import org.chs.camlauncher.front.controller.FrontTask;
 import org.chs.camlauncher.front.text.UiText;
 import org.chs.camlauncher.ui.control.CamlButton;
 import org.chs.camlauncher.ui.control.CamlComboBox;
+import org.chs.camlauncher.ui.theme.CamlMotion;
 
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -194,7 +194,7 @@ final class ModDetailView extends VBox implements PageLifecycle {
             loaders.addAll(file.loaders());
         }
         List<String> sortedVersions = new ArrayList<>(versions);
-        sortedVersions.sort(Comparator.reverseOrder());
+        sortedVersions.sort(MinecraftVersionComparator.NEWEST_FIRST);
         List<String> sortedLoaders = new ArrayList<>(loaders);
         sortedLoaders.sort(String::compareTo);
 
@@ -227,7 +227,7 @@ final class ModDetailView extends VBox implements PageLifecycle {
             return;
         }
         groups.entrySet().stream()
-                .sorted(Map.Entry.comparingByKey(Comparator.reverseOrder()))
+                .sorted(Map.Entry.comparingByKey(MinecraftVersionComparator.GROUP_NEWEST_FIRST))
                 .forEach(entry -> groupsBox.getChildren().add(
                         groupCard(entry.getKey(), entry.getValue())));
     }
@@ -340,7 +340,7 @@ final class ModDetailView extends VBox implements PageLifecycle {
             content.setManaged(expanded[0]);
             content.setVisible(expanded[0]);
             arrow.setText(expanded[0] ? "▼" : "▶");
-            if (expanded[0]) {
+            if (expanded[0] && !CamlMotion.reduceMotion()) {
                 FadeTransition fade = new FadeTransition(Duration.millis(120), content);
                 fade.setFromValue(0.25);
                 fade.setToValue(1);

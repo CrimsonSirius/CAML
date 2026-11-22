@@ -11,6 +11,7 @@ import javafx.scene.input.KeyCode;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.util.Duration;
+import org.chs.camlauncher.ui.theme.CamlMotion;
 
 /** CAML 开关。JavaFX 没有原生 Switch，这里用轨道和滑块组合实现。 */
 public final class CamlSwitch extends StackPane {
@@ -90,6 +91,11 @@ public final class CamlSwitch extends StackPane {
     }
 
     private void animateThumb(boolean selected) {
+        if (CamlMotion.reduceMotion()) {
+            thumbAnimation.stop();
+            thumb.setTranslateX(selected ? THUMB_TRAVEL : 0);
+            return;
+        }
         thumbAnimation.stop();
         thumbAnimation.setToX(selected ? THUMB_TRAVEL : 0);
         thumbAnimation.play();

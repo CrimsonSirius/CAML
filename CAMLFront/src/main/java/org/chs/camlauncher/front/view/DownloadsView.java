@@ -5,6 +5,7 @@ import javafx.animation.Timeline;
 import javafx.event.ActionEvent;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
+import javafx.scene.Scene;
 import javafx.scene.control.Label;
 import javafx.scene.control.ProgressBar;
 import javafx.scene.layout.HBox;
@@ -105,7 +106,7 @@ final class DownloadsView extends HBox implements SidebarPage, PageLifecycle {
         shaderItem.addEventHandler(ActionEvent.ACTION, event -> showShaders());
         resourcePackItem.addEventHandler(ActionEvent.ACTION, event -> showResourcePacks());
 
-        getChildren().addAll(sidebar, contentColumn);
+        getChildren().add(contentColumn);
         getStyleClass().add("app-download-page");
         setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
     }
@@ -507,7 +508,8 @@ final class DownloadsView extends HBox implements SidebarPage, PageLifecycle {
     }
 
     private void updateSidebarWidth() {
-        double width = getWidth();
+        Scene scene = getScene();
+        double width = scene == null ? getWidth() : scene.getWidth();
         double factor = ViewSupport.uiFactor(this);
         double sidebarWidth = width <= 0
                 ? UiScale.size(ModDownloadLayout.SIDEBAR_MIN_WIDTH, factor)

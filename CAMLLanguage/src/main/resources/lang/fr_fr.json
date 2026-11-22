@@ -438,6 +438,7 @@
   "operation.saveMaxMemory": "Enregistrer la mémoire maximale",
   "operation.saveTheme": "Enregistrer la sélection de thème",
   "operation.saveVersionIsolation": "Enregistrer le paramètre d’isolation des versions",
+  "operation.saveWindowState": "Enregistrer l'état de la fenêtre",
   "operation.scanJava": "Scanner Java",
   "operation.searchMods": "Rechercher des mods : %s",
   "operation.searchResourcePacks": "Rechercher des packs de ressources : %s",

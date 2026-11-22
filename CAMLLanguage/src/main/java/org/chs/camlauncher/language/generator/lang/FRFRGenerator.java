@@ -461,6 +461,7 @@ public final class FRFRGenerator extends LanguageTranslationGenerator {
         t.put("operation.saveMaxMemory", "Enregistrer la mémoire maximale");
         t.put("operation.saveJvmArguments", "Enregistrer les arguments JVM");
         t.put("operation.saveGameDirectory", "Enregistrer le répertoire de jeu");
+        t.put("operation.saveWindowState", "Enregistrer l'état de la fenêtre");
         t.put("operation.saveVersionIsolation", "Enregistrer le paramètre d’isolation des versions");
         t.put("operation.saveAutoGameLanguage", "Enregistrer le paramètre de langue automatique du jeu");
         t.put("operation.saveDownloadConcurrency", "Enregistrer le parallélisme de téléchargement");

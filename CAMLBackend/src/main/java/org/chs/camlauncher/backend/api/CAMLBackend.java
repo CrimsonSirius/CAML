@@ -385,6 +385,14 @@ public final class CAMLBackend implements AutoCloseable {
         settingsService.setGameDirectory(directory);
     }
 
+    public Optional<WindowState> savedWindowState() throws IOException {
+        return settingsService.windowState();
+    }
+
+    public void saveWindowState(WindowState state) throws IOException {
+        settingsService.setWindowState(state);
+    }
+
     public VersionIsolationMode versionIsolationMode() throws IOException {
         return settingsService.versionIsolationMode();
     }

@@ -461,6 +461,7 @@ public final class LALAGenerator extends LanguageTranslationGenerator {
         t.put("operation.saveMaxMemory", "Memoriam maximam servare");
         t.put("operation.saveJvmArguments", "Argumenta JVM servare");
         t.put("operation.saveGameDirectory", "Directorium ludi servare");
+        t.put("operation.saveWindowState", "Statum fenestrae servare");
         t.put("operation.saveVersionIsolation", "Segregationem versionum servare");
         t.put("operation.saveAutoGameLanguage", "Linguam ludi automaticam servare");
         t.put("operation.saveDownloadConcurrency", "Concurrentiam depositi servare");

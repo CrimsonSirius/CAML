@@ -9,6 +9,7 @@ import javafx.scene.control.Button;
 import javafx.scene.control.ContentDisplay;
 import javafx.scene.input.MouseEvent;
 import javafx.util.Duration;
+import org.chs.camlauncher.ui.theme.CamlMotion;
 
 /** CAML 侧边导航项目。 */
 public final class CamlSideNavItem extends Button {
@@ -16,8 +17,6 @@ public final class CamlSideNavItem extends Button {
     private static final Duration PRESS_DURATION = Duration.millis(70);
     private static final Duration RELEASE_DURATION = Duration.millis(160);
     private static final double PRESS_SCALE = 0.96;
-    private static final boolean REDUCE_MOTION = Boolean.getBoolean("caml.reduceMotion");
-
     private boolean selected;
     private ScaleTransition scaleAnimation;
 
@@ -58,7 +57,7 @@ public final class CamlSideNavItem extends Button {
     }
 
     private void animateScale(double target, Duration duration) {
-        if (REDUCE_MOTION) {
+        if (CamlMotion.reduceMotion()) {
             return;
         }
         if (scaleAnimation != null) {

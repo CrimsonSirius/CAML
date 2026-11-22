@@ -465,6 +465,7 @@ public final class ZHCNGenerator extends LanguageTranslationGenerator {
         t.put("operation.saveMaxMemory", "保存最大内存设置");
         t.put("operation.saveJvmArguments", "保存 JVM 参数");
         t.put("operation.saveGameDirectory", "保存游戏位置");
+        t.put("operation.saveWindowState", "保存窗口状态");
         t.put("operation.saveVersionIsolation", "保存版本隔离设置");
         t.put("operation.saveAutoGameLanguage", "保存自动游戏语言设置");
         t.put("operation.saveDownloadConcurrency", "保存下载并发数");

@@ -461,6 +461,7 @@ public final class ENUSGenerator extends LanguageTranslationGenerator {
         t.put("operation.saveMaxMemory", "Save max memory setting");
         t.put("operation.saveJvmArguments", "Save JVM arguments");
         t.put("operation.saveGameDirectory", "Save game directory");
+        t.put("operation.saveWindowState", "Save window state");
         t.put("operation.saveVersionIsolation", "Save version isolation setting");
         t.put("operation.saveAutoGameLanguage", "Save automatic game language setting");
         t.put("operation.saveDownloadConcurrency", "Save download concurrency");

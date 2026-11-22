@@ -462,6 +462,7 @@ public final class FNCNGenerator extends LanguageTranslationGenerator {
         t.put("operation.saveMaxMemory", "拯救最大记忆摆弄");
         t.put("operation.saveJvmArguments", "拯救爪哇摆弄参数");
         t.put("operation.saveGameDirectory", "拯救比赛名录");
+        t.put("operation.saveWindowState", "拯救窗口状态");
         t.put("operation.saveVersionIsolation", "拯救译本孤立法摆弄");
         t.put("operation.saveAutoGameLanguage", "拯救自动比赛腔调摆弄");
         t.put("operation.saveDownloadConcurrency", "拯救向下装载并发数");

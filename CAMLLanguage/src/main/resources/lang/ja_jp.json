@@ -438,6 +438,7 @@
   "operation.saveMaxMemory": "最大メモリ設定を保存",
   "operation.saveTheme": "テーマの選択を保存",
   "operation.saveVersionIsolation": "バージョン分離設定を保存",
+  "operation.saveWindowState": "ウィンドウ状態を保存",
   "operation.scanJava": "Java をスキャン",
   "operation.searchMods": "MOD を検索: %s",
   "operation.searchResourcePacks": "リソースパックを検索：%s",

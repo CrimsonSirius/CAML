@@ -438,6 +438,7 @@
   "operation.saveMaxMemory": "保存最大内存设置",
   "operation.saveTheme": "保存主题选择",
   "operation.saveVersionIsolation": "保存版本隔离设置",
+  "operation.saveWindowState": "保存窗口状态",
   "operation.scanJava": "扫描 Java",
   "operation.searchMods": "搜索 Mod：%s",
   "operation.searchResourcePacks": "搜索资源包：%s",

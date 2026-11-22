@@ -438,6 +438,7 @@
   "operation.saveMaxMemory": "དྲན་ཤེས་མང་ཤོས་ཀྱི་སྒྲིག་བཀོད་ཉར་ཚགས",
   "operation.saveTheme": "བརྗོད་གཞིའི་འདེམས་སྒྲུག་ཉར་ཚགས",
   "operation.saveVersionIsolation": "པར་གཞི་ལོགས་བཀར་གྱི་སྒྲིག་བཀོད་ཉར་ཚགས",
+  "operation.saveWindowState": "སྒེའུ་ཁུང་གི་གནས་ཚུལ་ཉར་ཚགས",
   "operation.scanJava": "Java བཤེར",
   "operation.searchMods": "MOD འཚོལ: %s",
   "operation.searchResourcePacks": "Search resource packs: %s",

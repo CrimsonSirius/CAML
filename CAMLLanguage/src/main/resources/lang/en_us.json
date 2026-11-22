@@ -438,6 +438,7 @@
   "operation.saveMaxMemory": "Save max memory setting",
   "operation.saveTheme": "Save theme selection",
   "operation.saveVersionIsolation": "Save version isolation setting",
+  "operation.saveWindowState": "Save window state",
   "operation.scanJava": "Scan Java",
   "operation.searchMods": "Search mods: %s",
   "operation.searchResourcePacks": "Search resource packs: %s",
