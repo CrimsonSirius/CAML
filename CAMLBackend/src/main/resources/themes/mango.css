@@ -1,42 +1,42 @@
 /*
- * CAML 默认主题 mango：白底、灰色表面、黄色强调。
+ * CAML 默认主题 mango：暖灰工作台、焦糖橙强调。
  * 这个文件会在首次启动时复制到 <data>/themes/mango.css。
  * 用户可以直接修改它，或添加新的 *.css 主题文件。
  */
 
 .caml-root {
-    -caml-accent: #f99e1a;
-    -caml-on-accent: #1a1a1a;
+    -caml-accent: #b45309;
+    -caml-on-accent: #ffffff;
     -caml-accent-text: #8a5200;
     -caml-accent-container: #ffe0b2;
     -caml-on-accent-container: #3a2200;
 
-    -caml-neutral: #5a5a5a;
+    -caml-neutral: #6b5f54;
     -caml-on-neutral: #ffffff;
-    -caml-neutral-container: #e8e8e8;
-    -caml-on-neutral-container: #1a1a1a;
+    -caml-neutral-container: #e9e0d5;
+    -caml-on-neutral-container: #2a2119;
 
     -caml-danger: #b3261e;
     -caml-on-danger: #ffffff;
     -caml-danger-container: #f9dedc;
     -caml-on-danger-container: #410e0b;
 
-    -caml-background: #ffffff;
-    -caml-on-background: #1a1a1a;
-    -caml-surface: #ffffff;
-    -caml-on-surface: #1a1a1a;
-    -caml-surface-muted: #e4e4e4;
-    -caml-on-surface-muted: #5a5a5a;
+    -caml-background: #f7f4ee;
+    -caml-on-background: #231a12;
+    -caml-surface: #fffcf7;
+    -caml-on-surface: #231a12;
+    -caml-surface-muted: #e9e1d6;
+    -caml-on-surface-muted: #5f554a;
     -caml-surface-lowest: #ffffff;
-    -caml-surface-low: #fafafa;
-    -caml-surface-container: #f0f0f0;
-    -caml-surface-high: #e8e8e8;
-    -caml-surface-highest: #e0e0e0;
+    -caml-surface-low: #f8f3eb;
+    -caml-surface-container: #f0eae1;
+    -caml-surface-high: #e8e0d5;
+    -caml-surface-highest: #ded4c7;
 
-    -caml-border: #767676;
-    -caml-border-subtle: #d0d0d0;
-    -caml-inverse-surface: #2a2a2a;
-    -caml-inverse-on-surface: #f5f5f5;
-    -caml-inverse-accent: #f99e1a;
-    -caml-shadow-color: rgba(0, 0, 0, 0.16);
+    -caml-border: #7d7266;
+    -caml-border-subtle: #d8cfc2;
+    -caml-inverse-surface: #2b2119;
+    -caml-inverse-on-surface: #fff7ef;
+    -caml-inverse-accent: #ffd180;
+    -caml-shadow-color: rgba(45, 31, 18, 0.18);
 }

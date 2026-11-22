@@ -23,7 +23,11 @@ class ThemeServiceTest {
 
         Path theme = dataDirectory.resolve("themes").resolve("mango.css");
         assertTrue(Files.isRegularFile(theme));
-        assertTrue(Files.readString(theme).contains("-caml-background: #ffffff"));
+        String content = Files.readString(theme);
+        assertTrue(content.contains("-caml-accent:"));
+        assertTrue(content.contains("-caml-background:"));
+        assertTrue(content.contains("-caml-on-surface:"));
+        assertTrue(content.contains("-caml-on-surface-muted:"));
     }
 
     @Test
