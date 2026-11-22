@@ -267,20 +267,21 @@
 
 .app-settings-content-host {
     -fx-padding: 2em 2.5em;
+    -fx-max-width: 70em;
 }
 
 .app-settings-content {
     -fx-min-width: 0;
-    -fx-spacing: 1.25em;
+    -fx-spacing: 1.75em;
 }
 
-/* 分组内部统一使用 1em 间距（设计值 16px），标题、说明、选项列表和辅助文字因此等比缩放。 */
+/* 设置页使用连续分区，而不是为每个分组重复套卡片。 */
 .app-settings-group {
-    -fx-background-color: -caml-surface-low;
-    -fx-background-radius: 0.75em;
-    -fx-border-color: -caml-border-subtle;
-    -fx-border-width: 1;
-    -fx-border-radius: 0.75em;
+    -fx-background-color: transparent;
+    -fx-background-radius: 0;
+    -fx-border-color: transparent transparent -caml-border-subtle transparent;
+    -fx-border-width: 0 0 1 0;
+    -fx-border-radius: 0;
     -fx-padding: 1.5em;
     -fx-spacing: 1em;
 }
@@ -302,6 +303,101 @@
 
 .app-settings-row {
     -fx-spacing: 0.75em;
+}
+
+/* 账号列表 */
+.app-account-list {
+    -fx-spacing: 0;
+}
+
+.app-account-row {
+    -fx-spacing: 0.875em;
+    -fx-padding: 0.75em 0;
+    -fx-border-color: transparent transparent -caml-border-subtle transparent;
+    -fx-border-width: 0 0 1 0;
+}
+
+.app-account-avatar {
+    -fx-min-width: 2.5em;
+    -fx-min-height: 2.5em;
+    -fx-pref-width: 2.5em;
+    -fx-pref-height: 2.5em;
+    -fx-max-width: 2.5em;
+    -fx-max-height: 2.5em;
+    -fx-background-radius: 100;
+}
+
+.app-account-avatar-offline {
+    -fx-background-color: -caml-surface-high;
+}
+
+.app-account-avatar-yggdrasil {
+    -fx-background-color: -caml-neutral-container;
+}
+
+.app-account-avatar-microsoft {
+    -fx-background-color: -caml-accent-container;
+}
+
+.app-account-avatar-text {
+    -fx-font-size: 1em;
+    -fx-font-weight: bold;
+    -fx-text-fill: -caml-on-surface;
+}
+
+.app-account-avatar-yggdrasil .app-account-avatar-text {
+    -fx-text-fill: -caml-on-neutral-container;
+}
+
+.app-account-avatar-microsoft .app-account-avatar-text {
+    -fx-text-fill: -caml-on-accent-container;
+}
+
+.app-account-info {
+    -fx-spacing: 0.15em;
+}
+
+.app-account-name {
+    -fx-font-size: 1em;
+    -fx-font-weight: bold;
+    -fx-text-fill: -caml-on-surface;
+}
+
+.app-account-meta {
+    -fx-font-size: 0.75em;
+    -fx-text-fill: -caml-on-surface-muted;
+}
+
+.app-account-meta-error {
+    -fx-text-fill: -caml-danger;
+}
+
+.app-account-controls {
+    -fx-spacing: 0.5em;
+}
+
+.app-account-profile {
+    -fx-pref-width: 10.5em;
+    -fx-max-width: 10.5em;
+}
+
+.app-destructive-action {
+    -fx-text-fill: -caml-danger;
+    -fx-border-color: -caml-danger-container;
+}
+
+.app-destructive-action:hover {
+    -fx-background-color: -caml-danger-container;
+}
+
+.app-empty-state {
+    -fx-padding: 1.5em 1em;
+    -fx-alignment: center-left;
+    -fx-background-color: -caml-surface-low;
+    -fx-background-radius: 0.75em;
+    -fx-border-color: -caml-border-subtle;
+    -fx-border-width: 1;
+    -fx-border-radius: 0.75em;
 }
 
 .app-settings-inline {
@@ -377,6 +473,29 @@
 
 .app-instance-item:pressed {
     -fx-background-color: -caml-surface-highest;
+}
+
+.app-instance-row {
+    -fx-font-size: 1em;
+    -fx-min-height: 3.25em;
+    -fx-padding: 0.75em 1em;
+    -fx-background-color: -caml-surface-low;
+    -fx-border-color: -caml-border-subtle;
+    -fx-border-radius: 0.625em;
+    -fx-background-radius: 0.625em;
+    -fx-text-fill: -caml-on-surface;
+}
+
+.app-instance-row .caml-icon-fill {
+    -fx-fill: -caml-on-surface-muted;
+}
+
+.app-instance-row .caml-icon-stroke {
+    -fx-stroke: -caml-on-surface-muted;
+}
+
+.app-instance-row:hover {
+    -fx-background-color: -caml-surface-high;
 }
 
 .app-instance-info-group {
@@ -514,6 +633,11 @@
     -fx-font-size: 0.75em;
     -fx-text-fill: -caml-on-surface-muted;
     -fx-max-height: 9em;
+}
+
+.app-download-version-main {
+    -fx-spacing: 0.625em;
+    -fx-alignment: center-left;
 }
 
 /* 日志文本区的高度由 MainView 按断点设置：CSS 声明会覆盖代码设置，因此此处不写 -fx-min-height / -fx-pref-height。 */
@@ -795,6 +919,10 @@
 .app-instance-mod-toggle:selected {
     -fx-background-color: -caml-accent-container;
     -fx-text-fill: -caml-on-accent-container;
+}
+
+.app-instance-mod-toggle:focused {
+    -fx-effect: dropshadow(gaussian, -caml-on-surface, 4, 0.65, 0, 0);
 }
 
 .app-instance-mod-title-row {

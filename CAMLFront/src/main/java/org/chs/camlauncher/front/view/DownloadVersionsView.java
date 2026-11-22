@@ -6,6 +6,7 @@ import javafx.scene.control.ContentDisplay;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import org.chs.camlauncher.backend.metadata.model.VersionManifest;
@@ -13,6 +14,7 @@ import org.chs.camlauncher.front.controller.DownloadsController;
 import org.chs.camlauncher.front.controller.FrontTask;
 import org.chs.camlauncher.front.text.UiText;
 import org.chs.camlauncher.ui.control.CamlButton;
+import org.chs.camlauncher.ui.control.CamlIcon;
 
 import java.util.List;
 import java.util.function.Consumer;
@@ -60,8 +62,12 @@ final class DownloadVersionsView extends VBox implements PageLifecycle {
         }
         if (versions.isEmpty()) {
             statusLabel.setText(UiText.tr("download.versions.empty", category.label()));
+            if (!statusLabel.getStyleClass().contains("app-empty-state")) {
+                statusLabel.getStyleClass().add("app-empty-state");
+            }
             return;
         }
+        statusLabel.getStyleClass().remove("app-empty-state");
 
         VBox list = new VBox();
         list.getStyleClass().add("app-version-list");
@@ -76,8 +82,11 @@ final class DownloadVersionsView extends VBox implements PageLifecycle {
             Label dateLabel = new Label(date);
             dateLabel.getStyleClass().add("app-download-version-date");
 
+            HBox main = new HBox(new CamlIcon(CamlIcon.Glyph.DOWNLOAD, 18), idLabel);
+            main.getStyleClass().add("app-download-version-main");
+
             BorderPane row = new BorderPane();
-            row.setLeft(idLabel);
+            row.setLeft(main);
             row.setRight(dateLabel);
             // 行宽 = 按钮宽度 - 按钮的左右内边距；内边距来自 CSS 的 em，缩放后自动跟上。
             row.prefWidthProperty().bind(Bindings.createDoubleBinding(() -> {
@@ -102,7 +111,7 @@ final class DownloadVersionsView extends VBox implements PageLifecycle {
             return;
         }
         statusLabel.setText(UiText.tr("download.versions.error", category.label(), message));
-        statusLabel.getStyleClass().remove("field-hint");
+        statusLabel.getStyleClass().removeAll("field-hint", "app-empty-state");
         statusLabel.getStyleClass().add("field-hint-error");
     }
 

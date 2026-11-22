@@ -135,7 +135,8 @@ final class ManageInstancesView extends VBox implements PageLifecycle {
         lastModCount = details.modCount();
         if (details.mods().isEmpty()) {
             Label empty = new Label(UiText.tr("instances.manage.mods.empty"));
-            empty.getStyleClass().addAll("caml-body-medium", "caml-on-surface-muted");
+            empty.getStyleClass().addAll(
+                    "caml-body-medium", "caml-on-surface-muted", "app-empty-state");
             modsList.getChildren().add(empty);
             setStatus(UiText.tr("instances.manage.mods.empty"), false);
             return;

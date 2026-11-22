@@ -10,6 +10,7 @@ import org.chs.camlauncher.front.controller.HomeController;
 import org.chs.camlauncher.front.controller.FrontTask;
 import org.chs.camlauncher.front.text.UiText;
 import org.chs.camlauncher.ui.control.CamlButton;
+import org.chs.camlauncher.ui.control.CamlIcon;
 
 import java.nio.file.Path;
 import java.util.function.Consumer;
@@ -69,14 +70,16 @@ final class InstancePickerView extends VBox implements PageLifecycle {
             }
             if (!info.hasInstalledVersions()) {
                 statusLabel.setText(UiText.tr("instances.picker.empty"));
+                statusLabel.getStyleClass().add("app-empty-state");
                 return;
             }
 
             VBox list = new VBox();
             list.getStyleClass().add("app-instance-list");
             for (String version : info.installedVersions()) {
-                CamlButton item = CamlButton.outlined(version);
-                item.getStyleClass().add("app-instance-item");
+                CamlButton item = CamlButton.outlined(version)
+                        .withGraphic(new CamlIcon(CamlIcon.Glyph.GRID, 18));
+                item.getStyleClass().addAll("app-instance-item", "app-instance-row");
                 item.setMaxWidth(Double.MAX_VALUE);
                 item.setAlignment(Pos.CENTER_LEFT);
                 item.setOnAction(event -> onSelected.accept(version));

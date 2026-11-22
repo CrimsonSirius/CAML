@@ -410,6 +410,11 @@
     -fx-background-color: -caml-on-accent;
 }
 
+.caml-check-box:focused .box {
+    -fx-border-color: -caml-on-surface;
+    -fx-effect: dropshadow(gaussian, -caml-accent, 4, 0.6, 0, 0);
+}
+
 /* Radio button. */
 .caml-radio-button {
     -fx-text-fill: -caml-on-surface;
@@ -417,8 +422,7 @@
     -fx-cursor: hand;
 }
 
-.caml-radio-button > .radio,
-.caml-radio-button:focused > .radio {
+.caml-radio-button > .radio {
     -fx-background-color: transparent;
     -fx-background-insets: 0;
     -fx-background-radius: 100;
@@ -429,9 +433,13 @@
 }
 
 .caml-radio-button:hover > .radio,
-.caml-radio-button:selected > .radio,
-.caml-radio-button:focused > .radio {
+.caml-radio-button:selected > .radio {
     -fx-border-color: -caml-accent;
+}
+
+.caml-radio-button:focused > .radio {
+    -fx-border-color: -caml-on-surface;
+    -fx-effect: dropshadow(gaussian, -caml-accent, 4, 0.6, 0, 0);
 }
 
 .caml-radio-button > .radio > .dot {
@@ -552,6 +560,11 @@
     -fx-text-fill: -caml-on-accent-container;
 }
 
+.caml-side-nav-item:focused {
+    -fx-border-color: -caml-accent;
+    -fx-effect: dropshadow(gaussian, -caml-accent, 4, 0.75, 0, 0);
+}
+
 /* Top navigation. */
 .caml-top-nav {
     -fx-spacing: 0.25em;
@@ -583,6 +596,11 @@
     -fx-background-color: -caml-accent-container;
     -fx-border-color: -caml-on-surface;
     -fx-text-fill: -caml-on-accent-container;
+}
+
+.caml-top-nav-item:focused {
+    -fx-border-color: -caml-accent;
+    -fx-effect: dropshadow(gaussian, -caml-accent, 4, 0.75, 0, 0);
 }
 
 /* Vector icons. */

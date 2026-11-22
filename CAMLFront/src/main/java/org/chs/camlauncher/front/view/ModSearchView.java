@@ -94,7 +94,6 @@ final class ModSearchView extends VBox implements PageLifecycle {
         this.type = type;
         this.onProjectSelected = onProjectSelected;
         getStyleClass().add("app-download-content");
-        setFocusTraversable(true);
         setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
 
         statusLabel.setText(text("search.loading"));
@@ -574,12 +573,12 @@ final class ModSearchView extends VBox implements PageLifecycle {
         nextButton.setDisable(disabled || !hasNext);
     }
 
-    /** 避免被禁用的分页/搜索按钮把焦点弹回顶部导航，触发导航项的焦点发光。 */
+    /** 把焦点移到仍可用的名称输入框，避免焦点留在即将被禁用的控件上。 */
     private void releaseFocusBeforeDisabling() {
         if (searchButton.isFocused() || resetButton.isFocused()
                 || sourceBox.isFocused() || loaderBox.isFocused()
                 || previousButton.isFocused() || nextButton.isFocused()) {
-            requestFocus();
+            queryField.requestFocus();
         }
     }
 

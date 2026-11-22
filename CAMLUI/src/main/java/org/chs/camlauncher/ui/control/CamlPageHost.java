@@ -5,6 +5,10 @@ import javafx.animation.Interpolator;
 import javafx.animation.ParallelTransition;
 import javafx.animation.TranslateTransition;
 import javafx.scene.Node;
+import javafx.scene.Parent;
+import javafx.scene.Scene;
+import javafx.scene.control.ScrollPane;
+import javafx.scene.control.SplitPane;
 import javafx.scene.layout.StackPane;
 import javafx.util.Duration;
 
@@ -34,7 +38,8 @@ public final class CamlPageHost extends StackPane {
 
     public CamlPageHost(Node initialPage) {
         getStyleClass().add("caml-page-host");
-        setFocusTraversable(true);
+        // 页面容器只负责切换内容，不参与焦点遍历；焦点应留在触发切换的导航项上。
+        setFocusTraversable(false);
         setPageImmediately(Objects.requireNonNull(initialPage, "initialPage"), null);
     }
 
@@ -51,6 +56,9 @@ public final class CamlPageHost extends StackPane {
      */
     public void setPage(Node page, Node sidebar) {
         Objects.requireNonNull(page, "page");
+        if (page == currentPage && sidebar == currentSidebar) {
+            return;
+        }
         if (REDUCE_MOTION) {
             if (running != null) {
                 running.stop();
@@ -59,10 +67,8 @@ public final class CamlPageHost extends StackPane {
             setPageImmediately(page, sidebar);
             return;
         }
-        if (page == currentPage && sidebar == currentSidebar && getChildren().size() == 1) {
-            return;
-        }
-
+        Scene scene = getScene();
+        boolean focusInsideHost = containsFocus(this, scene);
         if (running != null) {
             running.stop();
             running = null;
@@ -70,14 +76,10 @@ public final class CamlPageHost extends StackPane {
             reset(currentPage);
             resetSidebar(currentSidebar);
         }
-        if (page == currentPage && sidebar == currentSidebar) {
-            return;
-        }
 
         Node previous = currentPage;
         Node previousSidebar = currentSidebar;
         previous.setMouseTransparent(true);
-        requestFocus();
 
         page.setOpacity(0);
         page.setTranslateY(ENTER_OFFSET_Y);
@@ -142,24 +144,83 @@ public final class CamlPageHost extends StackPane {
 
         running = new ParallelTransition(exit, enter);
         running.setOnFinished(event -> {
+            boolean focusWasLost = scene != null && focusInsideHost
+                    && (scene.getFocusOwner() == null || containsFocus(previous, scene));
             getChildren().remove(previous);
             reset(page);
             resetSidebar(sidebar);
             currentPage = page;
             currentSidebar = sidebar;
             running = null;
-            requestFocus();
+            if (focusWasLost) {
+                focusFirstControl(page);
+            }
         });
         running.play();
     }
 
     private void setPageImmediately(Node page, Node sidebar) {
+        Node previous = currentPage;
+        Scene scene = getScene();
+        boolean focusInsideHost = containsFocus(this, scene);
         currentPage = page;
         currentSidebar = sidebar;
         getChildren().setAll(page);
         reset(page);
         resetSidebar(sidebar);
-        requestFocus();
+        if (scene != null && focusInsideHost
+                && (scene.getFocusOwner() == null || containsFocus(previous, scene))) {
+            focusFirstControl(page);
+        }
+    }
+
+    private static boolean containsFocus(Node container, Scene scene) {
+        if (container == null || scene == null) {
+            return false;
+        }
+        for (Node node = scene.getFocusOwner(); node != null; node = node.getParent()) {
+            if (node == container) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static void focusFirstControl(Node page) {
+        Node target = firstFocusable(page);
+        if (target != null) {
+            target.requestFocus();
+        }
+    }
+
+    private static Node firstFocusable(Node node) {
+        if (node == null || !node.isVisible() || node.isDisabled()) {
+            return null;
+        }
+        if (node instanceof ScrollPane scrollPane) {
+            return firstFocusable(scrollPane.getContent());
+        }
+        if (node instanceof SplitPane splitPane) {
+            for (Node item : splitPane.getItems()) {
+                Node focusable = firstFocusable(item);
+                if (focusable != null) {
+                    return focusable;
+                }
+            }
+            return null;
+        }
+        if (node.isFocusTraversable()) {
+            return node;
+        }
+        if (node instanceof Parent parent) {
+            for (Node child : parent.getChildrenUnmodifiable()) {
+                Node focusable = firstFocusable(child);
+                if (focusable != null) {
+                    return focusable;
+                }
+            }
+        }
+        return null;
     }
 
     private static void reset(Node page) {
