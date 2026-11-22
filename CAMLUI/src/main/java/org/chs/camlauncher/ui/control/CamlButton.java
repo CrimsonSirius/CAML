@@ -37,7 +37,6 @@ public final class CamlButton extends Button {
     public CamlButton withGraphic(Node graphic) {
         setGraphic(graphic);
         setContentDisplay(ContentDisplay.LEFT);
-        setGraphicTextGap(8);
         return this;
     }
 

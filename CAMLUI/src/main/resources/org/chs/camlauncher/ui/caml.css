@@ -100,6 +100,7 @@
     -fx-padding: 0.714286em 1.428571em;
     -fx-font-size: 0.875em;
     -fx-font-weight: bold;
+    -fx-graphic-text-gap: 0.571429em;
     -fx-cursor: hand;
     -fx-focus-color: -caml-accent;
     -fx-faint-focus-color: transparent;
@@ -186,6 +187,7 @@
     -fx-background-color: -caml-surface-container;
     -fx-background-radius: 0.75em;
     -fx-padding: 1.5em;
+    -fx-spacing: 1em;
 }
 
 .caml-card-elevated {
@@ -456,8 +458,6 @@
 /* Integer slider（设计高度 28px）。 */
 .caml-slider {
     -fx-cursor: hand;
-    -fx-min-height: 1.75em;
-    -fx-pref-height: 1.75em;
 }
 
 .caml-slider .caml-slider-track {
@@ -482,8 +482,6 @@
 /* Memory slider: two-tone bold track（设计高度 28px）。 */
 .caml-memory-slider {
     -fx-padding: 0.25em 0;
-    -fx-min-height: 1.75em;
-    -fx-pref-height: 1.75em;
     -fx-cursor: hand;
 }
 
@@ -543,6 +541,7 @@
     -fx-text-fill: -caml-on-surface-muted;
     -fx-font-size: 1em;
     -fx-font-weight: bold;
+    -fx-graphic-text-gap: 0.5em;
     -fx-padding: 0.625em 1em;
     -fx-min-height: 2.75em;
     -fx-cursor: hand;
@@ -567,7 +566,7 @@
 
 /* Top navigation. */
 .caml-top-nav {
-    -fx-spacing: 0.25em;
+    -fx-spacing: 0.125em;
     -fx-alignment: center-left;
 }
 
@@ -580,6 +579,7 @@
     -fx-text-fill: -caml-on-surface-muted;
     -fx-font-size: 1em;
     -fx-font-weight: bold;
+    -fx-graphic-text-gap: 0.4375em;
     -fx-padding: 0.625em 1.5em;
     -fx-min-width: 5.75em;
     -fx-min-height: 2.75em;
@@ -662,8 +662,21 @@
 .caml-top-bar {
     -fx-background-color: transparent;
     -fx-padding: 1em 1.5em;
+    -fx-spacing: 1em;
     -fx-border-color: transparent transparent -caml-border-subtle transparent;
     -fx-border-width: 0 0 1 0;
+}
+
+.caml-top-bar-titles {
+    -fx-spacing: 0.125em;
+}
+
+.caml-top-bar-actions {
+    -fx-spacing: 0.5em;
+}
+
+.caml-top-bar-navigation {
+    -fx-spacing: 0.25em;
 }
 
 /* Scroll pane and scrollbar. */

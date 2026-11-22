@@ -1,5 +1,6 @@
 package org.chs.camlauncher.front.view;
 
+import javafx.beans.binding.DoubleBinding;
 import javafx.geometry.Pos;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
@@ -19,6 +20,7 @@ import org.chs.camlauncher.front.task.AsyncTaskHandle;
 import org.chs.camlauncher.front.controller.HomeController;
 import org.chs.camlauncher.front.text.UiText;
 import org.chs.camlauncher.ui.control.CamlButton;
+import org.chs.camlauncher.ui.theme.CamlMetrics;
 
 import java.io.ByteArrayInputStream;
 import java.nio.file.Path;
@@ -145,18 +147,14 @@ final class ManageInstancesView extends VBox implements PageLifecycle {
         for (InstanceMod mod : details.mods()) {
             StackPane iconFrame = new StackPane();
             iconFrame.getStyleClass().add("app-mod-icon-frame");
-            iconFrame.setMinSize(36, 36);
-            iconFrame.setPrefSize(36, 36);
-            iconFrame.setMaxSize(36, 36);
+            bindSquare(iconFrame, 36);
 
             Label initial = new Label(initialOf(mod.fileName()));
             initial.getStyleClass().add("app-mod-icon-text");
             initial.setStyle("-fx-font-size: 1.05em;");
             StackPane placeholder = new StackPane(initial);
             placeholder.getStyleClass().add("app-mod-icon-placeholder");
-            placeholder.setMinSize(36, 36);
-            placeholder.setPrefSize(36, 36);
-            placeholder.setMaxSize(36, 36);
+            bindSquare(placeholder, 36);
             iconFrame.getChildren().add(placeholder);
 
             AsyncTaskHandle<byte[]> iconTask = controller.loadInstanceModIcon(
@@ -358,16 +356,28 @@ final class ManageInstancesView extends VBox implements PageLifecycle {
         if (bytes == null || bytes.length == 0) {
             return;
         }
-        Image image = new Image(new ByteArrayInputStream(bytes), 36, 36, true, true);
+        double decodeSize = CamlMetrics.size(36);
+        Image image = new Image(new ByteArrayInputStream(bytes), decodeSize, decodeSize, true, true);
         if (image.isError() || image.getWidth() <= 0) {
             return;
         }
         ImageView view = new ImageView(image);
-        view.setFitWidth(36);
-        view.setFitHeight(36);
+        DoubleBinding size = CamlMetrics.scaleProperty().multiply(36);
+        view.fitWidthProperty().bind(size);
+        view.fitHeightProperty().bind(size);
         view.setPreserveRatio(true);
         view.setSmooth(true);
         frame.getChildren().setAll(view);
+    }
+
+    private static void bindSquare(Region region, double designPx) {
+        DoubleBinding size = CamlMetrics.scaleProperty().multiply(designPx);
+        region.minWidthProperty().bind(size);
+        region.minHeightProperty().bind(size);
+        region.prefWidthProperty().bind(size);
+        region.prefHeightProperty().bind(size);
+        region.maxWidthProperty().bind(size);
+        region.maxHeightProperty().bind(size);
     }
 
     private void cancelIconTasks() {

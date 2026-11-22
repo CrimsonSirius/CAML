@@ -4,11 +4,14 @@ import javafx.animation.Interpolator;
 import javafx.animation.ScaleTransition;
 import javafx.beans.property.IntegerProperty;
 import javafx.beans.property.SimpleIntegerProperty;
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.WeakChangeListener;
 import javafx.scene.AccessibleRole;
 import javafx.scene.input.KeyCode;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.Region;
 import javafx.util.Duration;
+import org.chs.camlauncher.ui.theme.CamlMetrics;
 import org.chs.camlauncher.ui.theme.CamlMotion;
 
 /**
@@ -32,7 +35,12 @@ public final class CamlMemorySlider extends Pane {
     private final Region usedGameBar = new Region();
     private final Region fill = new Region();
     private final Region thumb = new Region();
+    private final ChangeListener<Number> metricsListener;
+    private final WeakChangeListener<Number> weakMetricsListener;
     private ScaleTransition thumbScale;
+    private double thickBarHeight = THICK_BAR_HEIGHT;
+    private double thinBarHeight = THIN_BAR_HEIGHT;
+    private double thumbSize = THUMB_SIZE;
 
     public CamlMemorySlider(int min, int max, int initialValue) {
         this(min, max, 256, initialValue, 0);
@@ -55,8 +63,6 @@ public final class CamlMemorySlider extends Pane {
         setAccessibleRole(AccessibleRole.SLIDER);
         setAccessibleText("最大内存");
         setMinWidth(0);
-        setMinHeight(28);
-        setPrefHeight(28);
         setMaxWidth(Double.MAX_VALUE);
 
         freeTrack.getStyleClass().add("caml-memory-slider-free");
@@ -69,6 +75,11 @@ public final class CamlMemorySlider extends Pane {
         thumb.setMouseTransparent(true);
         // 从下到上：淡灰未使用底线 -> 灰色已使用+游戏分配 -> 黄色分配前景 -> 小球。
         getChildren().addAll(freeTrack, usedGameBar, fill, thumb);
+
+        metricsListener = (observable, oldValue, newValue) -> applyMetrics();
+        weakMetricsListener = new WeakChangeListener<>(metricsListener);
+        CamlMetrics.scaleProperty().addListener(weakMetricsListener);
+        applyMetrics();
 
         value.addListener((observable, oldValue, newValue) -> requestLayout());
         setValue(initialValue);
@@ -124,22 +135,22 @@ public final class CamlMemorySlider extends Pane {
 
     @Override
     protected void layoutChildren() {
-        double trackStart = THUMB_SIZE / 2;
-        double trackLength = Math.max(0, getWidth() - THUMB_SIZE);
-        double thickY = (getHeight() - THICK_BAR_HEIGHT) / 2;
-        double thinY = (getHeight() - THIN_BAR_HEIGHT) / 2;
+        double trackStart = thumbSize / 2;
+        double trackLength = Math.max(0, getWidth() - thumbSize);
+        double thickY = (getHeight() - thickBarHeight) / 2;
+        double thinY = (getHeight() - thinBarHeight) / 2;
 
         double allocatedCenter = pointFor(getValue(), trackStart, trackLength);
         int usedGameMb = Math.min(max, usedMemoryMb + getValue());
         double usedGameCenter = pointFor(usedGameMb, trackStart, trackLength);
 
-        freeTrack.resizeRelocate(trackStart, thinY, trackLength, THIN_BAR_HEIGHT);
+        freeTrack.resizeRelocate(trackStart, thinY, trackLength, thinBarHeight);
         usedGameBar.resizeRelocate(trackStart, thickY,
-                Math.max(0, usedGameCenter - trackStart), THICK_BAR_HEIGHT);
+                Math.max(0, usedGameCenter - trackStart), thickBarHeight);
         fill.resizeRelocate(trackStart, thickY,
-                Math.max(0, allocatedCenter - trackStart), THICK_BAR_HEIGHT);
-        thumb.resizeRelocate(allocatedCenter - THUMB_SIZE / 2, (getHeight() - THUMB_SIZE) / 2,
-                THUMB_SIZE, THUMB_SIZE);
+                Math.max(0, allocatedCenter - trackStart), thickBarHeight);
+        thumb.resizeRelocate(allocatedCenter - thumbSize / 2, (getHeight() - thumbSize) / 2,
+                thumbSize, thumbSize);
     }
 
     private double pointFor(int memoryMb, double trackStart, double trackLength) {
@@ -148,10 +159,19 @@ public final class CamlMemorySlider extends Pane {
     }
 
     private void updateFromMouse(double x) {
-        double trackStart = THUMB_SIZE / 2;
-        double trackLength = Math.max(1, getWidth() - THUMB_SIZE);
+        double trackStart = thumbSize / 2;
+        double trackLength = Math.max(1, getWidth() - thumbSize);
         double fraction = Math.max(0, Math.min(1, (x - trackStart) / trackLength));
         setValue((int) Math.round(min + fraction * (max - min)));
+    }
+
+    private void applyMetrics() {
+        thickBarHeight = CamlMetrics.size(THICK_BAR_HEIGHT);
+        thinBarHeight = CamlMetrics.size(THIN_BAR_HEIGHT);
+        thumbSize = CamlMetrics.size(THUMB_SIZE);
+        setMinHeight(CamlMetrics.size(28));
+        setPrefHeight(CamlMetrics.size(28));
+        requestLayout();
     }
 
     private void animateThumb(double target, Duration duration) {

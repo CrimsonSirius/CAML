@@ -1,5 +1,7 @@
 package org.chs.camlauncher.ui.control;
 
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.WeakChangeListener;
 import javafx.scene.Group;
 import javafx.scene.layout.StackPane;
 import javafx.scene.shape.Arc;
@@ -10,6 +12,7 @@ import javafx.scene.shape.Polygon;
 import javafx.scene.shape.Polyline;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.shape.Shape;
+import org.chs.camlauncher.ui.theme.CamlMetrics;
 
 /** CAML 内置矢量图标；使用 JavaFX 几何图元，不依赖第三方图标库。 */
 public final class CamlIcon extends StackPane {
@@ -32,6 +35,10 @@ public final class CamlIcon extends StackPane {
     }
 
     private static final double DESIGN_SIZE = 24;
+    private final double designSize;
+    private final Group shapeGroup;
+    private final ChangeListener<Number> metricsListener;
+    private final WeakChangeListener<Number> weakMetricsListener;
 
     public CamlIcon(Glyph glyph) {
         this(glyph, 18);
@@ -45,19 +52,29 @@ public final class CamlIcon extends StackPane {
             throw new IllegalArgumentException("size must be positive");
         }
 
+        this.designSize = size;
         getStyleClass().add("caml-icon");
         setMouseTransparent(true);
         setPickOnBounds(false);
         setFocusTraversable(false);
-        setMinSize(size, size);
-        setPrefSize(size, size);
-        setMaxSize(size, size);
 
-        Group group = new Group(createShapes(glyph));
-        double scale = size / DESIGN_SIZE;
-        group.setScaleX(scale);
-        group.setScaleY(scale);
-        getChildren().add(group);
+        shapeGroup = new Group(createShapes(glyph));
+        getChildren().add(shapeGroup);
+
+        metricsListener = (observable, oldValue, newValue) -> applyMetrics();
+        weakMetricsListener = new WeakChangeListener<>(metricsListener);
+        CamlMetrics.scaleProperty().addListener(weakMetricsListener);
+        applyMetrics();
+    }
+
+    private void applyMetrics() {
+        double actualSize = CamlMetrics.size(designSize);
+        setMinSize(actualSize, actualSize);
+        setPrefSize(actualSize, actualSize);
+        setMaxSize(actualSize, actualSize);
+        double scale = actualSize / DESIGN_SIZE;
+        shapeGroup.setScaleX(scale);
+        shapeGroup.setScaleY(scale);
     }
 
     private static Shape[] createShapes(Glyph glyph) {

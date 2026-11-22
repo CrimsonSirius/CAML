@@ -19,7 +19,6 @@ public final class CamlTopNav extends HBox {
 
     public CamlTopNav() {
         getStyleClass().add("caml-top-nav");
-        setSpacing(2);
         setAlignment(Pos.CENTER_LEFT);
     }
 

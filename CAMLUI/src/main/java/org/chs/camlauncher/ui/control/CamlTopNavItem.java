@@ -24,7 +24,6 @@ public final class CamlTopNavItem extends ToggleButton {
     public CamlTopNavItem(Node icon, String text) {
         super(text, icon);
         setContentDisplay(ContentDisplay.LEFT);
-        setGraphicTextGap(7);
         configure();
     }
 

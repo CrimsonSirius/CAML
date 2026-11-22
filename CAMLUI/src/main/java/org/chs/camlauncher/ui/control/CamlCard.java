@@ -23,7 +23,6 @@ public final class CamlCard extends VBox {
 
     public CamlCard(Variant variant) {
         getStyleClass().addAll("caml-card", "caml-card-" + variant.styleName);
-        setSpacing(16);
     }
 
     public CamlCard(Node... children) {

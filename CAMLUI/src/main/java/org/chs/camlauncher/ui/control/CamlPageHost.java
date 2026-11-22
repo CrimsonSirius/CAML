@@ -13,6 +13,7 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.StackPane;
 import javafx.util.Duration;
+import org.chs.camlauncher.ui.theme.CamlMetrics;
 import org.chs.camlauncher.ui.theme.CamlMotion;
 
 import java.util.Objects;
@@ -27,10 +28,10 @@ public final class CamlPageHost extends StackPane {
     private static final Duration EXIT_DURATION = Duration.millis(90);
     private static final Duration ENTER_DURATION = Duration.millis(220);
     private static final Duration ENTER_DELAY = Duration.millis(30);
-    private static final double ENTER_OFFSET_Y = -12;
-    private static final double EXIT_OFFSET_Y = -4;
-    private static final double SIDEBAR_EXIT_OFFSET_X = -16;
-    private static final double SIDEBAR_ENTER_OFFSET_X = -16;
+    private static final double ENTER_OFFSET_Y = 12;
+    private static final double EXIT_OFFSET_Y = 4;
+    private static final double SIDEBAR_EXIT_OFFSET_X = 16;
+    private static final double SIDEBAR_ENTER_OFFSET_X = 16;
     private static final double SIDEBAR_EXIT_OFFSET_Y = 4;
     private static final double SIDEBAR_ENTER_OFFSET_Y = 12;
     private Node currentPage;
@@ -85,11 +86,11 @@ public final class CamlPageHost extends StackPane {
         previous.setMouseTransparent(true);
 
         page.setOpacity(0);
-        page.setTranslateY(ENTER_OFFSET_Y);
+        page.setTranslateY(-CamlMetrics.size(ENTER_OFFSET_Y));
         if (sidebar != null) {
             sidebar.setOpacity(0);
-            sidebar.setTranslateX(SIDEBAR_ENTER_OFFSET_X);
-            sidebar.setTranslateY(SIDEBAR_ENTER_OFFSET_Y);
+            sidebar.setTranslateX(-CamlMetrics.size(SIDEBAR_ENTER_OFFSET_X));
+            sidebar.setTranslateY(CamlMetrics.size(SIDEBAR_ENTER_OFFSET_Y));
         }
         Node container = createContainer(page, sidebar);
         getChildren().add(container);
@@ -98,7 +99,7 @@ public final class CamlPageHost extends StackPane {
         pageFadeOut.setToValue(0);
 
         TranslateTransition pageSlideOut = new TranslateTransition(EXIT_DURATION, previous);
-        pageSlideOut.setToY(EXIT_OFFSET_Y);
+        pageSlideOut.setToY(-CamlMetrics.size(EXIT_OFFSET_Y));
         pageSlideOut.setInterpolator(Interpolator.EASE_IN);
 
         FadeTransition pageFadeIn = new FadeTransition(ENTER_DURATION, page);
@@ -107,7 +108,7 @@ public final class CamlPageHost extends StackPane {
         pageFadeIn.setDelay(ENTER_DELAY);
 
         TranslateTransition pageSlideIn = new TranslateTransition(ENTER_DURATION, page);
-        pageSlideIn.setFromY(ENTER_OFFSET_Y);
+        pageSlideIn.setFromY(-CamlMetrics.size(ENTER_OFFSET_Y));
         pageSlideIn.setToY(0);
         pageSlideIn.setInterpolator(Interpolator.EASE_OUT);
         pageSlideIn.setDelay(ENTER_DELAY);
@@ -120,9 +121,9 @@ public final class CamlPageHost extends StackPane {
             sidebarFadeOut.setToValue(0);
 
             TranslateTransition sidebarSlideOut = new TranslateTransition(EXIT_DURATION, previousSidebar);
-            sidebarSlideOut.setToX(SIDEBAR_EXIT_OFFSET_X);
+            sidebarSlideOut.setToX(-CamlMetrics.size(SIDEBAR_EXIT_OFFSET_X));
             // 抵消页面整体上移，让侧边栏只向左淡出。
-            sidebarSlideOut.setToY(SIDEBAR_EXIT_OFFSET_Y);
+            sidebarSlideOut.setToY(CamlMetrics.size(SIDEBAR_EXIT_OFFSET_Y));
             sidebarSlideOut.setInterpolator(Interpolator.EASE_IN);
 
             exit.getChildren().addAll(sidebarFadeOut, sidebarSlideOut);
@@ -135,10 +136,10 @@ public final class CamlPageHost extends StackPane {
             sidebarFadeIn.setDelay(ENTER_DELAY);
 
             TranslateTransition sidebarSlideIn = new TranslateTransition(ENTER_DURATION, sidebar);
-            sidebarSlideIn.setFromX(SIDEBAR_ENTER_OFFSET_X);
+            sidebarSlideIn.setFromX(-CamlMetrics.size(SIDEBAR_ENTER_OFFSET_X));
             sidebarSlideIn.setToX(0);
             // 抵消页面从上方进入，让侧边栏保持垂直位置，只从左侧淡入。
-            sidebarSlideIn.setFromY(SIDEBAR_ENTER_OFFSET_Y);
+            sidebarSlideIn.setFromY(CamlMetrics.size(SIDEBAR_ENTER_OFFSET_Y));
             sidebarSlideIn.setToY(0);
             sidebarSlideIn.setInterpolator(Interpolator.EASE_OUT);
             sidebarSlideIn.setDelay(ENTER_DELAY);

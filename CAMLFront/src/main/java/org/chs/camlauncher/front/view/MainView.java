@@ -20,6 +20,7 @@ import org.chs.camlauncher.ui.control.CamlPageHost;
 import org.chs.camlauncher.ui.control.CamlTopBar;
 import org.chs.camlauncher.ui.control.CamlTopNav;
 import org.chs.camlauncher.ui.control.CamlTopNavItem;
+import org.chs.camlauncher.ui.theme.CamlMetrics;
 
 import java.nio.file.Path;
 import java.util.List;
@@ -294,6 +295,7 @@ public final class MainView extends BorderPane {
             return;
         }
         appliedFontPx = fontPx;
+        CamlMetrics.setScale(fontPx / UiScale.BASE_FONT_PX);
         setStyle("-fx-font-size: " + (int) fontPx + "px;");
     }
 
