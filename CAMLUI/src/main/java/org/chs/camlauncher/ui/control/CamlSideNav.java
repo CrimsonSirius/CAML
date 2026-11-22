@@ -3,7 +3,6 @@ package org.chs.camlauncher.ui.control;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.event.ActionEvent;
-import javafx.geometry.Insets;
 import javafx.scene.layout.VBox;
 
 import java.util.ArrayList;
@@ -18,8 +17,6 @@ public final class CamlSideNav extends VBox {
 
     public CamlSideNav() {
         getStyleClass().add("caml-side-nav");
-        setSpacing(4);
-        setPadding(new Insets(12, 8, 12, 8));
         setFillWidth(true);
     }
 

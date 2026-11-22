@@ -3,6 +3,7 @@ package org.chs.camlauncher.language.generator.lang;
 import org.chs.camlauncher.language.generator.LanguageTranslationGenerator;
 import org.chs.camlauncher.language.generator.TranslationTable;
 import org.chs.camlauncher.language.generator.TraditionalAccountTexts;
+import org.chs.camlauncher.language.generator.TraditionalWorkspaceTexts;
 
 /** 繁體中文翻譯。 */
 public final class ZHTWGenerator extends LanguageTranslationGenerator {
@@ -14,6 +15,7 @@ public final class ZHTWGenerator extends LanguageTranslationGenerator {
     @Override
     protected void populateSharedDefaults(TranslationTable translations) {
         TraditionalAccountTexts.populate(translations);
+        TraditionalWorkspaceTexts.populate(translations);
         super.populateSharedDefaults(translations);
     }
 

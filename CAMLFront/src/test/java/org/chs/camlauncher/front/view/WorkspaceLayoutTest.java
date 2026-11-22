@@ -75,8 +75,8 @@ class WorkspaceLayoutTest {
 
     @Test
     void usesDistinctDividerPositions() {
-        assertEquals(0.56, WorkspaceLayout.plan(1200, BASE).dividerPosition());
-        assertEquals(0.62, WorkspaceLayout.plan(800, BASE).dividerPosition());
+        assertEquals(0.68, WorkspaceLayout.plan(1200, BASE).dividerPosition());
+        assertEquals(0.64, WorkspaceLayout.plan(800, BASE).dividerPosition());
     }
 
     @Test

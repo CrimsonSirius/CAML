@@ -48,11 +48,15 @@ public final class ZHCNGenerator extends LanguageTranslationGenerator {
         t.put("home.error.missingGameDirectory", "游戏位置不存在，请到设置中保存有效目录");
         t.put("home.error.noInstance", "请先浏览并选择游戏实例");
         t.put("home.error.noUsername", "请填写离线用户名");
+        t.put("home.username.managed", "用户名由所选账号决定：%s");
 
         // 日志面板
         t.put("log.title", "运行日志");
         t.put("log.subtitle", "下载进度与游戏进程输出");
         t.put("log.accessible", "运行日志");
+        t.put("log.expand", "展开");
+        t.put("log.collapse", "收起");
+        t.put("log.empty", "暂无活动记录");
         t.put("log.download.installed.vanilla", "[下载] 已安装实例 %s（原版 %s）");
         t.put("log.download.installed.fabric", "[下载] 已安装 Fabric 实例 %s（Loader %s）");
         t.put("log.download.installed.loader", "[下载] 已安装 %s 实例 %s");

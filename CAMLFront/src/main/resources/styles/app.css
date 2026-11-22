@@ -13,6 +13,30 @@
     -fx-background-color: -caml-background;
 }
 
+/* 应用壳层 */
+.app-top-bar {
+    -fx-background-color: -caml-surface;
+    -fx-padding: 0.75em 2em;
+    -fx-border-color: transparent transparent -caml-border-subtle transparent;
+    -fx-border-width: 0 0 1 0;
+}
+
+.app-global-nav {
+    -fx-background-color: -caml-surface-container;
+    -fx-padding: 1em 0.75em;
+    -fx-spacing: 0.25em;
+    -fx-pref-width: 10.75em;
+    -fx-min-width: 10em;
+    -fx-max-width: 12em;
+    -fx-border-color: transparent -caml-border-subtle transparent transparent;
+    -fx-border-width: 0 1 0 0;
+}
+
+.app-global-nav .caml-side-nav-item {
+    -fx-padding: 0.75em 1em;
+    -fx-min-height: 3em;
+}
+
 .app-settings-page {
     -fx-background-color: -caml-surface;
 }
@@ -370,6 +394,54 @@
     -fx-font-weight: bold;
 }
 
+/* 主页当前实例 Hero */
+.app-home-hero {
+    -fx-background-color: -caml-surface-low;
+    -fx-background-radius: 1em;
+    -fx-border-color: -caml-border-subtle;
+    -fx-border-width: 1;
+    -fx-border-radius: 1em;
+    -fx-padding: 1.25em;
+}
+
+.app-home-hero-header {
+    -fx-spacing: 1em;
+}
+
+.app-home-hero-icon {
+    -fx-min-width: 4em;
+    -fx-min-height: 4em;
+    -fx-pref-width: 4em;
+    -fx-pref-height: 4em;
+    -fx-max-width: 4em;
+    -fx-max-height: 4em;
+    -fx-background-color: -caml-accent-container;
+    -fx-background-radius: 0.875em;
+}
+
+.app-home-hero-icon .caml-icon-fill {
+    -fx-fill: -caml-on-accent-container;
+}
+
+.app-home-hero-copy {
+    -fx-spacing: 0.35em;
+}
+
+.app-home-instance-title {
+    -fx-font-size: 1.5em;
+    -fx-font-weight: bold;
+    -fx-text-fill: -caml-on-surface;
+}
+
+.app-home-meta {
+    -fx-font-size: 0.875em;
+}
+
+.app-launch-button {
+    -fx-font-size: 1em;
+    -fx-min-height: 3em;
+}
+
 .app-instance-info-detail {
     -fx-text-fill: -caml-on-surface-muted;
     -fx-font-size: 1em;
@@ -416,8 +488,32 @@
 
 .app-log-pane {
     -fx-background-color: -caml-surface-container;
-    -fx-padding: 2em;
-    -fx-spacing: 1em;
+    -fx-padding: 1.5em;
+    -fx-spacing: 0.75em;
+    -fx-background-radius: 1em;
+}
+
+.app-log-header {
+    -fx-spacing: 0.75em;
+}
+
+.app-log-toggle {
+    -fx-font-size: 0.75em;
+    -fx-padding: 0.35em 0.65em;
+    -fx-min-height: 2.25em;
+}
+
+.app-log-preview {
+    -fx-background-color: -caml-surface-lowest;
+    -fx-background-radius: 0.5em;
+    -fx-border-color: -caml-border-subtle;
+    -fx-border-width: 1;
+    -fx-border-radius: 0.5em;
+    -fx-padding: 0.75em 1em;
+    -fx-font-family: "Monospaced";
+    -fx-font-size: 0.75em;
+    -fx-text-fill: -caml-on-surface-muted;
+    -fx-max-height: 9em;
 }
 
 /* 日志文本区的高度由 MainView 按断点设置：CSS 声明会覆盖代码设置，因此此处不写 -fx-min-height / -fx-pref-height。 */

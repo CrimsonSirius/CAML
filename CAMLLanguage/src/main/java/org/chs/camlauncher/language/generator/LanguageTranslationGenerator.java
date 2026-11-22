@@ -35,6 +35,7 @@ public abstract class LanguageTranslationGenerator {
      * 登记同名键即可覆盖这里的默认值。</p>
      */
     protected void populateSharedDefaults(TranslationTable translations) {
+        WorkspaceTexts.populateDefaults(translations);
         AccountTexts.populateDefaults(translations);
     }
 

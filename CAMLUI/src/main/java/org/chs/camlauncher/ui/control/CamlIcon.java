@@ -26,7 +26,9 @@ public final class CamlIcon extends StackPane {
         WARNING,
         MORE,
         SEARCH,
-        COPY
+        COPY,
+        CHEVRON_DOWN,
+        CHEVRON_UP
     }
 
     private static final double DESIGN_SIZE = 24;
@@ -117,6 +119,12 @@ public final class CamlIcon extends StackPane {
             case COPY -> new Shape[]{
                     stroked(new Rectangle(8, 3, 13, 13)),
                     stroked(new Rectangle(3, 8, 13, 13))
+            };
+            case CHEVRON_DOWN -> new Shape[]{
+                    stroked(new Polyline(7, 9, 12, 14, 17, 9))
+            };
+            case CHEVRON_UP -> new Shape[]{
+                    stroked(new Polyline(7, 15, 12, 10, 17, 15))
             };
         };
     }

@@ -4,6 +4,7 @@ import javafx.geometry.Orientation;
 import javafx.scene.Node;
 import javafx.scene.control.SplitPane;
 import javafx.scene.layout.StackPane;
+import org.chs.camlauncher.front.UiScale;
 import org.chs.camlauncher.front.controller.AccountController;
 import org.chs.camlauncher.front.controller.HomeController;
 import org.chs.camlauncher.ui.control.CamlPageHost;
@@ -30,6 +31,7 @@ final class HomeView extends StackPane implements PageLifecycle {
         this.launchSettings = launchSettings;
 
         logPane = new LogPaneView();
+        logPane.setOnCollapsedChanged(this::updateWorkspaceLayout);
         controller.setOnLogReceived(logPane::append);
         formPane = new LaunchFormView(controller, accountController, launchSettings,
                 logPane::clear, this::showInstancePicker, this::showManageInstances,
@@ -156,14 +158,13 @@ final class HomeView extends StackPane implements PageLifecycle {
 
     private void applyWorkspaceLayout(WorkspaceLayout.Plan plan) {
         if (plan.equals(appliedLayout)) {
+            applyLogPaneMetrics(plan);
             return;
         }
         appliedLayout = plan;
 
         formPane.setMinHeight(plan.formMinHeight());
-        logPane.setMinHeight(plan.logMinHeight());
-        logPane.logArea().setMinHeight(plan.logAreaMinHeight());
-        logPane.logArea().setPrefHeight(plan.logAreaPrefHeight());
+        applyLogPaneMetrics(plan);
 
         Orientation target = plan.compact() ? Orientation.VERTICAL : Orientation.HORIZONTAL;
         if (workspace.getOrientation() != target) {
@@ -171,5 +172,18 @@ final class HomeView extends StackPane implements PageLifecycle {
         }
         // 只在跨断点切换方案时重置分隔条，用户手动拖动的位置在缩放过程中保持不变。
         workspace.setDividerPositions(plan.dividerPosition());
+    }
+
+    private void applyLogPaneMetrics(WorkspaceLayout.Plan plan) {
+        double factor = ViewSupport.uiFactor(this);
+        if (logPane.isCollapsed()) {
+            logPane.setMinHeight(UiScale.size(plan.compact() ? 220 : 120, factor));
+            logPane.logArea().setMinHeight(0);
+            logPane.logArea().setPrefHeight(0);
+            return;
+        }
+        logPane.setMinHeight(plan.logMinHeight());
+        logPane.logArea().setMinHeight(plan.logAreaMinHeight());
+        logPane.logArea().setPrefHeight(plan.logAreaPrefHeight());
     }
 }

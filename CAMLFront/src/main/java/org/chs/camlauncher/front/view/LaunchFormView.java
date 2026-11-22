@@ -8,6 +8,7 @@ import javafx.scene.layout.ColumnConstraints;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
+import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import org.chs.camlauncher.backend.api.AccountSummary;
 import org.chs.camlauncher.backend.api.GameDirectoryInfo;
@@ -60,15 +61,17 @@ final class LaunchFormView extends BorderPane {
         getStyleClass().add("app-form-pane");
 
         instanceLabel = new Label();
-        instanceLabel.getStyleClass().add("app-instance-info-current");
+        instanceLabel.getStyleClass().add("app-home-instance-title");
         instanceLabel.setWrapText(true);
 
         gameLocationLabel = new Label();
-        gameLocationLabel.getStyleClass().add("app-instance-info-detail");
+        gameLocationLabel.getStyleClass().addAll(
+                "app-instance-info-detail", "app-home-meta");
         gameLocationLabel.setWrapText(true);
 
         saveLocationLabel = new Label();
-        saveLocationLabel.getStyleClass().add("app-instance-info-detail");
+        saveLocationLabel.getStyleClass().addAll(
+                "app-instance-info-detail", "app-home-meta");
         saveLocationLabel.setWrapText(true);
 
         accountBox = new CamlComboBox<>();
@@ -99,6 +102,7 @@ final class LaunchFormView extends BorderPane {
 
         launchBtn = CamlButton.filled(UiText.tr("home.launch"))
                 .withGraphic(new CamlIcon(CamlIcon.Glyph.PLAY, 20));
+        launchBtn.getStyleClass().add("app-launch-button");
         launchBtn.setMaxWidth(Double.MAX_VALUE);
         launchBtn.setDefaultButton(true);
 
@@ -110,8 +114,20 @@ final class LaunchFormView extends BorderPane {
 
     private void buildLayout(Runnable onChooseInstance, Runnable onManageInstances,
                              Runnable onManageAccounts) {
-        VBox instanceInfo = new VBox(instanceLabel, gameLocationLabel, saveLocationLabel);
-        instanceInfo.getStyleClass().add("app-instance-info-group");
+        StackPane heroIcon = new StackPane(new CamlIcon(CamlIcon.Glyph.GRID, 32));
+        heroIcon.getStyleClass().add("app-home-hero-icon");
+
+        VBox heroCopy = new VBox(instanceLabel, gameLocationLabel, saveLocationLabel);
+        heroCopy.getStyleClass().add("app-home-hero-copy");
+        HBox.setHgrow(heroCopy, Priority.ALWAYS);
+
+        HBox heroHeader = new HBox(heroIcon, heroCopy);
+        heroHeader.setAlignment(Pos.CENTER_LEFT);
+        heroHeader.getStyleClass().add("app-home-hero-header");
+
+        VBox instanceInfo = new VBox(heroHeader);
+        instanceInfo.getStyleClass().add("app-home-hero");
+        instanceInfo.setMaxWidth(Double.MAX_VALUE);
 
         CamlButton manageAccountsButton = CamlButton.outlined(UiText.tr("home.manageAccounts"))
                 .withGraphic(new CamlIcon(CamlIcon.Glyph.ACCOUNT));

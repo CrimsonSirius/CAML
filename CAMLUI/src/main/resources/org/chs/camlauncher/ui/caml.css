@@ -523,6 +523,7 @@
 .caml-side-nav {
     -fx-background-color: -caml-surface-low;
     -fx-padding: 0.75em 0.5em;
+    -fx-spacing: 0.25em;
 }
 
 .caml-side-nav-item {
