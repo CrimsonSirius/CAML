@@ -12,6 +12,7 @@ import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import javafx.util.Duration;
 import org.chs.camlauncher.front.text.UiText;
+import org.chs.camlauncher.front.task.DownloadTelemetry;
 import org.chs.camlauncher.ui.control.CamlButton;
 import org.chs.camlauncher.ui.control.CamlProgressBar;
 

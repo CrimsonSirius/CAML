@@ -215,7 +215,7 @@ CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
 - `MainView` 只负责壳层：顶栏、主导航、`CamlPageHost` 和底栏。
 - `MainController` 只组合 `HomeController`、`DownloadsController` 和 `SettingsController`；
   共享的 `ControllerContext` 负责后端访问、I/O 线程和日志回调。
-- 控制器的异步方法统一返回 `FrontTask<T>` 任务句柄。页面持有句柄，在离开或销毁时取消；
+- 控制器的异步方法统一返回 `AsyncTaskHandle<T>` 任务句柄。页面持有句柄，在离开或销毁时取消；
   取消会停止 UI 回调并尽力中断后台线程，但后端已开始且不响应中断的操作仍可能继续。
 - 页面实现 `PageLifecycle` 的 `onShow` / `onHide` / `dispose`。`MainView`、
   `DownloadsView`、`HomeView` 和 `SettingsView` 在页面切换时统一分发这些回调，

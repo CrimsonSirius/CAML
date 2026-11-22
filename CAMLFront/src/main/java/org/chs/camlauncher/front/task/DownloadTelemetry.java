@@ -1,4 +1,4 @@
-package org.chs.camlauncher.front.view;
+package org.chs.camlauncher.front.task;
 
 import org.chs.camlauncher.backend.download.DownloadListener;
 import org.chs.camlauncher.backend.download.DownloadStage;
@@ -12,7 +12,7 @@ import java.util.List;
 import java.util.Map;
 
 /** 把后端下载事件聚合为进度页需要的阶段、总进度和网速。 */
-final class DownloadTelemetry implements DownloadListener {
+public final class DownloadTelemetry implements DownloadListener {
     private static final long SPEED_WINDOW_NANOS = 1_000_000_000L;
     private static final double MIN_SPEED_WINDOW_SECONDS = 0.25;
 
@@ -41,7 +41,7 @@ final class DownloadTelemetry implements DownloadListener {
     private boolean cancelled;
     private String failureMessage = "";
 
-    DownloadTelemetry() {
+    public DownloadTelemetry() {
         stages.add(currentStage);
     }
 
@@ -123,9 +123,9 @@ final class DownloadTelemetry implements DownloadListener {
         onStage(label);
     }
 
-    void markCompleted() {
+    public void markCompleted() {
         synchronized (lock) {
-            if (finished) {
+            if (finished || failed || cancelled) {
                 return;
             }
             finished = true;
@@ -144,7 +144,7 @@ final class DownloadTelemetry implements DownloadListener {
         }
     }
 
-    void markFailed(String message) {
+    public void markFailed(String message) {
         synchronized (lock) {
             if (finished || failed || cancelled) {
                 return;
@@ -161,7 +161,7 @@ final class DownloadTelemetry implements DownloadListener {
         }
     }
 
-    void markCancelled() {
+    public void markCancelled() {
         synchronized (lock) {
             if (finished || failed || cancelled) {
                 return;
@@ -176,7 +176,7 @@ final class DownloadTelemetry implements DownloadListener {
         }
     }
 
-    Snapshot snapshot() {
+    public Snapshot snapshot() {
         synchronized (lock) {
             long now = System.nanoTime();
             long cutoff = now - SPEED_WINDOW_NANOS;
@@ -221,7 +221,7 @@ final class DownloadTelemetry implements DownloadListener {
                 || summary.totalItems() != lastPlanTotalItems);
     }
 
-    record Snapshot(
+    public record Snapshot(
             List<String> stages,
             String currentStage,
             String currentFile,

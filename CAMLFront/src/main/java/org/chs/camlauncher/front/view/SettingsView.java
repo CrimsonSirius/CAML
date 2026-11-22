@@ -28,18 +28,28 @@ import java.util.function.IntConsumer;
 
 /** 设置页：左侧子导航，右侧游戏/下载/外观设置内容。 */
 final class SettingsView extends VBox implements SidebarPage, PageLifecycle {
+    enum Section {
+        GAME,
+        DOWNLOAD,
+        ACCOUNT,
+        APPEARANCE
+    }
+
     private final GameSettingsView gameSettings;
     private final DownloadSettingsView downloadSettings;
     private final LauncherSettingsView launcherSettings;
     private final AccountSettingsView accountSettings;
     private final SettingsController controller;
     private final CamlSideNav sideNav;
+    private final CamlSideNavItem gameItem;
+    private final CamlSideNavItem downloadItem;
     private final CamlSideNavItem launcherItem;
     private final CamlSideNavItem accountItem;
     private final ScrollPane contentScroll = new ScrollPane();
     private final Label saveErrorLabel = new Label();
     private final StackPane contentHost;
     private Node currentContent;
+    private Section currentSection = Section.GAME;
     private FadeTransition contentTransition;
 
     SettingsView(LaunchSettings launchSettings, IntConsumer onMemoryChanged,
@@ -70,10 +80,10 @@ final class SettingsView extends VBox implements SidebarPage, PageLifecycle {
         sideNav = new CamlSideNav();
         sideNav.getStyleClass().add("app-settings-sidebar");
         sideNav.setMaxHeight(Double.MAX_VALUE);
-        CamlSideNavItem gameItem = new CamlSideNavItem(
+        gameItem = new CamlSideNavItem(
                 new CamlIcon(CamlIcon.Glyph.SETTINGS, 20),
                 UiText.tr("settings.section.game"));
-        CamlSideNavItem downloadItem = new CamlSideNavItem(
+        downloadItem = new CamlSideNavItem(
                 new CamlIcon(CamlIcon.Glyph.DOWNLOAD, 20),
                 UiText.tr("settings.section.download"));
         accountItem = new CamlSideNavItem(
@@ -118,12 +128,16 @@ final class SettingsView extends VBox implements SidebarPage, PageLifecycle {
         });
         sideNav.selectedItemProperty().addListener((observable, oldValue, selected) -> {
             if (selected == launcherItem) {
+                currentSection = Section.APPEARANCE;
                 showContent(launcherSettings);
             } else if (selected == downloadItem) {
+                currentSection = Section.DOWNLOAD;
                 showContent(downloadSettings);
             } else if (selected == accountItem) {
+                currentSection = Section.ACCOUNT;
                 showContent(accountSettings);
             } else {
+                currentSection = Section.GAME;
                 showContent(gameSettings);
             }
         });
@@ -146,8 +160,18 @@ final class SettingsView extends VBox implements SidebarPage, PageLifecycle {
         downloadSettings.flushPendingSaves();
     }
 
-    void showAppearanceSection() {
-        sideNav.select(launcherItem);
+    void showSection(Section section) {
+        Section target = section == null ? Section.GAME : section;
+        sideNav.select(switch (target) {
+            case GAME -> gameItem;
+            case DOWNLOAD -> downloadItem;
+            case ACCOUNT -> accountItem;
+            case APPEARANCE -> launcherItem;
+        });
+    }
+
+    Section currentSection() {
+        return currentSection;
     }
 
     @Override

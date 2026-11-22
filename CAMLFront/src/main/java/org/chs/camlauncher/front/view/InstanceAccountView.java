@@ -9,7 +9,7 @@ import javafx.scene.layout.VBox;
 import org.chs.camlauncher.backend.api.AccountSummary;
 import org.chs.camlauncher.backend.api.InstanceAccountMismatch;
 import org.chs.camlauncher.front.controller.AccountController;
-import org.chs.camlauncher.front.controller.FrontTask;
+import org.chs.camlauncher.front.task.AsyncTaskHandle;
 import org.chs.camlauncher.front.controller.HomeController;
 import org.chs.camlauncher.front.text.AccountChoice;
 import org.chs.camlauncher.front.text.UiText;
@@ -34,7 +34,7 @@ final class InstanceAccountView extends VBox implements PageLifecycle {
     private final HBox mismatchRow = new HBox();
     private final Label mismatchLabel = ViewSupport.hintLabel();
     private final ScrollPane scroll = new ScrollPane();
-    private final List<FrontTask<?>> tasks = new ArrayList<>();
+    private final List<AsyncTaskHandle<?>> tasks = new ArrayList<>();
 
     private List<AccountSummary> accounts = List.of();
     private List<String> instances = List.of();
@@ -231,7 +231,7 @@ final class InstanceAccountView extends VBox implements PageLifecycle {
     }    @Override
     public void dispose() {
         disposed = true;
-        for (FrontTask<?> task : tasks) {
+        for (AsyncTaskHandle<?> task : tasks) {
             if (task != null) {
                 task.cancel();
             }

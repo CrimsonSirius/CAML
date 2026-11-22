@@ -44,6 +44,8 @@ public final class MainView extends BorderPane {
     private final SettingsView settingsView;
     private final CamlPageHost pageHost;
     private CamlTopNav navigation;
+    private CamlTopNavItem homeNavItem;
+    private CamlTopNavItem downloadsNavItem;
     private CamlTopNavItem settingsNavItem;
     private PageLifecycle activePage;
     private LanguageSelectionMode languageMode;
@@ -51,6 +53,25 @@ public final class MainView extends BorderPane {
     private LanguageFallbackMode languageFallbackMode;
     private String languageFallbackLocale;
     private double appliedFontPx = -1;
+
+    private enum Page {
+        HOME,
+        DOWNLOADS,
+        SETTINGS
+    }
+
+    public static final class State {
+        private final Page page;
+        private final SettingsView.Section settingsSection;
+        private final VersionCategory downloadCategory;
+
+        private State(Page page, SettingsView.Section settingsSection,
+                      VersionCategory downloadCategory) {
+            this.page = page;
+            this.settingsSection = settingsSection;
+            this.downloadCategory = downloadCategory;
+        }
+    }
 
     public MainView(MainController controller, int initialMaxMemoryMb,
                     SystemMemoryInfo systemMemory, Path initialGameDirectory,
@@ -172,17 +193,17 @@ public final class MainView extends BorderPane {
     private CamlTopNav buildTopNavigation() {
         navigation = new CamlTopNav();
         navigation.getStyleClass().add("app-top-nav");
-        CamlTopNavItem home = navigation.addItem(
+        homeNavItem = navigation.addItem(
                 new CamlIcon(CamlIcon.Glyph.HOME), UiText.tr("nav.home"));
-        CamlTopNavItem downloads = navigation.addItem(
+        downloadsNavItem = navigation.addItem(
                 new CamlIcon(CamlIcon.Glyph.DOWNLOAD), UiText.tr("nav.downloads"));
         settingsNavItem = navigation.addItem(
                 new CamlIcon(CamlIcon.Glyph.SETTINGS), UiText.tr("nav.settings"));
-        navigation.select(home);
+        navigation.select(homeNavItem);
         navigation.selectedItemProperty().addListener((observable, oldValue, selected) -> {
-            if (selected == home) {
+            if (selected == homeNavItem) {
                 showPage(homeView);
-            } else if (selected == downloads) {
+            } else if (selected == downloadsNavItem) {
                 showPage(downloadsView);
             } else if (selected == settingsNavItem) {
                 showPage(settingsView);
@@ -227,10 +248,24 @@ public final class MainView extends BorderPane {
         settingsView.flushPendingSettings();
     }
 
-    /** 语言切换重建后回到设置页的外观分组。 */
-    public void showSettingsPage() {
-        navigation.select(settingsNavItem);
-        settingsView.showAppearanceSection();
+    public State snapshotState() {
+        Page page = activePage == downloadsView
+                ? Page.DOWNLOADS
+                : activePage == settingsView ? Page.SETTINGS : Page.HOME;
+        return new State(page, settingsView.currentSection(), downloadsView.currentCategory());
+    }
+
+    public void restoreState(State state) {
+        State target = state == null
+                ? new State(Page.HOME, SettingsView.Section.GAME, VersionCategory.RELEASE)
+                : state;
+        navigation.select(switch (target.page) {
+            case HOME -> homeNavItem;
+            case DOWNLOADS -> downloadsNavItem;
+            case SETTINGS -> settingsNavItem;
+        });
+        settingsView.showSection(target.settingsSection);
+        downloadsView.showCategory(target.downloadCategory);
     }
 
     public void dispose() {

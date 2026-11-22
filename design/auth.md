@@ -55,7 +55,7 @@ CAMLBackend/.../backend/auth/
 
 ```text
 CAMLFront/.../front/
-  controller/AccountController.java   账号页控制器（全部走 FrontTask + 后台线程）
+  controller/AccountController.java   账号页控制器（全部走 AsyncTaskHandle + 后台线程）
   view/AccountSettingsView.java       设置 → 账号
   view/InstanceAccountView.java       主页二级页 → 实例账号
   view/LaunchFormView.java            主页启动表单的账号选择器

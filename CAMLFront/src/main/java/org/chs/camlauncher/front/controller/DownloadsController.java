@@ -1,5 +1,9 @@
 package org.chs.camlauncher.front.controller;
 
+import org.chs.camlauncher.front.task.AsyncTaskHandle;
+
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.chs.camlauncher.backend.download.DownloadCancellationToken;
@@ -25,6 +29,7 @@ import org.chs.camlauncher.backend.mod.model.ModSearchPage;
 import org.chs.camlauncher.backend.mod.model.ModSearchQuery;
 import org.chs.camlauncher.backend.mod.model.ModSource;
 import org.chs.camlauncher.front.text.UiText;
+import org.chs.camlauncher.front.task.DownloadTask;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -38,9 +43,26 @@ public final class DownloadsController {
     private static final Logger LOGGER = LogManager.getLogger(DownloadsController.class);
 
     private final ControllerContext context;
+    private final ObservableList<DownloadTask> downloadTasks = FXCollections.observableArrayList();
 
     DownloadsController(ControllerContext context) {
         this.context = Objects.requireNonNull(context, "context");
+    }
+
+    public ObservableList<DownloadTask> downloadTasks() {
+        return downloadTasks;
+    }
+
+    public void registerDownloadTask(DownloadTask task) {
+        Objects.requireNonNull(task, "task");
+        downloadTasks.removeIf(existing -> !existing.isRunning());
+        if (!downloadTasks.contains(task)) {
+            downloadTasks.add(task);
+        }
+    }
+
+    public void removeDownloadTask(DownloadTask task) {
+        downloadTasks.remove(task);
     }
 
     public String downloadSourceLabel() {
@@ -59,7 +81,7 @@ public final class DownloadsController {
         return context.backend().curseForgeConfigured();
     }
 
-    public FrontTask<ModSearchPage> searchMods(
+    public AsyncTaskHandle<ModSearchPage> searchMods(
             ModSearchQuery query,
             Consumer<ModSearchPage> onLoaded,
             Consumer<String> onError) {
@@ -70,7 +92,7 @@ public final class DownloadsController {
                 () -> context.backend().searchMods(query), onLoaded, onError);
     }
 
-    public FrontTask<ModProjectDetail> fetchModProject(
+    public AsyncTaskHandle<ModProjectDetail> fetchModProject(
             ModSource source,
             String projectId,
             Consumer<ModProjectDetail> onLoaded,
@@ -79,7 +101,7 @@ public final class DownloadsController {
                 () -> context.backend().fetchModProject(source, projectId), onLoaded, onError);
     }
 
-    public FrontTask<ModProjectDetail> fetchContentProject(
+    public AsyncTaskHandle<ModProjectDetail> fetchContentProject(
             ModContentType type,
             ModSource source,
             String projectId,
@@ -91,7 +113,7 @@ public final class DownloadsController {
                 () -> context.backend().fetchModProject(source, projectId), onLoaded, onError);
     }
 
-    public FrontTask<byte[]> loadModIcon(
+    public AsyncTaskHandle<byte[]> loadModIcon(
             String iconUrl,
             Consumer<byte[]> onLoaded,
             Consumer<String> onError) {
@@ -99,7 +121,7 @@ public final class DownloadsController {
                 () -> context.backend().loadModIcon(iconUrl), onLoaded, onError);
     }
 
-    public FrontTask<byte[]> retryModIcon(
+    public AsyncTaskHandle<byte[]> retryModIcon(
             String iconUrl,
             long delayMillis,
             Consumer<byte[]> onLoaded,
@@ -108,12 +130,13 @@ public final class DownloadsController {
                 () -> context.backend().loadModIcon(iconUrl), onLoaded, onError);
     }
 
-    public FrontTask<ModDownloadResult> downloadMod(
+    public AsyncTaskHandle<ModDownloadResult> downloadMod(
             ModFile file,
             Path gameDirectory,
             String instanceId,
             boolean fullVersionIsolation,
             DownloadListener listener,
+            DownloadCancellationToken token,
             Consumer<ModDownloadResult> onSuccess,
             Consumer<String> onError) {
         return context.runDownload(UiText.tr("operation.downloadMod", file.name()),
@@ -124,19 +147,21 @@ public final class DownloadsController {
                         fullVersionIsolation
                                 ? VersionIsolationMode.FULL
                                 : VersionIsolationMode.NONE,
-                        listener
+                        listener,
+                        token
                 ),
                 onSuccess,
                 onError);
     }
 
-    public FrontTask<ModDownloadResult> downloadContent(
+    public AsyncTaskHandle<ModDownloadResult> downloadContent(
             ModContentType type,
             ModFile file,
             Path gameDirectory,
             String instanceId,
             boolean fullVersionIsolation,
             DownloadListener listener,
+            DownloadCancellationToken token,
             Consumer<ModDownloadResult> onSuccess,
             Consumer<String> onError) {
         return context.runDownload(UiText.tr(contentOperation(type,
@@ -150,7 +175,8 @@ public final class DownloadsController {
                         fullVersionIsolation
                                 ? VersionIsolationMode.FULL
                                 : VersionIsolationMode.NONE,
-                        listener
+                        listener,
+                        token
                 ),
                 onSuccess,
                 onError);
@@ -166,7 +192,7 @@ public final class DownloadsController {
         };
     }
 
-    public FrontTask<InstanceNameCheck> checkInstanceName(Path gameDirectory, String instanceId,
+    public AsyncTaskHandle<InstanceNameCheck> checkInstanceName(Path gameDirectory, String instanceId,
                                                           Consumer<InstanceNameCheck> onChecked,
                                                           Consumer<String> onError) {
         return context.runCheck(UiText.tr("operation.checkInstanceName"),
@@ -175,7 +201,7 @@ public final class DownloadsController {
     }
 
     /** 异步获取官方版本清单中的正式版。 */
-    public FrontTask<List<VersionManifest.Version>> fetchReleaseVersions(
+    public AsyncTaskHandle<List<VersionManifest.Version>> fetchReleaseVersions(
             Consumer<List<VersionManifest.Version>> onLoaded,
             Consumer<String> onError) {
         return fetchVersions(UiText.tr("download.category.release"),
@@ -183,7 +209,7 @@ public final class DownloadsController {
     }
 
     /** 异步获取官方版本清单中的快照版。 */
-    public FrontTask<List<VersionManifest.Version>> fetchSnapshotVersions(
+    public AsyncTaskHandle<List<VersionManifest.Version>> fetchSnapshotVersions(
             Consumer<List<VersionManifest.Version>> onLoaded,
             Consumer<String> onError) {
         return fetchVersions(UiText.tr("download.category.snapshot"),
@@ -191,14 +217,14 @@ public final class DownloadsController {
     }
 
     /** 异步获取官方版本清单中的远古版（Alpha/Beta）。 */
-    public FrontTask<List<VersionManifest.Version>> fetchOldVersions(
+    public AsyncTaskHandle<List<VersionManifest.Version>> fetchOldVersions(
             Consumer<List<VersionManifest.Version>> onLoaded,
             Consumer<String> onError) {
         return fetchVersions(UiText.tr("download.category.old"),
                 VersionManifest::oldVersionsNewestFirst, onLoaded, onError);
     }
 
-    private FrontTask<List<VersionManifest.Version>> fetchVersions(
+    private AsyncTaskHandle<List<VersionManifest.Version>> fetchVersions(
             String category,
             Function<VersionManifest, List<VersionManifest.Version>> selector,
             Consumer<List<VersionManifest.Version>> onLoaded,
@@ -210,7 +236,7 @@ public final class DownloadsController {
     }
 
     /** 异步下载官方原版实例。 */
-    public FrontTask<InstalledVersion> downloadVersion(
+    public AsyncTaskHandle<InstalledVersion> downloadVersion(
             String versionId,
             String instanceId,
             Path gameDirectory,
@@ -231,7 +257,7 @@ public final class DownloadsController {
                 onError);
     }
 
-    public FrontTask<List<FabricLoaderVersion>> fetchFabricLoaderVersions(
+    public AsyncTaskHandle<List<FabricLoaderVersion>> fetchFabricLoaderVersions(
             String gameVersion,
             Consumer<List<FabricLoaderVersion>> onLoaded,
             Consumer<String> onError) {
@@ -240,7 +266,7 @@ public final class DownloadsController {
                 onLoaded, onError);
     }
 
-    public FrontTask<List<FabricApiVersion>> fetchFabricApiVersions(
+    public AsyncTaskHandle<List<FabricApiVersion>> fetchFabricApiVersions(
             String gameVersion,
             Consumer<List<FabricApiVersion>> onLoaded,
             Consumer<String> onError) {
@@ -249,7 +275,7 @@ public final class DownloadsController {
                 onLoaded, onError);
     }
 
-    public FrontTask<InstalledVersion> downloadFabricVersion(
+    public AsyncTaskHandle<InstalledVersion> downloadFabricVersion(
             String gameVersion,
             String instanceId,
             String loaderVersion,
@@ -280,7 +306,7 @@ public final class DownloadsController {
                 onError);
     }
 
-    public FrontTask<List<QuiltLoaderVersion>> fetchQuiltLoaderVersions(
+    public AsyncTaskHandle<List<QuiltLoaderVersion>> fetchQuiltLoaderVersions(
             String gameVersion,
             Consumer<List<QuiltLoaderVersion>> onLoaded,
             Consumer<String> onError) {
@@ -289,7 +315,7 @@ public final class DownloadsController {
                 onLoaded, onError);
     }
 
-    public FrontTask<List<QuiltApiVersion>> fetchQuiltApiVersions(
+    public AsyncTaskHandle<List<QuiltApiVersion>> fetchQuiltApiVersions(
             String gameVersion,
             Consumer<List<QuiltApiVersion>> onLoaded,
             Consumer<String> onError) {
@@ -298,7 +324,7 @@ public final class DownloadsController {
                 onLoaded, onError);
     }
 
-    public FrontTask<InstalledVersion> downloadQuiltVersion(
+    public AsyncTaskHandle<InstalledVersion> downloadQuiltVersion(
             String gameVersion,
             String instanceId,
             String loaderVersion,
@@ -329,7 +355,7 @@ public final class DownloadsController {
                 onError);
     }
 
-    public FrontTask<List<ForgeVersion>> fetchForgeVersions(
+    public AsyncTaskHandle<List<ForgeVersion>> fetchForgeVersions(
             String gameVersion,
             Consumer<List<ForgeVersion>> onLoaded,
             Consumer<String> onError) {
@@ -338,7 +364,7 @@ public final class DownloadsController {
                 onLoaded, onError);
     }
 
-    public FrontTask<List<NeoForgeVersion>> fetchNeoForgeVersions(
+    public AsyncTaskHandle<List<NeoForgeVersion>> fetchNeoForgeVersions(
             String gameVersion,
             Consumer<List<NeoForgeVersion>> onLoaded,
             Consumer<String> onError) {
@@ -347,7 +373,7 @@ public final class DownloadsController {
                 onLoaded, onError);
     }
 
-    public FrontTask<List<OptiFineVersion>> fetchOptiFineVersions(
+    public AsyncTaskHandle<List<OptiFineVersion>> fetchOptiFineVersions(
             String gameVersion,
             Consumer<List<OptiFineVersion>> onLoaded,
             Consumer<String> onError) {
@@ -356,7 +382,7 @@ public final class DownloadsController {
                 onLoaded, onError);
     }
 
-    public FrontTask<InstalledVersion> downloadForgeVersion(
+    public AsyncTaskHandle<InstalledVersion> downloadForgeVersion(
             String gameVersion,
             String instanceId,
             ForgeVersion version,
@@ -371,7 +397,7 @@ public final class DownloadsController {
                 onSuccess, onError);
     }
 
-    public FrontTask<InstalledVersion> downloadNeoForgeVersion(
+    public AsyncTaskHandle<InstalledVersion> downloadNeoForgeVersion(
             String gameVersion,
             String instanceId,
             NeoForgeVersion version,
@@ -386,7 +412,7 @@ public final class DownloadsController {
                 onSuccess, onError);
     }
 
-    public FrontTask<InstalledVersion> downloadForgeOptiFineVersion(
+    public AsyncTaskHandle<InstalledVersion> downloadForgeOptiFineVersion(
             String gameVersion,
             String instanceId,
             ForgeVersion forgeVersion,
@@ -403,7 +429,7 @@ public final class DownloadsController {
                 onSuccess, onError);
     }
 
-    private FrontTask<InstalledVersion> downloadExternalLoaderVersion(
+    private AsyncTaskHandle<InstalledVersion> downloadExternalLoaderVersion(
             String loaderName,
             String instanceId,
             Path gameDirectory,

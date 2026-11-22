@@ -6,7 +6,7 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import org.chs.camlauncher.backend.api.InstanceDetails;
-import org.chs.camlauncher.front.controller.FrontTask;
+import org.chs.camlauncher.front.task.AsyncTaskHandle;
 import org.chs.camlauncher.front.controller.HomeController;
 import org.chs.camlauncher.front.text.UiText;
 import org.chs.camlauncher.ui.control.CamlButton;
@@ -27,7 +27,7 @@ final class InstanceManagementView extends VBox implements PageLifecycle {
             CamlButton.filled(UiText.tr("instances.manage.manageMods"));
     private final CamlButton manageResourcePacksButton =
             CamlButton.tonal(UiText.tr("instances.manage.manageResourcePacks"));
-    private FrontTask<?> inspectTask;
+    private AsyncTaskHandle<?> inspectTask;
     private InstanceDetails details;
     private boolean disposed;
 

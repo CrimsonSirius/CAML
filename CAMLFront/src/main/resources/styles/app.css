@@ -150,6 +150,15 @@
     -fx-text-fill: -caml-on-surface;
 }
 
+.app-download-task-row {
+    -fx-spacing: 0.75em;
+    -fx-alignment: center-left;
+}
+
+.app-download-task-text {
+    -fx-spacing: 0.125em;
+}
+
 .app-download-task-progress {
     -fx-min-width: 6em;
     -fx-pref-width: 12em;

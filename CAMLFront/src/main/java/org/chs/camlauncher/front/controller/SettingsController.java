@@ -1,5 +1,7 @@
 package org.chs.camlauncher.front.controller;
 
+import org.chs.camlauncher.front.task.AsyncTaskHandle;
+
 import javafx.application.Platform;
 import org.chs.camlauncher.backend.api.GameDirectoryInfo;
 import org.chs.camlauncher.backend.api.WindowState;
@@ -59,13 +61,13 @@ public final class SettingsController {
         return context.backend().customDownloadApi();
     }
 
-    public FrontTask<List<JavaCandidate>> scanJavaCandidates(
+    public AsyncTaskHandle<List<JavaCandidate>> scanJavaCandidates(
             Consumer<List<JavaCandidate>> onLoaded, Consumer<String> onError) {
         return context.runJava(UiText.tr("operation.scanJava"),
                 () -> context.backend().listJavaCandidates(), onLoaded, onError);
     }
 
-    public FrontTask<JavaCandidate> addManualJava(
+    public AsyncTaskHandle<JavaCandidate> addManualJava(
             Path executable, Consumer<JavaCandidate> onAdded, Consumer<String> onError) {
         return context.runJava(UiText.tr("operation.addManualJava"),
                 () -> context.backend().addManualJavaPath(executable), onAdded, onError);
@@ -76,17 +78,17 @@ public final class SettingsController {
                 () -> context.backend().setJavaSelection(mode, selectedJavaPath));
     }
 
-    public FrontTask<GameDirectoryInfo> inspectGameDirectory(
+    public AsyncTaskHandle<GameDirectoryInfo> inspectGameDirectory(
             Path directory, Consumer<GameDirectoryInfo> callback) {
         return context.inspectGameDirectory(directory, callback);
     }
 
-    public FrontTask<GameDirectoryInfo> inspectGameDirectory(
+    public AsyncTaskHandle<GameDirectoryInfo> inspectGameDirectory(
             Path directory, Consumer<GameDirectoryInfo> callback, Consumer<String> onError) {
         return context.inspectGameDirectory(directory, callback, onError);
     }
 
-    public FrontTask<Boolean> checkDirectory(
+    public AsyncTaskHandle<Boolean> checkDirectory(
             Path directory, Consumer<Boolean> callback, Consumer<String> onError) {
         return context.checkDirectory(directory, callback, onError);
     }
@@ -97,7 +99,7 @@ public final class SettingsController {
                 () -> context.backend().setMaxMemoryMb(maxMemoryMb));
     }
 
-    public FrontTask<String> saveJvmArgumentsAsync(
+    public AsyncTaskHandle<String> saveJvmArgumentsAsync(
             String arguments, Consumer<String> onSaved, Consumer<String> onError) {
         String normalized = arguments == null ? "" : arguments.trim();
         return context.runSettings(UiText.tr("operation.saveJvmArguments"), () -> {
@@ -160,7 +162,7 @@ public final class SettingsController {
     }
 
     /** 在设置线程完成语言持久化与重载，成功后把快照切回 JavaFX 线程。 */
-    public FrontTask<LanguageSnapshot> switchLanguageAsync(
+    public AsyncTaskHandle<LanguageSnapshot> switchLanguageAsync(
             LanguageSelectionMode mode, String locale,
             Consumer<LanguageSnapshot> onLoaded, Consumer<String> onError) {
         String operation = UiText.tr("operation.saveLanguage");
@@ -180,7 +182,7 @@ public final class SettingsController {
                 });
     }
 
-    public FrontTask<LanguageSnapshot> switchLanguageFallbackAsync(
+    public AsyncTaskHandle<LanguageSnapshot> switchLanguageFallbackAsync(
             LanguageFallbackMode mode, String locale,
             Consumer<LanguageSnapshot> onLoaded, Consumer<String> onError) {
         String operation = UiText.tr("operation.saveLanguageFallback");

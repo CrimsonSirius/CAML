@@ -2,6 +2,7 @@ package org.chs.camlauncher.front.view;
 
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
+import javafx.collections.ListChangeListener;
 import javafx.event.ActionEvent;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
@@ -18,14 +19,17 @@ import org.chs.camlauncher.backend.mod.model.ModContentType;
 import org.chs.camlauncher.backend.mod.model.ModProjectSummary;
 import org.chs.camlauncher.front.UiScale;
 import org.chs.camlauncher.front.controller.DownloadsController;
-import org.chs.camlauncher.front.controller.FrontTask;
+import org.chs.camlauncher.front.task.AsyncTaskHandle;
 import org.chs.camlauncher.front.text.UiText;
+import org.chs.camlauncher.front.task.DownloadTelemetry;
+import org.chs.camlauncher.front.task.DownloadTask;
 import org.chs.camlauncher.ui.control.CamlButton;
 import org.chs.camlauncher.ui.control.CamlPageHost;
 import org.chs.camlauncher.ui.control.CamlProgressBar;
 import org.chs.camlauncher.ui.control.CamlSideNav;
 import org.chs.camlauncher.ui.control.CamlSideNavItem;
 
+import java.util.LinkedHashMap;
 import java.util.EnumMap;
 import java.util.Map;
 import java.util.function.Consumer;
@@ -35,15 +39,15 @@ final class DownloadsView extends HBox implements SidebarPage, PageLifecycle {
     private final DownloadsController controller;
     private final LaunchSettings launchSettings;
     private final CamlSideNav sidebar;
+    private final CamlSideNavItem releaseItem;
+    private final CamlSideNavItem snapshotItem;
+    private final CamlSideNavItem oldItem;
     private final CamlPageHost contentHost;
-    private final HBox taskBar = new HBox();
-    private final Label taskTitle = new Label();
-    private final Label taskDetail = new Label();
-    private final CamlProgressBar taskProgress = new CamlProgressBar();
-    private final CamlButton taskViewButton = CamlButton.text(UiText.tr("download.progress.progress"));
-    private final CamlButton taskCancelButton = CamlButton.outlined(UiText.tr("common.cancel"));
+    private final VBox taskRowsBox = new VBox();
+    private final Map<DownloadTask, TaskRow> taskRows = new LinkedHashMap<>();
+    private final ListChangeListener<DownloadTask> taskListListener = change -> rebuildTaskRows();
     private final Timeline taskRefreshTimeline = new Timeline(
-            new KeyFrame(Duration.millis(250), event -> refreshTaskBar()));
+            new KeyFrame(Duration.millis(250), event -> refreshTaskRows()));
     private final Map<VersionCategory, DownloadVersionsView> versionsViews =
             new EnumMap<>(VersionCategory.class);
     private VersionCategory currentCategory = VersionCategory.RELEASE;
@@ -52,11 +56,7 @@ final class DownloadsView extends HBox implements SidebarPage, PageLifecycle {
     private ModSearchView modsView;
     private ModSearchView shadersView;
     private ModSearchView resourcePacksView;
-    private DownloadRequest activeRequest;
-    private DownloadTelemetry activeTelemetry;
-    private DownloadCancellationToken activeToken;
-    private FrontTask<?> activeTask;
-    private DownloadProgressView activeProgressPage;
+    private boolean shown;
     private boolean disposed;
 
     DownloadsView(DownloadsController controller, LaunchSettings launchSettings) {
@@ -69,9 +69,9 @@ final class DownloadsView extends HBox implements SidebarPage, PageLifecycle {
         // 内边距和子项间距由 app.css 的 .app-sidebar（em）负责，跟随根字号缩放。
         ViewSupport.onLayoutMetricsChanged(this, this::updateSidebarWidth);
 
-        CamlSideNavItem releaseItem = new CamlSideNavItem(VersionCategory.RELEASE.label());
-        CamlSideNavItem snapshotItem = new CamlSideNavItem(VersionCategory.SNAPSHOT.label());
-        CamlSideNavItem oldItem = new CamlSideNavItem(VersionCategory.OLD.label());
+        releaseItem = new CamlSideNavItem(VersionCategory.RELEASE.label());
+        snapshotItem = new CamlSideNavItem(VersionCategory.SNAPSHOT.label());
+        oldItem = new CamlSideNavItem(VersionCategory.OLD.label());
         CamlSideNavItem modItem = new CamlSideNavItem(UiText.tr("mods.nav"));
         CamlSideNavItem shaderItem = new CamlSideNavItem(UiText.tr("shaders.nav"));
         CamlSideNavItem resourcePackItem = new CamlSideNavItem(UiText.tr("resourcepacks.nav"));
@@ -90,11 +90,13 @@ final class DownloadsView extends HBox implements SidebarPage, PageLifecycle {
         contentHost.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
         VBox.setVgrow(contentHost, Priority.ALWAYS);
 
-        buildTaskBar();
+        buildTaskRows();
         taskRefreshTimeline.setCycleCount(Timeline.INDEFINITE);
-        VBox contentColumn = new VBox(taskBar, contentHost);
+        VBox contentColumn = new VBox(taskRowsBox, contentHost);
         contentColumn.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
         HBox.setHgrow(contentColumn, Priority.ALWAYS);
+        controller.downloadTasks().addListener(taskListListener);
+        rebuildTaskRows();
 
         releaseItem.addEventHandler(ActionEvent.ACTION,
                 event -> showVersions(VersionCategory.RELEASE));
@@ -111,29 +113,11 @@ final class DownloadsView extends HBox implements SidebarPage, PageLifecycle {
         setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
     }
 
-    private void buildTaskBar() {
-        taskTitle.getStyleClass().add("app-download-task-title");
-        taskTitle.setMinWidth(0);
-        taskTitle.setMaxWidth(Double.MAX_VALUE);
-        taskDetail.getStyleClass().addAll("caml-body-small", "caml-on-surface-muted");
-        taskDetail.setWrapText(false);
-        taskDetail.setMinWidth(0);
-        taskDetail.setMaxWidth(Double.MAX_VALUE);
-        VBox text = new VBox(taskTitle, taskDetail);
-        text.getStyleClass().add("app-download-task-text");
-        text.setMinWidth(0);
-        HBox.setHgrow(text, Priority.ALWAYS);
-
-        taskProgress.getStyleClass().add("app-download-task-progress");
-
-        taskViewButton.setOnAction(event -> showActiveProgress());
-        taskCancelButton.setOnAction(event -> cancelActiveDownload());
-
-        taskBar.getChildren().setAll(taskProgress, text, taskViewButton, taskCancelButton);
-        taskBar.getStyleClass().add("app-download-task-bar");
-        taskBar.setAlignment(Pos.CENTER_LEFT);
-        taskBar.setVisible(false);
-        taskBar.setManaged(false);
+    private void buildTaskRows() {
+        taskRowsBox.getStyleClass().add("app-download-task-bar");
+        taskRowsBox.setFillWidth(true);
+        taskRowsBox.setVisible(false);
+        taskRowsBox.setManaged(false);
     }
 
     @Override
@@ -174,6 +158,20 @@ final class DownloadsView extends HBox implements SidebarPage, PageLifecycle {
         showingVersionList = true;
         currentCategory = category;
         setContentPage(versionsView(category));
+    }
+
+    VersionCategory currentCategory() {
+        return currentCategory;
+    }
+
+    void showCategory(VersionCategory category) {
+        VersionCategory target = category == null ? VersionCategory.RELEASE : category;
+        sidebar.select(switch (target) {
+            case RELEASE -> releaseItem;
+            case SNAPSHOT -> snapshotItem;
+            case OLD -> oldItem;
+        });
+        showVersions(target);
     }
 
     private void showMods() {
@@ -242,24 +240,23 @@ final class DownloadsView extends HBox implements SidebarPage, PageLifecycle {
     }
 
     private void startDownload(DownloadRequest request) {
-        if (isTaskRunning()) {
-            showActiveProgress();
-            return;
-        }
-
-        DownloadProgressView previousProgress = activeProgressPage;
-        clearTaskState();
         DownloadTelemetry telemetry = new DownloadTelemetry();
         DownloadCancellationToken token = new DownloadCancellationToken();
+        DownloadTask downloadTask = new DownloadTask(
+                "download.progress.title",
+                new Object[]{request.instanceId()},
+                request.instanceId(),
+                telemetry,
+                token
+        );
+        controller.registerDownloadTask(downloadTask);
+        DownloadProgressView previousProgress =
+                activeContentPage instanceof DownloadProgressView page ? page : null;
         DownloadProgressView page = new DownloadProgressView(
                 request,
                 telemetry,
                 this::backFromProgress
         );
-        activeRequest = request;
-        activeTelemetry = telemetry;
-        activeToken = token;
-        activeProgressPage = page;
         setDownloadNavigationVisible(false);
         showingVersionList = false;
         setContentPage(page);
@@ -268,18 +265,18 @@ final class DownloadsView extends HBox implements SidebarPage, PageLifecycle {
         }
 
         Runnable onSuccess = () -> {
-            telemetry.markCompleted();
+            downloadTask.complete();
             launchSettings.setSelectedVersion(request.instanceId());
             page.refreshNow();
-            refreshTaskBar();
+            refreshTaskRows();
         };
         Consumer<String> onError = message -> {
-            telemetry.markFailed(message);
+            downloadTask.fail(message);
             page.refreshNow();
-            refreshTaskBar();
+            refreshTaskRows();
         };
 
-        FrontTask<?> task;
+        AsyncTaskHandle<?> task;
         if (request.optiFine() != null) {
             task = controller.downloadForgeOptiFineVersion(request.version().id(), request.instanceId(),
                     request.forge(), request.optiFine(), request.gameDirectory(),
@@ -302,84 +299,98 @@ final class DownloadsView extends HBox implements SidebarPage, PageLifecycle {
             task = controller.downloadVersion(request.version().id(), request.instanceId(),
                     request.gameDirectory(), telemetry, token, onSuccess, onError);
         }
-        activeTask = task;
-        refreshTaskBar();
+        downloadTask.attach(task::cancel);
+        refreshTaskRows();
         taskRefreshTimeline.playFromStart();
     }
 
-    private void showActiveProgress() {
-        if (activeProgressPage == null) {
-            return;
-        }
-        setDownloadNavigationVisible(false);
-        showingVersionList = false;
-        setContentPage(activeProgressPage);
-    }
-
     private void backFromProgress() {
+        DownloadProgressView page = activeContentPage instanceof DownloadProgressView current
+                ? current
+                : null;
         showVersions(currentCategory);
-        if (!isTaskRunning()) {
-            DownloadProgressView finishedPage = activeProgressPage;
-            clearTaskState();
-            if (finishedPage != null && finishedPage != activeContentPage) {
-                finishedPage.dispose();
-            }
+        if (page != null && page != activeContentPage) {
+            page.dispose();
         }
     }
 
-    private void cancelActiveDownload() {
-        FrontTask<?> task = activeTask;
-        if (task == null) {
+    private void rebuildTaskRows() {
+        if (disposed) {
             return;
         }
-        boolean cancelled = task.cancel();
-        if (!cancelled) {
-            refreshTaskBar();
-            return;
+        taskRowsBox.getChildren().clear();
+        taskRows.clear();
+        for (DownloadTask task : controller.downloadTasks()) {
+            TaskRow row = createTaskRow(task);
+            taskRows.put(task, row);
+            taskRowsBox.getChildren().add(row.container());
         }
-        if (activeToken != null) {
-            activeToken.cancel();
-        }
-        if (activeTelemetry != null) {
-            activeTelemetry.markCancelled();
-        }
-        if (activeProgressPage != null) {
-            activeProgressPage.refreshNow();
-        }
-        refreshTaskBar();
-    }
-
-    private boolean isTaskRunning() {
-        if (activeTelemetry == null) {
-            return false;
-        }
-        DownloadTelemetry.Snapshot snapshot = activeTelemetry.snapshot();
-        return !snapshot.finished() && !snapshot.failed() && !snapshot.cancelled();
-    }
-
-    private void refreshTaskBar() {
-        if (activeRequest == null || activeTelemetry == null) {
-            taskBar.setVisible(false);
-            taskBar.setManaged(false);
-            return;
-        }
-
-        DownloadTelemetry.Snapshot snapshot = activeTelemetry.snapshot();
-        boolean running = !snapshot.finished() && !snapshot.failed() && !snapshot.cancelled();
-        taskBar.setVisible(true);
-        taskBar.setManaged(true);
-        taskTitle.setText(taskTitle(snapshot));
-        taskDetail.setText(taskDetail(snapshot));
-        taskProgress.setProgress(taskProgress(snapshot, running));
-        taskCancelButton.setVisible(running);
-        taskCancelButton.setManaged(running);
-        taskViewButton.setDisable(activeProgressPage == null);
-        if (!running) {
+        boolean visible = !taskRows.isEmpty();
+        taskRowsBox.setVisible(visible);
+        taskRowsBox.setManaged(visible);
+        refreshTaskRows();
+        if (shown && hasRunningTasks()) {
+            taskRefreshTimeline.playFromStart();
+        } else {
             taskRefreshTimeline.stop();
         }
     }
 
-    private String taskTitle(DownloadTelemetry.Snapshot snapshot) {
+    private TaskRow createTaskRow(DownloadTask task) {
+        Label title = new Label();
+        title.getStyleClass().add("app-download-task-title");
+        title.setMinWidth(0);
+        title.setMaxWidth(Double.MAX_VALUE);
+
+        Label detail = new Label();
+        detail.getStyleClass().addAll("caml-body-small", "caml-on-surface-muted");
+        detail.setWrapText(false);
+        detail.setMinWidth(0);
+        detail.setMaxWidth(Double.MAX_VALUE);
+
+        VBox text = new VBox(title, detail);
+        text.getStyleClass().add("app-download-task-text");
+        text.setMinWidth(0);
+        HBox.setHgrow(text, Priority.ALWAYS);
+
+        CamlProgressBar progress = new CamlProgressBar();
+        progress.getStyleClass().add("app-download-task-progress");
+
+        CamlButton cancel = CamlButton.outlined(UiText.tr("common.cancel"));
+        cancel.setOnAction(event -> {
+            task.cancel();
+            refreshTaskRows();
+        });
+
+        HBox row = new HBox(progress, text, cancel);
+        row.getStyleClass().add("app-download-task-row");
+        row.setAlignment(Pos.CENTER_LEFT);
+        return new TaskRow(row, title, detail, progress, cancel);
+    }
+
+    private void refreshTaskRows() {
+        if (disposed) {
+            return;
+        }
+        boolean anyRunning = false;
+        for (Map.Entry<DownloadTask, TaskRow> entry : taskRows.entrySet()) {
+            DownloadTask task = entry.getKey();
+            TaskRow row = entry.getValue();
+            DownloadTelemetry.Snapshot snapshot = task.snapshot();
+            boolean running = !snapshot.finished() && !snapshot.failed() && !snapshot.cancelled();
+            anyRunning |= running;
+            row.title().setText(taskHeadline(task, snapshot));
+            row.detail().setText(taskDetail(task, snapshot));
+            row.progress().setProgress(taskProgress(snapshot, running));
+            row.cancel().setVisible(running);
+            row.cancel().setManaged(running);
+        }
+        if (!anyRunning) {
+            taskRefreshTimeline.stop();
+        }
+    }
+
+    private static String taskHeadline(DownloadTask task, DownloadTelemetry.Snapshot snapshot) {
         if (snapshot.finished()) {
             return UiText.tr("download.progress.completed");
         }
@@ -389,15 +400,18 @@ final class DownloadsView extends HBox implements SidebarPage, PageLifecycle {
         if (snapshot.cancelled()) {
             return UiText.tr("download.progress.failedHint");
         }
-        return UiText.tr("download.progress.title", activeRequest.instanceId());
+        return task.title();
     }
 
-    private String taskDetail(DownloadTelemetry.Snapshot snapshot) {
+    private static String taskDetail(DownloadTask task, DownloadTelemetry.Snapshot snapshot) {
         if (snapshot.finished()) {
-            return UiText.tr("download.progress.finishedHint");
+            return task.subject() + " · " + UiText.tr("download.progress.finishedHint");
         }
-        if (snapshot.failed() || snapshot.cancelled()) {
-            return activeRequest.instanceId();
+        if (snapshot.failed()) {
+            return task.subject();
+        }
+        if (snapshot.cancelled()) {
+            return task.subject();
         }
         return snapshot.currentFile().isBlank()
                 ? snapshot.currentStage()
@@ -415,15 +429,13 @@ final class DownloadsView extends HBox implements SidebarPage, PageLifecycle {
         return running ? ProgressBar.INDETERMINATE_PROGRESS : 0;
     }
 
-    private void clearTaskState() {
-        taskRefreshTimeline.stop();
-        activeRequest = null;
-        activeTelemetry = null;
-        activeToken = null;
-        activeTask = null;
-        activeProgressPage = null;
-        taskBar.setVisible(false);
-        taskBar.setManaged(false);
+    private record TaskRow(
+            HBox container,
+            Label title,
+            Label detail,
+            CamlProgressBar progress,
+            CamlButton cancel
+    ) {
     }
 
     private void setContentPage(Node next) {
@@ -449,17 +461,28 @@ final class DownloadsView extends HBox implements SidebarPage, PageLifecycle {
 
     @Override
     public void onShow() {
+        shown = true;
         if (activeContentPage != null) {
             activeContentPage.onShow();
         }
-        refreshTaskBar();
-        if (isTaskRunning()) {
+        refreshTaskRows();
+        if (hasRunningTasks()) {
             taskRefreshTimeline.playFromStart();
         }
     }
 
+    private boolean hasRunningTasks() {
+        for (DownloadTask task : controller.downloadTasks()) {
+            if (task.isRunning()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     @Override
     public void onHide() {
+        shown = false;
         taskRefreshTimeline.stop();
         if (activeContentPage != null) {
             activeContentPage.onHide();
@@ -469,11 +492,9 @@ final class DownloadsView extends HBox implements SidebarPage, PageLifecycle {
     @Override
     public void dispose() {
         disposed = true;
+        controller.downloadTasks().removeListener(taskListListener);
         taskRefreshTimeline.stop();
-        if (activeProgressPage != null && activeProgressPage != activeContentPage) {
-            activeProgressPage.dispose();
-        }
-        activeProgressPage = null;
+        taskRows.clear();
         if (activeContentPage != null) {
             activeContentPage.onHide();
             activeContentPage.dispose();

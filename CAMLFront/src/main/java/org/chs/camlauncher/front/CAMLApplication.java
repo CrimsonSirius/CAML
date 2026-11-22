@@ -214,6 +214,7 @@ public final class CAMLApplication extends Application {
             logger.warn("无法应用主题: {}", theme.file(), e);
             return;
         }
+        activeTheme = theme;
 
         controller.settingsController().saveThemeAsync(theme.id());
     }
@@ -260,6 +261,8 @@ public final class CAMLApplication extends Application {
         if (mode == languageSelectionMode && nextLanguage.equals(language)) {
             return;
         }
+        LanguageSelectionMode previousMode = languageSelectionMode;
+        String previousLanguage = language;
         languageSelectionMode = mode;
         language = nextLanguage;
         long generation = ++languageChangeGeneration;
@@ -271,7 +274,13 @@ public final class CAMLApplication extends Application {
                     language = snapshot.activeLocale();
                     rebuildView();
                 },
-                message -> logger.warn("切换语言失败: {}", message));
+                message -> {
+                    if (generation == languageChangeGeneration) {
+                        languageSelectionMode = previousMode;
+                        language = previousLanguage;
+                    }
+                    logger.warn("切换语言失败: {}", message);
+                });
     }
 
     private void changeLanguageFallback(LanguageFallbackMode mode, String locale) {
@@ -279,6 +288,8 @@ public final class CAMLApplication extends Application {
         if (mode == languageFallbackMode && nextLocale.equals(languageFallbackLocale)) {
             return;
         }
+        LanguageFallbackMode previousMode = languageFallbackMode;
+        String previousLocale = languageFallbackLocale;
         languageFallbackMode = mode;
         languageFallbackLocale = nextLocale;
         long generation = ++languageFallbackChangeGeneration;
@@ -290,7 +301,13 @@ public final class CAMLApplication extends Application {
                     languageFallbackLocale = snapshot.fallbackLocale();
                     rebuildView();
                 },
-                message -> logger.warn("设置语言回退失败: {}", message));
+                message -> {
+                    if (generation == languageFallbackChangeGeneration) {
+                        languageFallbackMode = previousMode;
+                        languageFallbackLocale = previousLocale;
+                    }
+                    logger.warn("设置语言回退失败: {}", message);
+                });
     }
 
     private void rebuildView() {
@@ -298,6 +315,7 @@ public final class CAMLApplication extends Application {
             return;
         }
         MainView previous = view;
+        MainView.State state = previous.snapshotState();
         view = previous.recreate();
         view.configureThemes(themes, activeTheme, theme -> switchTheme(scene, theme));
         previous.flushPendingSettings();
@@ -305,7 +323,7 @@ public final class CAMLApplication extends Application {
         CamlTheme.markRoot(view);
         scene.setRoot(view);
         CamlTheme.install(scene);
-        view.showSettingsPage();
+        view.restoreState(state);
     }
 
     @Override

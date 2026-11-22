@@ -15,7 +15,7 @@ import org.chs.camlauncher.backend.api.InstanceDetails;
 import org.chs.camlauncher.backend.api.InstanceMod;
 import org.chs.camlauncher.backend.api.InstanceModUpdate;
 import org.chs.camlauncher.backend.download.DownloadListener;
-import org.chs.camlauncher.front.controller.FrontTask;
+import org.chs.camlauncher.front.task.AsyncTaskHandle;
 import org.chs.camlauncher.front.controller.HomeController;
 import org.chs.camlauncher.front.text.UiText;
 import org.chs.camlauncher.ui.control.CamlButton;
@@ -40,10 +40,10 @@ final class ManageInstancesView extends VBox implements PageLifecycle {
     private final ScrollPane modsScroll = new ScrollPane(modsList);
     private final CamlButton openFolderButton =
             CamlButton.outlined(UiText.tr("instances.manage.openFolder"));
-    private final List<FrontTask<byte[]>> iconTasks = new ArrayList<>();
+    private final List<AsyncTaskHandle<byte[]>> iconTasks = new ArrayList<>();
     private final Map<String, ModRow> modRows = new LinkedHashMap<>();
-    private FrontTask<?> inspectTask;
-    private FrontTask<?> updateTask;
+    private AsyncTaskHandle<?> inspectTask;
+    private AsyncTaskHandle<?> updateTask;
     private int lastModCount;
     private boolean disposed;
 
@@ -159,7 +159,7 @@ final class ManageInstancesView extends VBox implements PageLifecycle {
             placeholder.setMaxSize(36, 36);
             iconFrame.getChildren().add(placeholder);
 
-            FrontTask<byte[]> iconTask = controller.loadInstanceModIcon(
+            AsyncTaskHandle<byte[]> iconTask = controller.loadInstanceModIcon(
                     gameDirectory, instanceId, mod.fileName(),
                     bytes -> applyModIcon(iconFrame, bytes),
                     ignored -> {
@@ -371,7 +371,7 @@ final class ManageInstancesView extends VBox implements PageLifecycle {
     }
 
     private void cancelIconTasks() {
-        for (FrontTask<byte[]> task : iconTasks) {
+        for (AsyncTaskHandle<byte[]> task : iconTasks) {
             task.cancel();
         }
         iconTasks.clear();

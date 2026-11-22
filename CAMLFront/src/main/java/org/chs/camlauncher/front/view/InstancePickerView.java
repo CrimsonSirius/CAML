@@ -7,7 +7,7 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import org.chs.camlauncher.front.controller.HomeController;
-import org.chs.camlauncher.front.controller.FrontTask;
+import org.chs.camlauncher.front.task.AsyncTaskHandle;
 import org.chs.camlauncher.front.text.UiText;
 import org.chs.camlauncher.ui.control.CamlButton;
 import org.chs.camlauncher.ui.control.CamlIcon;
@@ -19,7 +19,7 @@ import java.util.function.Consumer;
 final class InstancePickerView extends VBox implements PageLifecycle {
     private final Label statusLabel = new Label(UiText.tr("instances.picker.scanning"));
     private final ScrollPane scroll = new ScrollPane();
-    private FrontTask<?> scanTask;
+    private AsyncTaskHandle<?> scanTask;
     private boolean disposed;
 
     InstancePickerView(HomeController controller, Path gameDirectory,

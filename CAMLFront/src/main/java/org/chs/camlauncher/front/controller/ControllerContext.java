@@ -1,5 +1,7 @@
 package org.chs.camlauncher.front.controller;
 
+import org.chs.camlauncher.front.task.AsyncTaskHandle;
+
 import javafx.application.Platform;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -102,32 +104,32 @@ final class ControllerContext {
         backend.markUiFailure();
     }
 
-    <T> FrontTask<T> runDownload(String operation, IoSupplier<T> supplier,
+    <T> AsyncTaskHandle<T> runDownload(String operation, IoSupplier<T> supplier,
                                  Consumer<T> onSuccess, Consumer<String> onError) {
         return submit(operation, downloadExecutor, supplier, onSuccess, onError,
                 false, FailureMode.REPORT);
     }
 
-    <T> FrontTask<T> runCheck(String operation, IoSupplier<T> supplier,
+    <T> AsyncTaskHandle<T> runCheck(String operation, IoSupplier<T> supplier,
                               Consumer<T> onSuccess, Consumer<String> onError) {
         return submit(operation, checkExecutor, supplier, onSuccess, onError,
                 false, FailureMode.REPORT);
     }
 
-    <T> FrontTask<T> runMetadata(String operation, IoSupplier<T> supplier,
+    <T> AsyncTaskHandle<T> runMetadata(String operation, IoSupplier<T> supplier,
                                  Consumer<T> onSuccess, Consumer<String> onError) {
         return submit(operation, metadataExecutor, supplier, onSuccess, onError,
                 false, FailureMode.REPORT);
     }
 
-    <T> FrontTask<T> runIcon(String operation, IoSupplier<T> supplier,
+    <T> AsyncTaskHandle<T> runIcon(String operation, IoSupplier<T> supplier,
                              Consumer<T> onSuccess, Consumer<String> onError) {
         return submit(operation, iconExecutor, supplier, onSuccess, onError,
                 false, FailureMode.LOG_WARN);
     }
 
     /** 图标重试使用独立线程池，不占用正常图标下载的 8 个并发槽。 */
-    <T> FrontTask<T> runIconRetry(String operation, long delayMillis, IoSupplier<T> supplier,
+    <T> AsyncTaskHandle<T> runIconRetry(String operation, long delayMillis, IoSupplier<T> supplier,
                                   Consumer<T> onSuccess, Consumer<String> onError) {
         Objects.requireNonNull(supplier, "supplier");
         CompletableFuture<T> completion = new CompletableFuture<>();
@@ -145,25 +147,25 @@ final class ControllerContext {
                 false, FailureMode.LOG_DEBUG);
     }
 
-    <T> FrontTask<T> runJava(String operation, IoSupplier<T> supplier,
+    <T> AsyncTaskHandle<T> runJava(String operation, IoSupplier<T> supplier,
                              Consumer<T> onSuccess, Consumer<String> onError) {
         return submit(operation, javaExecutor, supplier, onSuccess, onError,
                 false, FailureMode.REPORT);
     }
 
-    <T> FrontTask<T> runSettings(String operation, IoSupplier<T> supplier,
+    <T> AsyncTaskHandle<T> runSettings(String operation, IoSupplier<T> supplier,
                                  Consumer<T> onSuccess, Consumer<String> onError) {
         return submit(operation, settingsExecutor, supplier, onSuccess, onError,
                 false, FailureMode.REPORT);
     }
 
-    <T> FrontTask<T> runLaunch(String operation, IoSupplier<T> supplier,
+    <T> AsyncTaskHandle<T> runLaunch(String operation, IoSupplier<T> supplier,
                                Consumer<T> onSuccess, Consumer<String> onError) {
         return submit(operation, launchExecutor, supplier, onSuccess, onError,
                 true, FailureMode.REPORT);
     }
 
-    private <T> FrontTask<T> submit(String operation, ExecutorService executor,
+    private <T> AsyncTaskHandle<T> submit(String operation, ExecutorService executor,
                                     IoSupplier<T> supplier, Consumer<T> onSuccess,
                                     Consumer<String> onError, boolean fatal,
                                     FailureMode failureMode) {
@@ -173,11 +175,11 @@ final class ControllerContext {
         return newTask(operation, completion, running, onSuccess, onError, fatal, failureMode);
     }
 
-    private <T> FrontTask<T> newTask(String operation, CompletableFuture<T> completion,
+    private <T> AsyncTaskHandle<T> newTask(String operation, CompletableFuture<T> completion,
                                      Future<?> running, Consumer<T> onSuccess,
                                      Consumer<String> onError, boolean fatal,
                                      FailureMode failureMode) {
-        FrontTask<T> task = new FrontTask<>(completion, running);
+        AsyncTaskHandle<T> task = new AsyncTaskHandle<>(completion, running);
         completion.whenComplete((value, failure) -> {
             if (task.isCancelled()) {
                 return;
@@ -196,7 +198,7 @@ final class ControllerContext {
     }
 
     private <T> void handleFailure(String operation, Throwable failure, boolean fatal,
-                                   FailureMode failureMode, FrontTask<T> task,
+                                   FailureMode failureMode, AsyncTaskHandle<T> task,
                                    Consumer<String> onError) {
         switch (failureMode) {
             case REPORT -> {
@@ -226,7 +228,7 @@ final class ControllerContext {
         }
     }
 
-    private static <T> void notifyError(FrontTask<T> task, Throwable root,
+    private static <T> void notifyError(AsyncTaskHandle<T> task, Throwable root,
                                         Consumer<String> onError) {
         if (onError == null || root instanceof CancellationException) {
             return;
@@ -252,10 +254,10 @@ final class ControllerContext {
         }
     }
 
-    private static <T> FrontTask<T> cancelledTask() {
+    private static <T> AsyncTaskHandle<T> cancelledTask() {
         CompletableFuture<T> completion = new CompletableFuture<>();
         completion.cancel(false);
-        return new FrontTask<>(completion, completion);
+        return new AsyncTaskHandle<>(completion, completion);
     }
 
     void executeSettings(String operation, IoAction task) {
@@ -281,12 +283,12 @@ final class ControllerContext {
     }
 
     /** 目录扫描统一走后端，结果始终在 JavaFX 线程回调。 */
-    FrontTask<GameDirectoryInfo> inspectGameDirectory(Path directory,
+    AsyncTaskHandle<GameDirectoryInfo> inspectGameDirectory(Path directory,
                                                       Consumer<GameDirectoryInfo> callback) {
         return inspectGameDirectory(directory, callback, null);
     }
 
-    FrontTask<GameDirectoryInfo> inspectGameDirectory(Path directory,
+    AsyncTaskHandle<GameDirectoryInfo> inspectGameDirectory(Path directory,
                                                       Consumer<GameDirectoryInfo> callback,
                                                       Consumer<String> onError) {
         if (directory == null) {
@@ -297,7 +299,7 @@ final class ControllerContext {
                 () -> backend.inspectGameDirectory(directory), callback, onError);
     }
 
-    FrontTask<Boolean> checkDirectory(Path directory, Consumer<Boolean> callback,
+    AsyncTaskHandle<Boolean> checkDirectory(Path directory, Consumer<Boolean> callback,
                                       Consumer<String> onError) {
         if (directory == null) {
             return null;

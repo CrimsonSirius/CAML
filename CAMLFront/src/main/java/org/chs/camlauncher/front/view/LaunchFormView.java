@@ -13,7 +13,7 @@ import javafx.scene.layout.VBox;
 import org.chs.camlauncher.backend.api.AccountSummary;
 import org.chs.camlauncher.backend.api.GameDirectoryInfo;
 import org.chs.camlauncher.front.controller.AccountController;
-import org.chs.camlauncher.front.controller.FrontTask;
+import org.chs.camlauncher.front.task.AsyncTaskHandle;
 import org.chs.camlauncher.front.controller.HomeController;
 import org.chs.camlauncher.front.text.AccountChoice;
 import org.chs.camlauncher.front.text.UiText;
@@ -47,7 +47,7 @@ final class LaunchFormView extends BorderPane {
     private List<AccountSummary> accounts = List.of();
     private String defaultAccountId;
     private GameDirectoryInfo lastGameDirectoryInfo;
-    private FrontTask<?> launchTask;
+    private AsyncTaskHandle<?> launchTask;
 
     LaunchFormView(HomeController controller, AccountController accountController,
                    LaunchSettings launchSettings, Runnable onLaunchStarted,

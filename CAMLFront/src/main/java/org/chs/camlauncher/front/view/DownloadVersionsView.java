@@ -11,7 +11,7 @@ import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import org.chs.camlauncher.backend.metadata.model.VersionManifest;
 import org.chs.camlauncher.front.controller.DownloadsController;
-import org.chs.camlauncher.front.controller.FrontTask;
+import org.chs.camlauncher.front.task.AsyncTaskHandle;
 import org.chs.camlauncher.front.text.UiText;
 import org.chs.camlauncher.ui.control.CamlButton;
 import org.chs.camlauncher.ui.control.CamlIcon;
@@ -24,7 +24,7 @@ final class DownloadVersionsView extends VBox implements PageLifecycle {
     private final VersionCategory category;
     private final Label statusLabel;
     private final ScrollPane scroll = new ScrollPane();
-    private FrontTask<List<VersionManifest.Version>> loadTask;
+    private AsyncTaskHandle<List<VersionManifest.Version>> loadTask;
     private boolean disposed;
 
     DownloadVersionsView(DownloadsController controller,

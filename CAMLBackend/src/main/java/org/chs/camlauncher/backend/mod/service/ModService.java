@@ -97,7 +97,7 @@ public final class ModService {
             DownloadListener listener
     ) throws IOException, InterruptedException {
         return download(file, ModContentType.MOD, gameDirectory, instanceId,
-                isolationMode, listener);
+                isolationMode, listener, new DownloadCancellationToken());
     }
 
     public ModDownloadResult download(
@@ -108,9 +108,23 @@ public final class ModService {
             VersionIsolationMode isolationMode,
             DownloadListener listener
     ) throws IOException, InterruptedException {
+        return download(file, type, gameDirectory, instanceId, isolationMode, listener,
+                new DownloadCancellationToken());
+    }
+
+    public ModDownloadResult download(
+            ModFile file,
+            ModContentType type,
+            Path gameDirectory,
+            String instanceId,
+            VersionIsolationMode isolationMode,
+            DownloadListener listener,
+            DownloadCancellationToken token
+    ) throws IOException, InterruptedException {
         Objects.requireNonNull(file, "file");
         Objects.requireNonNull(type, "type");
         Objects.requireNonNull(isolationMode, "isolationMode");
+        Objects.requireNonNull(token, "token");
         if (!file.hasDownloadUri()) {
             throw new BackendException(BackendError.of("mod.error.downloadUrlMissing", file.name()));
         }
@@ -131,7 +145,7 @@ public final class ModService {
                 headers
         );
         DownloadValidator validator = md5Validator(file);
-        fileDownloader.download(item, listener, validator, new DownloadCancellationToken());
+        fileDownloader.download(item, listener, validator, token);
         String contentType = switch (type) {
             case MOD -> "Mod";
             case SHADER -> "光影包";
