@@ -24,9 +24,9 @@ public final class CamlSideNavItem extends Button {
     public CamlSideNavItem(Node icon, String label) {
         super(label, icon);
         getStyleClass().add("caml-side-nav-item");
-        setContentDisplay(ContentDisplay.TOP);
-        setGraphicTextGap(4);
-        setAlignment(Pos.CENTER);
+        setContentDisplay(ContentDisplay.LEFT);
+        setGraphicTextGap(8);
+        setAlignment(Pos.CENTER_LEFT);
         setMaxWidth(Double.MAX_VALUE);
         setFocusTraversable(true);
         installPressAnimation();

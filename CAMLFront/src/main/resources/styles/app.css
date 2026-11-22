@@ -112,7 +112,7 @@
 .app-download-concurrency-value {
     -fx-font-size: 1em;
     -fx-font-weight: bold;
-    -fx-text-fill: -caml-accent-text;
+    -fx-text-fill: -caml-on-surface;
     -fx-padding: 0 0 0.25em 0;
 }
 
@@ -123,7 +123,7 @@
 }
 
 .app-download-progress-heading {
-    -fx-font-size: 1.875em;
+    -fx-font-size: 1.5em;
     -fx-font-weight: bold;
     -fx-text-fill: -caml-on-surface;
 }
@@ -140,7 +140,7 @@
 }
 
 .app-download-card-title {
-    -fx-font-size: 1.125em;
+    -fx-font-size: 1em;
     -fx-font-weight: bold;
     -fx-text-fill: -caml-on-surface;
 }
@@ -151,7 +151,7 @@
 }
 
 .app-download-speed-value {
-    -fx-font-size: 2.5em;
+    -fx-font-size: 2em;
     -fx-font-weight: bold;
     -fx-text-fill: -caml-accent-text;
 }
@@ -261,6 +261,12 @@
     -fx-spacing: 1em;
 }
 
+.app-settings-group-title {
+    -fx-font-size: 1.0625em;
+    -fx-font-weight: bold;
+    -fx-text-fill: -caml-on-surface;
+}
+
 /* 分组内部的间距梯度：选项列表 12px、滑块块 10px、单选行 18px、工具按钮行与字段行 8~10px。 */
 .app-settings-options {
     -fx-spacing: 0.75em;
@@ -271,7 +277,7 @@
 }
 
 .app-settings-row {
-    -fx-spacing: 1.125em;
+    -fx-spacing: 0.75em;
 }
 
 .app-settings-inline {
@@ -342,11 +348,11 @@
 }
 
 .app-instance-item:hover {
-    -fx-background-color: -caml-accent-container;
+    -fx-background-color: -caml-surface-high;
 }
 
 .app-instance-item:pressed {
-    -fx-background-color: derive(-caml-accent-container, -6%);
+    -fx-background-color: -caml-surface-highest;
 }
 
 .app-instance-info-group {
@@ -468,11 +474,11 @@
 }
 
 .app-mod-item:hover {
-    -fx-background-color: -caml-accent-container;
+    -fx-background-color: -caml-surface-high;
 }
 
 .app-mod-item:pressed {
-    -fx-background-color: derive(-caml-accent-container, -6%);
+    -fx-background-color: -caml-surface-highest;
 }
 
 .app-mod-accent {
@@ -499,14 +505,14 @@
 
 .app-mod-title,
 .app-mod-detail-title {
-    -fx-font-size: 1.25em;
+    -fx-font-size: 1.125em;
     -fx-font-weight: bold;
     -fx-text-fill: -caml-on-surface;
 }
 
 .app-mod-source {
     -fx-font-size: 0.9375em;
-    -fx-text-fill: -caml-accent-text;
+    -fx-text-fill: -caml-on-surface-muted;
 }
 
 .app-mod-summary {

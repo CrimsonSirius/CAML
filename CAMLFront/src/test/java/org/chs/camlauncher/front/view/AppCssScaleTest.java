@@ -31,8 +31,8 @@ class AppCssScaleTest {
     void typographyAndGeometryScaleWithRootFont() throws Exception {
         Metrics base = onFxThread(() -> measure(UiScale.DEFAULT_FACTOR));
 
-        // 设计基准：1em = 16px，标题 1.875em，分组内边距 1.5em，内容列不再有固定上限。
-        assertEquals(30, base.headingFontPx(), 0.5, "标题字号应为 1.875em");
+        // 设计基准：1em = 16px，标题 1.5em，分组内边距 1.5em，内容列不再有固定上限。
+        assertEquals(24, base.headingFontPx(), 0.5, "标题字号应为 1.5em");
         assertEquals(24, base.groupPadding(), 0.5, "分组内边距应为 1.5em");
         assertEquals(Double.MAX_VALUE, base.contentMaxWidth(), 0.0,
                 "设置内容列应允许横向铺满，不能再有 35em 上限");

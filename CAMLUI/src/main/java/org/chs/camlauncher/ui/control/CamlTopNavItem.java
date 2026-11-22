@@ -2,6 +2,8 @@ package org.chs.camlauncher.ui.control;
 
 import javafx.animation.Interpolator;
 import javafx.animation.ScaleTransition;
+import javafx.scene.Node;
+import javafx.scene.control.ContentDisplay;
 import javafx.scene.control.ToggleButton;
 import javafx.scene.input.MouseEvent;
 import javafx.util.Duration;
@@ -17,6 +19,17 @@ public final class CamlTopNavItem extends ToggleButton {
 
     public CamlTopNavItem(String text) {
         super(text);
+        configure();
+    }
+
+    public CamlTopNavItem(Node icon, String text) {
+        super(text, icon);
+        setContentDisplay(ContentDisplay.LEFT);
+        setGraphicTextGap(7);
+        configure();
+    }
+
+    private void configure() {
         getStyleClass().add("caml-top-nav-item");
         setFocusTraversable(true);
         addEventHandler(MouseEvent.MOUSE_PRESSED, event -> animateScale(PRESS_SCALE, PRESS_DURATION));

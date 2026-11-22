@@ -15,6 +15,7 @@ import org.chs.camlauncher.front.controller.HomeController;
 import org.chs.camlauncher.front.controller.MainController;
 import org.chs.camlauncher.front.controller.SettingsController;
 import org.chs.camlauncher.front.text.UiText;
+import org.chs.camlauncher.ui.control.CamlIcon;
 import org.chs.camlauncher.ui.control.CamlPageHost;
 import org.chs.camlauncher.ui.control.CamlTopBar;
 import org.chs.camlauncher.ui.control.CamlTopNav;
@@ -165,9 +166,12 @@ public final class MainView extends BorderPane {
         CamlTopBar bar = new CamlTopBar("CAML", UiText.tr("app.subtitle"));
 
         navigation = new CamlTopNav();
-        CamlTopNavItem home = navigation.addItem(UiText.tr("nav.home"));
-        CamlTopNavItem downloads = navigation.addItem(UiText.tr("nav.downloads"));
-        settingsNavItem = navigation.addItem(UiText.tr("nav.settings"));
+        CamlTopNavItem home = navigation.addItem(
+                new CamlIcon(CamlIcon.Glyph.HOME), UiText.tr("nav.home"));
+        CamlTopNavItem downloads = navigation.addItem(
+                new CamlIcon(CamlIcon.Glyph.DOWNLOAD), UiText.tr("nav.downloads"));
+        settingsNavItem = navigation.addItem(
+                new CamlIcon(CamlIcon.Glyph.SETTINGS), UiText.tr("nav.settings"));
         navigation.select(home);
         navigation.selectedItemProperty().addListener((observable, oldValue, selected) -> {
             if (selected == home) {

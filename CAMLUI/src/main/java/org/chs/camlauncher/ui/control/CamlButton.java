@@ -1,6 +1,8 @@
 package org.chs.camlauncher.ui.control;
 
+import javafx.scene.Node;
 import javafx.scene.control.Button;
+import javafx.scene.control.ContentDisplay;
 
 /**
  * CAML 按钮。
@@ -29,6 +31,14 @@ public final class CamlButton extends Button {
     public CamlButton(String text, Variant variant) {
         super(text);
         getStyleClass().addAll("caml-button", "caml-button-" + variant.styleName);
+    }
+
+    /** 在按钮文字前添加图标，并保持图标为装饰元素。 */
+    public CamlButton withGraphic(Node graphic) {
+        setGraphic(graphic);
+        setContentDisplay(ContentDisplay.LEFT);
+        setGraphicTextGap(8);
+        return this;
     }
 
     public static CamlButton filled(String text) {

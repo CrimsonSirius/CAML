@@ -18,6 +18,7 @@ import org.chs.camlauncher.front.text.AccountChoice;
 import org.chs.camlauncher.front.text.UiText;
 import org.chs.camlauncher.ui.control.CamlButton;
 import org.chs.camlauncher.ui.control.CamlComboBox;
+import org.chs.camlauncher.ui.control.CamlIcon;
 import org.chs.camlauncher.ui.control.CamlTextField;
 
 import java.nio.file.Path;
@@ -96,7 +97,8 @@ final class LaunchFormView extends BorderPane {
         statusLabel.setVisible(false);
         statusLabel.setManaged(false);
 
-        launchBtn = CamlButton.filled(UiText.tr("home.launch"));
+        launchBtn = CamlButton.filled(UiText.tr("home.launch"))
+                .withGraphic(new CamlIcon(CamlIcon.Glyph.PLAY, 20));
         launchBtn.setMaxWidth(Double.MAX_VALUE);
         launchBtn.setDefaultButton(true);
 
@@ -111,7 +113,8 @@ final class LaunchFormView extends BorderPane {
         VBox instanceInfo = new VBox(instanceLabel, gameLocationLabel, saveLocationLabel);
         instanceInfo.getStyleClass().add("app-instance-info-group");
 
-        CamlButton manageAccountsButton = CamlButton.outlined(UiText.tr("home.manageAccounts"));
+        CamlButton manageAccountsButton = CamlButton.outlined(UiText.tr("home.manageAccounts"))
+                .withGraphic(new CamlIcon(CamlIcon.Glyph.ACCOUNT));
         manageAccountsButton.setMinWidth(0);
         manageAccountsButton.setOnAction(event -> onManageAccounts.run());
 
@@ -135,12 +138,14 @@ final class LaunchFormView extends BorderPane {
         );
         fields.getStyleClass().add("app-fields");
 
-        CamlButton chooseInstanceButton = CamlButton.outlined(UiText.tr("home.browseInstances"));
+        CamlButton chooseInstanceButton = CamlButton.outlined(UiText.tr("home.browseInstances"))
+                .withGraphic(new CamlIcon(CamlIcon.Glyph.FOLDER));
         chooseInstanceButton.setMinWidth(0);
         chooseInstanceButton.setMaxWidth(Double.MAX_VALUE);
         chooseInstanceButton.setOnAction(event -> onChooseInstance.run());
 
-        CamlButton manageInstancesButton = CamlButton.outlined(UiText.tr("home.manageInstances"));
+        CamlButton manageInstancesButton = CamlButton.outlined(UiText.tr("home.manageInstances"))
+                .withGraphic(new CamlIcon(CamlIcon.Glyph.GRID));
         manageInstancesButton.setMinWidth(0);
         manageInstancesButton.setMaxWidth(Double.MAX_VALUE);
         manageInstancesButton.setOnAction(event -> onManageInstances.run());

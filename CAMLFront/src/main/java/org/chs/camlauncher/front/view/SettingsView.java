@@ -17,6 +17,7 @@ import org.chs.camlauncher.language.contract.LanguageFallbackMode;
 import org.chs.camlauncher.front.controller.AccountController;
 import org.chs.camlauncher.front.controller.SettingsController;
 import org.chs.camlauncher.front.text.UiText;
+import org.chs.camlauncher.ui.control.CamlIcon;
 import org.chs.camlauncher.ui.control.CamlSideNav;
 import org.chs.camlauncher.ui.control.CamlSideNavItem;
 
@@ -70,10 +71,18 @@ final class SettingsView extends VBox implements SidebarPage, PageLifecycle {
         sideNav = new CamlSideNav();
         sideNav.getStyleClass().add("app-settings-sidebar");
         sideNav.setMaxHeight(Double.MAX_VALUE);
-        CamlSideNavItem gameItem = new CamlSideNavItem(UiText.tr("settings.section.game"));
-        CamlSideNavItem downloadItem = new CamlSideNavItem(UiText.tr("settings.section.download"));
-        accountItem = new CamlSideNavItem(UiText.tr("settings.section.account"));
-        launcherItem = new CamlSideNavItem(UiText.tr("settings.section.appearance"));
+        CamlSideNavItem gameItem = new CamlSideNavItem(
+                new CamlIcon(CamlIcon.Glyph.SETTINGS, 20),
+                UiText.tr("settings.section.game"));
+        CamlSideNavItem downloadItem = new CamlSideNavItem(
+                new CamlIcon(CamlIcon.Glyph.DOWNLOAD, 20),
+                UiText.tr("settings.section.download"));
+        accountItem = new CamlSideNavItem(
+                new CamlIcon(CamlIcon.Glyph.ACCOUNT, 20),
+                UiText.tr("settings.section.account"));
+        launcherItem = new CamlSideNavItem(
+                new CamlIcon(CamlIcon.Glyph.APPEARANCE, 20),
+                UiText.tr("settings.section.appearance"));
         sideNav.addItem(gameItem);
         sideNav.addItem(downloadItem);
         sideNav.addItem(accountItem);
