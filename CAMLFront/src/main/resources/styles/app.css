@@ -266,7 +266,7 @@
 
 .app-settings-content-host {
     -fx-padding: 2em 2.5em;
-    -fx-max-width: 70em;
+    -fx-max-width: 100em;
 }
 
 .app-settings-content-column {
@@ -282,18 +282,18 @@
 
 .app-settings-content {
     -fx-min-width: 0;
-    -fx-spacing: 1.75em;
+    -fx-spacing: 1.25em;
 }
 
-/* 设置页使用连续分区，而不是为每个分组重复套卡片。 */
+/* 设置页使用扁平分组卡：有清晰边界，但不加阴影，避免卡片过重。 */
 .app-settings-group {
-    -fx-background-color: transparent;
-    -fx-background-radius: 0;
-    -fx-border-color: transparent transparent -caml-border-subtle transparent;
-    -fx-border-width: 0 0 1 0;
-    -fx-border-radius: 0;
-    -fx-padding: 1.5em;
-    -fx-spacing: 1em;
+    -fx-background-color: -caml-surface-low;
+    -fx-background-radius: 0.75em;
+    -fx-border-color: -caml-border-subtle;
+    -fx-border-width: 1;
+    -fx-border-radius: 0.75em;
+    -fx-padding: 1.25em;
+    -fx-spacing: 0.875em;
 }
 
 .app-settings-group-title {
