@@ -33,6 +33,10 @@
 - 模组子页与版本列表共用左侧导航：侧边栏宽度取窗口宽度的 `1/6`，并限制在 `180–260`
   设计像素（实际宽度再乘以 UI 缩放因子）。比例按逻辑像素计算，因此 150% 缩放的 1080p 屏幕
   （逻辑宽度约 `1280`）会落在按因子缩小后的上限，而不是假设存在 `1920×1080` 的逻辑空间。
+- Linux 启动使用 LWJGL 2 的实例时，主页会异步检查 `xrandr`。如果缺少该命令，会显示
+  与应用内 Java 下载弹窗同类的遮罩卡片，列出常见发行版安装命令；命令使用原生不可滚动
+  `CamlSelectableText` 展示，支持鼠标拖动选择、双击选词、`Ctrl/Cmd+A` 和 `Ctrl/Cmd+C`，
+  并提供一键复制按钮。提示不会中断或取消启动，游戏进程仍按原流程继续运行。
 - 光影包子页位于模组下方，复用搜索、分页、结果行和详情页；搜索表单去掉加载器筛选，
   详情页按游戏版本分组，下载写入实例 `shaderpacks`。
 - 资源包子页位于光影下方，同样复用搜索与详情；Modrinth 使用 `project_type:resourcepack`，
@@ -133,6 +137,7 @@
 | 额外 JVM 参数 | `CamlTextArea`（游戏设置） |
 | 启动游戏 | filled `CamlButton` |
 | 运行日志 | `CamlTextArea` |
+| 不可滚动可选文本 | `CamlSelectableText` |
 | 主题选择 | `CamlComboBox<ThemeInfo>`（外观） |
 | 分区标题 | `caml-headline-small` / `caml-title-large` |
 

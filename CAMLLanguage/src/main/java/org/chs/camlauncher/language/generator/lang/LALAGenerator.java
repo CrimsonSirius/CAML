@@ -17,6 +17,8 @@ public final class LALAGenerator extends LanguageTranslationGenerator {
         t.put("common.cancel", "Abrogare");
         t.put("common.browse", "Percurrere");
         t.put("common.save", "Servare");
+        t.put("common.copy", "Copiare mandata");
+        t.put("common.copied", "Copiatum");
 
         // Navigatio et pedis
         t.put("nav.home", "Domus");
@@ -87,6 +89,9 @@ public final class LALAGenerator extends LanguageTranslationGenerator {
         t.put("launch.manualJavaNotConfigured", "Electio manualis Java activa est, sed semita Java non electa est.");
         t.put("launch.manualJavaUnavailable", "Java electa praesto non est: %s");
         t.put("launch.javaRequirementNotFound", "Nulla Java requisitum versionis %s implens inventa est. Java installa vel elige.");
+        t.put("launch.warning.xrandr.title", "xrandr deest");
+        t.put("launch.warning.xrandr.message", "Haec instantia LWJGL 2 utitur, sed xrandr in systemate non inventum est. Ludus nihilominus incipiet, sed in modo ostensionis componendo exire potest. xrandr installa et ludum rursus incipe.");
+        t.put("launch.warning.xrandr.commands", "Arch Linux: sudo pacman -S xorg-xrandr\nDebian/Ubuntu: sudo apt install x11-xserver-utils\nFedora/RHEL: sudo dnf install xrandr");
 
         // Genera et fontes
         t.put("download.category.release", "Editio");

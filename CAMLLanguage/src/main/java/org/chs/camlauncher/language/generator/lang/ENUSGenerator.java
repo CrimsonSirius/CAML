@@ -17,6 +17,8 @@ public final class ENUSGenerator extends LanguageTranslationGenerator {
         t.put("common.cancel", "Cancel");
         t.put("common.browse", "Browse");
         t.put("common.save", "Save");
+        t.put("common.copy", "Copy commands");
+        t.put("common.copied", "Copied");
 
         // Top navigation and footer
         t.put("nav.home", "Home");
@@ -87,6 +89,9 @@ public final class ENUSGenerator extends LanguageTranslationGenerator {
         t.put("launch.manualJavaNotConfigured", "Manual Java selection is enabled, but no Java path is selected.");
         t.put("launch.manualJavaUnavailable", "The selected Java is unavailable: %s");
         t.put("launch.javaRequirementNotFound", "No Java satisfying the version requirement %s was found. Install or select Java.");
+        t.put("launch.warning.xrandr.title", "xrandr is missing");
+        t.put("launch.warning.xrandr.message", "This instance uses LWJGL 2, but xrandr was not found on the system. The game will still launch, but it may exit while initializing the display mode. Install xrandr and restart the game.");
+        t.put("launch.warning.xrandr.commands", "Arch Linux: sudo pacman -S xorg-xrandr\nDebian/Ubuntu: sudo apt install x11-xserver-utils\nFedora/RHEL: sudo dnf install xrandr");
 
         // Version categories and download sources
         t.put("download.category.release", "Release");

@@ -58,6 +58,7 @@ import org.chs.camlauncher.backend.loader.quilt.QuiltService;
 import org.chs.camlauncher.backend.launch.GameLaunch;
 import org.chs.camlauncher.backend.launch.GameLaunchService;
 import org.chs.camlauncher.backend.launch.LaunchOptions;
+import org.chs.camlauncher.backend.launch.LaunchCompatibilityService;
 import org.chs.camlauncher.backend.launch.LaunchPlan;
 import org.chs.camlauncher.backend.launch.LaunchPlanner;
 import org.chs.camlauncher.backend.launch.classpath.ClasspathBuilder;
@@ -141,6 +142,7 @@ public final class CAMLBackend implements AutoCloseable {
     private final BackendConfig config;
     private final JsonService json;
     private final MetadataService metadata;
+    private final LaunchCompatibilityService launchCompatibilityService;
     private final JavaLocator javaLocator;
     private final ManagedJavaRepository managedJavaRepository;
     private final JavaDownloadService javaDownloadService;
@@ -194,6 +196,7 @@ public final class CAMLBackend implements AutoCloseable {
         this.config = Objects.requireNonNull(config, "config");
         this.json = new JsonService();
         this.metadata = new MetadataService();
+        this.launchCompatibilityService = new LaunchCompatibilityService(metadata);
         this.javaLocator = new JavaLocator();
         this.managedJavaRepository = new ManagedJavaRepository(config.dataDirectory(), javaLocator);
         this.versionManifestService = new VersionManifestService();
@@ -1470,6 +1473,20 @@ public final class CAMLBackend implements AutoCloseable {
                 downloadListener,
                 processListener
         );
+    }
+
+    /**
+     * 检查 Linux 上的 LWJGL 2 实例是否缺少 xrandr。
+     *
+     * <p>预检失败不会阻止启动，只用于前端展示提示。</p>
+     */
+    public boolean needsXrandrWarning(String versionId, Path gameDirectory) {
+        try {
+            return launchCompatibilityService.needsXrandrWarning(gameDirectory, versionId);
+        } catch (IOException | RuntimeException e) {
+            LOGGER.debug("无法完成 Linux 启动环境预检: {}", versionId, e);
+            return false;
+        }
     }
 
     /**

@@ -17,6 +17,8 @@ public final class FNCNGenerator extends LanguageTranslationGenerator {
         t.put("common.cancel", "作废");
         t.put("common.browse", "吃草");
         t.put("common.save", "拯救");
+        t.put("common.copy", "抄走命令");
+        t.put("common.copied", "抄好了");
 
         // 顶部导航与底栏
         t.put("nav.home", "家");
@@ -87,6 +89,9 @@ public final class FNCNGenerator extends LanguageTranslationGenerator {
         t.put("launch.manualJavaNotConfigured", "已经开窍肉手爪哇揪出，但没有揪出爪哇小径。");
         t.put("launch.manualJavaUnavailable", "肉手揪出的爪哇不能用：%s");
         t.put("launch.javaRequirementNotFound", "撞不见满足译本要求的爪哇 %s，请打进或揪出爪哇。");
+        t.put("launch.warning.xrandr.title", "xrandr 跑丢了");
+        t.put("launch.warning.xrandr.message", "这锅是 LWJGL 2 的：它非得找 xrandr，系统里却没这玩意。游戏照常往下冲，但多半会在摆弄显示模式时扑街。把 xrandr 打进去再开一次就行。");
+        t.put("launch.warning.xrandr.commands", "Arch Linux：sudo pacman -S xorg-xrandr\nDebian/Ubuntu：sudo apt install x11-xserver-utils\nFedora/RHEL：sudo dnf install xrandr");
 
         // 下载版本类别与来源
         t.put("download.category.release", "释放版");

@@ -375,6 +375,54 @@
     -fx-spacing: 0.5em;
 }
 
+.app-launch-warning-dialog {
+    -fx-min-width: 26em;
+    -fx-pref-width: 32em;
+    -fx-max-width: 38em;
+    -fx-padding: 1.125em;
+    -fx-spacing: 0.625em;
+    -fx-background-color: -caml-surface;
+    -fx-background-radius: 1em;
+    -fx-border-color: -caml-border-subtle;
+    -fx-border-width: 1;
+    -fx-border-radius: 1em;
+}
+
+.app-launch-warning-title {
+    -fx-font-size: 1.375em;
+    -fx-font-weight: bold;
+    -fx-text-fill: -caml-on-surface;
+}
+
+.app-launch-warning-commands {
+    -fx-padding: 0.65em 0.8em;
+    -fx-background-color: -caml-surface-low;
+    -fx-background-radius: 0.5em;
+    -fx-border-color: -caml-border-subtle;
+    -fx-border-width: 1;
+    -fx-border-radius: 0.5em;
+}
+
+.app-launch-warning-commands .caml-selectable-text-text {
+    -fx-fill: -caml-on-surface-muted;
+    -fx-font-family: monospace;
+    -fx-font-size: 0.9em;
+}
+
+.app-launch-warning-commands .caml-selectable-text-selected-text {
+    -fx-fill: -caml-on-accent;
+    -fx-font-family: monospace;
+    -fx-font-size: 0.9em;
+}
+
+.app-launch-warning-commands:focused {
+    -fx-border-color: -caml-accent;
+}
+
+.app-launch-warning-actions {
+    -fx-spacing: 0.5em;
+}
+
 .app-settings-save-error {
     -fx-background-color: -caml-danger-container;
     -fx-text-fill: -caml-on-danger-container;

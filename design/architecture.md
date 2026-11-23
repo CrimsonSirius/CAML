@@ -202,6 +202,8 @@ CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
 - 继承系统环境变量，不改写 `APPDATA`。
 - Linux 启动游戏时把 `~/.local/bin` 前插到子进程 `PATH`，供 LWJGL 2 调用外部 `xrandr -q`
   枚举显示模式；系统包对应 `xorg-xrandr`。
+- 启动前异步预检 Linux + LWJGL 2 实例：若系统与 `~/.local/bin` 都找不到 `xrandr`，
+  前端显示非阻塞提示；预检异常或缺失提示都不会阻止后续安装和进程启动。
 - 使用 `ProcessBuilder` 启动。
 - 后台线程读取 stdout/stderr；Minecraft Log4j `LegacyXMLLayout` 事件转换为
   `[HH:mm:ss] [线程/级别]: 消息` 后再转发到界面。
@@ -309,6 +311,7 @@ CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
   首次启动复制到 `~/.caml/themes/mango.css`。
 - 默认主题使用白底、灰色表面、黄色强调色和深色文字。
 - 组件 API 包括 `CamlButton`、`CamlCard`、`CamlTextField`、`CamlTextArea`、
+  `CamlSelectableText`、
   `CamlComboBox`、`CamlSpinner`、`CamlSwitch`、`CamlCheckBox`、`CamlSlider`、
   `CamlMemorySlider`、`CamlRadioButton`、`CamlProgressBar`、`CamlSideNav`、`CamlSideNavItem`、`CamlTopNav`、
   `CamlTopNavItem`、`CamlPageHost` 和 `CamlTopBar`。

@@ -17,6 +17,8 @@ public final class RURUGenerator extends LanguageTranslationGenerator {
         t.put("common.cancel", "Отмена");
         t.put("common.browse", "Обзор");
         t.put("common.save", "Сохранить");
+        t.put("common.copy", "Копировать команды");
+        t.put("common.copied", "Скопировано");
 
         // Навигация и подвал
         t.put("nav.home", "Главная");
@@ -87,6 +89,9 @@ public final class RURUGenerator extends LanguageTranslationGenerator {
         t.put("launch.manualJavaNotConfigured", "Включён ручной выбор Java, но путь к Java не выбран.");
         t.put("launch.manualJavaUnavailable", "Выбранная Java недоступна: %s");
         t.put("launch.javaRequirementNotFound", "Не найдена Java, удовлетворяющая требованию версии %s. Установите или выберите Java.");
+        t.put("launch.warning.xrandr.title", "xrandr не найден");
+        t.put("launch.warning.xrandr.message", "Этот экземпляр использует LWJGL 2, но в системе не найден xrandr. Игра всё равно запустится, но может завершиться при инициализации режима отображения. Установите xrandr и перезапустите игру.");
+        t.put("launch.warning.xrandr.commands", "Arch Linux: sudo pacman -S xorg-xrandr\nDebian/Ubuntu: sudo apt install x11-xserver-utils\nFedora/RHEL: sudo dnf install xrandr");
 
         // Категории и источники
         t.put("download.category.release", "Релиз");

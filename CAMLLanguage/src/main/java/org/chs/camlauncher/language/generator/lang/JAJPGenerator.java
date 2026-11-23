@@ -17,6 +17,8 @@ public final class JAJPGenerator extends LanguageTranslationGenerator {
         t.put("common.cancel", "キャンセル");
         t.put("common.browse", "参照");
         t.put("common.save", "保存");
+        t.put("common.copy", "コマンドをコピー");
+        t.put("common.copied", "コピーしました");
 
         // ナビゲーションとフッター
         t.put("nav.home", "ホーム");
@@ -87,6 +89,9 @@ public final class JAJPGenerator extends LanguageTranslationGenerator {
         t.put("launch.manualJavaNotConfigured", "手動 Java 選択は有効ですが、Java のパスが選択されていません。");
         t.put("launch.manualJavaUnavailable", "選択した Java は使用できません: %s");
         t.put("launch.javaRequirementNotFound", "バージョン要件 %s を満たす Java が見つかりません。Java をインストールするか選択してください。");
+        t.put("launch.warning.xrandr.title", "xrandr が見つかりません");
+        t.put("launch.warning.xrandr.message", "このインスタンスは LWJGL 2 を使用していますが、システムに xrandr が見つかりません。ゲームはそのまま起動しますが、表示モードの初期化時に終了する可能性があります。xrandr をインストールしてから再起動してください。");
+        t.put("launch.warning.xrandr.commands", "Arch Linux: sudo pacman -S xorg-xrandr\nDebian/Ubuntu: sudo apt install x11-xserver-utils\nFedora/RHEL: sudo dnf install xrandr");
 
         // バージョン分類と取得元
         t.put("download.category.release", "リリース");

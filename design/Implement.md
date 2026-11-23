@@ -273,7 +273,7 @@ CAML
   约 300ms 后通过后端异步写入。
 - 导航切换会保留主页已填写的状态。
 - 界面控件来自 `CAMLUI`：`CamlButton`、`CamlComboBox`、`CamlMemorySlider`、`CamlRadioButton`、
-  `CamlTextArea`、`CamlTextField`、`CamlTopBar`、`CamlTopNav`、`CamlTopNavItem`、
+  `CamlTextArea`、`CamlSelectableText`、`CamlTextField`、`CamlTopBar`、`CamlTopNav`、`CamlTopNavItem`、
   `CamlPageHost`、`CamlSideNav` 和 `CamlSideNavItem`。
 - 主题入口：`CamlTheme.install(scene)` 和 `CamlTheme.applyTheme(scene, path)`。
 - 结构样式：`CAMLUI/src/main/resources/org/chs/camlauncher/ui/caml.css`，不含固定配色。
