@@ -422,6 +422,8 @@
     -fx-text-fill: -caml-on-surface;
     -fx-font-size: 0.875em;
     -fx-cursor: hand;
+    -fx-focus-color: transparent;
+    -fx-faint-focus-color: transparent;
 }
 
 .caml-radio-button > .radio {
@@ -437,11 +439,6 @@
 .caml-radio-button:hover > .radio,
 .caml-radio-button:selected > .radio {
     -fx-border-color: -caml-accent;
-}
-
-.caml-radio-button:focused > .radio {
-    -fx-border-color: -caml-on-surface;
-    -fx-effect: dropshadow(gaussian, -caml-accent, 4, 0.6, 0, 0);
 }
 
 .caml-radio-button > .radio > .dot {

@@ -64,22 +64,22 @@ class FocusStyleTest {
     }
 
     @Test
-    void selectedRadioButtonShowsFocusRing() throws Exception {
-        boolean visible = onFxThread(() -> {
+    void radioButtonDoesNotJoinFocusTraversalOrShowFocusRing() throws Exception {
+        boolean[] result = onFxThread(() -> {
             CamlRadioButton radio = new CamlRadioButton("默认");
             radio.setSelected(true);
 
             VBox root = new VBox(radio);
             applyStyles(root);
             Region circle = region(root, ".radio");
-            assertNull(circle.getEffect(), "未聚焦时不应显示焦点环");
 
             radio.pseudoClassStateChanged(FOCUSED, true);
             applyStyles(root);
-            return circle.getEffect() != null;
+            return new boolean[]{radio.isFocusTraversable(), circle.getEffect() == null};
         });
 
-        assertTrue(visible, "已选中的单选按钮获得焦点时仍必须显示焦点环");
+        assertFalse(result[0], "单选按钮不应参与焦点遍历");
+        assertTrue(result[1], "单选按钮不应显示焦点环");
     }
 
     @Test
@@ -137,4 +137,5 @@ class FocusStyleTest {
         assertNotNull(node, "找不到控件内部节点 " + selector);
         return (Region) node;
     }
+
 }
