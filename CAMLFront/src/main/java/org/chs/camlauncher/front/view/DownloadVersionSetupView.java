@@ -4,6 +4,7 @@ import javafx.animation.PauseTransition;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.Label;
+import javafx.scene.control.ScrollPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
@@ -111,9 +112,7 @@ final class DownloadVersionSetupView extends VBox implements PageLifecycle {
                 optionBar(UiText.tr("download.setup.option.neoforge"), neoForgeSelector)
         );
         options.getStyleClass().add("app-download-setup-options");
-
-        Region spacer = new Region();
-        VBox.setVgrow(spacer, Priority.ALWAYS);
+        ScrollPane optionsScroll = createOptionsScroll(options);
 
         statusLabel.getStyleClass().addAll("caml-body-small", "field-hint");
         statusLabel.setWrapText(true);
@@ -124,7 +123,7 @@ final class DownloadVersionSetupView extends VBox implements PageLifecycle {
         downloadButton.setDisable(true);
         downloadButton.setOnAction(event -> startDownload());
 
-        getChildren().addAll(nameRow, options, spacer, statusLabel, downloadButton);
+        getChildren().addAll(nameRow, optionsScroll, statusLabel, downloadButton);
 
         instanceNameDebounce.setOnFinished(event -> checkInstanceNameNow());
         instanceNameField.textProperty().addListener((observable, oldValue, newValue) ->
@@ -720,6 +719,18 @@ final class DownloadVersionSetupView extends VBox implements PageLifecycle {
         bar.setMaxWidth(Double.MAX_VALUE);
         bar.getStyleClass().add("app-download-option-bar");
         return bar;
+    }
+
+    static ScrollPane createOptionsScroll(VBox options) {
+        ScrollPane scroll = new ScrollPane(options);
+        scroll.getStyleClass().add("app-download-setup-options-scroll");
+        scroll.setFitToWidth(true);
+        scroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+        scroll.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
+        scroll.setMinHeight(0);
+        scroll.setMaxHeight(Double.MAX_VALUE);
+        VBox.setVgrow(scroll, Priority.ALWAYS);
+        return scroll;
     }
 
     private static Label valueLabel(String text) {

@@ -48,17 +48,47 @@
     -fx-spacing: 1em;
 }
 
-.app-version-list {
-    -fx-spacing: 0.5em;
-    -fx-padding: 0.25em 0;
-}
-
 .app-download-version-item {
     -fx-alignment: center-left;
     -fx-font-size: 1em;
     -fx-padding: 0.75em 1em;
     -fx-background-radius: 0.625em;
+    -fx-border-color: transparent;
+    -fx-border-width: 2;
     -fx-border-radius: 0.625em;
+}
+
+.app-download-version-list {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-border-color: transparent;
+    -fx-padding: 0;
+}
+
+.app-download-version-list > .virtual-flow > .clipped-container > .sheet {
+    -fx-background-color: transparent;
+}
+
+.app-download-version-cell {
+    -fx-background-color: transparent;
+    -fx-padding: 0 0 0.5em 0;
+}
+
+.app-download-version-cell:empty {
+    -fx-padding: 0;
+}
+
+.app-download-version-cell:hover .app-download-version-item {
+    -fx-background-color: -caml-surface-high;
+}
+
+.app-download-version-cell:selected .app-download-version-item {
+    -fx-background-color: -caml-surface-highest;
+}
+
+.app-download-version-list:focused .app-download-version-cell:selected .app-download-version-item {
+    -fx-border-color: -caml-accent;
+    -fx-effect: dropshadow(gaussian, -caml-accent, 4, 0.75, 0, 0);
 }
 
 .app-download-version-id {
@@ -82,6 +112,30 @@
 
 .app-download-setup-page .caml-text-field {
     -fx-font-size: 1em;
+}
+
+.app-download-setup-name-row {
+    -fx-spacing: 0.75em;
+    -fx-alignment: center-left;
+}
+
+.app-download-setup-name {
+    -fx-spacing: 0.25em;
+}
+
+.app-download-setup-options {
+    -fx-spacing: 0.5em;
+}
+
+.app-download-setup-options-scroll {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-border-color: transparent;
+    -fx-padding: 0;
+}
+
+.app-download-setup-options-scroll > .viewport {
+    -fx-background-color: transparent;
 }
 
 .app-download-option-bar {
@@ -652,11 +706,6 @@
     -fx-font-size: 0.75em;
     -fx-text-fill: -caml-on-surface-muted;
     -fx-max-height: 9em;
-}
-
-.app-download-version-main {
-    -fx-spacing: 0.625em;
-    -fx-alignment: center-left;
 }
 
 /* 日志文本区的高度由 MainView 按断点设置：CSS 声明会覆盖代码设置，因此此处不写 -fx-min-height / -fx-pref-height。 */
