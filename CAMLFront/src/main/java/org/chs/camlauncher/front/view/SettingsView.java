@@ -59,6 +59,7 @@ final class SettingsView extends VBox implements SidebarPage, PageLifecycle {
     private Section currentSection = Section.GAME;
     private FadeTransition contentTransition;
     private boolean focusLanguageWhenContentReady;
+    private boolean focusFallbackLanguageWhenContentReady;
 
     SettingsView(LaunchSettings launchSettings, IntConsumer onMemoryChanged,
                  Consumer<Boolean> onVersionIsolationChanged,
@@ -203,9 +204,10 @@ final class SettingsView extends VBox implements SidebarPage, PageLifecycle {
         });
     }
 
-    void focusLanguageSetting() {
+    void focusLanguageSetting(boolean fallbackChange) {
+        focusFallbackLanguageWhenContentReady = fallbackChange;
         if (currentContent == launcherSettings) {
-            Platform.runLater(launcherSettings::focusLanguageSetting);
+            Platform.runLater(this::requestLanguageFocus);
         } else {
             focusLanguageWhenContentReady = true;
         }
@@ -282,9 +284,13 @@ final class SettingsView extends VBox implements SidebarPage, PageLifecycle {
         if (focusLanguageWhenContentReady) {
             focusLanguageWhenContentReady = false;
             if (next == launcherSettings) {
-                Platform.runLater(launcherSettings::focusLanguageSetting);
+                Platform.runLater(this::requestLanguageFocus);
             }
         }
+    }
+
+    private void requestLanguageFocus() {
+        launcherSettings.focusLanguageSetting(focusFallbackLanguageWhenContentReady);
     }
 
     private void showSaveError(String message) {
