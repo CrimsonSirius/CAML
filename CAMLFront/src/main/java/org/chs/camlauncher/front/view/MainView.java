@@ -271,9 +271,9 @@ public final class MainView extends BorderPane {
     }
 
     /** 语言重建后把焦点交回设置页，避免焦点落回顶栏第一个导航胶囊。 */
-    public void focusAfterRebuild() {
+    public void focusAfterRebuild(boolean fallbackChange) {
         if (activePage == settingsView) {
-            settingsView.focusLanguageSetting();
+            settingsView.focusLanguageSetting(fallbackChange);
         }
     }
 

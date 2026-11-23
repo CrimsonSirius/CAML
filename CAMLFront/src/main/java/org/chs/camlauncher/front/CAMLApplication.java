@@ -272,7 +272,7 @@ public final class CAMLApplication extends Application {
                         return;
                     }
                     language = snapshot.activeLocale();
-                    rebuildView();
+                    rebuildView(false);
                 },
                 message -> {
                     if (generation == languageChangeGeneration) {
@@ -299,7 +299,7 @@ public final class CAMLApplication extends Application {
                         return;
                     }
                     languageFallbackLocale = snapshot.fallbackLocale();
-                    rebuildView();
+                    rebuildView(true);
                 },
                 message -> {
                     if (generation == languageFallbackChangeGeneration) {
@@ -310,7 +310,7 @@ public final class CAMLApplication extends Application {
                 });
     }
 
-    private void rebuildView() {
+    private void rebuildView(boolean fallbackChange) {
         if (view == null || scene == null) {
             return;
         }
@@ -326,7 +326,7 @@ public final class CAMLApplication extends Application {
         view.requestFocus();
         CamlTheme.install(scene);
         view.restoreState(state);
-        view.focusAfterRebuild();
+        view.focusAfterRebuild(fallbackChange);
     }
 
     @Override
