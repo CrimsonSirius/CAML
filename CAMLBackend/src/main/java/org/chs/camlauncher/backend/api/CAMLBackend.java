@@ -94,9 +94,13 @@ import org.chs.camlauncher.backend.settings.SettingsService;
 import org.chs.camlauncher.language.contract.LanguageEventListener;
 import org.chs.camlauncher.language.contract.LanguageFallbackMode;
 import org.chs.camlauncher.language.contract.LanguageSelectionMode;
+import org.chs.camlauncher.backend.system.DeviceInfo;
+import org.chs.camlauncher.backend.system.DeviceInfoService;
+import org.chs.camlauncher.backend.system.DirectoryOpener;
+import org.chs.camlauncher.backend.system.SystemInfo;
+import org.chs.camlauncher.backend.system.SystemInfoService;
 import org.chs.camlauncher.backend.system.SystemMemoryInfo;
 import org.chs.camlauncher.backend.system.SystemMemoryService;
-import org.chs.camlauncher.backend.system.DirectoryOpener;
 import org.chs.camlauncher.backend.theme.ThemeInfo;
 import org.chs.camlauncher.backend.theme.ThemeService;
 
@@ -161,6 +165,8 @@ public final class CAMLBackend implements AutoCloseable {
     private final SettingsService settingsService;
     private final LanguageService languageService;
     private final SystemMemoryService systemMemoryService;
+    private final SystemInfo systemInfo;
+    private final DeviceInfo deviceInfo;
     private final LatestLogService latestLogService;
     private final AccountStore accountStore;
     private final AuthServerService authServerService;
@@ -240,6 +246,9 @@ public final class CAMLBackend implements AutoCloseable {
         this.settingsService = new SettingsService(config.dataDirectory());
         this.languageService = new LanguageService(config.dataDirectory(), settingsService);
         this.systemMemoryService = new SystemMemoryService();
+        // 系统信息是静态数据，在启动器初始化阶段读取，避免 JavaFX 线程做磁盘 I/O。
+        this.systemInfo = new SystemInfoService().read();
+        this.deviceInfo = new DeviceInfoService().read();
         this.latestLogService = new LatestLogService(
                 config.dataDirectory().resolve("logs").resolve("latest.log"));
         this.gameLaunchService = new GameLaunchService(
@@ -375,6 +384,14 @@ public final class CAMLBackend implements AutoCloseable {
 
     public SystemMemoryInfo systemMemory() {
         return systemMemoryService.read();
+    }
+
+    public SystemInfo systemInfo() {
+        return systemInfo;
+    }
+
+    public DeviceInfo deviceInfo() {
+        return deviceInfo;
     }
 
     public Optional<Path> savedGameDirectory() throws IOException {

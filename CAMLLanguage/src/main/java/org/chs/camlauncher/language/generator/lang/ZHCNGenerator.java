@@ -233,6 +233,34 @@ public final class ZHCNGenerator extends LanguageTranslationGenerator {
         t.put("settings.section.download", "下载设置");
         t.put("settings.section.appearance", "外观");
 
+        // 关于
+        t.put("settings.section.about", "关于");
+        t.put("settings.about.application.title", "启动器");
+        t.put("settings.about.version", "版本");
+        t.put("settings.about.backend", "后端");
+        t.put("settings.about.license", "许可证");
+        t.put("settings.about.system.title", "系统");
+        t.put("settings.about.os", "操作系统");
+        t.put("settings.about.osVersion", "系统版本");
+        t.put("settings.about.kernelVersion", "内核版本");
+        t.put("settings.about.architecture", "系统架构");
+        t.put("settings.about.runtime.title", "启动器运行环境");
+        t.put("settings.about.javaVersion", "Java 版本");
+        t.put("settings.about.javaVendor", "Java 供应商");
+        t.put("settings.about.device.title", "设备信息");
+        t.put("settings.about.cpu", "CPU");
+        t.put("settings.about.gpu", "GPU");
+        t.put("settings.about.npu", "NPU");
+        t.put("settings.about.memory", "运行内存");
+        t.put("settings.about.notDetected", "未检测到");
+        t.put("settings.about.directories.title", "目录");
+        t.put("settings.about.dataDirectory", "数据目录");
+        t.put("settings.about.gameDirectory", "游戏目录");
+        t.put("settings.about.project.title", "项目");
+        t.put("settings.about.projectName", "名称");
+        t.put("settings.about.copyright", "版权");
+        t.put("settings.about.unknown", "未知");
+
         // 游戏位置
         t.put("settings.game.location.title", "游戏位置");
         t.put("settings.game.location.description", "设置 Minecraft 游戏数据目录。手动输入后必须点击保存才会生效。");

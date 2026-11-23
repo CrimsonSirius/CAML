@@ -3,6 +3,7 @@ package org.chs.camlauncher.front.controller;
 import org.chs.camlauncher.front.task.AsyncTaskHandle;
 
 import javafx.application.Platform;
+import org.chs.camlauncher.backend.api.BackendStatus;
 import org.chs.camlauncher.backend.api.GameDirectoryInfo;
 import org.chs.camlauncher.backend.api.WindowState;
 import org.chs.camlauncher.backend.download.source.DownloadSourceMode;
@@ -10,9 +11,11 @@ import org.chs.camlauncher.backend.instance.VersionIsolationMode;
 import org.chs.camlauncher.backend.language.LanguageSnapshot;
 import org.chs.camlauncher.backend.runtime.JavaCandidate;
 import org.chs.camlauncher.backend.runtime.JavaSelectionMode;
+import org.chs.camlauncher.backend.system.DeviceInfo;
+import org.chs.camlauncher.backend.system.SystemInfo;
+import org.chs.camlauncher.backend.system.SystemMemoryInfo;
 import org.chs.camlauncher.language.contract.LanguageSelectionMode;
 import org.chs.camlauncher.language.contract.LanguageFallbackMode;
-import org.chs.camlauncher.backend.system.SystemMemoryInfo;
 import org.chs.camlauncher.front.text.UiText;
 
 import java.nio.file.Path;
@@ -47,6 +50,18 @@ public final class SettingsController {
 
     public Path defaultGameDirectory() {
         return context.backend().status().gameDirectory();
+    }
+
+    public BackendStatus backendStatus() {
+        return context.backend().status();
+    }
+
+    public SystemInfo systemInfo() {
+        return context.backend().systemInfo();
+    }
+
+    public DeviceInfo deviceInfo() {
+        return context.backend().deviceInfo();
     }
 
     public int downloadConcurrency() {

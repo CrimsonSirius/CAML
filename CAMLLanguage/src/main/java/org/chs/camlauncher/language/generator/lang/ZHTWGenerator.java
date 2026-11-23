@@ -238,6 +238,34 @@ public final class ZHTWGenerator extends LanguageTranslationGenerator {
         t.put("settings.section.download", "下載設定");
         t.put("settings.section.appearance", "外觀");
 
+        // 關於
+        t.put("settings.section.about", "關於");
+        t.put("settings.about.application.title", "啟動器");
+        t.put("settings.about.version", "版本");
+        t.put("settings.about.backend", "後端");
+        t.put("settings.about.license", "授權條款");
+        t.put("settings.about.system.title", "系統");
+        t.put("settings.about.os", "作業系統");
+        t.put("settings.about.osVersion", "系統版本");
+        t.put("settings.about.kernelVersion", "核心版本");
+        t.put("settings.about.architecture", "系統架構");
+        t.put("settings.about.runtime.title", "啟動器執行環境");
+        t.put("settings.about.javaVersion", "Java 版本");
+        t.put("settings.about.javaVendor", "Java 供應商");
+        t.put("settings.about.device.title", "裝置資訊");
+        t.put("settings.about.cpu", "CPU");
+        t.put("settings.about.gpu", "GPU");
+        t.put("settings.about.npu", "NPU");
+        t.put("settings.about.memory", "執行記憶體");
+        t.put("settings.about.notDetected", "未偵測到");
+        t.put("settings.about.directories.title", "目錄");
+        t.put("settings.about.dataDirectory", "資料目錄");
+        t.put("settings.about.gameDirectory", "遊戲目錄");
+        t.put("settings.about.project.title", "專案");
+        t.put("settings.about.projectName", "名稱");
+        t.put("settings.about.copyright", "版權");
+        t.put("settings.about.unknown", "未知");
+
         // 遊戲位置
         t.put("settings.game.location.title", "遊戲位置");
         t.put("settings.game.location.description", "設定 Minecraft 遊戲資料目錄。手動輸入後必須點擊儲存才會生效。");
