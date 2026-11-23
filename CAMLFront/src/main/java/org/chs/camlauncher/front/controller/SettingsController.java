@@ -10,7 +10,11 @@ import org.chs.camlauncher.backend.download.source.DownloadSourceMode;
 import org.chs.camlauncher.backend.instance.VersionIsolationMode;
 import org.chs.camlauncher.backend.language.LanguageSnapshot;
 import org.chs.camlauncher.backend.runtime.JavaCandidate;
+import org.chs.camlauncher.backend.runtime.JavaDownloadOption;
+import org.chs.camlauncher.backend.runtime.JavaDistributionOption;
+import org.chs.camlauncher.backend.runtime.JavaPackageType;
 import org.chs.camlauncher.backend.runtime.JavaSelectionMode;
+import org.chs.camlauncher.backend.download.DownloadListener;
 import org.chs.camlauncher.backend.system.DeviceInfo;
 import org.chs.camlauncher.backend.system.ProjectDependency;
 import org.chs.camlauncher.backend.system.SystemInfo;
@@ -91,6 +95,28 @@ public final class SettingsController {
             Path executable, Consumer<JavaCandidate> onAdded, Consumer<String> onError) {
         return context.runJava(UiText.tr("operation.addManualJava"),
                 () -> context.backend().addManualJavaPath(executable), onAdded, onError);
+    }
+
+    public List<JavaDistributionOption> javaDownloadDistributions() {
+        return context.backend().javaDownloadDistributions();
+    }
+
+    public AsyncTaskHandle<List<JavaDownloadOption>> listJavaDownloadOptions(
+            String distributionId, JavaPackageType packageType,
+            Consumer<List<JavaDownloadOption>> onLoaded, Consumer<String> onError) {
+        return context.runMetadata(
+                UiText.tr("operation.fetchJavaDownloadList", distributionId),
+                () -> context.backend().listJavaDownloadOptions(distributionId, packageType),
+                onLoaded, onError);
+    }
+
+    public AsyncTaskHandle<JavaCandidate> downloadJava(
+            JavaDownloadOption option, String name, DownloadListener listener,
+            Consumer<JavaCandidate> onInstalled, Consumer<String> onError) {
+        return context.runJava(UiText.tr("operation.downloadJava", option.javaVersion()),
+                () -> context.backend().downloadAndInstallJava(
+                        option, name, listener, new org.chs.camlauncher.backend.download.DownloadCancellationToken()),
+                onInstalled, onError);
     }
 
     public AsyncTaskHandle<Void> openJavaFolder(

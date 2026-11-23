@@ -2,20 +2,31 @@ package org.chs.camlauncher.front.view;
 
 import javafx.animation.Interpolator;
 import javafx.animation.ScaleTransition;
+import javafx.application.Platform;
 import javafx.geometry.Pos;
+import javafx.scene.Node;
 import javafx.scene.control.Label;
 import javafx.scene.control.Tooltip;
 import javafx.scene.input.MouseEvent;
+import javafx.scene.layout.ColumnConstraints;
+import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import javafx.util.Duration;
+import javafx.util.StringConverter;
+import org.chs.camlauncher.backend.download.DownloadListener;
 import org.chs.camlauncher.backend.runtime.JavaCandidate;
+import org.chs.camlauncher.backend.runtime.JavaDownloadOption;
+import org.chs.camlauncher.backend.runtime.JavaDistributionOption;
+import org.chs.camlauncher.backend.runtime.JavaPackageType;
+import org.chs.camlauncher.backend.runtime.JavaSelectionMode;
 import org.chs.camlauncher.front.controller.SettingsController;
 import org.chs.camlauncher.front.task.AsyncTaskHandle;
 import org.chs.camlauncher.front.text.UiText;
 import org.chs.camlauncher.ui.control.CamlButton;
+import org.chs.camlauncher.ui.control.CamlComboBox;
 import org.chs.camlauncher.ui.control.CamlIcon;
 import org.chs.camlauncher.ui.theme.CamlMotion;
 
@@ -31,6 +42,8 @@ final class JavaManagementView extends VBox implements PageLifecycle {
     private final SettingsController controller;
     private final LaunchSettings launchSettings;
     private final Consumer<List<JavaCandidate>> onCandidatesChanged;
+    private final Consumer<Node> showOverlay;
+    private final Runnable hideOverlay;
     private final Label statusLabel = new Label();
     private final VBox list = new VBox();
     private final CamlButton refreshButton = CamlButton.outlined(
@@ -40,16 +53,21 @@ final class JavaManagementView extends VBox implements PageLifecycle {
     private final List<JavaCandidate> candidates = new ArrayList<>();
     private AsyncTaskHandle<List<JavaCandidate>> scanTask;
     private AsyncTaskHandle<JavaCandidate> addTask;
+    private AsyncTaskHandle<List<JavaDownloadOption>> versionTask;
+    private AsyncTaskHandle<JavaCandidate> installTask;
     private boolean scanning;
     private boolean adding;
     private boolean loaded;
     private boolean disposed;
 
     JavaManagementView(SettingsController controller, LaunchSettings launchSettings,
-                       Consumer<List<JavaCandidate>> onCandidatesChanged) {
+                       Consumer<List<JavaCandidate>> onCandidatesChanged,
+                       boolean linux, Consumer<Node> showOverlay, Runnable hideOverlay) {
         this.controller = controller;
         this.launchSettings = launchSettings;
         this.onCandidatesChanged = onCandidatesChanged;
+        this.showOverlay = showOverlay;
+        this.hideOverlay = hideOverlay;
 
         setMinWidth(0);
         setMaxWidth(Double.MAX_VALUE);
@@ -57,7 +75,13 @@ final class JavaManagementView extends VBox implements PageLifecycle {
 
         refreshButton.setOnAction(event -> scan());
         addButton.setOnAction(event -> chooseJavaFile());
-        HBox toolbar = new HBox(refreshButton, addButton);
+        CamlButton downloadButton = CamlButton.outlined(
+                UiText.tr("settings.javaManagement.download"));
+        downloadButton.setOnAction(event -> showJavaDownloadDialog());
+        refreshButton.getStyleClass().add("app-java-management-toolbar-button");
+        addButton.getStyleClass().add("app-java-management-toolbar-button");
+        downloadButton.getStyleClass().add("app-java-management-toolbar-button");
+        HBox toolbar = new HBox(refreshButton, addButton, downloadButton);
         toolbar.getStyleClass().add("app-java-management-toolbar");
         toolbar.setAlignment(Pos.CENTER_LEFT);
 
@@ -66,7 +90,252 @@ final class JavaManagementView extends VBox implements PageLifecycle {
         list.getStyleClass().add("app-java-management-list");
         list.setFillWidth(true);
 
-        getChildren().addAll(toolbar, statusLabel, list);
+        getChildren().add(toolbar);
+        if (linux) {
+            Label linuxHint = new Label(
+                    UiText.tr("settings.javaManagement.linuxHint"));
+            linuxHint.getStyleClass().addAll(
+                    "caml-body-small", "app-java-management-linux-hint");
+            linuxHint.setWrapText(true);
+            getChildren().add(linuxHint);
+        }
+        getChildren().addAll(statusLabel, list);
+    }
+
+    private void showJavaDownloadDialog() {
+        if (getScene() == null || disposed) {
+            return;
+        }
+        Label title = new Label(UiText.tr("settings.javaManagement.download"));
+        title.getStyleClass().add("app-settings-group-title");
+
+        CamlComboBox<JavaDistributionOption> distributionBox = new CamlComboBox<>();
+        distributionBox.getItems().setAll(controller.javaDownloadDistributions());
+        distributionBox.setMaxWidth(Double.MAX_VALUE);
+        distributionBox.setConverter(new StringConverter<>() {
+            @Override
+            public String toString(JavaDistributionOption value) {
+                return value == null ? "" : value.displayName();
+            }
+
+            @Override
+            public JavaDistributionOption fromString(String value) {
+                return distributionBox.getItems().stream()
+                        .filter(item -> item.displayName().equals(value))
+                        .findFirst()
+                        .orElse(null);
+            }
+        });
+
+        CamlComboBox<JavaPackageType> packageTypeBox = new CamlComboBox<>();
+        packageTypeBox.getItems().setAll(JavaPackageType.values());
+        packageTypeBox.setMaxWidth(Double.MAX_VALUE);
+        packageTypeBox.setConverter(new StringConverter<>() {
+            @Override
+            public String toString(JavaPackageType value) {
+                return value == null ? "" : value.displayName();
+            }
+
+            @Override
+            public JavaPackageType fromString(String value) {
+                return JavaPackageType.fromApi(value);
+            }
+        });
+
+        CamlComboBox<JavaDownloadOption> versionBox = new CamlComboBox<>();
+        versionBox.setMaxWidth(Double.MAX_VALUE);
+        versionBox.setConverter(new StringConverter<>() {
+            @Override
+            public String toString(JavaDownloadOption value) {
+                return value == null ? "" : value.displayName();
+            }
+
+            @Override
+            public JavaDownloadOption fromString(String value) {
+                return versionBox.getItems().stream()
+                        .filter(item -> item.displayName().equals(value))
+                        .findFirst()
+                        .orElse(null);
+            }
+        });
+
+        Label downloadStatus = new Label();
+        downloadStatus.getStyleClass().addAll("caml-body-small", "field-hint");
+        downloadStatus.setWrapText(true);
+
+        CamlButton download = CamlButton.filled(
+                UiText.tr("settings.javaManagement.downloadAndInstall"));
+        download.setDisable(true);
+        CamlButton close = CamlButton.outlined(UiText.tr("common.close"));
+        HBox actions = new HBox(download, close);
+        actions.setAlignment(Pos.CENTER_RIGHT);
+        actions.getStyleClass().add("app-java-download-actions");
+
+        GridPane form = new GridPane();
+        form.getStyleClass().add("app-java-download-form");
+        form.addRow(0, formLabel("settings.javaManagement.distribution"), distributionBox);
+        form.addRow(1, formLabel("settings.javaManagement.packageType"), packageTypeBox);
+        form.addRow(2, formLabel("settings.javaManagement.version"), versionBox);
+        ColumnConstraints labelColumn = new ColumnConstraints();
+        ColumnConstraints fieldColumn = new ColumnConstraints();
+        fieldColumn.setHgrow(Priority.ALWAYS);
+        form.getColumnConstraints().setAll(labelColumn, fieldColumn);
+
+        Runnable loadVersions = () -> loadJavaVersions(
+                distributionBox, packageTypeBox, versionBox, downloadStatus, download);
+        distributionBox.valueProperty().addListener((observable, oldValue, value) ->
+                loadVersions.run());
+        packageTypeBox.valueProperty().addListener((observable, oldValue, value) ->
+                loadVersions.run());
+        versionBox.valueProperty().addListener((observable, oldValue, value) ->
+                download.setDisable(value == null));
+        distributionBox.getSelectionModel().selectFirst();
+        packageTypeBox.getSelectionModel().selectFirst();
+        loadVersions.run();
+
+        close.setOnAction(event -> {
+            if (versionTask != null) {
+                versionTask.cancel();
+                versionTask = null;
+            }
+            hideOverlay.run();
+        });
+        download.setOnAction(event -> startJavaDownload(
+                versionBox.getValue(), nameFor(versionBox.getValue()),
+                distributionBox, packageTypeBox, versionBox, downloadStatus,
+                download, close));
+
+        Region spacer = new Region();
+        VBox.setVgrow(spacer, Priority.ALWAYS);
+        VBox dialog = new VBox(title, form, downloadStatus, spacer, actions);
+        dialog.getStyleClass().add("app-java-download-dialog");
+        dialog.setMaxWidth(Double.MAX_VALUE);
+        showOverlay.accept(dialog);
+        Platform.runLater(close::requestFocus);
+    }
+
+    private void loadJavaVersions(CamlComboBox<JavaDistributionOption> distributionBox,
+                                  CamlComboBox<JavaPackageType> packageTypeBox,
+                                  CamlComboBox<JavaDownloadOption> versionBox,
+                                  Label status, CamlButton download) {
+        if (versionTask != null) {
+            versionTask.cancel();
+            versionTask = null;
+        }
+        JavaDistributionOption distribution = distributionBox.getValue();
+        JavaPackageType packageType = packageTypeBox.getValue();
+        versionBox.getItems().clear();
+        versionBox.setValue(null);
+        download.setDisable(true);
+        if (distribution == null || packageType == null) {
+            status.setText("");
+            return;
+        }
+        status.setText(UiText.tr("settings.javaManagement.loadingVersions"));
+        status.getStyleClass().removeAll("field-hint-error", "app-empty-state");
+        ensureHintStyle(status);
+        versionTask = controller.listJavaDownloadOptions(distribution.id(), packageType,
+                options -> {
+                    if (disposed) {
+                        return;
+                    }
+                    versionTask = null;
+                    versionBox.getItems().setAll(options);
+                    if (options.isEmpty()) {
+                        status.setText(UiText.tr("settings.javaManagement.emptyVersions"));
+                    } else {
+                        versionBox.getSelectionModel().selectFirst();
+                        status.setText(UiText.tr("settings.javaManagement.versionCount",
+                                options.size()));
+                    }
+                },
+                message -> {
+                    if (disposed) {
+                        return;
+                    }
+                    versionTask = null;
+                    status.setText(UiText.tr(
+                            "settings.javaManagement.loadVersionsFailed", message));
+                    status.getStyleClass().remove("field-hint");
+                    status.getStyleClass().add("field-hint-error");
+                });
+    }
+
+    private void startJavaDownload(JavaDownloadOption option, String name,
+                                   CamlComboBox<JavaDistributionOption> distributionBox,
+                                   CamlComboBox<JavaPackageType> packageTypeBox,
+                                   CamlComboBox<JavaDownloadOption> versionBox,
+                                   Label status, CamlButton download, CamlButton close) {
+        if (option == null || disposed) {
+            return;
+        }
+        distributionBox.setDisable(true);
+        packageTypeBox.setDisable(true);
+        versionBox.setDisable(true);
+        download.setDisable(true);
+        close.setDisable(true);
+        status.getStyleClass().removeAll("field-hint-error", "app-empty-state");
+        ensureHintStyle(status);
+        status.setText(UiText.tr("settings.javaManagement.downloading"));
+        DownloadListener listener = progress -> Platform.runLater(() -> {
+            if (disposed) {
+                return;
+            }
+            if (progress.total() > 0) {
+                int percent = (int) Math.min(100,
+                        Math.round(progress.downloaded() * 100.0 / progress.total()));
+                status.setText(UiText.tr(
+                        "settings.javaManagement.downloadingProgress", percent));
+            }
+        });
+        installTask = controller.downloadJava(option, name, listener, candidate -> {
+            if (disposed) {
+                return;
+            }
+            installTask = null;
+            launchSettings.setJavaSelectionMode(JavaSelectionMode.MANUAL);
+            launchSettings.setSelectedJavaPath(candidate.executable());
+            controller.saveJavaSelectionAsync(
+                    JavaSelectionMode.MANUAL, candidate.executable());
+            hideOverlay.run();
+            statusLabel.setText(UiText.tr(
+                    "settings.javaManagement.installed", candidate.executable()));
+            scan();
+        }, message -> {
+            if (disposed) {
+                return;
+            }
+            installTask = null;
+            distributionBox.setDisable(false);
+            packageTypeBox.setDisable(false);
+            versionBox.setDisable(false);
+            download.setDisable(versionBox.getValue() == null);
+            close.setDisable(false);
+            status.setText(UiText.tr(
+                    "settings.javaManagement.installFailed", message));
+            status.getStyleClass().remove("field-hint");
+            status.getStyleClass().add("field-hint-error");
+        });
+    }
+
+    private static Label formLabel(String key) {
+        Label label = new Label(UiText.tr(key));
+        label.getStyleClass().add("caml-label-medium");
+        return label;
+    }
+
+    private static String nameFor(JavaDownloadOption option) {
+        if (option == null) {
+            return "java";
+        }
+        return option.distributionId() + "-" + option.majorVersion()
+                + "-" + option.packageType().apiValue();
+    }
+
+    private static void ensureHintStyle(Label label) {
+        if (!label.getStyleClass().contains("field-hint")) {
+            label.getStyleClass().add("field-hint");
+        }
     }
 
     @Override
@@ -86,6 +355,14 @@ final class JavaManagementView extends VBox implements PageLifecycle {
         if (addTask != null) {
             addTask.cancel();
             addTask = null;
+        }
+        if (versionTask != null) {
+            versionTask.cancel();
+            versionTask = null;
+        }
+        if (installTask != null) {
+            installTask.cancel();
+            installTask = null;
         }
     }
 
@@ -183,14 +460,18 @@ final class JavaManagementView extends VBox implements PageLifecycle {
         installPressAnimation(openFolder);
         openFolder.setOnAction(event -> openFolder(candidate, openFolder));
 
-        HBox row = new HBox(badge, info, openFolder);
-        row.setAlignment(Pos.CENTER_LEFT);
-        row.getStyleClass().add("app-java-management-row");
+        HBox header = new HBox(badge, info, openFolder);
+        header.setAlignment(Pos.CENTER_LEFT);
+        header.getStyleClass().add("app-java-management-row");
+        header.setMaxWidth(Double.MAX_VALUE);
+
+        VBox card = new VBox(header);
+        card.getStyleClass().addAll("app-settings-group", "app-java-management-card");
         if (!candidate.available()) {
-            row.getStyleClass().add("app-java-management-row-unavailable");
+            card.getStyleClass().add("app-java-management-card-unavailable");
         }
-        row.setMaxWidth(Double.MAX_VALUE);
-        return row;
+        card.setMaxWidth(Double.MAX_VALUE);
+        return card;
     }
 
     private void openFolder(JavaCandidate candidate, CamlButton button) {

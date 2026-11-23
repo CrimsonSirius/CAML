@@ -1,5 +1,6 @@
 package org.chs.camlauncher.front.view;
 
+import javafx.beans.binding.Bindings;
 import javafx.geometry.Pos;
 import javafx.scene.AccessibleRole;
 import javafx.scene.control.ContentDisplay;
@@ -138,7 +139,9 @@ final class DownloadVersionsView extends VBox implements PageLifecycle {
             row.setAlignment(Pos.CENTER_LEFT);
             row.getStyleClass().addAll("app-instance-item", "app-download-version-item");
             row.setMaxWidth(Double.MAX_VALUE);
-            row.prefWidthProperty().bind(widthProperty());
+            row.prefWidthProperty().bind(Bindings.createDoubleBinding(
+                    () -> Math.max(0, getWidth() - getPadding().getLeft() - getPadding().getRight()),
+                    widthProperty(), paddingProperty()));
             setGraphic(row);
 
             setOnMouseClicked(event -> {

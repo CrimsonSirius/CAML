@@ -20,6 +20,14 @@ public final class HashVerifier {
         return digest(file, "MD5");
     }
 
+    public static String sha256(Path file) throws IOException {
+        return digest(file, "SHA-256");
+    }
+
+    public static String sha512(Path file) throws IOException {
+        return digest(file, "SHA-512");
+    }
+
     private static String digest(Path file, String algorithm) throws IOException {
         MessageDigest digest = newDigest(algorithm);
 

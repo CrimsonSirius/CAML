@@ -88,8 +88,13 @@ import org.chs.camlauncher.backend.mod.source.CurseForgeFingerprint;
 import org.chs.camlauncher.backend.mod.source.ModrinthClient;
 import org.chs.camlauncher.backend.runtime.JavaLocator;
 import org.chs.camlauncher.backend.runtime.JavaCandidate;
+import org.chs.camlauncher.backend.runtime.JavaDownloadOption;
+import org.chs.camlauncher.backend.runtime.JavaDownloadService;
+import org.chs.camlauncher.backend.runtime.JavaDistributionOption;
+import org.chs.camlauncher.backend.runtime.JavaPackageType;
 import org.chs.camlauncher.backend.runtime.JavaRuntime;
 import org.chs.camlauncher.backend.runtime.JavaSelectionMode;
+import org.chs.camlauncher.backend.runtime.ManagedJavaRepository;
 import org.chs.camlauncher.backend.settings.SettingsService;
 import org.chs.camlauncher.language.contract.LanguageEventListener;
 import org.chs.camlauncher.language.contract.LanguageFallbackMode;
@@ -119,6 +124,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.Map;
@@ -136,6 +142,8 @@ public final class CAMLBackend implements AutoCloseable {
     private final JsonService json;
     private final MetadataService metadata;
     private final JavaLocator javaLocator;
+    private final ManagedJavaRepository managedJavaRepository;
+    private final JavaDownloadService javaDownloadService;
     private final VersionManifestService versionManifestService;
     private final AtomicLong versionManifestGeneration = new AtomicLong();
     private final LoaderVersionCache loaderVersionCache = new LoaderVersionCache();
@@ -187,10 +195,12 @@ public final class CAMLBackend implements AutoCloseable {
         this.json = new JsonService();
         this.metadata = new MetadataService();
         this.javaLocator = new JavaLocator();
+        this.managedJavaRepository = new ManagedJavaRepository(config.dataDirectory(), javaLocator);
         this.versionManifestService = new VersionManifestService();
         this.downloadPlanner = new DownloadPlanner();
         this.assetDownloadPlanner = new AssetDownloadPlanner();
         this.fileDownloader = new FileDownloader();
+        this.javaDownloadService = new JavaDownloadService(managedJavaRepository, fileDownloader);
         this.modService = new ModService(
                 new ModrinthClient(), new CurseForgeClient(), fileDownloader);
         this.modIconService = new ModIconService(config.dataDirectory());
@@ -516,10 +526,40 @@ public final class CAMLBackend implements AutoCloseable {
     }
 
     public List<JavaCandidate> listJavaCandidates() throws IOException {
-        return javaLocator.discoverCandidates(
+        Map<String, JavaCandidate> candidates = new LinkedHashMap<>();
+        for (JavaCandidate candidate : javaLocator.discoverCandidates(
                 settingsService.manualJavaPaths(),
                 settingsService.selectedJavaPath().orElse(null)
-        );
+        )) {
+            candidates.put(candidate.executable().toAbsolutePath().normalize().toString(), candidate);
+        }
+        for (JavaCandidate candidate : managedJavaRepository.listCandidates()) {
+            candidates.putIfAbsent(
+                    candidate.executable().toAbsolutePath().normalize().toString(), candidate);
+        }
+        List<JavaCandidate> result = new ArrayList<>(candidates.values());
+        result.sort(java.util.Comparator
+                .comparing(JavaCandidate::available).reversed()
+                .thenComparing(Comparator.comparingInt(JavaCandidate::majorVersion).reversed())
+                .thenComparing(candidate -> candidate.executable().toString()));
+        return List.copyOf(result);
+    }
+
+    public List<JavaDistributionOption> javaDownloadDistributions() {
+        return javaDownloadService.distributions();
+    }
+
+    public List<JavaDownloadOption> listJavaDownloadOptions(
+            String distributionId, JavaPackageType packageType)
+            throws IOException, InterruptedException {
+        return javaDownloadService.listOptions(distributionId, packageType);
+    }
+
+    public JavaCandidate downloadAndInstallJava(
+            JavaDownloadOption option, String name,
+            DownloadListener listener, DownloadCancellationToken token)
+            throws IOException, InterruptedException {
+        return javaDownloadService.downloadAndInstall(option, name, listener, token);
     }
 
     public JavaCandidate addManualJavaPath(Path executable) throws IOException {
