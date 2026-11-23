@@ -92,6 +92,10 @@ final class GameSettingsView extends VBox {
         }
     }
 
+    JavaSettingsView javaSettings() {
+        return javaSettings;
+    }
+
     private void buildLayout() {
         Label heading = new Label(UiText.tr("settings.game.memory.title"));
         heading.getStyleClass().add("app-settings-group-title");
