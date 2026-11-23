@@ -276,6 +276,10 @@ public final class ZHTWGenerator extends LanguageTranslationGenerator {
         t.put("settings.javaManagement.manual", "手動新增");
         t.put("settings.javaManagement.unavailable", "不可用");
         t.put("settings.javaManagement.meta", "%s · %d 位%s");
+        t.put("settings.javaManagement.openFolder", "開啟所在資料夾");
+        t.put("settings.javaManagement.openFolder.opening", "正在開啟資料夾...");
+        t.put("settings.javaManagement.openFolder.failed", "開啟 Java 資料夾失敗：%s");
+        t.put("operation.openJavaFolder", "開啟 Java 資料夾");
 
         // 遊戲位置
         t.put("settings.game.location.title", "遊戲位置");

@@ -93,6 +93,18 @@ public final class SettingsController {
                 () -> context.backend().addManualJavaPath(executable), onAdded, onError);
     }
 
+    public AsyncTaskHandle<Void> openJavaFolder(
+            Path executable, Runnable onOpened, Consumer<String> onError) {
+        return context.runJava(UiText.tr("operation.openJavaFolder"), () -> {
+            context.backend().openJavaFolder(executable);
+            return null;
+        }, ignored -> {
+            if (onOpened != null) {
+                onOpened.run();
+            }
+        }, onError);
+    }
+
     public void saveJavaSelectionAsync(JavaSelectionMode mode, Path selectedJavaPath) {
         save(UiText.tr("operation.saveJavaSelection"),
                 () -> context.backend().setJavaSelection(mode, selectedJavaPath));

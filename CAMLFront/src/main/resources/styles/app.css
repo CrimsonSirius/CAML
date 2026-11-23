@@ -543,7 +543,7 @@
 .app-java-management-row {
     -fx-spacing: 0.875em;
     -fx-padding: 0.75em 0.25em;
-    -fx-alignment: top-left;
+    -fx-alignment: center-left;
     -fx-border-color: transparent transparent -caml-border-subtle transparent;
     -fx-border-width: 0 0 1 0;
 }
@@ -595,6 +595,42 @@
     -fx-padding: 0.125em 0.5em;
     -fx-text-fill: -caml-on-surface-muted;
     -fx-font-size: 0.75em;
+}
+
+.app-java-management-icon-button {
+    -fx-min-width: 2.75em;
+    -fx-min-height: 2.75em;
+    -fx-pref-width: 2.75em;
+    -fx-pref-height: 2.75em;
+    -fx-max-width: 2.75em;
+    -fx-max-height: 2.75em;
+    -fx-padding: 0;
+    -fx-alignment: center;
+    -fx-background-color: transparent;
+    -fx-background-radius: 0.5em;
+    -fx-border-color: -caml-accent;
+    -fx-border-width: 2;
+    -fx-border-radius: 0.5em;
+}
+
+.app-java-management-icon-button:hover {
+    -fx-background-color: -caml-accent-container;
+}
+
+.app-java-management-icon-button:pressed {
+    -fx-background-color: -caml-surface-highest;
+}
+
+.app-java-management-icon-button:focused {
+    -fx-border-color: -caml-on-surface;
+}
+
+.app-java-management-icon-button .caml-icon-fill {
+    -fx-fill: -caml-accent-text;
+}
+
+.app-java-management-icon-button .caml-icon-stroke {
+    -fx-stroke: -caml-accent-text;
 }
 
 .app-instance-picker {

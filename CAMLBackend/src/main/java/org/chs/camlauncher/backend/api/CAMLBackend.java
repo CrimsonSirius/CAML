@@ -1005,6 +1005,18 @@ public final class CAMLBackend implements AutoCloseable {
         DirectoryOpener.open(InstanceInspector.dataDirectory(gameDirectory, instanceId));
     }
 
+    /** 打开 java/javaw 可执行文件所在目录。 */
+    public void openJavaFolder(Path executable) throws IOException {
+        Path normalized = Objects.requireNonNull(executable, "executable")
+                .toAbsolutePath()
+                .normalize();
+        Path folder = normalized.getParent();
+        if (folder == null) {
+            throw new IOException("无法确定 Java 所在目录: " + normalized);
+        }
+        DirectoryOpener.open(folder);
+    }
+
     /** 切换实例 Mod 的启用状态，并把状态写入 CAML 配置。 */
     public void setModDisabled(Path gameDirectory, String instanceId, String fileName,
                                boolean disabled) throws IOException {
