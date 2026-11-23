@@ -12,6 +12,7 @@ public final class BackendPaths {
         Files.createDirectories(config.dataDirectory().resolve("logs"));
         Files.createDirectories(config.dataDirectory().resolve("cache"));
         Files.createDirectories(config.dataDirectory().resolve("themes"));
+        Files.createDirectories(config.dataDirectory().resolve("java"));
         Files.createDirectories(config.gameDirectory());
         Files.createDirectories(config.gameDirectory().resolve("versions"));
     }

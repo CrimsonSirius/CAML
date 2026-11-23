@@ -74,9 +74,13 @@
   显示操作系统名称和版本；Linux 显示发行版名称和内核版本，Windows 显示系统名称和系统版本。
   设备信息组显示 CPU、GPU（可包含核显）、NPU 和运行内存总容量；项目依赖组显示运行时依赖的
   名称与版本、作者和许可证。
-- Java 管理页提供“重新扫描”和“添加 Java”，以列表显示扫描到的 Java 版本、供应商、架构、
-  位数和可执行文件路径，并可用文件夹按钮打开 java/javaw 所在目录；游戏设置中的 Java 分组
-  只保留自动/手动选择和运行时详情。
+- Java 管理页提供“重新扫描 / 添加 Java / 下载 Java”，以分组卡显示扫描到的 Java 版本、供应商、
+  架构、位数和可执行文件路径，并可用文件夹按钮打开 java/javaw 所在目录；游戏设置中的 Java
+  分组只保留自动/手动选择和运行时详情。“下载 Java”打开覆盖整个窗口的应用内卡片，可从
+  foojay Disco API 选择发行版、JDK/JRE 和版本，下载校验后解压到 `<data>/java`。托管仓库与
+  `<data>/themes` 同级，安装清单写在 `<data>/java/<platform>/<name>.json`；Linux 上 Java
+  管理页会提示优先使用 apt、dnf 或 pacman 等发行版包管理器安装 JDK/JRE，不建议使用
+  CAML 托管 Java。Windows 不显示该提示。
 - 下载设置：上方“下载源”圆角组，包含“尽可能使用镜像源 / 尽可能使用官方源 / 导入自定义 API”
   三个圆角单选项；只有选择自定义时输入框可用，切换到其他源时输入框禁用但保留网址。
   下载页的版本列表加载提示会同步显示当前下载源；下载源保存成功后，已加载的分类列表和
@@ -111,7 +115,7 @@
 | 版本隔离 | `CamlRadioButton` + `ToggleGroup`（游戏设置组） |
 | 下载并发数 | `CamlSlider`（下载设置组，1–256） |
 | 下载源 | `CamlRadioButton` × 3 + `CamlTextField`（下载设置组） |
-| 下载版本列表 | `CamlButton` 列表 + `CamlPageHost` 内部切页 |
+| 下载版本列表 | 虚拟化 `ListView` + 带左右内边距的焦点行 + `CamlPageHost` 内部切页 |
 | 下载设置页 | 六个圆角信息条 + Forge/OptiFine/Fabric/Fabric API/NeoForge `CamlComboBox` + 整宽 `CamlButton` |
 | Mod 搜索 | `CamlTextField` × 2 + `CamlComboBox` × 2 + 搜索/重置 `CamlButton`（方向按内容宽度在“两行两列 `2:1` / 两行两列 / 单列”间切换） |
 | Mod 结果列表 | `CamlButton` 行 + `88px` 图标 + 行尾来源标签 + 随内容滚动的分页 |

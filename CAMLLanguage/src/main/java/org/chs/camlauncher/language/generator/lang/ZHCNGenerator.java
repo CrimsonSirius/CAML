@@ -274,7 +274,26 @@ public final class ZHCNGenerator extends LanguageTranslationGenerator {
         t.put("settings.javaManagement.openFolder", "打开所在文件夹");
         t.put("settings.javaManagement.openFolder.opening", "正在打开文件夹...");
         t.put("settings.javaManagement.openFolder.failed", "打开 Java 文件夹失败：%s");
+        t.put("settings.javaManagement.download", "下载 Java");
+        t.put("settings.javaManagement.distribution", "发行版");
+        t.put("settings.javaManagement.packageType", "包类型");
+        t.put("settings.javaManagement.version", "版本");
+        t.put("settings.javaManagement.downloadAndInstall", "下载并安装");
+        t.put("settings.javaManagement.loadingVersions", "正在获取 Java 版本...");
+        t.put("settings.javaManagement.emptyVersions", "没有可下载的 Java 版本");
+        t.put("settings.javaManagement.versionCount", "共 %d 个版本");
+        t.put("settings.javaManagement.loadVersionsFailed", "获取 Java 版本失败：%s");
+        t.put("settings.javaManagement.downloading", "正在下载 Java...");
+        t.put("settings.javaManagement.downloadingProgress", "正在下载 Java... %d%%");
+        t.put("settings.javaManagement.installed", "已安装 Java：%s");
+        t.put("settings.javaManagement.installFailed", "安装 Java 失败：%s");
+        t.put("settings.javaManagement.linuxHint",
+                "Linux 上建议使用发行版包管理器（如 apt、dnf 或 pacman）安装 JDK 或 JRE，"
+                        + "不建议使用 CAML 托管 Java。");
         t.put("operation.openJavaFolder", "打开 Java 文件夹");
+        t.put("operation.fetchJavaDownloadList", "获取 Java 下载列表：%s");
+        t.put("operation.downloadJava", "下载并安装 Java %s");
+        t.put("common.close", "关闭");
 
         // 游戏位置
         t.put("settings.game.location.title", "游戏位置");

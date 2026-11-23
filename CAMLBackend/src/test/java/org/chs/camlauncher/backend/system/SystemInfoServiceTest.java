@@ -7,6 +7,7 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class SystemInfoServiceTest {
 
@@ -49,5 +50,18 @@ class SystemInfoServiceTest {
         assertFalse(info.operatingSystem().isBlank());
         assertFalse(info.architecture().isBlank());
         assertFalse(info.javaVersion().isBlank());
+    }
+
+    @Test
+    void detectsLinuxOperatingSystem() {
+        SystemInfo windows = new SystemInfo(
+                "Windows 11", "10.0", SystemInfo.VersionKind.SYSTEM,
+                "amd64", "25", "Microsoft");
+        SystemInfo linux = new SystemInfo(
+                "Arch Linux", "6.8.0", SystemInfo.VersionKind.KERNEL,
+                "amd64", "25", "Oracle");
+
+        assertFalse(windows.isLinux());
+        assertTrue(linux.isLinux());
     }
 }

@@ -279,7 +279,26 @@ public final class ZHTWGenerator extends LanguageTranslationGenerator {
         t.put("settings.javaManagement.openFolder", "開啟所在資料夾");
         t.put("settings.javaManagement.openFolder.opening", "正在開啟資料夾...");
         t.put("settings.javaManagement.openFolder.failed", "開啟 Java 資料夾失敗：%s");
+        t.put("settings.javaManagement.download", "下載 Java");
+        t.put("settings.javaManagement.distribution", "發行版");
+        t.put("settings.javaManagement.packageType", "套件類型");
+        t.put("settings.javaManagement.version", "版本");
+        t.put("settings.javaManagement.downloadAndInstall", "下載並安裝");
+        t.put("settings.javaManagement.loadingVersions", "正在取得 Java 版本...");
+        t.put("settings.javaManagement.emptyVersions", "沒有可下載的 Java 版本");
+        t.put("settings.javaManagement.versionCount", "共 %d 個版本");
+        t.put("settings.javaManagement.loadVersionsFailed", "取得 Java 版本失敗：%s");
+        t.put("settings.javaManagement.downloading", "正在下載 Java...");
+        t.put("settings.javaManagement.downloadingProgress", "正在下載 Java... %d%%");
+        t.put("settings.javaManagement.installed", "已安裝 Java：%s");
+        t.put("settings.javaManagement.installFailed", "安裝 Java 失敗：%s");
+        t.put("settings.javaManagement.linuxHint",
+                "Linux 上建議使用發行版套件管理員（如 apt、dnf 或 pacman）安裝 JDK 或 JRE，"
+                        + "不建議使用 CAML 託管 Java。");
         t.put("operation.openJavaFolder", "開啟 Java 資料夾");
+        t.put("operation.fetchJavaDownloadList", "取得 Java 下載清單：%s");
+        t.put("operation.downloadJava", "下載並安裝 Java %s");
+        t.put("common.close", "關閉");
 
         // 遊戲位置
         t.put("settings.game.location.title", "遊戲位置");

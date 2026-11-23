@@ -71,7 +71,7 @@
 
 .app-download-version-cell {
     -fx-background-color: transparent;
-    -fx-padding: 0 0 0.5em 0;
+    -fx-padding: 0 0.5em 0.5em 0.5em;
 }
 
 .app-download-version-cell:empty {
@@ -336,6 +336,45 @@
     -fx-spacing: 0.75em;
 }
 
+.app-overlay {
+    -fx-padding: 0;
+}
+
+.app-overlay-scrim {
+    -fx-background-color: -caml-on-surface;
+    -fx-opacity: 0.24;
+}
+
+.app-overlay-content {
+    -fx-padding: 2em;
+    -fx-alignment: center;
+}
+
+.app-java-download-dialog {
+    -fx-min-width: 24em;
+    -fx-pref-width: 30em;
+    -fx-max-width: 32em;
+    -fx-min-height: 18em;
+    -fx-pref-height: 22em;
+    -fx-max-height: 26em;
+    -fx-padding: 1.25em;
+    -fx-spacing: 1em;
+    -fx-background-color: -caml-surface;
+    -fx-background-radius: 1em;
+    -fx-border-color: -caml-border-subtle;
+    -fx-border-width: 1;
+    -fx-border-radius: 1em;
+}
+
+.app-java-download-form {
+    -fx-hgap: 0.75em;
+    -fx-vgap: 0.5em;
+}
+
+.app-java-download-actions {
+    -fx-spacing: 0.5em;
+}
+
 .app-settings-save-error {
     -fx-background-color: -caml-danger-container;
     -fx-text-fill: -caml-on-danger-container;
@@ -536,19 +575,32 @@
     -fx-alignment: center-left;
 }
 
+.app-java-management-toolbar-button {
+    -fx-min-width: 7.5em;
+    -fx-pref-width: 7.5em;
+}
+
+.app-java-management-linux-hint {
+    -fx-background-color: -caml-accent-container;
+    -fx-background-radius: 0.5em;
+    -fx-text-fill: -caml-on-accent-container;
+    -fx-padding: 0.5em 0.75em;
+}
+
 .app-java-management-list {
-    -fx-spacing: 0;
+    -fx-spacing: 0.75em;
 }
 
 .app-java-management-row {
     -fx-spacing: 0.875em;
-    -fx-padding: 0.75em 0.25em;
     -fx-alignment: center-left;
-    -fx-border-color: transparent transparent -caml-border-subtle transparent;
-    -fx-border-width: 0 0 1 0;
 }
 
-.app-java-management-row-unavailable {
+.app-java-management-card {
+    -fx-padding: 1em 1.25em;
+}
+
+.app-java-management-card-unavailable {
     -fx-opacity: 0.72;
 }
 

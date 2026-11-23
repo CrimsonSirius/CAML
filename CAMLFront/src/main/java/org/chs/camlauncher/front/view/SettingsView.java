@@ -55,6 +55,7 @@ final class SettingsView extends VBox implements SidebarPage, PageLifecycle {
     private final ScrollPane contentScroll = new ScrollPane();
     private final Label saveErrorLabel = new Label();
     private final StackPane contentHost;
+    private final Runnable hideOverlay;
     private Node currentContent;
     private Section currentSection = Section.GAME;
     private FadeTransition contentTransition;
@@ -68,13 +69,16 @@ final class SettingsView extends VBox implements SidebarPage, PageLifecycle {
                  LanguageSelectionMode initialLanguageMode, String initialLanguage,
                  LanguageFallbackMode initialFallbackMode, String initialFallbackLocale,
                  BiConsumer<LanguageSelectionMode, String> onLanguageChanged,
-                 BiConsumer<LanguageFallbackMode, String> onLanguageFallbackChanged) {
+                 BiConsumer<LanguageFallbackMode, String> onLanguageFallbackChanged,
+                 Consumer<Node> showOverlay, Runnable hideOverlay) {
         this.controller = controller;
+        this.hideOverlay = hideOverlay;
         gameSettings = new GameSettingsView(
                 launchSettings, onMemoryChanged, onVersionIsolationChanged, systemMemory, controller);
         controller.setOnSystemMemoryUpdated(gameSettings::updateSystemMemory);
         javaManagement = new JavaManagementView(
-                controller, launchSettings, gameSettings.javaSettings()::setCandidates);
+                controller, launchSettings, gameSettings.javaSettings()::setCandidates,
+                controller.systemInfo().isLinux(), showOverlay, hideOverlay);
         downloadSettings = new DownloadSettingsView(
                 controller.downloadConcurrency(),
                 controller::saveDownloadConcurrencyAsync,
@@ -243,6 +247,7 @@ final class SettingsView extends VBox implements SidebarPage, PageLifecycle {
             contentTransition = null;
         }
         focusLanguageWhenContentReady = false;
+        hideOverlay.run();
         javaManagement.dispose();
     }
 
@@ -250,6 +255,7 @@ final class SettingsView extends VBox implements SidebarPage, PageLifecycle {
         if (currentContent == next) {
             return;
         }
+        hideOverlay.run();
         if (next != launcherSettings) {
             focusLanguageWhenContentReady = false;
         }

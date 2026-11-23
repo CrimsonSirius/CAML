@@ -3,6 +3,8 @@ package org.chs.camlauncher.front.view;
 import javafx.scene.Node;
 import javafx.scene.control.Label;
 import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.Region;
+import javafx.scene.layout.StackPane;
 import org.chs.camlauncher.backend.api.BackendStatus;
 import org.chs.camlauncher.backend.runtime.JavaSelectionMode;
 import org.chs.camlauncher.language.contract.LanguageSelectionMode;
@@ -34,7 +36,12 @@ import java.util.function.Consumer;
  * <p>具体页面拆分到 {@link HomeView}、{@link DownloadsView} 和
  * {@link SettingsView}，本类不持有启动表单、日志或设置控件。</p>
  */
-public final class MainView extends BorderPane {
+public final class MainView extends StackPane {
+    private final BorderPane shell = new BorderPane();
+    private final StackPane overlayLayer = new StackPane();
+    private final Region overlayScrim = new Region();
+    private final StackPane overlayContent = new StackPane();
+    private Node overlayFocusOwner;
     private final MainController controller;
     private final LaunchSettings launchSettings;
     private final SystemMemoryInfo systemMemory;
@@ -149,7 +156,9 @@ public final class MainView extends BorderPane {
                             ? UiText.DEFAULT_LOCALE
                             : locale;
                     this.onLanguageFallbackChanged.accept(mode, this.languageFallbackLocale);
-                }
+                },
+                this::showOverlay,
+                this::hideOverlay
         );
         homeView = new HomeView(homeController, controller.accountController(), launchSettings);
         downloadsView = new DownloadsView(downloadsController, launchSettings);
@@ -158,9 +167,18 @@ public final class MainView extends BorderPane {
         activePage = homeView;
         homeView.onShow();
 
-        setTop(buildTopBar());
-        setCenter(pageHost);
-        setBottom(buildFooter());
+        shell.setTop(buildTopBar());
+        shell.setCenter(pageHost);
+        shell.setBottom(buildFooter());
+        overlayScrim.getStyleClass().add("app-overlay-scrim");
+        overlayScrim.setPickOnBounds(true);
+        overlayScrim.setOnMouseClicked(event -> hideOverlay());
+        overlayContent.getStyleClass().add("app-overlay-content");
+        overlayLayer.getStyleClass().add("app-overlay");
+        overlayLayer.getChildren().addAll(overlayScrim, overlayContent);
+        overlayLayer.setVisible(false);
+        overlayLayer.setManaged(false);
+        getChildren().addAll(shell, overlayLayer);
 
         // 根节点字号决定整个界面的缩放：CSS 中的 em 全部按根字号换算，
         // 需要代码计算的几何（模组页、工作区分栏）读取同一个 UiScale 因子。
@@ -285,6 +303,26 @@ public final class MainView extends BorderPane {
         homeView.dispose();
         downloadsView.dispose();
         settingsView.dispose();
+    }
+
+    private void showOverlay(Node content) {
+        if (!overlayLayer.isVisible() && getScene() != null) {
+            overlayFocusOwner = getScene().getFocusOwner();
+        }
+        overlayContent.getChildren().setAll(content);
+        overlayLayer.setVisible(true);
+        overlayLayer.setManaged(true);
+    }
+
+    private void hideOverlay() {
+        Node restoreFocus = overlayFocusOwner;
+        overlayFocusOwner = null;
+        if (restoreFocus != null && restoreFocus.getScene() == getScene()) {
+            restoreFocus.requestFocus();
+        }
+        overlayLayer.setVisible(false);
+        overlayLayer.setManaged(false);
+        overlayContent.getChildren().clear();
     }
 
     /**
