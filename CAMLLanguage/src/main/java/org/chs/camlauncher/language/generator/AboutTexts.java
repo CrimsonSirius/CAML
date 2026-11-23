@@ -31,6 +31,9 @@ final class AboutTexts {
         put(t, "settings.about.project.title", "Project");
         put(t, "settings.about.projectName", "Name");
         put(t, "settings.about.copyright", "Copyright");
+        put(t, "settings.about.dependencies.title", "Project dependencies");
+        put(t, "settings.about.dependency.author", "Author: %s");
+        put(t, "settings.about.dependency.license", "License: %s");
         put(t, "settings.about.unknown", "Unknown");
     }
 

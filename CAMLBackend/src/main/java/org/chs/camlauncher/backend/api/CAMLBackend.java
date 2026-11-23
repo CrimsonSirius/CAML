@@ -97,6 +97,8 @@ import org.chs.camlauncher.language.contract.LanguageSelectionMode;
 import org.chs.camlauncher.backend.system.DeviceInfo;
 import org.chs.camlauncher.backend.system.DeviceInfoService;
 import org.chs.camlauncher.backend.system.DirectoryOpener;
+import org.chs.camlauncher.backend.system.ProjectDependency;
+import org.chs.camlauncher.backend.system.ProjectDependencyService;
 import org.chs.camlauncher.backend.system.SystemInfo;
 import org.chs.camlauncher.backend.system.SystemInfoService;
 import org.chs.camlauncher.backend.system.SystemMemoryInfo;
@@ -167,6 +169,7 @@ public final class CAMLBackend implements AutoCloseable {
     private final SystemMemoryService systemMemoryService;
     private final SystemInfo systemInfo;
     private final DeviceInfo deviceInfo;
+    private final List<ProjectDependency> projectDependencies;
     private final LatestLogService latestLogService;
     private final AccountStore accountStore;
     private final AuthServerService authServerService;
@@ -249,6 +252,7 @@ public final class CAMLBackend implements AutoCloseable {
         // 系统信息是静态数据，在启动器初始化阶段读取，避免 JavaFX 线程做磁盘 I/O。
         this.systemInfo = new SystemInfoService().read();
         this.deviceInfo = new DeviceInfoService().read();
+        this.projectDependencies = new ProjectDependencyService().dependencies();
         this.latestLogService = new LatestLogService(
                 config.dataDirectory().resolve("logs").resolve("latest.log"));
         this.gameLaunchService = new GameLaunchService(
@@ -392,6 +396,10 @@ public final class CAMLBackend implements AutoCloseable {
 
     public DeviceInfo deviceInfo() {
         return deviceInfo;
+    }
+
+    public List<ProjectDependency> projectDependencies() {
+        return projectDependencies;
     }
 
     public Optional<Path> savedGameDirectory() throws IOException {
