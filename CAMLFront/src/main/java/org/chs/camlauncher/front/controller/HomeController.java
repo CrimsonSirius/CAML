@@ -52,6 +52,14 @@ public final class HomeController {
         this.onGameDirectoryInspected = onGameDirectoryInspected;
     }
 
+    /** 异步检查 Linux 启动环境；检查结果不参与是否启动游戏的判断。 */
+    public AsyncTaskHandle<Boolean> checkXrandrWarning(
+            String version, Path gameDirectory, Consumer<Boolean> onChecked) {
+        return context.runCheck(UiText.tr("operation.launchGame", version),
+                () -> context.backend().needsXrandrWarning(version, gameDirectory),
+                onChecked, null);
+    }
+
     /**
      * 在指定游戏目录启动游戏。
      *

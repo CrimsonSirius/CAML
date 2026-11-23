@@ -17,6 +17,8 @@ public final class BOCNGenerator extends LanguageTranslationGenerator {
         t.put("common.cancel", "རྩིས་མེད");
         t.put("common.browse", "བཤེར་བ");
         t.put("common.save", "ཉར་ཚགས");
+        t.put("common.copy", "བཤུས་ཤོག");
+        t.put("common.copied", "བཤུས་ཟིན");
 
         // གོ་རིམ་དང་མཇུག་རིམ
         t.put("nav.home", "མ་ཤོག");
@@ -87,6 +89,9 @@ public final class BOCNGenerator extends LanguageTranslationGenerator {
         t.put("launch.manualJavaNotConfigured", "ལག་ཐོགས་ Java འདེམས་སྒྲུག་སྒོ་ཕྱེ་ཡོད་ཀྱང་ Java ལམ་བུ་མ་འདེམས");
         t.put("launch.manualJavaUnavailable", "འདེམས་པའི་ Java ད་ལྟ་བེད་མི་སྤྱོད་ཐུབ: %s");
         t.put("launch.javaRequirementNotFound", "པར་གཞིའི་དགོས་མཁོ %s ལ་མཐུན་པའི་ Java མ་རྙེད། Java སྒྲིག་འཛུགས་ཡང་ན་འདེམས");
+        t.put("launch.warning.xrandr.title", "xrandr མི་འདུག");
+        t.put("launch.warning.xrandr.message", "འདིའི་ཐོན་རིམ་གྱིས LWJGL 2 བེད་སྤྱོད་བྱེད་ཀྱི་ཡོད། མ་ལག་ནང་ xrandr མ་རྙེད། རྩེད་མོ་མུ་མཐུད་འགོ་འཛུགས་རྒྱུ་ཡིན་ཀྱང་། མངོན་གསལ་ཐབས་ལམ་སྒྲིག་སྐབས་ཕྱིར་ཐོན་སྲིད། xrandr བཙུགས་རྗེས་རྩེད་མོ་བསྐྱར་འགོ་བཙུགས་རོགས།");
+        t.put("launch.warning.xrandr.commands", "Arch Linux: sudo pacman -S xorg-xrandr\nDebian/Ubuntu: sudo apt install x11-xserver-utils\nFedora/RHEL: sudo dnf install xrandr");
 
         // པར་གཞིའི་རིགས་དང་འབྱུང་ཁུངས
         t.put("download.category.release", "གཏན་འབེབས་པར་གཞི");

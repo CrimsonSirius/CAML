@@ -17,6 +17,8 @@ public final class DEDEGenerator extends LanguageTranslationGenerator {
         t.put("common.cancel", "Abbrechen");
         t.put("common.browse", "Durchsuchen");
         t.put("common.save", "Speichern");
+        t.put("common.copy", "Befehle kopieren");
+        t.put("common.copied", "Kopiert");
 
         // Navigation und Fußzeile
         t.put("nav.home", "Start");
@@ -87,6 +89,9 @@ public final class DEDEGenerator extends LanguageTranslationGenerator {
         t.put("launch.manualJavaNotConfigured", "Die manuelle Java-Auswahl ist aktiviert, aber kein Java-Pfad ausgewählt.");
         t.put("launch.manualJavaUnavailable", "Das ausgewählte Java ist nicht verfügbar: %s");
         t.put("launch.javaRequirementNotFound", "Kein Java gefunden, das die Versionsanforderung %s erfüllt. Installiere oder wähle Java.");
+        t.put("launch.warning.xrandr.title", "xrandr fehlt");
+        t.put("launch.warning.xrandr.message", "Diese Instanz verwendet LWJGL 2, aber xrandr wurde im System nicht gefunden. Das Spiel wird trotzdem gestartet, kann aber beim Initialisieren des Anzeigemodus beendet werden. Installiere xrandr und starte das Spiel erneut.");
+        t.put("launch.warning.xrandr.commands", "Arch Linux: sudo pacman -S xorg-xrandr\nDebian/Ubuntu: sudo apt install x11-xserver-utils\nFedora/RHEL: sudo dnf install xrandr");
 
         // Kategorien und Quellen
         t.put("download.category.release", "Release");

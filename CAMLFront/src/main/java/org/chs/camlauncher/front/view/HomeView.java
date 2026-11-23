@@ -9,6 +9,8 @@ import org.chs.camlauncher.front.controller.AccountController;
 import org.chs.camlauncher.front.controller.HomeController;
 import org.chs.camlauncher.ui.control.CamlPageHost;
 
+import java.util.function.Consumer;
+
 /**
  * 主页：启动表单 + 运行日志，以及二级游戏实例选择页和实例账号页。
  */
@@ -25,7 +27,7 @@ final class HomeView extends StackPane implements PageLifecycle {
     private boolean disposed;
 
     HomeView(HomeController controller, AccountController accountController,
-             LaunchSettings launchSettings) {
+             LaunchSettings launchSettings, Consumer<Node> showOverlay, Runnable hideOverlay) {
         this.controller = controller;
         this.accountController = accountController;
         this.launchSettings = launchSettings;
@@ -35,7 +37,7 @@ final class HomeView extends StackPane implements PageLifecycle {
         controller.setOnLogReceived(logPane::append);
         formPane = new LaunchFormView(controller, accountController, launchSettings,
                 logPane::clear, this::showInstancePicker, this::showManageInstances,
-                this::showInstanceAccounts);
+                this::showInstanceAccounts, showOverlay, hideOverlay);
 
         workspace = new SplitPane(formPane, logPane);
         workspace.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);

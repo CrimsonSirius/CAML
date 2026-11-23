@@ -17,6 +17,8 @@ public final class FRFRGenerator extends LanguageTranslationGenerator {
         t.put("common.cancel", "Annuler");
         t.put("common.browse", "Parcourir");
         t.put("common.save", "Enregistrer");
+        t.put("common.copy", "Copier les commandes");
+        t.put("common.copied", "Copié");
 
         // Navigation et pied de page
         t.put("nav.home", "Accueil");
@@ -87,6 +89,9 @@ public final class FRFRGenerator extends LanguageTranslationGenerator {
         t.put("launch.manualJavaNotConfigured", "La sélection manuelle de Java est activée, mais aucun chemin Java n’est sélectionné.");
         t.put("launch.manualJavaUnavailable", "Le Java sélectionné est indisponible : %s");
         t.put("launch.javaRequirementNotFound", "Aucun Java satisfaisant l’exigence de version %s n’a été trouvé. Installez ou sélectionnez Java.");
+        t.put("launch.warning.xrandr.title", "xrandr est absent");
+        t.put("launch.warning.xrandr.message", "Cette instance utilise LWJGL 2, mais xrandr est introuvable sur le système. Le jeu va quand même démarrer, mais il risque de quitter pendant l’initialisation du mode d’affichage. Installez xrandr puis relancez le jeu.");
+        t.put("launch.warning.xrandr.commands", "Arch Linux : sudo pacman -S xorg-xrandr\nDebian/Ubuntu : sudo apt install x11-xserver-utils\nFedora/RHEL : sudo dnf install xrandr");
 
         // Catégories et sources
         t.put("download.category.release", "Version finale");

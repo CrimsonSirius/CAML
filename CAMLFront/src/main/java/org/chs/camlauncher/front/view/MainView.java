@@ -160,7 +160,8 @@ public final class MainView extends StackPane {
                 this::showOverlay,
                 this::hideOverlay
         );
-        homeView = new HomeView(homeController, controller.accountController(), launchSettings);
+        homeView = new HomeView(homeController, controller.accountController(), launchSettings,
+                this::showOverlay, this::hideOverlay);
         downloadsView = new DownloadsView(downloadsController, launchSettings);
         settingsController.setOnDownloadSourceSaved(downloadsView::refreshVersions);
         pageHost = new CamlPageHost(homeView);

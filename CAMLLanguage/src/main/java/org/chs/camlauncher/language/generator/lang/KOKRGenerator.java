@@ -17,6 +17,8 @@ public final class KOKRGenerator extends LanguageTranslationGenerator {
         t.put("common.cancel", "취소");
         t.put("common.browse", "찾아보기");
         t.put("common.save", "저장");
+        t.put("common.copy", "명령 복사");
+        t.put("common.copied", "복사됨");
 
         // 내비게이션과 하단 표시줄
         t.put("nav.home", "홈");
@@ -87,6 +89,9 @@ public final class KOKRGenerator extends LanguageTranslationGenerator {
         t.put("launch.manualJavaNotConfigured", "수동 Java 선택이 활성화되어 있지만 Java 경로가 선택되지 않았습니다.");
         t.put("launch.manualJavaUnavailable", "선택한 Java를 사용할 수 없습니다: %s");
         t.put("launch.javaRequirementNotFound", "버전 요구 사항 %s을(를) 충족하는 Java를 찾을 수 없습니다. Java를 설치하거나 선택하세요.");
+        t.put("launch.warning.xrandr.title", "xrandr를 찾을 수 없습니다");
+        t.put("launch.warning.xrandr.message", "이 인스턴스는 LWJGL 2를 사용하지만 시스템에서 xrandr를 찾지 못했습니다. 게임은 계속 실행되지만 디스플레이 모드를 초기화할 때 종료될 수 있습니다. xrandr를 설치한 뒤 게임을 다시 시작하세요.");
+        t.put("launch.warning.xrandr.commands", "Arch Linux: sudo pacman -S xorg-xrandr\nDebian/Ubuntu: sudo apt install x11-xserver-utils\nFedora/RHEL: sudo dnf install xrandr");
 
         // 버전 분류와 소스
         t.put("download.category.release", "정식 버전");

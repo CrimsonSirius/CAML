@@ -150,7 +150,8 @@ CAML/
 
 Linux 上运行使用 LWJGL 2 的旧版本（如 1.12.2）还需要 `xrandr` 命令，对应 Arch 包
 `xorg-xrandr`。CAML 启动游戏时会把 `~/.local/bin` 前插到子进程 `PATH`，因此用户级安装的
-`xrandr` 也能被 LWJGL 2 找到。
+`xrandr` 也能被 LWJGL 2 找到。若检测到 LWJGL 2 实例缺少 `xrandr`，启动时会显示应用内提示
+和常见发行版安装命令，但不会阻止游戏继续启动。
 
 ```bash
 # Windows
@@ -376,6 +377,7 @@ CamlCard card = new CamlCard(
 ```
 
 当前提供：`CamlTheme`、`CamlButton`、`CamlCard`、`CamlTextField`、`CamlTextArea`、
+`CamlSelectableText`、
 `CamlComboBox`、`CamlSpinner`、`CamlSwitch`、`CamlCheckBox`、`CamlSlider`、`CamlRadioButton`、
 `CamlMemorySlider`、`CamlProgressBar`、`CamlSideNav`、`CamlSideNavItem`、`CamlTopNav`、
 `CamlTopNavItem`、`CamlPageHost` 和 `CamlTopBar`。

@@ -357,6 +357,25 @@
     -fx-border-color: -caml-accent;
 }
 
+/* 原生不可滚动的可选文本块。 */
+.caml-selectable-text {
+    -fx-background-color: transparent;
+}
+
+.caml-selectable-text-text {
+    -fx-fill: -caml-on-surface;
+}
+
+.caml-selectable-text-selected-text {
+    -fx-fill: -caml-on-accent;
+}
+
+.caml-selectable-text-selection {
+    -fx-fill: -caml-accent;
+    -fx-stroke: transparent;
+    -fx-stroke-width: 0;
+}
+
 /* Switch. */
 .caml-switch {
     -fx-cursor: hand;

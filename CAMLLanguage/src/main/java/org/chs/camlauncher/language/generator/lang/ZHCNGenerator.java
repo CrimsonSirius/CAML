@@ -17,6 +17,8 @@ public final class ZHCNGenerator extends LanguageTranslationGenerator {
         t.put("common.cancel", "取消");
         t.put("common.browse", "浏览");
         t.put("common.save", "保存");
+        t.put("common.copy", "复制命令");
+        t.put("common.copied", "已复制");
 
         // 顶部导航与底栏
         t.put("nav.home", "主页");
@@ -91,6 +93,9 @@ public final class ZHCNGenerator extends LanguageTranslationGenerator {
         t.put("launch.manualJavaNotConfigured", "已启用手动 Java 选择，但没有选择 Java 路径。");
         t.put("launch.manualJavaUnavailable", "手动选择的 Java 不可用：%s");
         t.put("launch.javaRequirementNotFound", "找不到满足版本要求的 Java %s，请安装或选择 Java。");
+        t.put("launch.warning.xrandr.title", "缺少 xrandr");
+        t.put("launch.warning.xrandr.message", "当前实例使用 LWJGL 2，但系统中未找到 xrandr。游戏仍会继续启动，不过可能在初始化显示模式时退出。安装 xrandr 后重新启动游戏即可。");
+        t.put("launch.warning.xrandr.commands", "Arch Linux：sudo pacman -S xorg-xrandr\nDebian/Ubuntu：sudo apt install x11-xserver-utils\nFedora/RHEL：sudo dnf install xrandr");
 
         // 下载版本类别与来源
         t.put("download.category.release", "正式版");

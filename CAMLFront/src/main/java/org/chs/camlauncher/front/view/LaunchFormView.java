@@ -1,13 +1,18 @@
 package org.chs.camlauncher.front.view;
 
+import javafx.application.Platform;
 import javafx.geometry.Pos;
+import javafx.scene.Node;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
+import javafx.scene.input.Clipboard;
+import javafx.scene.input.ClipboardContent;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.ColumnConstraints;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
+import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import org.chs.camlauncher.backend.api.AccountSummary;
@@ -20,12 +25,14 @@ import org.chs.camlauncher.front.text.UiText;
 import org.chs.camlauncher.ui.control.CamlButton;
 import org.chs.camlauncher.ui.control.CamlComboBox;
 import org.chs.camlauncher.ui.control.CamlIcon;
+import org.chs.camlauncher.ui.control.CamlSelectableText;
 import org.chs.camlauncher.ui.control.CamlTextField;
 
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.function.Consumer;
 
 /** 主页左侧的启动表单与启动交互。 */
 final class LaunchFormView extends BorderPane {
@@ -33,6 +40,8 @@ final class LaunchFormView extends BorderPane {
     private final AccountController accountController;
     private final LaunchSettings launchSettings;
     private final Runnable onLaunchStarted;
+    private final Consumer<Node> showOverlay;
+    private final Runnable hideOverlay;
 
     private final Label instanceLabel;
     private final Label gameLocationLabel;
@@ -52,11 +61,13 @@ final class LaunchFormView extends BorderPane {
     LaunchFormView(HomeController controller, AccountController accountController,
                    LaunchSettings launchSettings, Runnable onLaunchStarted,
                    Runnable onChooseInstance, Runnable onManageInstances,
-                   Runnable onManageAccounts) {
+                   Runnable onManageAccounts, Consumer<Node> showOverlay, Runnable hideOverlay) {
         this.controller = Objects.requireNonNull(controller, "controller");
         this.accountController = Objects.requireNonNull(accountController, "accountController");
         this.launchSettings = Objects.requireNonNull(launchSettings, "launchSettings");
         this.onLaunchStarted = Objects.requireNonNull(onLaunchStarted, "onLaunchStarted");
+        this.showOverlay = Objects.requireNonNull(showOverlay, "showOverlay");
+        this.hideOverlay = Objects.requireNonNull(hideOverlay, "hideOverlay");
 
         getStyleClass().add("app-form-pane");
 
@@ -271,6 +282,47 @@ final class LaunchFormView extends BorderPane {
         launchTask = controller.startGame(version, username, accountChoice,
                 launchSettings.maxMemoryMb(), gameDirectory,
                 launchSettings.fullVersionIsolation(), launchSettings.jvmArguments());
+        controller.checkXrandrWarning(version, gameDirectory, warning -> {
+            if (Boolean.TRUE.equals(warning)) {
+                showXrandrWarning();
+            }
+        });
+    }
+
+    private void showXrandrWarning() {
+        if (getScene() == null) {
+            return;
+        }
+        Label title = new Label(UiText.tr("launch.warning.xrandr.title"));
+        title.getStyleClass().add("app-launch-warning-title");
+
+        Label message = new Label(UiText.tr("launch.warning.xrandr.message"));
+        message.getStyleClass().addAll("caml-body-large", "caml-on-surface");
+        message.setWrapText(true);
+
+        CamlSelectableText commands = new CamlSelectableText(
+                UiText.tr("launch.warning.xrandr.commands"));
+        commands.setMaxWidth(Double.MAX_VALUE);
+        commands.getStyleClass().add("app-launch-warning-commands");
+
+        CamlButton copy = CamlButton.outlined(UiText.tr("common.copy"));
+        copy.setOnAction(event -> {
+            ClipboardContent content = new ClipboardContent();
+            content.putString(commands.getText());
+            Clipboard.getSystemClipboard().setContent(content);
+            copy.setText(UiText.tr("common.copied"));
+        });
+        CamlButton close = CamlButton.filled(UiText.tr("common.close"));
+        HBox actions = new HBox(copy, close);
+        actions.setAlignment(Pos.CENTER_RIGHT);
+        actions.getStyleClass().add("app-launch-warning-actions");
+        close.setOnAction(event -> hideOverlay.run());
+
+        VBox dialog = new VBox(title, message, commands, actions);
+        dialog.getStyleClass().add("app-launch-warning-dialog");
+        dialog.setMaxHeight(Region.USE_PREF_SIZE);
+        showOverlay.accept(dialog);
+        Platform.runLater(close::requestFocus);
     }
 
     private void applyGameDirectoryInfo(GameDirectoryInfo info) {
