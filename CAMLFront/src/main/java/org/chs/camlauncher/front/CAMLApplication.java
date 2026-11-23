@@ -322,8 +322,11 @@ public final class CAMLApplication extends Application {
         previous.dispose();
         CamlTheme.markRoot(view);
         scene.setRoot(view);
+        // 根容器接管重建期间的程序化焦点，避免焦点瞬间落到“主页”胶囊上。
+        view.requestFocus();
         CamlTheme.install(scene);
         view.restoreState(state);
+        view.focusAfterRebuild();
     }
 
     @Override

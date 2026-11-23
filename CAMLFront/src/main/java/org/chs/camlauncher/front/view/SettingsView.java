@@ -1,6 +1,7 @@
 package org.chs.camlauncher.front.view;
 
 import javafx.animation.FadeTransition;
+import javafx.application.Platform;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.Label;
@@ -57,6 +58,7 @@ final class SettingsView extends VBox implements SidebarPage, PageLifecycle {
     private Node currentContent;
     private Section currentSection = Section.GAME;
     private FadeTransition contentTransition;
+    private boolean focusLanguageWhenContentReady;
 
     SettingsView(LaunchSettings launchSettings, IntConsumer onMemoryChanged,
                  Consumer<Boolean> onVersionIsolationChanged,
@@ -201,6 +203,14 @@ final class SettingsView extends VBox implements SidebarPage, PageLifecycle {
         });
     }
 
+    void focusLanguageSetting() {
+        if (currentContent == launcherSettings) {
+            Platform.runLater(launcherSettings::focusLanguageSetting);
+        } else {
+            focusLanguageWhenContentReady = true;
+        }
+    }
+
     Section currentSection() {
         return currentSection;
     }
@@ -230,12 +240,16 @@ final class SettingsView extends VBox implements SidebarPage, PageLifecycle {
             contentTransition.stop();
             contentTransition = null;
         }
+        focusLanguageWhenContentReady = false;
         javaManagement.dispose();
     }
 
     private void showContent(Node next) {
         if (currentContent == next) {
             return;
+        }
+        if (next != launcherSettings) {
+            focusLanguageWhenContentReady = false;
         }
         if (CamlMotion.reduceMotion()) {
             setContent(next);
@@ -265,6 +279,12 @@ final class SettingsView extends VBox implements SidebarPage, PageLifecycle {
         next.setOpacity(1);
         contentScroll.setContent(next);
         contentScroll.setVvalue(0);
+        if (focusLanguageWhenContentReady) {
+            focusLanguageWhenContentReady = false;
+            if (next == launcherSettings) {
+                Platform.runLater(launcherSettings::focusLanguageSetting);
+            }
+        }
     }
 
     private void showSaveError(String message) {

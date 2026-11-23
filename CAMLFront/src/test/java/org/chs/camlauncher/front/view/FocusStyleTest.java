@@ -4,6 +4,7 @@ import javafx.css.PseudoClass;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
+import javafx.scene.control.Button;
 import javafx.scene.control.ToggleButton;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
@@ -117,6 +118,53 @@ class FocusStyleTest {
         });
 
         assertTrue(visible, "模组启停按钮获得焦点时必须显示焦点环");
+    }
+
+    @Test
+    void replacingSceneRootDoesNotFocusFirstButton() throws Exception {
+        boolean homeFocused = onFxThread(() -> {
+            ToggleButton home1 = new ToggleButton("主页");
+            ToggleButton settings1 = new ToggleButton("设置");
+            VBox root1 = new VBox(home1, settings1);
+            Scene scene = new Scene(root1, 400, 300);
+            CamlTheme.install(scene);
+            addStylesheet(scene, "/themes/mango.css");
+            addStylesheet(scene, "/styles/app.css");
+            root1.applyCss();
+            root1.resize(400, 300);
+            root1.layout();
+            settings1.requestFocus();
+
+            ToggleButton home2 = new ToggleButton("主页");
+            ToggleButton settings2 = new ToggleButton("设置");
+            VBox root2 = new VBox(home2, settings2);
+            scene.setRoot(root2);
+            root2.applyCss();
+            root2.resize(400, 300);
+            root2.layout();
+            return home2.isFocused();
+        });
+
+        assertFalse(homeFocused, "替换根节点后不应自动聚焦第一个按钮");
+    }
+
+    @Test
+    void plainContainerCanReceiveProgrammaticFocus() throws Exception {
+        boolean rootFocused = onFxThread(() -> {
+            Button child = new Button("主页");
+            VBox root = new VBox(child);
+            Scene scene = new Scene(root, 400, 300);
+            CamlTheme.install(scene);
+            addStylesheet(scene, "/themes/mango.css");
+            addStylesheet(scene, "/styles/app.css");
+            root.applyCss();
+            root.resize(400, 300);
+            root.layout();
+            root.requestFocus();
+            return scene.getFocusOwner() == root;
+        });
+
+        assertTrue(rootFocused, "普通容器应能作为无视觉描边的临时焦点落点");
     }
 
     private static void applyStyles(Parent root) {
