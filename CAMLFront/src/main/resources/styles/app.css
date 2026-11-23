@@ -621,10 +621,6 @@
     -fx-background-color: -caml-surface-highest;
 }
 
-.app-java-management-icon-button:focused {
-    -fx-border-color: -caml-on-surface;
-}
-
 .app-java-management-icon-button .caml-icon-fill {
     -fx-fill: -caml-accent-text;
 }

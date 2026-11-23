@@ -178,7 +178,6 @@ final class JavaManagementView extends VBox implements PageLifecycle {
         CamlButton openFolder = CamlButton.outlined("")
                 .withGraphic(new CamlIcon(CamlIcon.Glyph.FOLDER, 18));
         openFolder.getStyleClass().add("app-java-management-icon-button");
-        openFolder.setFocusTraversable(false);
         openFolder.setAccessibleText(UiText.tr("settings.javaManagement.openFolder"));
         openFolder.setTooltip(new Tooltip(UiText.tr("settings.javaManagement.openFolder")));
         installPressAnimation(openFolder);
