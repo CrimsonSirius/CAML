@@ -1,190 +1,152 @@
-# CAML 第三方（Yggdrasil）账号登录
+# CAML 账号与认证
 
-更新日期：2026-11-18
+> 本文按当前认证代码重写，最后核对时间：2026-11-23；基线提交：`c86eb05`。
 
-## 1. 方案结论
+## 1. 支持范围
 
-第三方认证服务器（LittleSkin 等）采用 **标准 Yggdrasil 协议登录 + authlib-injector 运行时注入**：
+当前支持四类身份来源：
 
-```text
-用户名 + 密码
-→ POST {apiRoot}/authserver/authenticate
-→ accessToken + selectedProfile(id, name) + availableProfiles[]
-→ （服务器未绑定角色时）POST {apiRoot}/authserver/refresh + selectedProfile 补绑定
-→ AuthSession(username, uuid, accessToken, "mojang", "{}")
-→ -javaagent:authlib-injector.jar={apiRoot}
-```
+| 类型 | 网络 | 凭据持久化 | 启动注入 |
+|---|---|---|---|
+| 离线账号 | 无 | 仅用户名和离线 UUID | 无 |
+| Microsoft | OAuth 2.0 设备码 + Xbox/Minecraft Services | accessToken、refreshToken 加密保存 | 无 |
+| Yggdrasil | 第三方认证服务器 | 可选保存 accessToken；密码永不保存 | authlib-injector `-javaagent` |
+| 主页临时离线用户名 | 无 | 不进入账号列表 | 无 |
 
-- 认证走 HTTP，游戏端由 authlib-injector 把 `authserver`/`sessionserver` 指向皮肤站。
-- **只改 JVM 参数**，不修改版本 JSON、`libraries` 或 classpath，因此与原版、Fabric、Quilt、
-  Forge、NeoForge、OptiFine 和版本隔离完全解耦。
-- 不内置改写过的 authlib，也不打包客户端 jar。
+密码不会落盘，也不会写入日志。前端只接触 `AccountSummary` 和登录会话结果，不接触 token 明文。
 
-被否决的方案：
+## 2. 账号模型与入口
 
-| 方案 | 原因 |
-|---|---|
-| 自带皮肤 Mod（CustomSkinLoader） | 只换皮肤，不能通过 `online-mode` 服务器校验 |
-| 修改或替换 authlib | 版本矩阵爆炸，且违背“元数据以官方为准”的原则 |
-| 登录失败静默降级离线 | 玩家会以 `legacy` 身份被 `online-mode` 服务器踢出，错误信息完全误导 |
+主要类：
 
-## 2. 代码位置
+- `AccountService`：账号列表、登录、删除、角色切换、实例绑定和启动会话解析。
+- `AccountStore`：`~/.caml/accounts/accounts.json` 的原子读写和 token 加解密。
+- `SecretCipher`：AES-GCM 加密，密钥保存在 `~/.caml/accounts/secret.key`。
+- `MicrosoftAuthService`：设备码、refresh、Xbox Live、XSTS、Minecraft Services 流程。
+- `YggdrasilClient`：metadata、authenticate、refresh、validate。
+- `AuthServerService` / `AuthServerStore`：Yggdrasil metadata 的内存和磁盘缓存。
+- `AuthlibInjectorService`：authlib-injector 下载、缓存、校验和覆盖路径。
 
-```text
-CAMLBackend/.../backend/auth/
-  AccountType.java             offline / yggdrasil
-  AccountService.java          编排：列表、登录、重登标记、角色切换、实例/全局解析
-  yggdrasil/
-    AuthServerInfo.java         metadata + prefetched Base64（占位 metadata 不生成 prefetched）
-    AuthServerService.java      metadata 拉取，回退顺序：网络 → 内存 → 磁盘
-    YggdrasilClient.java        authenticate / refresh / validate / metadata
-    YggdrasilSession.java       accessToken + 选中角色 + 全部可用角色
-    YggdrasilProfile.java       角色档案（id + name）
-    YggdrasilUnavailableException.java  服务器暂时不可用（5xx / 429 / 网络）
-  store/
-    AccountStore.java           ~/.caml/accounts/accounts.json（原子写，含角色列表）
-    AuthServerStore.java        ~/.caml/accounts/servers.json（metadata 冷启动缓存）
-    SecretCipher.java           AES-GCM，密钥 ~/.caml/accounts/secret.key
-    StoredAccount.java          内部模型（toString 不含 token）
-  injector/
-    AuthlibInjector.java        jar + apiRoot + prefetched
-    AuthlibInjectorService.java 版本固定、下载、SHA-256 校验、缓存、自定义覆盖
-```
+`CAMLBackend` 对前端暴露账号摘要、默认账号、实例账号和第三方服务器预设；登录和刷新都在后端线程执行。
 
-前端：
+## 3. 离线账号
 
-```text
-CAMLFront/.../front/
-  controller/AccountController.java   账号页控制器（全部走 AsyncTaskHandle + 后台线程）
-  view/AccountSettingsView.java       设置 → 账号
-  view/InstanceAccountView.java       主页二级页 → 实例账号
-  view/LaunchFormView.java            主页启动表单的账号选择器
-  text/AccountChoice.java             下拉框展示文本
-```
+`OfflineAccount` 根据用户名生成稳定的离线 UUID，规则固定，不依赖网络或启动器重启。离线账号不包含 accessToken。
 
-## 3. authlib-injector：运行时下载
+主页在没有可用账号或选择离线模式时，可以使用输入框中的离线用户名直接启动；该用户名不是账号列表里的持久账号。
 
-**只下载一次，之后每次启动只校验。**
+## 4. Microsoft 登录
 
-1. 落地 `~/.caml/authlib-injector/<版本>/authlib-injector-<版本>.jar`，版本号目录互不覆盖。
-2. 每次启动判断“文件存在 + `*.sha256` 存在 + SHA-256 一致”，命中即复用，**全程零网络**。
-3. 只有三种情况重新下载：首次使用、启动器升级提升固定版本号、本地文件被改动导致校验失败。
-4. 校验值优先取上游随包发布的 `.sha256` 并固化到本地；取不到时退化为下载后自行计算并记录。
-5. 设置页可指定自定义 jar，完全跳过下载与校验（内网/离线场景）。
-6. `FileDownloader` 通过既有 `DownloadValidator` 做 SHA-256 校验，不需要改动 `DownloadItem`。
-7. 请求统一带 `User-Agent: CAML/1.0`，与项目其它 HTTP 客户端一致（部分站点的 WAF 会拒绝无 UA 请求）。
+### 4.1 配置
 
-## 4. 账号归属
+- Client ID 属性：`caml.microsoft.clientId`。
+- 构建环境变量：`CAML_MICROSOFT_CLIENT_ID`。
+- 构建任务会把 Client ID 写入生成的 `caml.properties`；未配置时微软登录返回 `auth.microsoft.clientIdMissing`。
+- scope：`XboxLive.signin offline_access`。
 
-| 层级 | 位置 | 说明 |
-|---|---|---|
-| 全局账号列表 + 默认账号 | 设置 → 账号 | 用户可在任意账号上点“默认” |
-| 实例账号 | 主页 → 实例账号 | 每个实例一行下拉框，可选“跟随默认账号” |
-| 启动时解析 | `AccountService.resolve` | 实例账号 → 全局默认账号 → 无账号则抛 `auth.error.noAccount` |
+### 4.2 设备码流程
 
-主页启动表单另有“离线用户名”选项，保留原有的离线启动路径。
+1. POST `https://login.microsoftonline.com/consumers/oauth2/v2.0/devicecode` 获取 `device_code`、`user_code`、验证地址、有效期和轮询间隔。
+2. 前端显示设备码和验证页面，并提供复制按钮；用户自行在浏览器完成登录。
+3. 后端轮询 `https://login.microsoftonline.com/consumers/oauth2/v2.0/token`，最多等待 15 分钟。
+4. 使用 Microsoft refresh token 换取 Xbox Live token。
+5. 调用 Xbox XSTS `https://xsts.auth.xboxlive.com/xsts/authorize`，RelyingParty 为 `rp://api.minecraftservices.com/`。
+6. 用 XSTS 换取 Minecraft access token：`https://api.minecraftservices.com/authentication/login_with_xbox`。
+7. 检查 `https://api.minecraftservices.com/entitlements/mcstore`，无 Java 版权益时返回明确错误。
+8. 读取 `https://api.minecraftservices.com/minecraft/profile`，得到角色名、UUID 和 access token。
 
-**隐藏策略（用户名输入框）**：只有选中“离线用户名”时才显示用户名输入框；选择账号
-（含“跟随默认账号”）时该行隐藏，原位显示一行说明（`home.username.managed`）指出实际使用的
-账号。这样界面与真实行为一致——账号模式下用户名输入框会被后端忽略。
+微软登录成功后，accessToken 和 refreshToken 都由 `AccountStore` 加密保存。启动前如果距过期不足 1 小时，会自动使用 refresh token 刷新；刷新得到的 profile UUID 与账号不一致时按 `auth.microsoft.profileChanged` 处理，要求重新登录。
 
-## 5. 安全
+常见 Xbox/XSTS 错误分别映射为家庭限制、地区限制、未注册 Xbox、账号封禁、账号暂停等稳定错误码，不把服务端原文直接展示给用户。
 
-- 密码只在本次登录使用，**不落盘、不进日志、不进异常文案**；登录后立即从控件清除。
-  JavaFX 的 `PasswordField.getText()` 只能返回 `String`，无法做到真正的 `char[]` 清零，
-  因此这里的安全目标是“不持久化、不外泄”，而不是“内存中不可恢复”。
-- `accessToken` 使用 AES-GCM 加密后写入 `accounts.json`，密钥放在
-  `~/.caml/accounts/secret.key`（POSIX 下收紧到 0600）。
-- **这不是安全边界**：密钥与密文在同一台机器上，能读用户目录的程序仍可解密。
-  它的目的只是避免凭据以明文形式躺在磁盘上。
-- `clientToken` 首次生成后持久化，用于 `refresh` 校验。
-- 日志只记录服务器地址、用户名和 HTTP 状态码；服务器返回的错误原文只写 DEBUG 日志，
-  不进入界面文案。
-- **已知暴露面**：accessToken 会出现在游戏进程的命令行中（Yggdrasil 协议要求），
-  同一台机器上的其他本地用户可通过进程查询看到。每次启动轮换 token 可以压缩这个窗口，
-  但不能消除它。
+## 5. Yggdrasil 登录
 
-### 5.1 “不记住登录”的真实语义
+### 5.1 协议调用
 
-勾选“记住登录”时才把 accessToken 加密落盘；**不勾选时 token 只保存在后端进程内存里**：
+`YggdrasilClient` 只实现启动器需要的四个调用：
 
-| 场景 | 行为 |
-|---|---|
-| 登录后立即启动 | 正常启动（走内存中的会话） |
-| 重启启动器后再启动 | 要求重新登录，账号卡片显示“登录已失效” |
+- `GET <apiRoot>`：读取 metadata（服务器名、skinDomains、原始 metadata）。
+- `POST /authserver/authenticate`：用户名 + 密码 + clientToken + agent。
+- `POST /authserver/refresh`：刷新 accessToken，可携带 `selectedProfile`。
+- `POST /authserver/validate`：验证 token 是否仍有效。
 
-这条区分很重要：否则“不记住登录”会变成“登录等于没登录”，用户必须立刻再登一次才能启动。
+登录时 `requestUser=false`，不会请求用户属性。若认证响应没有 `selectedProfile`（部分服务器多角色账号如此），客户端会立刻用 `refresh + selectedProfile` 补绑定；启动时仍会再次 refresh，保证进入服务器时 token 已绑定角色。
 
-## 6. 错误语义
+### 5.2 错误分类
 
-| 场景 | 行为 |
-|---|---|
-| 用户名/密码错误 | `auth.error.invalidCredentials`，不降级离线 |
-| 认证服务器返回未绑定角色的 token | 登录时自动用 `refresh` + `selectedProfile` 补绑定 |
-| accessToken 失效但可刷新 | 自动 `refresh` 并回写新 token |
-| accessToken 失效且无法刷新 | `auth.error.loginExpired`，提示重新登录 |
-| `refresh` 返回 4xx | 一律按“需要重新登录”处理，不把服务器原文抛到界面 |
-| 服务器 5xx / 网络失败 / 超时 | **启动时继续使用现有 token**；登录时以 `auth.error.requestFailed` 报错 |
-| 请求被限流（429） | `auth.error.tooManyRequests`，提示稍后重试 |
-| 认证服务器不可达（登录时） | `auth.error.requestFailed`（元数据缺失不再阻塞登录） |
-| 未保存凭据（未勾选“记住登录”且已重启） | `auth.error.loginRequired` |
-| 指定的角色不在账号里 | `auth.error.profileMissing` |
+- `400/401/403`：凭据或 token 无效，返回固定的登录失效错误或需要重新登录。
+- `429`、5xx、网络失败、超时：`YggdrasilUnavailableException`，语义是“暂时无法确认凭据状态”；启动流程可以继续使用已有 token。
+- 服务器返回的原文只写 debug 日志，不直接进入界面。
 
-“服务器暂时不可用”统一用 `YggdrasilUnavailableException` 表示，与“凭据被拒绝”区分开：
-启动流程遇到它可以继续使用已有 token（单人生存不依赖认证服务器，多人服务器的校验由游戏自己完成），
-登录流程则把同一个对象原样展示给用户。
+### 5.3 多角色
 
-## 7. 角色绑定、多角色与启动时刷新
+`StoredAccount.profiles` 保存全部可用角色，`uuid` 是当前角色；账号 ID 使用 profile/account 映射生成并在切换角色时保持不变。切换角色会 refresh token 到新 profile，并把新的 accessToken 写回账号存储或内存会话。
 
-部分服务器（LittleSkin 等）在账号拥有**多个角色**时，`authenticate` 只返回 `availableProfiles`、
-不设置 `selectedProfile`。此时 accessToken 处于“未绑定角色”状态，服务器会对
-`validate`/`refresh` 和进入服务器返回 400：
+## 6. 凭据存储与“记住登录”
 
-```text
-The access token has no profile assigned, please select a profile.
-```
+账号文件格式版本为 1，条目字段包括账号 ID、类型、显示名、UUID、apiRoot、服务器名、加密后的 accessToken/refreshToken、clientToken、过期时间和角色列表。
 
-处理方式：
+加密方式：
 
-1. 登录：`authenticate` 之后若响应没有 `selectedProfile`，立即调用一次 `refresh` 并带上所选角色的
-   `selectedProfile`，把 token 绑定到该角色（失败不影响登录，启动时会再试）。
-2. 启动：直接 `refresh`（同样带 `selectedProfile`），而不是先 `validate`。这样历史上已保存的、
-   未绑定角色的 token 会在下次启动时自愈；只有 `refresh` 被拒且 `validate` 也失败时才报
-   `auth.error.loginExpired`。
-3. **多角色切换**：登录响应里的全部角色写入 `accounts.json`，设置页账号行提供角色下拉框。
-   切换走 `POST /authserver/refresh` + 目标角色的 `selectedProfile`，**账号 id 保持不变**
-   （`yggdrasil:<uuid>`），只更新显示名、UUID 与角色列表，避免同一账号在列表里变成多条。
+- AES/GCM/NoPadding；
+- 随机 12 字节 IV 放在密文前；
+- 128 位 GCM tag；
+- 密钥文件长度为 16 字节，POSIX 下收紧为 `rw-------`；
+- 读取失败时只丢弃 token，不删除账号条目。
 
-代价：每次启动都会轮换一次 accessToken（服务器会吊销旧 token），因此同一账号不宜同时
-在多台机器上用本启动器登录。
+“记住登录”的真实语义：
 
-## 8. metadata 与 prefetched
+- Yggdrasil 勾选：accessToken 加密写入账号文件，重启后可直接使用/刷新。
+- Yggdrasil 不勾选：账号条目仍保存 clientToken、角色列表和服务器信息，accessToken 只放在进程内 `transientSessions`；本次运行可用，重启后要求重新登录。
+- Microsoft：设备码登录后 accessToken 和 refreshToken 都加密保存，没有“不记住”分支。
 
-- `GET {apiRoot}` 是 Yggdrasil 的**可选**扩展：登录与启动都不依赖它成功。
-- 登录时按“尽力而为”拉取（`fetchOrRemember`），失败就以主机名作显示名继续登录。
-- 启动时把 metadata 原文 Base64 塞进 `-Dauthlibinjector.yggdrasil.prefetched`，
-  游戏启动时无需再联网拉 metadata。
-- 缓存分三级：网络 → 内存（进程内）→ 磁盘（`~/.caml/accounts/servers.json`）。
-  磁盘缓存保证冷启动或皮肤站维护期间仍能注入 prefetched。
-- 占位 metadata（`{}`）**不会**生成 prefetched：注入空 metadata 会让皮肤域名与签名公钥
-  全部缺失，而且很难从日志里看出根因。
-- 不注入 `-Dauthlibinjector.disableHttpd`：内置 HTTP 服务是皮肤域名���理的一部分，
-  关掉它属于无明确收益的行为变更，保持与上游默认一致。
+密码只在登录请求生命周期内存在，不进入 `StoredAccount`。
 
-## 9. 已知限制
+## 7. 默认账号与实例账号
 
-- 一次启动只能注入一个认证服务器（`-javaagent` 单实例），账号与服务器一一绑定。
-- Yggdrasil UUID 与离线 UUID 不同，切换账号后服务器端玩家数据/白名单不会自动迁移。
-- 首版只支持账号密码登录，2FA/OAuth 需要后续扩展。
-- 实例账号绑定以“游戏目录 + 实例名”为键：修改“游戏位置”后旧绑定不会自动生效
-  （与禁用 Mod 状态相同的既有行为）。绑定本身不会丢，主页“实例账号”页检测到这种情况时
-  会列出受影响的实例，并提供“应用到当前游戏位置”一键重新套用；旧目录下的绑定保留，
-  切回原目录仍然有效。
+解析顺序：
 
-## 10. 待办
+1. 实例账号：`settings.properties` 中 `instanceAccounts` 以“游戏目录 + 实例 ID”为键。
+2. 全局默认账号：`defaultAccountId`。
+3. 若仍无账号，主页可回退到输入的离线用户名。
 
-- LittleSkin 等站点的 2FA / OAuth 授权码流程。
-- 使用系统凭据库（DPAPI / libsecret）替换自管理密钥。
-- 账号的皮肤头像展示。
-- 账号导入导出（换机器不必重新登录）。
+设置文件保存的是账号 ID，不保存 token。删除账号时会清理全局默认和所有实例绑定；游戏位置变化时，旧目录绑定不会静默套用到新目录，界面可以检测并迁移仍然存在的实例绑定。
 
+## 8. authlib-injector
+
+- 固定版本：`1.2.5`。
+- 缓存：`~/.caml/authlib-injector/1.2.5/authlib-injector-1.2.5.jar` 和 `.sha256`。
+- 来源：authlib-injector 官方 artifact，GitHub release 作为备用候选。
+- 每次使用前用 SHA-256 校验；校验失败删除并重新下载。
+- 支持设置 `authlibInjectorPath` 覆盖内置版本，跳过自动下载和校验。
+- 启动时只追加 JVM 参数：`-javaagent:<jar>=<apiRoot>`；有 metadata 时再追加 `-Dauthlibinjector.yggdrasil.prefetched=<base64>`。
+- 不修改版本 JSON、libraries、classpath 或游戏参数。
+
+## 9. metadata 缓存
+
+`AuthServerService` 的回退顺序是“网络 → 内存 → 磁盘”。
+
+- 网络：读取 `<apiRoot>` metadata；
+- 内存：`ConcurrentHashMap`；
+- 磁盘：`~/.caml/accounts/servers.json`。
+
+metadata 失败不能阻塞 Yggdrasil 密码登录或已有 token 启动；只是无法提供 `prefetched`，authlib-injector 会自行联网获取。
+
+## 10. 安全边界与限制
+
+- Client ID 是公共客户端 ID，不是 secret。
+- CurseForge API Key 与账号认证无关，见 Mod 下载文档。
+- Windows 没有系统级安全存储集成；账号 token 仅依赖本机 key 文件加密，能访问用户目录的攻击者仍可能同时取得 key 和密文。
+- 没有账号导入/导出功能。
+- 没有 Mojang 旧版 Yggdrasil 官方登录；微软账号使用官方 OAuth 设备码流程。
+- 没有 token 吊销/登出服务端会话；删除账号只清理本地凭据。
+
+## 11. 相关测试
+
+- `AccountModelTest`
+- `OfflineAccountTest`
+- `AccountServiceTest`
+- `MicrosoftAuthServiceTest`
+- `YggdrasilClientTest`
+- `AuthServerStoreTest`
+- `InstanceAccountBindingTest`
