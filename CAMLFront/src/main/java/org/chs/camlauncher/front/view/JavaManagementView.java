@@ -1,16 +1,23 @@
 package org.chs.camlauncher.front.view;
 
+import javafx.animation.Interpolator;
+import javafx.animation.ScaleTransition;
 import javafx.geometry.Pos;
 import javafx.scene.control.Label;
+import javafx.scene.control.Tooltip;
+import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
+import javafx.util.Duration;
 import org.chs.camlauncher.backend.runtime.JavaCandidate;
 import org.chs.camlauncher.front.controller.SettingsController;
 import org.chs.camlauncher.front.task.AsyncTaskHandle;
 import org.chs.camlauncher.front.text.UiText;
 import org.chs.camlauncher.ui.control.CamlButton;
+import org.chs.camlauncher.ui.control.CamlIcon;
+import org.chs.camlauncher.ui.theme.CamlMotion;
 
 import java.io.File;
 import java.nio.file.Path;
@@ -34,6 +41,7 @@ final class JavaManagementView extends VBox implements PageLifecycle {
     private AsyncTaskHandle<List<JavaCandidate>> scanTask;
     private AsyncTaskHandle<JavaCandidate> addTask;
     private boolean scanning;
+    private boolean adding;
     private boolean loaded;
     private boolean disposed;
 
@@ -63,7 +71,7 @@ final class JavaManagementView extends VBox implements PageLifecycle {
 
     @Override
     public void onShow() {
-        if (!loaded && !scanning) {
+        if (!loaded && !scanning && !adding) {
             scan();
         }
     }
@@ -82,12 +90,10 @@ final class JavaManagementView extends VBox implements PageLifecycle {
     }
 
     private void scan() {
-        if (scanning || disposed) {
+        if (scanning || adding || disposed) {
             return;
         }
         scanning = true;
-        refreshButton.setDisable(true);
-        addButton.setDisable(true);
         statusLabel.setText(UiText.tr("settings.game.java.scanningAll"));
         statusLabel.getStyleClass().removeAll("field-hint-error", "app-empty-state");
         ensureHintStyle();
@@ -97,8 +103,6 @@ final class JavaManagementView extends VBox implements PageLifecycle {
             }
             scanning = false;
             scanTask = null;
-            refreshButton.setDisable(false);
-            addButton.setDisable(false);
             statusLabel.setText(UiText.tr("settings.game.java.scanFailed", message));
             statusLabel.getStyleClass().removeAll("field-hint", "app-empty-state");
             statusLabel.getStyleClass().add("field-hint-error");
@@ -112,8 +116,6 @@ final class JavaManagementView extends VBox implements PageLifecycle {
         scanning = false;
         loaded = true;
         scanTask = null;
-        refreshButton.setDisable(false);
-        addButton.setDisable(false);
         candidates.clear();
         candidates.addAll(loadedCandidates);
         sortCandidates(candidates);
@@ -173,14 +175,48 @@ final class JavaManagementView extends VBox implements PageLifecycle {
         info.setMinWidth(0);
         HBox.setHgrow(info, Priority.ALWAYS);
 
-        HBox row = new HBox(badge, info);
-        row.setAlignment(Pos.TOP_LEFT);
+        CamlButton openFolder = CamlButton.outlined("")
+                .withGraphic(new CamlIcon(CamlIcon.Glyph.FOLDER, 18));
+        openFolder.getStyleClass().add("app-java-management-icon-button");
+        openFolder.setFocusTraversable(false);
+        openFolder.setAccessibleText(UiText.tr("settings.javaManagement.openFolder"));
+        openFolder.setTooltip(new Tooltip(UiText.tr("settings.javaManagement.openFolder")));
+        installPressAnimation(openFolder);
+        openFolder.setOnAction(event -> openFolder(candidate, openFolder));
+
+        HBox row = new HBox(badge, info, openFolder);
+        row.setAlignment(Pos.CENTER_LEFT);
         row.getStyleClass().add("app-java-management-row");
         if (!candidate.available()) {
             row.getStyleClass().add("app-java-management-row-unavailable");
         }
         row.setMaxWidth(Double.MAX_VALUE);
         return row;
+    }
+
+    private void openFolder(JavaCandidate candidate, CamlButton button) {
+        button.setDisable(true);
+        statusLabel.setText(UiText.tr("settings.javaManagement.openFolder.opening"));
+        statusLabel.getStyleClass().remove("field-hint-error");
+        ensureHintStyle();
+        controller.openJavaFolder(candidate.executable(), () -> {
+            if (disposed) {
+                return;
+            }
+            button.setDisable(false);
+            statusLabel.setText(UiText.tr("settings.javaManagement.count", candidates.size()));
+            statusLabel.getStyleClass().remove("field-hint-error");
+            ensureHintStyle();
+        }, message -> {
+            if (disposed) {
+                return;
+            }
+            button.setDisable(false);
+            statusLabel.setText(UiText.tr(
+                    "settings.javaManagement.openFolder.failed", message));
+            statusLabel.getStyleClass().remove("field-hint");
+            statusLabel.getStyleClass().add("field-hint-error");
+        });
     }
 
     private static Label badge(String textKey) {
@@ -195,9 +231,10 @@ final class JavaManagementView extends VBox implements PageLifecycle {
     }
 
     private void chooseJavaFile() {
-        if (getScene() == null || disposed) {
+        if (getScene() == null || disposed || adding || scanning) {
             return;
         }
+        adding = true;
         Path current = launchSettings.selectedJavaPath();
         Path parent = current == null ? null : current.getParent();
         if (parent == null) {
@@ -205,7 +242,6 @@ final class JavaManagementView extends VBox implements PageLifecycle {
             return;
         }
 
-        addButton.setDisable(true);
         controller.checkDirectory(parent,
                 exists -> showJavaChooser(exists ? parent : null),
                 message -> showJavaChooser(null));
@@ -213,7 +249,7 @@ final class JavaManagementView extends VBox implements PageLifecycle {
 
     private void showJavaChooser(Path initialDirectory) {
         if (getScene() == null || disposed) {
-            addButton.setDisable(false);
+            adding = false;
             return;
         }
         javafx.stage.FileChooser chooser = new javafx.stage.FileChooser();
@@ -223,11 +259,10 @@ final class JavaManagementView extends VBox implements PageLifecycle {
         }
         File selected = chooser.showOpenDialog(getScene().getWindow());
         if (selected == null) {
-            addButton.setDisable(false);
+            adding = false;
             return;
         }
 
-        addButton.setDisable(true);
         statusLabel.setText(UiText.tr("settings.game.java.checking"));
         statusLabel.getStyleClass().remove("field-hint-error");
         ensureHintStyle();
@@ -236,7 +271,7 @@ final class JavaManagementView extends VBox implements PageLifecycle {
                 return;
             }
             addTask = null;
-            addButton.setDisable(false);
+            adding = false;
             candidates.removeIf(item -> samePath(item.executable(), candidate.executable()));
             candidates.add(candidate);
             sortCandidates(candidates);
@@ -248,11 +283,39 @@ final class JavaManagementView extends VBox implements PageLifecycle {
                 return;
             }
             addTask = null;
-            addButton.setDisable(false);
+            adding = false;
             statusLabel.setText(UiText.tr("settings.game.java.addFailed", message));
             statusLabel.getStyleClass().remove("field-hint");
             statusLabel.getStyleClass().add("field-hint-error");
         });
+    }
+
+    private static void installPressAnimation(CamlButton button) {
+        ScaleTransition[] animation = new ScaleTransition[1];
+        button.addEventHandler(MouseEvent.MOUSE_PRESSED,
+                event -> animateScale(button, animation, 0.94, 70));
+        button.addEventHandler(MouseEvent.MOUSE_RELEASED,
+                event -> animateScale(button, animation, 1, 160));
+        button.addEventHandler(MouseEvent.MOUSE_EXITED,
+                event -> animateScale(button, animation, 1, 160));
+    }
+
+    private static void animateScale(CamlButton button, ScaleTransition[] animation,
+                                     double target, long millis) {
+        if (animation[0] != null) {
+            animation[0].stop();
+        }
+        if (CamlMotion.reduceMotion()) {
+            button.setScaleX(1);
+            button.setScaleY(1);
+            return;
+        }
+        ScaleTransition transition = new ScaleTransition(Duration.millis(millis), button);
+        transition.setToX(target);
+        transition.setToY(target);
+        transition.setInterpolator(Interpolator.EASE_OUT);
+        transition.play();
+        animation[0] = transition;
     }
 
     private static boolean samePath(Path left, Path right) {

@@ -271,6 +271,10 @@ public final class ZHCNGenerator extends LanguageTranslationGenerator {
         t.put("settings.javaManagement.manual", "手动添加");
         t.put("settings.javaManagement.unavailable", "不可用");
         t.put("settings.javaManagement.meta", "%s · %d 位%s");
+        t.put("settings.javaManagement.openFolder", "打开所在文件夹");
+        t.put("settings.javaManagement.openFolder.opening", "正在打开文件夹...");
+        t.put("settings.javaManagement.openFolder.failed", "打开 Java 文件夹失败：%s");
+        t.put("operation.openJavaFolder", "打开 Java 文件夹");
 
         // 游戏位置
         t.put("settings.game.location.title", "游戏位置");

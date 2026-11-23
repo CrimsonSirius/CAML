@@ -12,6 +12,10 @@ final class JavaManagementTexts {
         put(t, "settings.javaManagement.manual", "Manually added");
         put(t, "settings.javaManagement.unavailable", "Unavailable");
         put(t, "settings.javaManagement.meta", "%s · %d-bit%s");
+        put(t, "settings.javaManagement.openFolder", "Open containing folder");
+        put(t, "settings.javaManagement.openFolder.opening", "Opening folder...");
+        put(t, "settings.javaManagement.openFolder.failed", "Failed to open Java folder: %s");
+        put(t, "operation.openJavaFolder", "Open Java folder");
     }
 
     private static void put(TranslationTable t, String key, String value) {
