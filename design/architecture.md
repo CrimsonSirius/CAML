@@ -1,439 +1,231 @@
 # CAML 总体架构
 
-更新日期：2026-11-09
+> 本文按当前代码重写，最后核对时间：2026-11-23；核对基线：`c86eb05`。
+> 涉及“已实现/未实现”的表述以仓库代码和测试为准，不以历史计划为准。
 
-## 1. 构架目标
+## 1. 目标与硬边界
 
-CAML 采用前后端分离的多模块结构：
+CAML 是 Java 25 + JavaFX 的 Minecraft 启动器，架构目标是把协议、下载、安装、认证、Java 运行时和进程启动集中在纯 Java 后端，把界面、状态绑定和用户交互留在前端。
+
+硬边界如下：
+
+- `CAMLBackend` 是纯 Java，不 import JavaFX，不依赖 `CAMLFront`。
+- `CAMLFront` 只负责 JavaFX 页面、交互和状态绑定，不直接读写文件、不直接发 HTTP、不直接启动进程。
+- `CAMLUI` 只包含 JavaFX 控件、布局和结构 CSS，不依赖后端业务模块。
+- `CAMLLanguage` 只包含语言契约、生成器工具和语言 JSON，不在运行时读取文件、检测语言、执行回退或格式化文本。
+- 前后端通过 `CAMLBackend`、DTO、`CompletableFuture`、下载/进程监听器和语言事件交互。
+- 游戏安装与启动不得依赖第三方 Minecraft 启动库，元数据和启动逻辑按公开协议自行实现。
+
+## 2. 模块与依赖
 
 ```text
-CAMLUI      JavaFX + CSS 的 CAML 组件库
-CAMLLanguage 纯 Java 语言契约、生成器与语言资源
-CAMLFront   JavaFX 界面，只负责展示和交互
-CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
+CAMLFront ──> CAMLBackend ──> CAMLLanguage
+    │              │
+    └──────────────┴──────> CAMLUI
 ```
 
-核心约束：
-
-- `CAMLBackend` 是纯 Java，不 import JavaFX。
-- `CAMLBackend` 不依赖 `CAMLFront`。
-- `CAMLUI` 只依赖 JavaFX 和自身 CSS，不依赖 `CAMLBackend` 或 `CAMLFront`。
-- `CAMLUI` 不定义固定配色；组件颜色全部来自外部主题文件。
-- `CAMLLanguage` 是纯 Java 模块，不依赖 JavaFX、`CAMLBackend` 或 `CAMLFront`；
-  它只定义语言事件、错误、枚举和 DTO，并提供开发期 JSON 生成器与资源。
-- 语言运行时全部位于 `CAMLBackend` 的 `language` 包，负责文件安装、检测、加载、回退、格式化和日志。
-- `CAMLFront` 不直接读写文件、不直接发 HTTP、不直接启动进程。
-- `CAMLFront` 不在视图和控制器中硬编码界面文案，统一通过 `UiText` 显示后端提供的最终文案；
-  `UiText` 不读取文件、不做回退、不做格式化。
-- 前后端通过 facade、DTO、事件和 `CompletableFuture` 交互。
-
-## 2. 后端模块职责
-
-| 包 | 职责 | 当前状态 |
+| 模块 | 职责 | 主要依赖 |
 |---|---|---|
-| `api` | 后端 facade 和状态 DTO | 已有 |
-| `config` | 配置、目录约定和路径初始化 | 已有 |
-| `metadata` | 版本清单和 JSON；子包 `model`、`rule`、`parse`、`resolve` | 已有 |
-| `instance` | 实例模型、本地版本复用、版本安装和隔离判定 | 已有 |
-| `download` | 下载入口；子包 `model`、`plan`、`source`、`io`、`hash` | 已有 |
-| `mod` | Modrinth/CurseForge 官方 API 搜索、详情、依赖和 Mod 文件下载；WebP 图标转 PNG | 已有 |
-| `auth` | 账号、AuthSession、离线登录、微软设备码登录、Yggdrasil 第三方登录与 authlib-injector 注入 | 已有离线、微软与第三方能力 |
-| `runtime` | Java 运行时检测、版本/架构/位数匹配 | 已有 |
-| `launch` | 启动编排；子包 `command`、`classpath`、`prepare`、`process`、`patch` | 已有 |
-| `theme` | 主题目录、默认主题复制和当前主题配置 | 已有 |
-| `settings` | 启动器设置持久化（游戏位置、最大内存、版本隔离、下载源、下载并发数） | 已有 |
-| `system` | 物理内存与可用内存读取 | 已有 |
-| `loader` | Fabric Loader/Fabric API、Quilt Loader/Quilted Fabric API、Forge、NeoForge、OptiFine（仅 Forge）安装 | 已有 |
-| `json` | 通用 JSON 文件读写 | 已有 |
+| `CAMLLanguage` | 语言标识、语言文本契约、生成期翻译工具、11 套内置 JSON | Gson |
+| `CAMLBackend` | 元数据、下载、安装、实例、启动、认证、Java、主题、设置、日志 | CAMLLanguage、Gson、Log4j API、TwelveMonkeys WebP |
+| `CAMLUI` | JavaFX 控件库、页面宿主、缩放工具、结构样式 | JavaFX Controls |
+| `CAMLFront` | JavaFX 应用入口、页面、控制器、异步任务、进程日志展示 | CAMLBackend、CAMLUI、CAMLLanguage、JavaFX |
 
-## 3. 当前已实现能力
+根工程统一使用 Java toolchain 25、UTF-8 编译、JUnit Platform；构建版本为 `1.0-SNAPSHOT`。
 
-### 3.1 元数据
+## 3. 后端包结构
 
-- 解析 `version_manifest_v2.json`。
-- 解析单版本 JSON。
-- 解析字符串参数和带规则参数。
-- 解析 libraries、asset index、downloads、javaVersion 和 logging。
-- 处理 OS、架构、版本正则和 features 规则。
-- 合并 `inheritsFrom` 父版本。
-- 子版本标量字段覆盖父版本；libraries 子版本优先；支持 `jar` 字段。
-- 拉取远程版本清单和单版本 JSON。
-- 版本清单缓存和网络失败回退。
+| 包 | 职责 |
+|---|---|
+| `api` | `CAMLBackend` facade、状态 DTO、实例/目录/账号/窗口 DTO |
+| `auth` | 离线、微软、Yggdrasil、authlib-injector、账号存储和实例账号解析 |
+| `config` | `BackendConfig`、默认数据/游戏目录和启动目录创建 |
+| `download` | 下载模型、监听器、文件下载器、并发执行、哈希校验、下载源 |
+| `download.plan` | 版本文件与资源对象下载计划 |
+| `error` | 稳定错误码 `BackendError` 和结构化异常 |
+| `instance` | 实例名规则、版本安装、继承解析、隔离布局、实例检查、图标/元数据 |
+| `io` | 路径越界防护 `SafePaths` |
+| `json` | Gson 文件读写 |
+| `language` | 语言初始化、发现、目录加载、回退、格式化与事件发布 |
+| `launch` | 启动计划、classpath、参数、natives、进程、兼容修复与预检 |
+| `loader` | Fabric/Quilt/Forge/NeoForge/OptiFine 版本查询和安装 |
+| `log` | UI 日志 `latest.log`、失败归档 |
+| `metadata` | 版本清单、版本 JSON、规则、继承合并 |
+| `mod` | Modrinth/CurseForge 搜索、详情、依赖展示、下载和图标 |
+| `runtime` | 游戏 Java 检测、要求匹配、托管仓库和 Foojay 下载 |
+| `settings` | `settings.properties` 持久化 |
+| `system` | 系统/设备/内存/依赖信息和目录打开 |
+| `theme` | 外部 CSS 主题扫描、默认主题复制和选择持久化 |
 
-### 3.2 下载
+## 4. 后端生命周期
 
-- 生成客户端 jar、libraries、natives、asset index 下载计划。
-- 旧式 Forge library 根据 `name/url/checksums/clientreq` 推导 Maven 下载。
-- 生成 assets objects 下载计划。
-- 使用 SHA-1 校验。
-- 使用 `.part` 临时文件和原子移动。
-- 已知大小且不小于 4 MiB 的文件先探测 HTTP Range，支持时拆成最多 4 个分片并发下载；
-  分片检查点写入同目录 `.part.json`，中断后从已确认偏移继续，Range 不可用或服务端忽略 Range 时回退单流。
-- 文件下载响应体使用空闲读超时（默认 30 秒）；超过时限没有收到数据时关闭响应流并触发重试，
-  元数据 HTTP 客户端也用总截止时间覆盖响应体读取，避免 read 永久阻塞。
-- JSON/XML 元数据使用解析型请求；HTTP 2xx 但 JSON 无效、解析异常或结果为空时继续尝试下一个候选源，
-  只有最后一个候选源合法返回空结果时才作为空数据返回。
-- 下载使用 HTTP/1.1；默认总计最多 6 次尝试，候选源按轮次轮流并短暂退避，最终错误包含下载项和地址。
-- 版本清单和版本 JSON 使用手动逐跳重定向和整次请求总截止时间；同一候选地址超时或连接失败时
-  重试一次，避免 BMCLAPI 单次 302 落到慢节点后长时间卡住，仍失败才切换下一个下载源或读取缓存。
-- 使用有界线程池并发执行下载，并发数由设置决定（1–256，默认 8）。
-- 下载链路接受 `DownloadCancellationToken`；文件下载在候选重试、单流读取和分片循环中检查令牌。
-  `DownloadExecutor` 在失败或取消时取消剩余 Future、关闭线程池并等待 worker 终止，
-  超时后记录警告，避免失败返回时仍有 worker 写盘。
-- 下载监听同时提供单文件进度、计划级聚合摘要和阶段事件；聚合摘要包含已下载字节、
-  已知总字节、已完成文件数和总文件数，供进度页计算总进度。
-- 下载源支持“尽可能使用镜像源”“尽可能使用官方源”和“自定义镜像根地址”三种模式；
-  默认镜像源，镜像失败时回退原始官方地址；覆盖版本清单、版本 JSON、版本文件、库、资源、
-  Fabric/Quilt/Forge/NeoForge/OptiFine 元数据、Fabric/Quilt Maven 依赖和加载器 installer/API。
-- Fabric Loader/API、Quilt Loader/Quilted Fabric API、Forge、NeoForge、OptiFine 的版本列表
-  按“加载器类型 + 游戏版本”在内存中缓存 5 分钟；下载源变化时缓存整体失效，避免切换源后继续显示旧列表。
-- 已有有效文件时跳过。
+`CAMLApplication.init()` 创建 `CAMLBackend(BackendConfig.defaults())` 并调用 `start()`。
 
-### 3.3 实例安装
+`CAMLBackend.start()` 的固定顺序：
 
-- 按版本 ID 安装原版。
-- 远程安装区分官方版本 ID 和实例 ID：官方 ID 用于拉取元数据，实例 ID 用作 `versions/<id>` 目录名和当前实例名。
-- 实例名默认官方版本号；原版、Fabric、Forge、NeoForge 统一拒绝空名、非法字符和已存在实例目录。
-  前端在输入停止约 0.5 秒后异步检查，并在输入框下方显示格式、重复目录和加载器同名提示；
-  检查通过前下载按钮保持禁用。
-- 本地已安装的版本（包括第三方启动器/整合包的自定义版本 ID）直接复用，不访问官方清单。
-- 复用本地版本时保持版本 JSON 不变，只补齐缺失文件。
-- 本地版本以 `versions/<id>` 文件夹名作为版本 ID；`inheritsFrom` 也按文件夹名查找父版本。
-- 安装完成后把 manifest 的 `id` 统一为文件夹名；客户端 jar 按 `jar` 字段回退到实例 ID。
-- 基础文件下载完成后才写入版本 JSON。
-- 返回 `InstalledVersion`，包含后续启动需要的路径。
-- Fabric 安装先确保原版父版本存在，再写入 Fabric Meta profile JSON，并把可选 Fabric API jar 放入实际游戏目录的 `mods`。
-- Quilt 安装复用同一套 profile 流程：先确保原版父版本存在，再写入 Quilt Meta
-  `v3/versions/loader/<game>/<loader>/profile/json` 的 profile JSON，并把可选 Quilted Fabric API jar 放入实际游戏目录的 `mods`。
-  Quilt Meta 的版本列表把信息嵌在 `loader` 对象中，`build` 不能用于比较新旧，列表按语义化版本排序；
-  未收录的游戏版本返回 404 时按“无可用版本”处理。
-- Forge/NeoForge 先按当前下载源把 installer 的 `version.json` / `install_profile.json` 依赖预下载到 staging，
-  再通过官方 installer 的 `--installClient` 执行 processor，避免 installer 绕过镜像直连官方 Maven。
-- Forge/NeoForge 版本列表在镜像源下优先读取 BMCLAPI 的按 Minecraft 版本 JSON 接口；
-  官方源使用 Maven 元数据，NeoForge 通过版本号规则映射到实际 Minecraft 版本，不再逐个下载 installer 探测。
-- OptiFine 按下载源选择官方下载页或 BMCLAPI 获取版本和 installer；先安装 Forge，再调用 OptiFine
-  官方 installer 的 `doInstall` 生成补丁库，最后把 OptiFine 库和启动参数合并进 Forge 版本 JSON。
-- OptiFine I6 与 Forge 47.4.27+ 存在 `ResourceLocation.parse` 冲突；选择 OptiFine 时限制并自动切换到兼容的 Forge 版本。
-- OptiFine 只允许与 Forge 组合；选择 Fabric/NeoForge 时 OptiFine 选项会被清空并禁用。
-- `CAMLBackend.inspectGameDirectory` 扫描 `versions/<id>/<id>.json`，返回已安装版本和隔离版本列表。
+1. `BackendPaths.ensure()` 创建数据目录、`logs`、`cache`、`themes`、`java`、游戏目录和 `versions`。
+2. `ThemeService.ensureDefaultTheme()` 在缺少 `mango.css` 时从 classpath 复制默认主题，不覆盖已有文件。
+3. `LatestLogService.start()` 截断并打开 `logs/latest.log`。
+4. `LanguageService.initialize()` 同步内置语言、读取语言设置并建立语言快照。
+5. 读取下载并发数和下载源，应用到版本安装器、外部加载器安装器和全部 HTTP 客户端。
+6. 读取自动游戏语言、Java 选择和 authlib-injector 覆盖路径。
+7. 标记 backend ready。
 
-### 3.4 账号
+`close()` 关闭日志写入器；前端 `CAMLApplication.stop()` 还会先提交窗口/设置、释放页面、关闭控制器线程池。
 
-- 离线账号登录、稳定离线 UUID、生成 `AuthSession`。
-- 第三方 Yggdrasil 认证服务器（LittleSkin 等）登录：`authenticate` 后若 token 未绑定角色，
-  立即用 `refresh` + `selectedProfile` 补绑定；启动时**直接 `refresh`**（而非先 `validate`），
-  这样历史遗留的未绑定 token 会自愈。`userType` 固定为 `mojang`，
-  `selectedProfile.id` 的 32 位 ID 转换为标准 UUID。
-- 微软设备码登录：OAuth → Xbox Live → XSTS → Minecraft Services，检查许可证与 profile，
-  `userType` 固定为 `msa`；启动时 access token 未过期则复用，否则自动 refresh。
-- 多角色账号：登录响应里的 `availableProfiles` 一并持久化，设置页可切换角色；
-  切换同样走 `refresh` + 目标角色，账号 id 保持不变。
-- “不记住登录”时 accessToken 只留在后端进程内存中：本次运行可启动，重启后要求重新登录。
-- 启动时通过 authlib-injector 以 `-javaagent` 注入，只增加 JVM 参数，不修改版本 JSON、
-  `libraries` 或 classpath。
-- authlib-injector **只下载一次**：落在 `~/.caml/authlib-injector/<版本>/`，之后每次启动只用
-  SHA-256 校验，命中即复用；版本升级或文件被改动时才重新下载，也可在设置页指定自定义 jar。
-- 认证服务器 metadata 三级缓存（网络 → 内存 → `~/.caml/accounts/servers.json`），
-  冷启动或皮肤站维护期间仍能注入 `prefetched`；metadata 获取失败不阻塞登录。
-- 账号归属：设置页维护全局账号列表与默认账号，主页“实例账号”二级页为每个实例单独指定账号；
-  未单独指定的实例回退到全局默认账号。
-- 实例绑定以“游戏目录 + 实例名”为键；修改游戏位置后旧绑定不会自动生效，
-  主页“实例账号”页会提示受影响的实例并提供一键重新套用。
-- `accessToken` 用 AES-GCM 加密后写入 `~/.caml/accounts/accounts.json`；密码不落盘。
-- 详细说明见 [auth.md](auth.md)。
+## 5. 数据目录
 
-### 3.5 Java
+默认 `BackendConfig`：
 
-- 扫描 `java.home`、`JAVA_HOME`、`PATH` 和常见 JDK 目录。
-- 读取 Java 版本、供应商、架构和位数。
-- 根据版本 JSON 的 `javaVersion` 生成 `JavaRequirement`。
-- 选择满足要求的 JavaRuntime。
-- Windows 优先使用 `javaw.exe`。
-- 详细说明见 [runtime.md](runtime.md)。
+- 数据目录：`~/.caml`
+- 游戏目录：`~/.minecraft`
+- 两者在 Windows/Linux 都以用户主目录为基准，避免安装目录只读问题。
 
-### 3.6 启动计划
+| 路径 | 内容 |
+|---|---|
+| `~/.caml/settings.properties` | 游戏位置、隔离、内存、JVM 参数、下载、Java、语言、窗口、账号绑定、禁用 Mod 等 |
+| `~/.caml/theme.txt` | 当前主题 ID |
+| `~/.caml/themes/*.css` | 外部主题；默认 `mango.css` 首次启动复制 |
+| `~/.caml/lang/*.json` | 运行时语言文件；内置语言随启动器版本同步 |
+| `~/.caml/logs/latest.log` | 本次 UI 日志；有失败时退出额外生成 `.log.gz` 归档 |
+| `~/.caml/cache/version_manifest_v2.json` | 版本清单缓存 |
+| `~/.caml/cache/mod-icons/` | Mod/光影/资源包图标缓存（WebP 转 PNG） |
+| `~/.caml/java/<platform>/<name>/` | CAML 托管 Java |
+| `~/.caml/accounts/accounts.json` | 账号索引，token 字段加密 |
+| `~/.caml/accounts/secret.key` | 本机账号加密密钥 |
+| `~/.caml/accounts/servers.json` | Yggdrasil metadata 磁盘缓存 |
+| `~/.caml/authlib-injector/1.2.5/` | authlib-injector jar 与 SHA-256 记录 |
+| `~/.minecraft/versions/<id>/` | 版本 JSON、客户端 jar、natives、实例数据 |
+| `~/.minecraft/libraries/` | 全局库 |
+| `~/.minecraft/assets/` | 资源索引、objects、log_configs、虚拟资源 |
+| `~/.minecraft/mods|resourcepacks|shaderpacks/` | 非隔离实例内容目录 |
 
-- 生成不可变 `LaunchPlan`。
-- 合并 `InstalledVersion`、`AuthSession`、`JavaRuntime`、目录和 `LaunchOptions`。
-- 支持内存、分辨率、JVM 参数、游戏参数和环境变量。
-- 启动计划创建时校验 Java 是否满足版本要求。
-- **版本隔离**：界面持久化 `VersionIsolationMode.FULL` 或 `NONE`。`FULL` 始终把
-  `--gameDir` 指向 `versions/<id>`，`NONE` 始始终指向 `.minecraft` 根目录；
-  `libraries` 与 `assets` 始终来自根目录。旧 API 仍可使用 `AUTO` 按
-  `saves`、`options.txt` 等标记自动检测。`GameLaunchService` 接收显式模式并调用
-  `GameDataLayout.resolve`。
+版本隔离只改变“游戏数据目录”，`libraries` 与 `assets` 始终位于 `.minecraft` 根目录。
 
-### 3.7 classpath
+## 6. 核心链路
 
-- 按规则筛选 libraries。
-- 排除 native-only library。
-- 跳过 `clientreq=false`。
-- 按 `group:artifact:classifier` 与目标路径去重，子版本优先。
-- 子版本库排在父版本库前，客户端 jar 按 `jar` 字段追加在最后。
-- LaunchWrapper 版本若带 OptiFine，原版客户端 jar 改为排在 OptiFine 补丁 jar 前。
-  OptiFine 归档自带 `anb.class`，若它先被 FML 读到，Forge 的 binpatch 会因 Adler-32
-  不一致直接退出；这样排序后 FML 读取的是 Mojang 原版类。
-- 使用平台路径分隔符拼接。
+### 6.1 元数据
 
-### 3.8 启动参数
+- 版本清单默认地址：`https://piston-meta.mojang.com/mc/game/version_manifest_v2.json`。
+- 版本 JSON 下载后按清单中的 SHA-1 校验，再解析为 `VersionInfo`。
+- 清单网络失败时回退 `version_manifest_v2.json` 磁盘缓存。
+- `ManifestResolver` 负责 `inheritsFrom`：标量由子版本覆盖，game/JVM 参数合并，libraries 子版本优先，`jar` 默认继承。
+- 规则由 `RuleEvaluator` 按顺序匹配，最后一个匹配规则决定 allow/deny；无规则默认允许。
 
-- 构建 JVM 参数和游戏参数。
-- 支持内存、分辨率、用户自定义参数和环境变量。
-- 替换认证、版本、目录、classpath 等 `${...}` 占位符。
-- 处理 `has_custom_resolution` 等 features 规则。
-- 支持旧版 `minecraftArguments`。
-- 自动补充 `-Djava.library.path` 和 `-cp`。
+### 6.2 下载
 
-### 3.9 natives 与日志配置
+- 下载源模式：镜像、官方、自定义。镜像默认 BMCLAPI，最终仍追加原始官方 URL 作为兜底。
+- `FileDownloader` 对已有且校验通过的文件直接跳过。
+- 已知大小且不少于 4 MiB 的文件先探测 HTTP Range；支持时最多 4 段并行，全局最多 8 个分段槽位。
+- 分片下载使用 `.part` 和 `.part.json` 检查点，校验 ETag/Last-Modified，支持断点续传；Range 失效时清理分片并回退单流。
+- 所有路径使用临时文件，大小与哈希/自定义校验通过后原子移动到目标；失败或取消清理临时文件。
+- `DownloadExecutor` 使用 1–256 的并发数聚合多项进度；安装器依赖缺少声明大小时，从实际响应动态补齐总字节数。
 
-- 清理旧 natives 目录。
-- 解压当前系统的 native jar。
-- 根据版本 JSON 的 `-Djava.library.path=${natives_directory}/<子目录>` 决定实际解压目录。
-- 跳过 `META-INF/` 和 `extract.exclude` 指定内容。
-- 下载游戏 Log4j 配置文件。
-- 在 JVM 参数中注入 `-Dlog4j.configurationFile`。
-- 旧版本 asset index 标记为 virtual 时重建 `assets/virtual/<id>`。
-- `map_to_resources` 时同步写入 `resources`。
+### 6.3 实例与加载器
 
-### 3.10 进程启动
+- 本地已有 `versions/<id>/<id>.json` 时优先使用本地版本，不重写 JSON。
+- 远程安装使用官方版本 ID 拉元数据，可用独立实例 ID 命名目录；失败时删除新建的半成品目录。
+- 基础版本安装补齐 client、libraries、natives、asset index、assets objects 和 Logging 配置。
+- Fabric/Quilt 通过 Meta profile + `VersionInstaller.installProfile` 安装，API 文件写入实例与根目录 `mods`。
+- Forge/NeoForge 下载官方 installer，先预下载 installer 声明的库，再运行 installer processor，合并 staging 库并校验结果。
+- OptiFine 仅在 Forge 组合中启用：先装 Forge，再运行 OptiFine 官方 installer，合并库、tweak 参数并移除会误加载的 `META-INF/mods.toml`。
+- 已知兼容冲突：OptiFine 1.20.1 HD U I6 不允许 Forge 47.4.27 及以上。
 
-- 构建最终 `java + JVM 参数 + mainClass + 游戏参数` 命令。
-- 设置工作目录和环境变量。
-- 继承系统环境变量，不改写 `APPDATA`。
-- Linux 启动游戏时把 `~/.local/bin` 前插到子进程 `PATH`，供 LWJGL 2 调用外部 `xrandr -q`
-  枚举显示模式；系统包对应 `xorg-xrandr`。
-- 启动前异步预检 Linux + LWJGL 2 实例：若系统与 `~/.local/bin` 都找不到 `xrandr`，
-  前端显示非阻塞提示；预检异常或缺失提示都不会阻止后续安装和进程启动。
-- 使用 `ProcessBuilder` 启动。
-- 后台线程读取 stdout/stderr；Minecraft Log4j `LegacyXMLLayout` 事件转换为
-  `[HH:mm:ss] [线程/级别]: 消息` 后再转发到界面。
-- 提供退出码回调和停止能力。
-- 命令行过长时，Java 9+ 自动使用 `@argfile`。
-- Java 8 或 argfile 失败时使用 manifest classpath jar。
-- 两种回退都失败时抛出明确异常。
-- `LaunchException` 区分命令行过长、权限不足、找不到 Java 和其他启动失败。
-- 每种错误提供用户可读提示文本。
-- `GameLaunchService` 串联安装、离线登录、Java 选择、LaunchPlan、classpath、natives 和进程启动。
-- 版本隔离只改变 `workingDirectory` 与 `--gameDir`，不改变环境变量。
+### 6.4 启动
 
-### 3.11 前端界面
+`GameLaunchService.launch()` 的顺序：
 
-- `CAMLApplication` 初始化后端并创建 `MainView`。
-- `MainView` 只负责壳层：顶栏、主导航、`CamlPageHost` 和底栏。
-- `MainController` 只组合 `HomeController`、`DownloadsController` 和 `SettingsController`；
-  共享的 `ControllerContext` 负责后端访问、I/O 线程和日志回调。
-- 控制器的异步方法统一返回 `AsyncTaskHandle<T>` 任务句柄。页面持有句柄，在离开或销毁时取消；
-  取消会停止 UI 回调并尽力中断后台线程，但后端已开始且不响应中断的操作仍可能继续。
-- 页面实现 `PageLifecycle` 的 `onShow` / `onHide` / `dispose`。`MainView`、
-  `DownloadsView`、`HomeView` 和 `SettingsView` 在页面切换时统一分发这些回调，
-  页面据此启动、暂停或释放任务、订阅和定时器。
-- 异步失败统一走 `ControllerContext.reportError`：记录日志、写入 UI 日志，并把错误消息
-  切回 JavaFX 线程交给页面展示；启动失败等致命路径额外标记错误日志。
-- `HomeView` 组合 `LaunchFormView` 与 `LogPaneView`，负责主页分栏和 900px 断点。
-- `LaunchFormView` 负责当前实例、账号选择、离线用户名、状态提示和启动交互；
-  “浏览游戏实例”打开二级列表，“管理实例”打开管理页，“实例账号”打开按实例绑定账号的二级页。
-- `GameLocationSettingsView` 负责游戏位置草稿、浏览、显式保存和目录校验。
-- `InstancePickerView` 扫描当前游戏位置并列出全部已安装实例。
-- `DownloadsView` 负责下载页子导航；`DownloadVersionsView` 加载正式版、快照版和远古版列表，
-  `DownloadVersionSetupView` 负责实例命名、版本信息、Forge/OptiFine/Fabric/NeoForge 选择；
-  OptiFine 只有在选择 Forge 后才可用。下载设置页提交不可变 `DownloadRequest` 后，
-  `DownloadProgressView` 接管页面，展示网速、总进度、当前文件和阶段列表；
-  `DownloadTelemetry` 在后台事件与 JavaFX 轮询之间聚合进度和网速。
-- 模组子页由 `ModSearchView`、`ModDetailView`、`ModViewSupport` 和纯计算的
-  `ModDownloadLayout` 组成。`ModDownloadLayout` 的设计基准是 `UiScale` 的 `1440×900`，
-  所有几何常量都是设计像素，使用前统一乘以同一个缩放因子，因此大屏与小屏上的比例一致。
-  所有断点按 *内容区宽度*（已扣除左侧导航）判断，而不是假设窗口拥有 1080p 的逻辑像素：
-  侧边栏取窗口宽度 `1/6` 并钳制在 `180–260`（设计像素，同样乘以因子），内容区留白 `40/32`，
-  卡片内边距 `24`、内部间距 `18`，字段列与下拉列权重 `2:1`，结果行图标 `88`、最小行高 `112`；
-  内容宽度 `>= 660` 用“标签在左”的两行两列，`520–659` 用“标签在上”的两行两列，
-  `< 520` 用单列堆叠，切换时控件尺寸、行高和字号保持不变。
-- `ModSearchView` 把搜索卡、状态、结果列表和分页放进同一个 `ScrollPane`：
-  高度不足时由整页纵向滚动接管，因此结果行不会被裁切，也不需要压缩行高。
-  表单每次切换方向时由 `applyPlan` 重新挂载到 `formHost`，几何参数全部来自 `ModDownloadLayout`。
-- 模组结果行由 `ModViewSupport.resultRow` 组装成叠层容器：下层是铺满整行的透明
-  `CamlButton`（点击、悬停、焦点与无障碍文本），上层是只读正文与左侧强调条。
-  行高由图标 `88` 加上下内边距 `12` 决定，不使用按钮 `graphic` 承载正文——
-  `caml.css` 的 `-fx-min-height: 44` 会覆盖代码设置，再叠加 `Region.USE_PREF_SIZE`
-  会使皮肤首选高度塌陷为 `0`，正文就会溢出到相邻行。`ModResultRowLayoutTest`
-  用真实样式表在 JavaFX 工具里守住行高、图标边界与点击层覆盖范围。
-- `GameSettingsView` 负责叠层内存滑块，`DownloadSettingsView` 负责下载源三选一、
-  自定义 API 输入和 1–256 下载并发滑块，
-  `LauncherSettingsView` 负责外观设置中的主题选择。
-- `SystemMemoryService` 在 Linux 读取 `/proc/meminfo` 的 `MemAvailable`，避免把
-  `MemFree` 误当成任务管理器显示的可用内存。
-- `SettingsController` 只在设置页可见时每 500ms 在后台线程读取一次系统内存，
-  并通过 `Platform.runLater` 立即刷新设置页。
-- 游戏位置、版本隔离、下载源、下载并发数、最大内存和最后启动实例保存在
-  `~/.caml/settings.properties`，启动时加载；游戏位置只有点击保存才写入，其余选项立即写入。
-  设置写入由串行写锁保护，并通过临时文件原子替换设置文件。
-- Java 选择模式、当前 Java 路径和手动 Java 列表保存在 `~/.caml/settings.properties`；
-  自动模式按版本 Java 要求选择运行时，手动模式在启动时使用用户选中的可执行文件。
-- Java 候选由 `JavaLocator` 扫描结果和手动列表按真实路径去重合并；设置页“重新扫描”
-  只刷新扫描结果，不丢弃手动添加项。
-- `LaunchSettings` 在主页和设置页之间共享游戏位置、版本隔离和最大内存值；`ViewSupport` 提供通用字段与侧边栏布局。
-- 当前实例通过共享 `LaunchSettings.selectedVersion` 管理；启动器初始化时恢复 `lastInstanceId`，实例信息下方显示存档位置。
-- `ControllerContext` 使用独立下载线程执行目录探测和下载，实例名检查使用独立短任务线程，
-  元数据、Java 扫描、启动和设置保存分别使用独立线程；
-  `HomeController` 负责启动派发，不阻塞 JavaFX Application Thread。
-- 下载日志按文件切换和每 10% 进度节流，避免刷屏。
-- 主工作区使用 `SplitPane`：宽度 `< 900` 时上下堆叠，`>= 900` 时左右分栏。
-- 断点切换时放宽表单和日志的最小高度，表单和日志在堆叠时仍然都能看到。
-- `UiScale`（`org.chs.camlauncher.front`）是唯一的界面缩放规则：设计基准窗口 `1440×900`、
-  基准根字号 `16px`，因子取 `min(窗口宽/1440, 高/900)` 并量化到 `1/16`（根字号整数像素），
-  钳制在 `0.6875–1.375`（根字号 `11–22px`）。
-- `MainView.updateUiScale` 把因子换算成根字号写入根节点内联样式；`CAMLUI/caml.css` 与
-  `styles/app.css` 中除 `1px` 描边外的所有长度都用 `em`，因此字号、控件尺寸、圆角、留白
-  与内边距随窗口等比缩放。无法用 CSS 表达的几何（模组页、工作区分栏、侧边栏宽度）
-  在 `ModDownloadLayout` / `WorkspaceLayout` / `DownloadsView` 中用同一个因子换算，两处结果一致。
-- 代码只负责结构与布局方向，几何要么写在 CSS（`em`），要么由布局类按因子给出，
-  同一属性不在两处同时赋值——JavaFX 中 AUTHOR 样式表会覆盖代码设置。
-- `WindowSizePlanner` 按主屏可用区域计算窗口初始尺寸、最小尺寸和居中位置：初始尺寸取可用区域的
-  `68%`/`74%`，上限与下限由 `UiScale` 推导（`1980×1237` 与 `990×618`，即设计基准放大到最大因子 /
-  缩小到最小因子），因此窗口始终落在“界面能按比例完整显示”的区间内；`WorkspaceLayout` 负责
-  900px 断点参数。
-- 启动设置是主区域，日志是支持面板；表单字段采用“标签在上、控件在下”的稳定结构。
-- 启动按钮固定在表单底部，字段过多时只滚动字段区域，主操作始终可见。
-- 顶栏只保留应用身份和“主页 / 下载 / 设置”主导航。
-- 主页承载启动设置和日志；下载页带“正式版 / 快照版 / 远古版”胶囊、分类版本列表和原版下载设置页。
-- 设置页带“游戏设置 / 下载设置 / 账号 / 外观”子侧边栏，不显示页面标题或说明。
-- 账号子页维护全局账号列表、默认账号、第三方登录与 authlib-injector 覆盖路径。
+1. `VersionInstaller.install()` 确保版本文件完整。
+2. 按自动或手动模式选择 Java；自动模式读取版本 `javaVersion.majorVersion`，缺省为 8。
+3. 按 `VersionIsolationMode` 解析游戏数据目录。
+4. 可选写入首次游戏语言；应用 NeoForge 26.2 + Vulkan 修复。
+5. 创建不可变 `LaunchPlan`，可选注入 authlib-injector。
+6. 为旧资源索引准备 virtual assets，解压 natives。
+7. 构建 classpath、JVM 参数和游戏参数，启动子进程。
+8. 后台线程读取 stdout/stderr，转换 Log4j XML 为 `[HH:mm:ss] [线程/级别]: 消息`，退出时回调退出码。
 
-### 3.12 CAMLUI 组件库与主题
+Linux + LWJGL 2 启动前会异步检查 `xrandr`；缺失时前端显示非阻塞提示，但启动任务已经提交，不改变启动结果。
 
-- 独立 Gradle 模块 `CAMLUI`，只依赖 JavaFX controls。
-- 不引入 JFoenix、AtlantaFX 等第三方主题库。
-- `caml.css` 只定义结构、字体层级、圆角、阴影和控件状态，不包含固定颜色。
-- `CamlTheme.install(scene)` 安装结构样式；`CamlTheme.applyTheme(scene, path)` 加载外部 CSS。
-- 主题文件位于 `~/.caml/themes/*.css`，设置 → 外观提供主题选择器。
-- 当前主题记录在 `~/.caml/theme.txt`，下次启动自动恢复。
-- 后端 `ThemeService` 负责扫描主题、首次复制默认主题和保存选择。
-- 默认主题 mango 作为 `CAMLBackend/src/main/resources/themes/mango.css` 打包，
-  首次启动复制到 `~/.caml/themes/mango.css`。
-- 默认主题使用白底、灰色表面、黄色强调色和深色文字。
-- 组件 API 包括 `CamlButton`、`CamlCard`、`CamlTextField`、`CamlTextArea`、
-  `CamlSelectableText`、
-  `CamlComboBox`、`CamlSpinner`、`CamlSwitch`、`CamlCheckBox`、`CamlSlider`、
-  `CamlMemorySlider`、`CamlRadioButton`、`CamlProgressBar`、`CamlSideNav`、`CamlSideNavItem`、`CamlTopNav`、
-  `CamlTopNavItem`、`CamlPageHost` 和 `CamlTopBar`。
-- `CAMLFront` 依赖 `CAMLUI` 和 `CAMLLanguage`，不再把控件外观或界面文案写死在业务界面里。
+### 6.5 账号
 
-### 3.13 前端多语言
+- 离线账号：稳定离线 UUID，仅本地。
+- 微软账号：OAuth 2.0 设备码 → Xbox Live → XSTS → Minecraft Services → entitlements/profile；accessToken 与 refreshToken 加密保存，启动前按过期时间刷新。
+- Yggdrasil：metadata、authenticate、refresh、validate；支持多角色切换。网络/5xx/限流按“暂不可用”分类，可继续使用已有 token。
+- 实例账号优先，其次全局默认账号；未配置账号时主页可退回输入的离线用户名。
+- 第三方账号通过 authlib-injector `-javaagent` 注入，不修改版本 JSON、libraries 或 classpath。
 
-- 多语言契约位于独立的 `CAMLLanguage` 模块，分为 `contract` 和 `generator` 两个包；内置资源放在
-  `CAMLLanguage/src/main/resources/lang/<locale>.json`。
-- 运行时的唯一入口是后端 `org.chs.camlauncher.backend.language.LanguageService`。它负责：
-  安装和同步内置语言、扫描自定义语言、检测系统语言、读取和校验 JSON、逐键回退、
-  占位符格式化、维护不可变快照、发布结构化事件，并写入运行日志。
-- `CAMLApplication` 启动时由 `CAMLBackend.start()` 初始化语言服务；前端通过
-  `UiText.initialize(backend.languageService())` 取得只读显示入口。
-- 语言文件同步到 `~/.caml/lang`：内置同名文件与资源按键值比对，不一致（含 JSON 损坏）就原子重写；
-  非内置语言文件原样保留。
-- 语言选择顺序：系统属性 `caml.language` → 系统语言。默认语言是 `en_us`，所以不检测英语系统，
-  只检测已内置且允许自动切换的系统语言：`zh_CN`、`zh_SG`、脚本 `Hans` 等简体中文系统使用 `zh_cn`；
-  `zh_TW`、`zh_HK`、`zh_MO`、脚本 `Hant` 等繁体中文系统使用 `zh_tw`；`ja` 使用 `ja_jp`、
-  `ko` 使用 `ko_kr`、`fr` 使用 `fr_fr`、`de` 使用 `de_de`、`ru` 使用 `ru_ru`；
-  其余系统（含英语）一律使用默认语言。拉丁文 `la_la` 与藏文 `bo_cn` 不参与检测，
-  只能在手动模式下选择。找不到对应文件时回退默认语言。
-- 语言下拉框中的语言名**不参与翻译**：后端 `LanguageService.displayName(locale)` 直接查
-  `LanguageLocales` 的运行时名称表，既不读取翻译文件也不经过当前界面语言，因此 `zh_cn` 永远显示
-  “简体中文”、`zh_tw` 永远显示“繁體中文”、`en_us` 永远显示“English”、`fn_cn` 永远显示“地道中国话”、
-  `ja_jp` 永远显示“日本語”、`ko_kr` 永远显示“한국어”、`fr_fr` 永远显示“Français”、
-  `de_de` 永远显示“Deutsch”、`ru_ru` 永远显示“Русский”、`la_la` 永远显示“Latina”、
-  `bo_cn` 永远显示“བོད་ཡིག”；翻译文件写错名称或用户改坏语言文件都不会影响下拉框。
-  未登记的自定义语言显示 locale 标识。
-- 新增内置语言需要在四处登记：`generator.lang` 下的生成器、`TranslationGeneratorRunner` 的列表、
-  `LanguageConstants.BUNDLED_LOCALES`（决定安装、同步与下拉框顺序）以及后端 `LanguageLocales` 的名称表；
-  需要参与自动检测的语言还要在 `LanguageLocales.DETECTED_LANGUAGE_LOCALES` 中登记语言代码。
-- 设置 → 外观 → 语言提供自动/手动两种模式；模式与手动语言写入
-  `~/.caml/settings.properties` 的 `languageMode`、`language`。手动切换后
-  `CAMLApplication` 复用当前 `LaunchSettings` 快照重建 `MainView`，立即应用新语言。
-- 语言回退由 `LanguageFallbackMode` 控制：`SYSTEM` 只使用系统检测语言，`DEFAULT` 固定
-  `en_us`，`KEY` 不补齐缺失键，`CUSTOM` 只使用选择的自定义 locale。除 `DEFAULT` 外，
-  缺失内容显示裸键。模式和自定义 locale 持久化为 `languageFallbackMode`、`languageFallbackLocale`。
-- `LanguageTranslationGenerator` 是开发期生成器基类，负责写 JSON；`TranslationTable` 按键排序保存文案，
-  `put(key, value)` 为实例方法并拒绝重复键。生成器、`TranslationTable` 和 `TranslationGeneratorRunner`
-  全部位于 `org.chs.camlauncher.language.generator`，不参与运行时语言逻辑。
-- `TranslationGeneratorRunner` 遍历生成器；Gradle 任务 `:CAMLLanguage:generateTranslation`
-  先编译再生成，`.run/generateTranslation` 提供 IDEA 入口。
-- `LanguageTest` 只校验生成器输出与已提交 JSON 一致、`BUNDLED_LOCALES` 与生成器一一对应、
-  各语言键集合相同和重复键保护。
-- 后端 `LanguageServiceTest` 覆盖安装修复、系统语言检测、逐键回退、缺键诊断、自定义语言和文件损坏。
-- 下载阶段使用 `DownloadStage` 稳定键和可选参数，由后端语言服务按当前快照翻译，前端只显示最终文本。
-- 后端用户可见失败使用 `BackendError(code, args)` / `BackendException` 传递；
-  前端 `ControllerContext` 按 code 翻译，未结构化异常统一显示 `error.unknown`，
-  原始异常消息只写入开发日志。
+### 6.6 内容下载
 
-## 4. 尚未实现的能力
+- `ModService` 聚合 Modrinth 与 CurseForge，支持 MOD、SHADER、RESOURCE_PACK 三种内容类型。
+- Modrinth 使用官方 v2 API；CurseForge 使用官方 v1 API，要求 API Key。
+- 搜索结果按 50 条上限分页；双来源模式按下载量合并。
+- 文件下载支持 SHA-1，CURSEFORGE 文件缺少 SHA-1 时可回退 MD5。
+- 图标由后端下载并缓存；Modrinth WebP 在后端转 PNG 后交给 JavaFX。
+- 管理实例页可检查本地 Mod 更新：Modrinth 使用哈希匹配，CurseForge 使用 MurmurHash2 指纹匹配。
 
-- 启动器隐藏/保留/关闭策略。
-- 异常退出分类和崩溃分析。
-- CAMLFront 启动错误对话框。
-- CAMLFront 停止游戏按钮。
-- 真实 Minecraft 客户端端到端验证。
-- 启动脚本导出。
-- 微软浏览器授权码回调、皮肤/披风上传（设备码登录已实现）。
-- 第三方账号的 2FA / OAuth 登录。
-- 下载取消和内容寻址缓存。
-- 整合包和模组管理。
+### 6.7 设置、主题、语言和日志
 
-## 5. 数据与安全原则
+- 设置写入由写锁串行化，使用临时文件 + 原子替换；读取失败按默认值降级。
+- 主题来自 `<data>/themes/*.css`，后端只持久化 ID，前端负责加载 CSS。
+- 内置语言为 `zh_cn`、`zh_tw`、`en_us`、`fn_cn`、`ja_jp`、`ko_kr`、`fr_fr`、`de_de`、`ru_ru`、`la_la`、`bo_cn`；语言文件由生成器生成，前后端不手改 JSON。
+- `LatestLogService` 异步写入 UI 日志；检测到异常/失败关键字或显式标记失败时，退出后额外压缩归档。
 
-- 版本元数据以官方 `version_manifest_v2.json` 和单版本 JSON 为准。
-- 下载必须校验 SHA-1，先写临时文件，校验通过后再原子移动。
-- 缓存和实例目录必须有明确边界。
-- 启动器数据默认放在 `~/.caml`。
-- 外部主题放在 `~/.caml/themes`，启动器不覆盖用户已有主题。
-- 游戏数据默认放在 `~/.minecraft`（所有平台都以用户主目录为基准）。
-- 微软登录只使用官方 OAuth 流程，不收集用户密码。
-- refresh token 不得明文保存，不得写入日志。
-- 第三方账号密码只在登录时使用，不落盘；accessToken 用 AES-GCM 加密后写入
-  `~/.caml/accounts/accounts.json`，密钥在 `~/.caml/accounts/secret.key`。
-  这只是避免明文落盘，<b>不构成安全边界</b>。
-- 版本 JSON、`libraries` 和 classpath 不因登录方式变化：第三方登录只注入 JVM 参数。
+## 7. 前端架构
 
-## 6. 后端入口
+`CAMLApplication` 负责后端初始化、主题/语言加载、窗口几何、场景根切换和关闭清理。`MainView` 是应用壳层：
 
-主要入口是：
+- 顶栏主导航：主页 / 下载 / 设置。
+- 页面内容交给 `CamlPageHost`，支持页面与侧栏的淡入/位移过渡。
+- 全局 `StackPane` 遮罩层承载 Java 下载、xrandr 提示等应用内弹窗。
+- 底栏显示版本、后端就绪状态和数据目录。
 
-```text
-org.chs.camlauncher.backend.api.CAMLBackend
-```
+页面控制器通过 `ControllerContext` 访问后端。控制器只处理参数、任务派发和 UI 回调，不直接触碰磁盘/网络/进程。
 
-当前主要 API：
+`CAMLApplication.rebuildView()` 用于语言切换后重建整个场景；重建前保存页面状态，重建后恢复设置页子项和下载分类，并处理程序化焦点落点。
 
-```java
-backend.start();
-backend.installVersion("1.21.5", listener);
-backend.loginOffline("Steve");
-backend.javaLocator();
-backend.fetchVersionManifest();
-backend.createLaunchPlan(installed, auth, java, options);
-backend.classpathBuilder().build(plan);
-backend.jvmArgumentsBuilder().build(plan, classpath);
-backend.gameArgumentsBuilder().build(plan, classpath);
-backend.nativeExtractor().extract(plan);
-backend.virtualAssetInstaller().prepare(plan);
-backend.launchCommandBuilder().build(plan, classpath);
-backend.processLauncher().launch(plan, classpath, listener);
-backend.launchGame(versionId, gameDirectory, username, options, downloadListener, processListener);
-backend.launchGameWithAccount(versionId, gameDirectory, accountId, options, isolationMode, dl, pl);
+## 8. 并发与线程模型
 
-backend.listAccounts();
-backend.loginYggdrasil(apiRoot, username, password, remember);
-backend.addOfflineAccount(username);
-backend.removeAccount(accountId);
-backend.setDefaultAccountId(accountId);
-backend.setInstanceAccountId(gameDirectory, instanceId, accountId);
-backend.setAuthlibInjectorPath(jar);
+后端所有阻塞操作由前端线程池移出 JavaFX Application Thread：
 
-GameDirectoryInfo info = backend.inspectGameDirectory(gameDirectory);
-info.installedVersions();
-info.isolatedVersions();
-```
+| 线程池 | 线程/并发 | 用途 |
+|---|---:|---|
+| `caml-download-worker` | 1 | 普通下载、目录检查等长任务 |
+| `caml-settings-worker` | 1 | 设置写入 |
+| `caml-check-worker` | 1 | 实例名、目录、启动环境检查 |
+| `caml-metadata-worker` | 6 | 版本/加载器/Mod 元数据 |
+| `caml-mod-icon-worker` | 8 | 图标下载 |
+| `caml-mod-icon-retry` | 4 | 图标延迟重试 |
+| `caml-java-worker` | 1 | Java 扫描、添加、下载 |
+| `caml-launch-worker` | 1 | 游戏安装/启动 |
 
-## 7. 相关文档
+UI 更新统一切回 `Platform.runLater`。下载页每 200ms 轮询遥测，下载任务条每 250ms 刷新，设置页内存监视每 500ms 读取一次。
 
-- 版本下载和启动链路详见 [version-download-and-launch.md](version-download-and-launch.md)。
-- 界面布局、组件映射和动效详见 [ui.md](ui.md)。
-- runtime 包详见 [runtime.md](runtime.md)。
-- 第三方账号登录详见 [auth.md](auth.md)。
+## 9. 错误与安全
+
+- 后端公开错误使用 `BackendError(code, args)`；前端通过 `LanguageTextProvider` 本地化，不显示服务器原文或 token。
+- 路径写入统一经过 `SafePaths`，拒绝越界；下载/解压也检查路径。
+- accessToken/refreshToken 使用 AES-GCM 加密后落盘；key 位于 `~/.caml/accounts/secret.key`，POSIX 下尽量收紧权限。
+- 密码不落盘、不写日志；登录后由表单清除。
+- 不打包 Minecraft 客户端 jar、assets、libraries 或游戏资源。
+
+## 10. 测试与当前限制
+
+当前测试共 103 个测试类、407 个测试方法，覆盖后端、前端和语言一致性；最近一次全量结果为 0 failure / 0 error / 0 skipped，详见 `HANDOFF.md`。
+
+当前明确未提供：
+
+- 整合包导入/导出和整合包依赖自动安装。
+- Mod 依赖的递归下载；详情页只展示依赖信息。
+- 游戏进程停止按钮；后端 `GameProcess.stop()` 已有，前端未接入。
+- 启动器自更新、代码签名和 macOS 正式包。
+- CurseForge 无内置可用 Key 时的自动获取；需要构建环境或系统属性提供 Key。
+- Microsoft OAuth Client ID 未注入时无法登录微软账号。
+
+## 11. 相关文档
+
+- [version-download-and-launch.md](version-download-and-launch.md)
+- [auth.md](auth.md)
+- [runtime.md](runtime.md)
+- [ui.md](ui.md)
+- [Implement.md](Implement.md)
+- [package.md](package.md)

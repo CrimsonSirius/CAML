@@ -1,782 +1,369 @@
-# CAML 版本下载与启动链路
+# CAML 版本下载、安装与启动链路
 
-更新日期：2026-11-07
+> 本文按当前下载/实例/启动代码重写，最后核对时间：2026-11-23；基线提交：`c86eb05`。
 
-## 1. 文档范围
+## 1. 范围
 
-本文只说明：
+覆盖：
 
-1. `Version` 如何从远程元数据解析、规划并下载到本地。
-2. 当前启动链路已经实现到哪一步，以及后续启动流程还缺什么。
+- 官方版本清单和版本 JSON；
+- 原版文件、libraries、natives、asset index、assets objects；
+- 本地版本复用、实例名和 `inheritsFrom`；
+- Fabric、Quilt、Forge、NeoForge、OptiFine 安装；
+- classpath、JVM/游戏参数、natives、virtual assets、Log4j；
+- Java 选择、版本隔离、子进程启动、日志和退出结果。
 
-总体架构、模块职责和其他模块的能力见 [architecture.md](architecture.md)。
+不覆盖 Mod/光影/资源包搜索本身；相关说明见架构文档和 UI 文档。
 
-当前状态：
+## 2. 上游地址与下载源
 
-- 版本下载链路已经可用。
-- 启动命令构建和基础进程启动已经实现。
-- JavaFX 界面已经可以选目录、选版本、启动和查看日志。
-- 启动错误对话框、停止按钮、异常退出处理和真实客户端端到端验证还没有完成。
+### 2.1 官方地址
 
-## 2. Version 下载链路
-
-### 2.1 调用入口
-
-```java
-InstalledVersion installed = backend.installVersion("1.21.5", DownloadListener.NONE);
-```
-
-调用链：
-
-```text
-CAMLBackend.installVersion(...)
-→ VersionInstaller.install(...)
-→ VersionManifestService.fetchManifestOrCache(...)
-→ VersionInstaller.resolve(...)
-→ DownloadPlanner.plan(...)
-→ FileDownloader.download(...)
-→ MetadataService.readAssetIndex(...)
-→ AssetDownloadPlanner.plan(...)
-→ FileDownloader.download(...)
-→ 原子写入 versions/<id>/<id>.json
-→ 返回 InstalledVersion
-```
-
-### 2.2 本地已有版本优先
-
-`VersionInstaller` 启动前先检查：
-
-```text
-<游戏目录>/versions/<id>/<id>.json
-```
-
-只要该文件存在，就直接使用**本地版本 JSON**，不会访问官方版本清单。
-因此版本 ID 就是 `versions/` 下的文件夹名，可以是第三方启动器或整合包
-自定义的名称（例如 `1.21.4-DeepSeek`），不要求出现在官方版本清单中。
-
-本地版本分支的调用链：
-
-```text
-VersionInstaller.install(...)
-→ 读取 versions/<id>/<id>.json
-→ 合并 inheritsFrom 父版本
-→ DownloadPlanner.plan(...)
-→ 只补齐缺失文件
-→ 返回 InstalledVersion
-```
-
-规则：
-
-- 本地已安装时不会重写版本 JSON，保持与外部启动器一致。
-
-下载原版时还支持单独实例名：官方版本 ID 用于查询清单和拉取版本 JSON，
-实例 ID 用于 `versions/<id>` 目录、客户端 jar 和当前实例显示。实例名默认官方版本号；
-原版、Fabric、Forge、NeoForge 都拒绝已存在的同名实例目录，前端会在下载前检查并提示。
-- 合并 `inheritsFrom` 时按**文件夹名**查找父版本，兼容 JSON 内部 `id` 与文件夹名不一致的情况。
-- 解析完成后把 manifest 的 `id` 统一为文件夹名，保证 `versions/<id>/<id>.jar` 等路径一致。
-- 本地版本缺库、缺资源或缺客户端 jar 时仍会自动补齐。
-
-只有本地不存在该版本时，才进入下面的官方清单流程。
-
-### 2.3 获取版本清单
-
-`VersionManifestService.fetchManifestOrCache(...)` 默认访问：
-
-```text
-https://piston-meta.mojang.com/mc/game/version_manifest_v2.json
-```
-
-默认缓存位置：
-
-```text
-~/.caml/cache/version_manifest_v2.json
-```
-
-行为：
-
-- 优先从网络获取。
-- 获取成功后原子写入缓存。
-- 网络失败时，如果缓存存在，则读取缓存。
-
-### 2.4 选择版本并拉取版本 JSON
-
-`VersionInstaller` 在清单的 `versions` 列表中按 `id` 查找目标版本。
-
-找到后调用：
-
-```java
-manifestService.fetchVersionJson(remoteVersion)
-```
-
-拿到原始版本 JSON，再用：
-
-```java
-metadata.parseVersionInfo(versionJson)
-```
-
-转换为 `VersionInfo`。
-
-原始 JSON 会被保留，安装完成后原样写入：
-
-```text
-versions/<id>/<id>.json
-```
-
-这样版本目录保持标准 Minecraft 布局，方便后续启动和外部工具读取。
-
-### 2.5 处理 inheritsFrom
-
-`VersionInstaller.resolve(...)` 检查 `VersionInfo.inheritsFrom()`。
-
-当前支持：
-
-- 原版版本：没有 `inheritsFrom`，直接使用。
-- 已安装的父版本：从本地读取：
-
-```text
-versions/<parentId>/<parentId>.json
-```
-
-- 父版本不存在：抛出 `IOException`。
-- 循环继承：抛出 `IllegalArgumentException`。
-
-合并由 `ManifestResolver` 负责：
-
-- 标量字段由子版本覆盖父版本；`jar` 未指定时继承父版本。
-- `arguments.game` 和 `arguments.jvm` 合并。
-- `libraries` 合并为“子版本库在前、父版本库在后”，classpath 按路径去重时子库优先。
-- `downloads` 和 `logging` 合并。
-- 清除 `inheritsFrom`，得到可下载的解析后 manifest。
-
-加载器版本的 `inheritsFrom` 依赖本地已经存在的父版本。Fabric 安装会先确保原版父版本存在。
-
-Fabric 安装流程：
-
-- 从 `https://meta.fabricmc.net/v2/versions/loader/<game>` 获取 Loader 版本。
-- 获取 `<game>/<loader>/profile/json`，写入 `versions/<instance>/<instance>.json`。
-- profile 没有 `jar` 时复用父版本客户端 jar。
-- Fabric API 从 Modrinth `fabric-api` 项目获取，并写入实际游戏目录的 `mods`。
-
-Quilt 安装流程：
-
-- 从 `https://meta.quiltmc.org/v3/versions/loader/<game>` 获取 Loader 版本；官方把版本信息嵌在
-  `loader` 对象里（`loader.version` / `loader.build`），`build` 是该版本自身的构建号（`0.24.0` 为 0、
-  `0.20.0-beta.9` 为 9），不能用于比较新旧，界面按语义化版本从新到旧排列。
-- Quilt Meta 对尚未收录的游戏版本（例如刚发布的正式版）返回 404，此时界面按“无可用版本”处理而不是报错。
-- 获取 `v3/versions/loader/<game>/<loader>/profile/json`，写入 `versions/<instance>/<instance>.json`；
-  profile 结构与 Fabric 一致，同样依赖本地已存在的原版父版本。
-- Quilted Fabric API 从 Modrinth `qsl` 项目（标题为 QFAPI / QSL）按 `loaders=["quilt"]` 获取，
-  下载后同时放入实例 `mods` 和实际游戏目录的 `mods`；QFAPI 只发布到 1.21 为止，更新的游戏版本没有可用条目。
-- 失败时删除目标版本目录，避免留下半成品实例。
-
-Forge/NeoForge 安装流程：
-
-- Forge/NeoForge 在镜像源下优先读取 BMCLAPI 的按 Minecraft 版本 JSON 接口；
-  官方源从 Maven `maven-metadata.xml` 筛选，NeoForge 再用版本号规则映射 Minecraft 版本。
-- 先确保原版父版本存在，再创建 staging 目录并复制父版本 JSON 和客户端 jar。
-- 读取 installer 的 `version.json` 与 `install_profile.json`，按当前下载源预下载其中声明的依赖库，
-  让 installer 直接校验并跳过下载，避免其直连 `maven.neoforged.net` 造成长时间超时。
-- 运行官方 installer 的 headless `--installClient <staging>`，由官方 processor 生成运行时库和版本文件。
-- 把 staging libraries 合并回共享 `libraries`，再按用户实例名移动版本目录。
-- 最后用 `VersionInstaller` 读取安装结果，解析 `inheritsFrom` 并校验启动所需文件。
-
-OptiFine 安装流程（仅 Forge）：
-
-- 官方源模式从 `https://optifine.net/downloads` 解析版本；镜像/自定义源模式从
-  `https://bmclapi2.bangbang93.com/optifine/<gameVersion>` 或自定义镜像根地址获取。
-- 先安装 Forge 实例，再把原版版本 JSON 和客户端 jar 放入 staging。
-- 通过独立 Java 进程调用 OptiFine 官方 installer 的 `optifine.Installer.doInstall(staging)`。
-- OptiFine I6 与 Forge 47.4.27+ 不兼容（Forge 新增方法会被 OptiFine 转换移除），
-  界面会选择 47.4.26 或更早的兼容版本，后端也会拒绝不兼容组合。
-- 合并生成的 OptiFine 库；传统 LaunchWrapper Forge 追加
-  `--tweakClass optifine.OptiFineForgeTweaker`，现代 Forge 保留 Forge 主类并加入 OptiFine 库。
-- 传统 LaunchWrapper 下把 OptiFine 补丁 jar 放到原版客户端 jar 之后，避免其自带的
-  `anb.class` 抢先被 Forge 的 binpatch 校验读到。
-- 删除 OptiFine 库中的 `META-INF/mods.toml`，避免 Forge 将其当作普通 mod 加载。
-
-### 2.6 生成基础下载计划
-
-`DownloadPlanner.plan(resolved, gameDirectory)` 生成基础文件计划，包含：
-
-- 客户端 jar：`versions/<id>/<id>.jar`。
-- libraries：`libraries/<Maven 路径>`。
-- 旧式 Forge library 没有 `downloads` 时，从 `name` 推导 Maven 路径，从 `url` 补下载地址，并使用 `checksums` 第一个 SHA-1。
-- 当前系统的 native classifier。
-- asset index：`assets/indexes/<assetIndexId>.json`。
-
-规则处理：
-
-- 使用 `RuleEvaluator` 过滤 library 的 `rules`。
-- `clientreq=false` 的 library 在客户端下载和 classpath 中跳过。
-- 最后一个匹配规则的 action 生效。
-- native classifier 中的 `${arch}` 替换为当前位数。
-- 相同目标路径会去重。
-
-### 2.7 执行基础下载
-
-`VersionInstaller.downloadPlan(...)` 遍历：
-
-```java
-plan.missing()
-```
-
-只下载不存在或 SHA-1 不匹配的文件。
-
-每个文件由 `FileDownloader` 处理：
-
-```text
-检查已有文件
-→ 创建目标父目录
-→ 尝试候选 URL
-→ 下载到目标目录下的 .part 临时文件
-→ 计算 SHA-1
-→ 校验通过后原子移动
-→ 失败重试
-```
-
-默认总计最多尝试 6 次；候选 URL 按轮次轮流使用，两个候选源时通常每个源尝试 3 次。候选 URL 按下载源设置生成：
-
-对于已知大小且不小于 4 MiB 的文件，下载器会先用 Range 请求探测服务端能力：
-
-- 支持 Range 时，按最多 4 个分片并发写入预分配的 `.part` 文件；
-- 分片检查点写入 `.part.json`，中断后从已确认偏移继续；
-- 服务端忽略 Range、返回错误状态或分片响应无效时，回退为单流下载；
-- 文件响应体超过 30 秒没有收到新数据时自动中止并重试，避免 read 永久阻塞；
-- 全部完成后统一计算 SHA-1，再原子移动到目标文件。
-
-- 镜像源：BMCLAPI 地址优先，原始官方地址兜底。
-- 官方源：原始官方地址优先。
-- 自定义 API：用户填写的镜像根地址优先，原始官方地址兜底；无效地址回退官方源。
-
-### 2.8 下载资源对象
-
-asset index 下载完成后，`VersionInstaller` 读取：
-
-```text
-assets/indexes/<assetIndexId>.json
-```
-
-解析为 `AssetIndexFile`，再交给 `AssetDownloadPlanner`。
-
-资源对象路径：
-
-```text
-assets/objects/<hash 前两位>/<hash>
-```
-
-默认资源对象地址：
-
-```text
-https://resources.download.minecraft.net/<hash 前两位>/<hash>
-```
-
-资源对象同样经过 `FileDownloader`，即临时文件、SHA-1 和原子移动。
-
-### 2.9 写入版本 JSON
-
-所有基础文件和资源对象完成后，`VersionInstaller` 才把原始版本 JSON 原子写入：
-
-```text
-versions/<id>/<id>.json
-```
-
-这样可以避免下载失败时留下一个看起来已经安装完成的版本目录。
-
-### 2.10 返回结果
-
-`InstalledVersion` 包含：
-
-```text
-id
-manifest
-versionDirectory
-versionJson
-clientJar
-librariesDirectory
-assetsDirectory
-assetIndexFile
-```
-
-后续启动流程应直接使用这个结果，而不是重新猜测路径。
-
-### 2.11 下载目录布局
-
-默认配置：
-
-```text
-~/.caml/                             启动器数据目录
-└─ cache/
-   └─ version_manifest_v2.json       版本清单缓存
-
-游戏目录：
-  Linux/macOS/Windows: ~/.minecraft
-
-<游戏目录>/
-├─ versions/
-│  └─ <id>/
-│     ├─ <id>.json                   原始版本 JSON
-│     └─ <id>.jar                    客户端 jar
-├─ libraries/                        共享库
-└─ assets/
-   ├─ indexes/
-   │  └─ <assetIndexId>.json         资源索引
-   └─ objects/
-      └─ <hash 前两位>/<hash>         资源对象
-```
-
-所有平台都以用户主目录为基准：发布包会把启动器装到只读的受管目录（Windows 默认
-`C:\Program Files\CAML`），若以启动器所在目录为基准，普通用户无权写入版本、存档和日志。
-
-### 2.12 下载链路关键类
-
-| 类 | 职责 |
+| 内容 | 官方地址 |
 |---|---|
-| `VersionInstaller` | 串起版本选择、解析、下载和版本 JSON 落盘 |
-| `VersionManifestService` | 拉取版本清单和单版本 JSON，处理缓存回退 |
-| `MetadataService` | 解析版本 JSON、版本清单和 asset index |
-| `ManifestResolver` | 合并 `inheritsFrom` 父版本 |
-| `DownloadPlanner` | 生成客户端、libraries、natives、asset index 下载计划 |
-| `AssetDownloadPlanner` | 生成 assets objects 下载计划 |
-| `FileDownloader` | HTTP 下载、重试、SHA-1、临时文件和原子移动 |
-| `DownloadItem` | 单个下载任务 |
-| `DownloadPlan` | 一组下载任务，并提供缺失文件过滤 |
-| `InstalledVersion` | 安装结果和启动所需的基础路径 |
+| 版本清单 | `https://piston-meta.mojang.com/mc/game/version_manifest_v2.json` |
+| 版本 JSON/client/libraries | 由版本清单和版本 JSON 给出 |
+| assets | `https://resources.download.minecraft.net/` |
+| Forge | `https://maven.minecraftforge.net/net/minecraftforge/forge/` |
+| NeoForge | `https://maven.neoforged.net/releases/net/neoforged/neoforge/` |
+| Fabric Meta | `https://meta.fabricmc.net/` |
+| Quilt Meta | `https://meta.quiltmc.org/` |
+| Fabric API | Modrinth `fabric-api` |
+| Quilted Fabric API/QSL | Modrinth `qsl` |
+| OptiFine | `https://optifine.net/` |
 
-### 2.13 当前下载限制
+### 2.2 镜像与候选顺序
 
-- 支持原版、Fabric Loader/Fabric API、Quilt Loader/Quilted Fabric API、Forge、NeoForge 和 OptiFine（仅 Forge）安装。
-- `inheritsFrom` 只读取本地父版本，不会自动安装父版本。
-- 下载源支持镜像、官方和自定义镜像根地址；应用于版本文件、libraries、asset index、assets objects、
-  Fabric/Quilt/Forge/NeoForge/OptiFine 元数据、Fabric/Quilt Maven 依赖、Forge/NeoForge installer、
-  Fabric API 和 Quilted Fabric API 下载；
-  版本清单与版本 JSON 也按下载源重写地址。Fabric API 与 Quilted Fabric API 的 Modrinth API/CDN
-  没有 BMCLAPI 镜像时仍回退官方地址。
-- 下载使用有界线程池并发执行，并发数可配置为 1–256；下载取消尚未实现。
-- 没有内容寻址缓存，只有目标文件存在且 SHA-1 匹配时跳过。
+`DownloadSourceMode`：
 
-### 2.14 metadata / download 包结构
+- `MIRROR`：默认 BMCLAPI 根 `https://bmclapi2.bangbang93.com`；
+- `OFFICIAL`：原地址；
+- `CUSTOM`：用户提供的 HTTP/HTTPS 镜像根。
+
+镜像源把 Mojang、Forge、NeoForge、Fabric、Quilt、assets 等地址重写到镜像路径。`DownloadSources.candidates()` 始终在候选末尾再追加原始 URL，所以镜像没有命中或请求失败时仍可回退官方。
+
+`SourceAwareHttpClient` 对每个候选执行请求；文本/二进制解析接口可以把“响应有效但解析为空”也视为失败并继续下一个候选。
+
+## 3. 版本安装入口
+
+`CAMLBackend` 调用 `VersionInstaller.install(...)`。`DownloadsController` 按加载器分派：
+
+- 原版：`downloadVersion`
+- Fabric：`downloadFabricVersion`
+- Quilt：`downloadQuiltVersion`
+- Forge：`downloadForgeVersion`
+- NeoForge：`downloadNeoForgeVersion`
+- Forge + OptiFine：`downloadForgeOptiFineVersion`
+
+前端创建不可变 `DownloadRequest`，包含官方版本、实例 ID、游戏目录和所选加载器版本。
+
+## 4. 本地已有版本优先
+
+`VersionInstaller.install(versionId, instanceId, ...)`：
+
+1. 先检查 `versions/<instanceId>/<instanceId>.json`。
+2. 存在则读取本地 JSON，合并父版本并补齐缺失文件，**不重写**本地 JSON。
+3. 不存在时才访问版本清单，按官方 `versionId` 拉取版本 JSON。
+
+因此 PCL/HMCL/整合包留下的自定义实例 ID 只要目录里有同名 JSON 就能直接启动；JSON 内部 `id` 与文件夹名不一致时，启动使用的 ID 统一改成文件夹名。
+
+远程安装失败时，如果目标版本目录是本次新建的，整个目录删除，避免半成品残留。
+
+## 5. 版本清单与版本 JSON
+
+### 5.1 清单缓存
+
+`VersionManifestService.fetchManifestOrCache()`：
+
+- 依次尝试全部下载源；
+- 解析并校验非空后写入 `~/.caml/cache/version_manifest_v2.json`；
+- 全部失败时读取磁盘缓存；
+- 没有缓存才抛出网络错误。
+
+清单请求有 10 秒总截止时间，最多跟随 10 次重定向。
+
+### 5.2 版本 JSON 校验
+
+清单中的版本 JSON SHA-1 会在解析前校验；不匹配时换下一个下载源。JSON 必须能解析出 `VersionInfo`，空响应或无效响应不会覆盖缓存。
+
+## 6. `inheritsFrom` 与元数据合并
+
+`ManifestResolver`：
+
+- 从最底层父版本向上解析，检测循环继承；
+- 标量字段由子版本优先；
+- `arguments.game` / `arguments.jvm` 合并；
+- `libraries` 先子版本、后父版本；
+- `downloads` / `logging` 合并；
+- `jar` 缺失时继承父版本，再缺省为父版本 ID；
+- 最终清除 `inheritsFrom`，并把 `id` 改为实例文件夹名。
+
+父版本 JSON 必须已存在于本地 `versions/<parentId>/<parentId>.json`。
+
+## 7. 基础下载计划
+
+`DownloadPlanner.plan(resolved, gameDirectory, clientJarId)` 生成 `DownloadPlan`：
+
+- client jar：`versions/<clientJarId>/<clientJarId>.jar`；
+- libraries：按规则筛选、`clientreq=false` 跳过；
+- 旧式 Forge library：根据 `name`、`url`、`checksums`、`size` 推导 Maven 路径和 URL；
+- natives：按当前 OS 和位数选择 classifier，替换 `${arch}`；
+- asset index：`assets/indexes/<id>.json`；
+- Log4j 配置：`assets/log_configs/<id>`。
+
+相同目标路径按 `putIfAbsent` 去重，避免父子版本重复下载。
+
+## 8. 下载执行
+
+### 8.1 文件下载
+
+`FileDownloader`：
+
+- 已有且大小/SHA-1 校验通过的文件直接跳过；
+- 最多 6 次尝试，逐个候选地址循环；轮次之间有递增退避；
+- 已知大小 ≥ 4 MiB 时先发 `Range: bytes=0-0` 探测；
+- 支持 Range 时最多 4 段并行，全局分段信号量上限 8；
+- `.part` 保存未完成内容，`.part.json` 保存各段进度、总大小、SHA-1、ETag、Last-Modified；
+- 每 1 MiB 或约 1 秒持久化检查点；
+- `If-Range` 和响应校验避免服务器内容变化时错误续传；
+- 服务器忽略/不支持 Range 时清理分片并回退单流；
+- 完整大小、SHA-1、自定义 validator 全部通过后才原子移动到目标；
+- 取消/失败清理 `.part` 和检查点，保留原始异常。
+
+### 8.2 批量下载
+
+`DownloadExecutor.download()`：
+
+- 使用有界线程池，并发数 1–256（默认 8）；
+- 对总字节数、文件完成数发送 `DownloadSummary`；
+- 每文件进度发送 `DownloadProgress`；
+- 安装器库缺少 `size` 时，从实际响应动态增加总字节数；
+- 单文件下载也走 `downloadSingle()`，保证进度页汇总覆盖 Forge/NeoForge installer、OptiFine installer、Fabric/Quilt API。
+
+`DownloadCancellationToken` 贯穿下载、安装器进程、OptiFine/Forge 子进程和下载页任务条；取消后不继续向 UI 提交成功回调。
+
+## 9. 资源对象与索引
+
+`AssetDownloadPlanner`：
+
+- 每个 asset hash 必须是 40 位十六进制；
+- 目标路径为 `assets/objects/<前2位>/<hash>`；
+- URL 为 `https://resources.download.minecraft.net/<前2位>/<hash>`；
+- SHA-1 使用对象 hash，大小使用索引值。
+
+`VirtualAssetInstaller` 在旧版 asset index 标记 `virtual=true` 时，把对象复制到 `assets/virtual/<assetId>/<资源名>`，并把 `LaunchPlan.assetsDirectory` 指向该目录；`map_to_resources=true` 时同步复制到游戏数据目录的 `resources/`。
+
+## 10. 实例命名与目录
+
+- 实例 ID 不能为空、不能包含路径分隔符/Windows 非法字符，拒绝已存在实例目录。
+- 原版和加载器安装统一使用 `versions/<instanceId>`。
+- 安装 Forge/NeoForge 时实例名不能等于游戏版本号，避免与基础版本目录冲突。
+- 加载器 installer 生成自己的版本 ID 时，移动到 `versions/<instanceId>` 并把 JSON/jar 重命名为实例 ID。
+
+## 11. 加载器安装
+
+### 11.1 Fabric / Quilt
+
+流程：
+
+1. 安装基础原版。
+2. 从 Meta 获取 loader profile JSON。
+3. `VersionInstaller.installProfile()` 写入实例并补齐文献库/client/assets。
+4. 若选择了 API，从 Modrinth 获取 API 文件，写入实例 `mods`，同时复制到根目录 `mods`。
+5. 失败删除目标版本目录。
+
+Fabric 版本列表来自 `v2/versions/loader/<game>`；Quilt 来自 `v3/versions/loader/<game>`。Quilt 版本按语义化版本排序，不以 `build` 号代表新旧。
+
+### 11.2 Forge / NeoForge
+
+`ExternalLoaderInstaller` 流程：
+
+1. 安装基础原版。
+2. 按基础版本 Java 要求选择 installer 运行 Java。
+3. 在游戏目录创建 staging，准备父版本 JSON/jar。
+4. 下载 installer；优先读取 `.sha1`，没有时至少校验 ZIP 内存在 `version.json` 或 `install_profile.json`。
+5. 从 installer 的 `version.json` / `install_profile.json` 预下载声明的 libraries 到 staging。
+6. 运行 installer headless，最多重试 2 次；20 分钟超时。
+7. 校验生成的版本 JSON、合并 staging libraries、移动版本目录。
+8. 再次用 `VersionInstaller` 补齐/验证库文件。
+
+Forge 镜像源优先读取 BMCLAPI 的 per-game JSON；官方源读取 Maven metadata。NeoForge 支持新坐标 `net.neoforged:neoforge` 与旧坐标 `net.neoforged:forge`，并从版本号推导 Minecraft 版本。
+
+### 11.3 OptiFine（仅 Forge）
+
+流程：
+
+1. 检查 Forge/OptiFine 已知兼容性。
+2. 安装基础版本和 Forge。
+3. 下载 OptiFine installer（官方下载页或 BMCLAPI）。
+4. 用独立 Java 子进程运行 `optifine.Installer.doInstall(staging)`。
+5. 查找生成的 OptiFine 版本 JSON，合并它的 libraries。
+6. 对 LaunchWrapper Forge 注入 `--tweakClass optifine.OptiFineForgeTweaker`。
+7. 删除 OptiFine 库中的 `META-INF/mods.toml`，避免被现代 Forge 当普通 Mod 加载。
+8. 最后重新走 `VersionInstaller` 补齐文件。
+
+已写死规则：OptiFine 1.20.1 HD U I6 与 Forge 47.4.27+ 不兼容，UI 会限制到 47.4.26 及以下。
+
+## 12. 游戏数据目录与版本隔离
+
+`VersionIsolationMode`：
+
+- `FULL`：游戏数据目录始终为 `versions/<id>`；
+- `NONE`：始终为 `.minecraft` 根目录；
+- `AUTO`：兼容旧调用，根据 `options.txt`、`saves`、`logs`、`mods`、`config`、`resourcepacks`、`shaderpacks`、`usercache.json`、`command_history.txt` 等标记判断。
+
+当前 UI 持久化 `FULL`/`NONE`。无论哪种模式，`libraries` 和 `assets` 都仍来自 `.minecraft` 根目录。
+
+## 13. Java 选择
+
+自动模式：
+
+- `JavaRequirement.from(installed.manifest())` 读取版本要求；
+- `JavaLocator.findSuitable()` 在系统、PATH、常见目录和 `~/.caml/java` 中查找；
+- 精确主版本优先，然后选最接近且满足要求的 Java。
+
+手动模式：
+
+- 使用 `selectedJavaPath`；
+- 路径不存在或无法识别时抛出 `LaunchException`；
+- 不回退自动选择。
+
+旧版 Forge 的 `net.minecraft.launchwrapper.Launch` 需要 Java 8；CAML 的托管仓库递归扫描保证 Java 管理页安装的 Zulu 8 能被自动模式选中。
+
+## 14. 启动前准备
+
+1. `VersionInstaller` 保证版本完整。
+2. 解析游戏数据目录。
+3. 自动游戏语言：只有 `options.txt` 尚未包含 `lang:` 时才写入；拉丁文/藏文映射到默认语言，地道中国话映射简体中文。
+4. NeoForge 26.2 + Vulkan：若 `options.txt` 使用 Vulkan，修改 `config/fml.toml` 的 `earlyWindowControl=false`。
+5. 创建 `LaunchPlan`，可选注入 authlib-injector。
+6. virtual assets 准备。
+7. natives 解压到 `versions/<id>/natives`。
+8. 构建 classpath 和命令。
+
+## 15. `LaunchPlan` 与 `LaunchOptions`
+
+`LaunchPlan` 持有：
+
+- `InstalledVersion`；
+- 合并后的 `VersionInfo`；
+- `AuthSession`；
+- `JavaRuntime`；
+- `LaunchOptions`；
+- 实际游戏数据目录；
+- assets 目录（可能被 virtual assets 改写）；
+- natives 目录；
+- 可选 `AuthlibInjector`。
+
+`LaunchOptions` 支持最小/最大内存、宽高、全屏、额外 JVM 参数、额外游戏参数和环境变量。默认页面只设置最大内存、额外 JVM 参数，宽高/全屏/额外游戏参数可由 API 使用。
+
+## 16. classpath
+
+`ClasspathBuilder`：
+
+- 按规则筛选 libraries；
+- 跳过 native-only 和 `clientreq=false`；
+- 按 `group:artifact:classifier` 与目标路径去重，子版本在前；
+- 普通 LaunchWrapper 版本把 client jar 放在 libraries 之后；
+- BootstrapLauncher（现代 Forge/NeoForge）不追加 vanilla client jar；
+- **LaunchWrapper + OptiFine 特殊顺序**：OptiFine 补丁 jar 延后到 client jar 之后。
+
+最后一条解决 FML binpatch 的 `anb.class` 冲突：OptiFine jar 自带一个 `anb.class`，如果它排在 client jar 前面，Forge 计算 Adler-32 时会读到 OptiFine 版本并报 `binary discrepancy`。
+
+## 17. 启动参数
+
+### 17.1 JVM 参数
+
+顺序：
+
+1. `-Xmx` / `-Xms`；
+2. 可选 authlib-injector `-javaagent` 与 prefetched；
+3. 版本 JSON `arguments.jvm`（按规则）；
+4. 客户端 Log4j `-Dlog4j.configurationFile=...`；
+5. 用户额外 JVM 参数；
+6. 缺少时补 `-Djava.library.path=<natives>`；
+7. 缺少时补 `-cp <classpath>`。
+
+占位符包括 `auth_*`、`version_name`、`game_directory`、`assets_root`、`assets_index_name`、`natives_directory`、`classpath`、`library_directory`、`primary_jar`、`launcher_name/version` 等。`has_custom_resolution` 由宽高是否同时存在决定。
+
+### 17.2 游戏参数
+
+- 新格式：`arguments.game` 按规则解析；
+- 旧格式：`minecraftArguments` 按空白拆分为 token，再替换占位符；
+- 追加额外游戏参数；
+- 全屏时追加 `--fullscreen`。
+
+## 18. 进程启动
+
+`ProcessLauncher`：
+
+- `ProcessBuilder(List<String>)`，不拼接 shell 字符串；
+- 工作目录为实际游戏数据目录；
+- 合并 `LaunchOptions.environmentVariables`；
+- Linux 把 `~/.local/bin` 去重前插到 `PATH`；
+- Windows 使用可用的 `javaw.exe` 避免控制台窗口。
+
+命令行过长时：
+
+1. Java 9+ 先写 `@argfile`；
+2. 仍失败则生成 manifest classpath jar，把 `-cp` 指向该 jar；
+3. 两种回退都失败时抛出 `launch.commandTooLongAfterFallback`。
+
+`GameProcess` 用独立线程读取 stdout/stderr，并等待退出；与游戏无关的临时 argfile/manifest jar 在退出后清理。
+
+## 19. 日志与退出
+
+`MinecraftLogFormatter` 将 Log4j XML 事件转换成：
 
 ```text
-metadata/
-├─ MetadataService.java         JSON 解析入口
-├─ VersionManifestService.java  版本清单/单版本 JSON 获取与缓存
-├─ model/                       版本、库、资源和参数 DTO
-├─ rule/                        规则模型和系统匹配
-├─ parse/                       自定义 Gson 解析
-└─ resolve/                     inheritsFrom 合并
-
-download/
-├─ FileDownloader.java          文件下载入口
-├─ DownloadListener.java        进度回调
-├─ DownloadConcurrency.java     并发数约束
-├─ model/                       DownloadItem、DownloadPlan
-├─ plan/                        版本和资源下载计划
-├─ source/                      DownloadSource、镜像/官方源和源工厂
-├─ io/                          并发任务执行
-└─ hash/                        SHA-1 计算与校验
+[HH:mm:ss] [线程/级别]: 消息
 ```
 
-## 3. 启动链路
-
-### 3.1 当前状态
-
-底层已经可以启动 Minecraft 进程，前端也已经接入启动按钮和日志窗口。以下内容尚未完成：
-
-- 启动错误对话框。
-- CAMLFront 停止游戏按钮。
-- 异常退出分类和崩溃分析。
-- 启动器隐藏/保留/关闭策略。
-- 真实 Minecraft 客户端端到端验证。
-
-### 3.2 已有启动前置数据
-
-启动流程需要三类数据：
-
-```text
-InstalledVersion  版本目录、manifest、客户端 jar、libraries、assets
-AuthSession       用户名、UUID、accessToken、userType、userProperties
-JavaRuntime       实际 Java 可执行文件、版本、架构、位数
-```
-
-这些类型已经存在，并由 `LaunchPlanner` 组合成不可变的 `LaunchPlan`。
-
-### 3.3 当前启动流程
-
-```text
-读取 InstalledVersion
-→ 读取 AuthSession
-→ 选择 JavaRuntime
-→ 读取用户选择的版本隔离模式
-→ 创建 LaunchPlan（已实现）
-→ 构建 classpath（已实现）
-→ 构建 JVM 参数（已实现）
-→ 构建游戏参数（已实现）
-→ 替换占位符（已实现）
-→ 准备 natives 和日志配置（已实现）
-→ ProcessBuilder 启动（已实现）
-→ 监控 stdout/stderr 和退出码（已实现）
-```
-
-### 3.4 LaunchPlan
-
-`LaunchPlan` 是启动阶段的核心输入对象。它把“安装结果、账号、Java、目录和用户选项”固定在一个不可变对象里，后续 classpath、参数和进程构建都从这里读取。
-
-字段如下：
-
-| 字段 | 类型 | 含义 |
-|---|---|---|
-| `instance` | `InstalledVersion` | 已安装版本及其文件路径 |
-| `manifest` | `VersionInfo` | 解析后的启动 manifest |
-| `auth` | `AuthSession` | 用户名、UUID、token、userType、userProperties |
-| `java` | `JavaRuntime` | 实际使用的游戏 Java |
-| `options` | `LaunchOptions` | 内存、分辨率、自定义参数和环境变量 |
-| `gameDirectory` | `Path` | 实际 `--gameDir`：版本隔离时为 `versions/<id>`，否则为 `.minecraft` 根目录 |
-| `assetsDirectory` | `Path` | assets 目录 |
-| `nativesDirectory` | `Path` | natives 解压目录 |
-
-`gameDirectory` 是实际传给 `--gameDir` 的目录：完全版本隔离时为 `versions/<id>`，
-不隔离时为 `.minecraft` 根目录。`assetsDirectory` 和 `libraries` 始终来自根目录。
-构造时会校验所有字段非空。
-
-### 3.5 LaunchOptions
-
-`LaunchOptions` 也是不可变 record，包含：
-
-| 字段 | 含义 | 约束 |
-|---|---|---|
-| `minMemoryMb` | 最小内存 | 可为空；不能为负数 |
-| `maxMemoryMb` | 最大内存 | 可为空；不能为负数且不能小于最小内存 |
-| `width` / `height` | 游戏窗口分辨率 | 可为空；如果存在必须为正数 |
-| `fullscreen` | 是否全屏 | 布尔值 |
-| `jvmArguments` | 用户 JVM 参数 | 复制为不可变列表 |
-| `gameArguments` | 用户游戏参数 | 复制为不可变列表 |
-| `environmentVariables` | 启动环境变量 | 复制为不可变 Map |
-
-`LaunchOptions.defaults()` 返回一个所有可选数值为空、列表和 Map 为空的默认选项。
-
-### 3.6 LaunchPlanner 创建流程
-
-```text
-LaunchPlanner.create(instance, auth, java, options)
-→ 校验参数非空
-→ JavaRequirement.from(instance.manifest())
-→ requirement.isSatisfiedBy(java)
-→ 不满足则抛出 IllegalArgumentException
-→ 构造 LaunchPlan
-→ nativesDirectory = versions/<id>/natives
-```
-
-`LaunchPlanner` 还提供：
-
-```java
-create(instance, auth, java, options, gameDataDirectory)
-```
-
-用于显式指定游戏数据目录。`GameLaunchService` 根据 `VersionIsolationMode` 调用
-`GameDataLayout.resolve(...)`：`FULL` 选择 `versions/<id>`，`NONE` 选择根目录，
-旧调用的 `AUTO` 才根据目录内容自动判断。
-
-当前 `LaunchPlan` 只负责组织启动所需数据，不负责：
-
-- 生成 JVM/游戏参数。
-- 替换占位符。
-- 解压 natives。
-- 启动进程。
-
-classpath 由 `ClasspathBuilder` 单独生成。Java 检测和匹配细节见 [runtime.md](runtime.md)。
-
-### 3.7 ClasspathBuilder
-
-`ClasspathBuilder.build(LaunchPlan)` 生成 `List<Path>`：
-
-```text
-遍历 resolved manifest 的 libraries
-→ 按 RuleEvaluator 过滤 rules
-→ 排除 native-only library
-→ 读取 downloads.artifact，缺失时从 name 推导 Maven 路径
-→ 解析 libraries/<path> 路径
-→ 去重并保持顺序
-→ 最后追加客户端 jar
-```
-
-规则：
-
-- 新式 library 使用 `downloads.artifact.path`；旧式 Forge library 从 `name` 推导 Maven 路径。
-- `clientreq=false` 的库不加入 classpath。
-- classifier 为 `natives-*` 的 native-only 库不加入 classpath。
-- 有 native classifier 的普通库仍保留主 artifact。
-- 先按 `group:artifact:classifier` 去重，保留先出现的子版本库；再按目标路径去重。
-- 客户端 jar 固定放在最后。
-- 客户端 jar 路径来自 manifest 的 `jar` 字段，未指定时回退到实例 ID。
-- `join(List<Path>)` 使用 `File.pathSeparator` 拼接。
-
-对外入口：
-
-```java
-List<Path> classpath = backend.classpathBuilder().build(plan);
-String joined = backend.classpathBuilder().join(classpath);
-```
-
-### 3.8 启动参数构建
-
-`JvmArgumentsBuilder` 负责：
-
-- 添加 `-Xms` / `-Xmx`。
-- 解析版本 JSON 的 `arguments.jvm`。
-- 应用 `rules` 和 `features`。
-- 追加用户 JVM 参数。
-- 缺少时补充 `-Djava.library.path`。
-- 缺少时补充 `-cp` 和 classpath。
-- 过滤空字符串。
-
-`GameArgumentsBuilder` 负责：
-
-- 解析版本 JSON 的 `arguments.game`。
-- 支持旧版 `minecraftArguments`。
-- 替换占位符。
-- 追加用户游戏参数。
-- 添加 `--fullscreen`。
-- 过滤空字符串。
-
-`PlaceholderResolver` 和 `LaunchPlaceholders` 负责：
-
-- 玩家名、UUID、accessToken、旧版 `auth_session`。
-- 版本名、版本类型、游戏目录。
-- assets 目录、asset index、natives 目录。
-- classpath、libraries 目录、`jar` 指定的客户端 jar。
-- 启动器名称和版本。
-- 分辨率。
-
-对外入口：
-
-```java
-List<String> jvmArgs = backend.jvmArgumentsBuilder().build(plan, classpath);
-List<String> gameArgs = backend.gameArgumentsBuilder().build(plan, classpath);
-```
-
-### 3.9 natives 与 Log4j 配置
-
-`NativeExtractor.extract(plan)`：
-
-- 清理 `versions/<id>/natives`。
-- 若版本 JSON 指定 `-Djava.library.path=${natives_directory}/java`，解压到
-  `versions/<id>/natives/java`；26.3 的原生库必须位于该目录。
-- 按当前 OS 和位数选择 native jar。
-- 支持旧式 `natives` classifier 和新式 `natives-*` library。
-- 跳过目录、`META-INF/` 和 `extract.exclude`。
-- 防止 zip slip 路径逃逸。
-
-Log4j 配置由两部分组成：
-
-- `DownloadPlanner` 下载 `logging.client.file` 到 `assets/log_configs/<id>`。
-- `JvmArgumentsBuilder` 注入 `logging.client.argument`，并把 `${path}` 替换为实际文件路径。
-
-对外入口：
-
-```java
-backend.nativeExtractor().extract(plan);
-```
-
-旧版本 virtual assets 由 `VirtualAssetInstaller.prepare(plan)` 处理：
-
-- 读取 asset index 的 `virtual` 和 `map_to_resources`。
-- 把 objects 复制到 `assets/virtual/<assetIndexId>/<逻辑路径>`。
-- `map_to_resources` 时同时复制到 `gameDirectory/resources`。
-- 返回一个 `assetsDirectory` 已替换为 virtual 目录的 `LaunchPlan`。
-
-```java
-LaunchPlan prepared = backend.virtualAssetInstaller().prepare(plan);
-```
-
-### 3.10 ProcessLauncher
-
-`LaunchCommandBuilder` 组合最终参数：
-
-```text
-java 可执行文件
-→ JVM 参数
-→ mainClass
-→ 游戏参数
-```
-
-`ProcessLauncher.launch(plan, classpath, listener)`：
-
-- 使用 `ProcessBuilder`。
-- 工作目录设置为游戏目录。
-- 合并 `LaunchOptions.environmentVariables()`。
-- 继承系统环境变量，不再改写 `APPDATA`。
-- 启动后返回 `GameProcess`。
-
-`GameProcess`：
-
-- 独立线程读取 stdout 和 stderr。
-- Minecraft 官方控制台 XML 事件由 `MinecraftLogFormatter` 转换为
-  `[HH:mm:ss] [线程/级别]: 消息`，堆栈保持多行。
-- 通过 `ProcessListener` 转发格式化后的日志。
-- 进程退出后回调退出码。
-- 支持 `waitFor`、`exitValue` 和 `stop`。
-
-命令行过长处理：
-
-- 捕获 Windows `CreateProcess error=206` 和 Linux `Argument list too long`。
-- Java 9+ 把 JVM 参数写入 `@argfile`，命令行只保留：
-
-```text
-java @argfile mainClass gameArgs
-```
-
-- Java 8 或 argfile 回退失败时，创建 manifest classpath jar：
-
-```text
-java [JVM 参数] -cp classpath-manifest.jar mainClass gameArgs
-```
-
-- 两种方式都失败时抛出明确的 `IOException`。
-- 临时 argfile 和 manifest jar 在进程退出后删除。
-
-启动错误由 `LaunchException` 分类：
-
-| 类型 | 含义 |
-|---|---|
-| `COMMAND_TOO_LONG` | 命令行过长，回退仍失败 |
-| `PERMISSION_DENIED` | 没有权限执行 Java 或访问目录 |
-| `EXECUTABLE_NOT_FOUND` | 找不到 Java 可执行文件 |
-| `PROCESS_START_FAILED` | 其他进程启动失败 |
-
-每种错误都提供中文 `userMessage()`，供前端展示。
-
-对外入口：
-
-```java
-GameProcess process = backend.processLauncher().launch(plan, classpath, listener);
-```
-
-### 3.11 GameLaunchService
-
-`GameLaunchService` 是后端统一启动入口：
-
-```text
-安装版本
-→ 离线登录
-→ 选择游戏 Java
-→ GameDataLayout.resolve 应用版本隔离模式
-→ NeoForge 26.2 Vulkan 兼容修复
-→ 创建 LaunchPlan
-→ 重建 virtual assets
-→ 解压 natives
-→ 构建 classpath
-→ 启动进程
-→ 返回 GameLaunch
-```
-
-对外入口：
-
-```java
-GameLaunch launch = backend.launchGame(
-        versionId,
-        gameDirectory,
-        username,
-        LaunchOptions.defaults(),
-        DownloadListener.NONE,
-        processListener
-);
-```
-
-`GameLaunch` 包含安装结果、AuthSession、JavaRuntime、LaunchPlan、classpath 和 GameProcess。
-
-### 3.12 版本隔离
-
-界面默认选择“完全版本隔离”，并把 `VersionIsolationMode.FULL` 保存到
-`~/.caml/settings.properties` 的 `versionIsolation` 项。启动时：
-
-- `FULL`：`--gameDir` 始终指向 `versions/<id>`。
-- `NONE`：`--gameDir` 始终指向 `.minecraft` 根目录。
-
-切换模式只影响后续启动，不会自动搬迁已有存档。旧 API 的 `AUTO` 模式仍通过
-`GameDataLayout` 检测以下标记：
-
-```text
-options.txt
-saves
-logs
-mods
-config
-resourcepacks
-shaderpacks
-usercache.json
-command_history.txt
-```
-
-命中任意一项时使用版本目录作为自动模式的结果。无论显式模式还是自动模式，
-`libraries` 和 `assets` 都来自 `.minecraft` 根目录。主页根据当前显式模式显示实际
-存档位置；`GameDirectoryInfo.isolatedVersions()` 仍保留给目录扫描和兼容用途。
-
-### 3.13 NeoForge 26.2 + Vulkan 兼容修复
-
-NeoForge 26.2 会把早期加载屏创建器创建的 OpenGL 窗口交给 Minecraft 作为主窗口。
-Vulkan 后端随后尝试在该窗口上创建 surface，GLFW 因窗口的 client API 不是
-`GLFW_NO_API` 而报 65540。
-
-`GameLaunchService` 在创建 `LaunchPlan` 前调用 `NeoForge262VulkanFix`：
-
-- 仅匹配主类为 `net.neoforged.fml.startup.Client` 且
-  `--fml.neoForgeVersion` 为 `26.2.*` 的实例。
-- 仅在实际游戏数据目录的 `options.txt` 选择 `vulkan` 时生效。
-- 把该目录的 `config/fml.toml` 中 `earlyWindowControl` 改为 `false`；
-  文件不存在时创建最小配置。
-- 其他 NeoForge 版本、OpenGL 实例和原版实例不受影响。
-
-关闭早期窗口后，Minecraft 会自行创建带 `GLFW_NO_API` 的窗口，Vulkan surface
-可以正常初始化。
-
-### 3.14 launch 包结构
-
-```text
-launch/
-├─ GameLaunchService.java       启动编排入口
-├─ GameLaunch.java              启动结果
-├─ LaunchPlan.java              启动计划
-├─ LaunchPlanner.java           启动计划构建
-├─ LaunchOptions.java           启动选项
-├─ LaunchException.java         启动错误
-├─ LaunchFailure.java           启动错误分类
-├─ command/                     参数、占位符和启动命令
-├─ classpath/                   classpath 构建
-├─ prepare/                     natives 和 virtual assets
-├─ process/                     进程、参数文件/manifest 回退和输出监控
-└─ patch/                       版本专用兼容修复
-```
-
-## 4. 相关源码
-
-- `CAMLBackend/src/main/java/org/chs/camlauncher/backend/instance/VersionInstaller.java`
-- `CAMLBackend/src/main/java/org/chs/camlauncher/backend/instance/GameDataLayout.java`
-- `CAMLBackend/src/main/java/org/chs/camlauncher/backend/instance/VersionIsolationMode.java`
-- `CAMLBackend/src/main/java/org/chs/camlauncher/backend/api/GameDirectoryInfo.java`
-- `CAMLBackend/src/main/java/org/chs/camlauncher/backend/metadata/VersionManifestService.java`
-- `CAMLBackend/src/main/java/org/chs/camlauncher/backend/download/plan/DownloadPlanner.java`
-- `CAMLBackend/src/main/java/org/chs/camlauncher/backend/download/plan/AssetDownloadPlanner.java`
-- `CAMLBackend/src/main/java/org/chs/camlauncher/backend/download/FileDownloader.java`
-- `CAMLBackend/src/main/java/org/chs/camlauncher/backend/loader/optifine/OptiFineService.java`
-- `CAMLBackend/src/main/java/org/chs/camlauncher/backend/loader/optifine/OptiFineInstaller.java`
-- `CAMLBackend/src/main/java/org/chs/camlauncher/backend/launch/classpath/ClasspathBuilder.java`
-- `CAMLBackend/src/main/java/org/chs/camlauncher/backend/launch/command/PlaceholderResolver.java`
-- `CAMLBackend/src/main/java/org/chs/camlauncher/backend/launch/command/LaunchPlaceholders.java`
-- `CAMLBackend/src/main/java/org/chs/camlauncher/backend/launch/command/JvmArgumentsBuilder.java`
-- `CAMLBackend/src/main/java/org/chs/camlauncher/backend/launch/command/GameArgumentsBuilder.java`
-- `CAMLBackend/src/main/java/org/chs/camlauncher/backend/launch/prepare/NativeExtractor.java`
-- `CAMLBackend/src/main/java/org/chs/camlauncher/backend/launch/prepare/VirtualAssetInstaller.java`
-- `CAMLBackend/src/main/java/org/chs/camlauncher/backend/launch/command/LaunchCommand.java`
-- `CAMLBackend/src/main/java/org/chs/camlauncher/backend/launch/command/LaunchCommandBuilder.java`
-- `CAMLBackend/src/main/java/org/chs/camlauncher/backend/launch/process/ProcessLauncher.java`
-- `CAMLBackend/src/main/java/org/chs/camlauncher/backend/launch/process/GameProcess.java`
-- `CAMLBackend/src/main/java/org/chs/camlauncher/backend/launch/process/MinecraftLogFormatter.java`
-- `CAMLBackend/src/main/java/org/chs/camlauncher/backend/launch/process/ProcessListener.java`
-- `CAMLBackend/src/main/java/org/chs/camlauncher/backend/launch/process/ArgumentFile.java`
-- `CAMLBackend/src/main/java/org/chs/camlauncher/backend/launch/process/ClasspathManifest.java`
-- `CAMLBackend/src/main/java/org/chs/camlauncher/backend/launch/LaunchFailure.java`
-- `CAMLBackend/src/main/java/org/chs/camlauncher/backend/launch/LaunchException.java`
-- `CAMLBackend/src/main/java/org/chs/camlauncher/backend/launch/GameLaunch.java`
-- `CAMLBackend/src/main/java/org/chs/camlauncher/backend/launch/GameLaunchService.java`
-- `CAMLBackend/src/main/java/org/chs/camlauncher/backend/launch/patch/NeoForge262VulkanFix.java`
-- `CAMLBackend/src/main/java/org/chs/camlauncher/backend/launch/`
+异常堆栈保留后续行。前端把 stdout 原样、stderr 加上 `[ERR]` 前缀写入日志面板；非零退出码标记失败并写入 `log.gameProcess.exitError`。
+
+## 20. Linux + LWJGL 2 的 `xrandr` 预检
+
+LWJGL 2 的 `LinuxDisplay` 会执行外部 `xrandr -q`。系统只有 `libXrandr` 而没有 `xrandr` 命令时，显示模式列表为空并抛出 `ArrayIndexOutOfBoundsException`。
+
+CAML 处理：
+
+- `LaunchCompatibilityService` 沿实例继承链查找 LWJGL 2；
+- 检查 `PATH` 和 `~/.local/bin` 中是否存在可执行的 `xrandr`；
+- 缺失时前端显示应用内提示和发行版安装命令；
+- 提示不等待、不取消启动；启动任务已先提交；
+- 游戏子进程仍收到包含 `~/.local/bin` 的 `PATH`。
+
+## 21. 已知限制
+
+- 没有整合包导入。
+- 下载任务可取消，但大型文件没有暂停/继续 UI；断点续传由文件层自动使用 `.part.json`。
+- 游戏启动后没有前端停止按钮；后端 `GameProcess.stop()` 已存在。
+- OptiFine 仅支持 Forge 组合。
+- 不支持 Mojang 官方旧版登录端点；微软账号使用 OAuth 设备码。
+- 没有 macOS 正式安装包和代码签名。
+
+## 22. 相关测试
+
+后端关键测试包括：
+
+- `VersionManifestServiceTest`
+- `ManifestResolverTest`
+- `DownloadPlannerTest`
+- `AssetDownloadPlannerTest`
+- `FileDownloaderTest`
+- `DownloadExecutorTest`
+- `LocalVersionInstallerTest`
+- `VersionInstallerTest`
+- `ExternalLoaderInstallerTest`
+- `FabricInstallerTest` / `QuiltInstallerTest` / `OptiFineInstallerTest`
+- `LaunchPlannerTest` / `ClasspathBuilderTest`
+- `LaunchArgumentsBuilderTest` / `LaunchCommandBuilderTest`
+- `ProcessLauncherTest`
+- `NativeExtractorTest` / `VirtualAssetInstallerTest`
+- `LaunchCompatibilityServiceTest`
+
+前端布局/进度测试包括：
+
+- `DownloadViewsLayoutTest`
+- `DownloadTelemetryTest`
+- `ProcessLauncher` 相关进度页、任务条和焦点回归测试
