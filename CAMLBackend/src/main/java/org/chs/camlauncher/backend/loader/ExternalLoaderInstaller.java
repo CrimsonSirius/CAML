@@ -164,13 +164,17 @@ public final class ExternalLoaderInstaller {
             DownloadListener.notifyStage(listener,
                     DownloadStage.of("loader.installer.download", loaderName));
             token.throwIfCancelled();
-            fileDownloader.download(new DownloadItem(
-                    loaderName + " installer",
-                    DownloadSources.candidates(sources, installerUri.toString()),
-                    installerJar,
-                    installerSha1,
-                    -1
-            ), listener, ExternalLoaderInstaller::validateInstallerArchive, token);
+            DownloadExecutor.downloadSingle(new DownloadItem(
+                            loaderName + " installer",
+                            DownloadSources.candidates(sources, installerUri.toString()),
+                            installerJar,
+                            installerSha1,
+                            -1
+                    ),
+                    listener,
+                    (item, itemListener) -> fileDownloader.download(
+                            item, itemListener, ExternalLoaderInstaller::validateInstallerArchive, token),
+                    token);
 
             token.throwIfCancelled();
             String installedVersionId = readInstallerVersionId(installerJar);

@@ -109,6 +109,38 @@ class DownloadExecutorTest {
     }
 
     @Test
+    void learnsUnknownSizesFromDownloadProgress() throws Exception {
+        List<DownloadItem> items = List.of(
+                new DownloadItem("first", List.of(URI.create("https://example.invalid/first")),
+                        tempDirectory.resolve("first"), null, -1),
+                new DownloadItem("second", List.of(URI.create("https://example.invalid/second")),
+                        tempDirectory.resolve("second"), null, -1)
+        );
+        AtomicReference<DownloadListener.DownloadSummary> lastSummary = new AtomicReference<>();
+
+        DownloadExecutor.download(items, 2, new DownloadListener() {
+            @Override
+            public void onProgress(DownloadListener.DownloadProgress progress) {
+            }
+
+            @Override
+            public void onSummary(DownloadListener.DownloadSummary summary) {
+                lastSummary.set(summary);
+            }
+        }, (item, listener) -> {
+            long total = "first".equals(item.label()) ? 100 : 120;
+            listener.onProgress(new DownloadListener.DownloadProgress(item.label(), total / 2, total));
+            listener.onProgress(new DownloadListener.DownloadProgress(item.label(), total, total));
+        });
+
+        DownloadListener.DownloadSummary summary = lastSummary.get();
+        assertNotNull(summary);
+        assertEquals(220, summary.downloaded());
+        assertEquals(220, summary.total());
+        assertEquals(2, summary.completedItems());
+    }
+
+    @Test
     void failureWaitsForSiblingWorkerToStop() throws Exception {
         List<DownloadItem> items = List.of(
                 new DownloadItem("fail",

@@ -190,6 +190,8 @@ OptiFine 安装流程（仅 Forge）：
   界面会选择 47.4.26 或更早的兼容版本，后端也会拒绝不兼容组合。
 - 合并生成的 OptiFine 库；传统 LaunchWrapper Forge 追加
   `--tweakClass optifine.OptiFineForgeTweaker`，现代 Forge 保留 Forge 主类并加入 OptiFine 库。
+- 传统 LaunchWrapper 下把 OptiFine 补丁 jar 放到原版客户端 jar 之后，避免其自带的
+  `anb.class` 抢先被 Forge 的 binpatch 校验读到。
 - 删除 OptiFine 库中的 `META-INF/mods.toml`，避免 Forge 将其当作普通 mod 加载。
 
 ### 2.6 生成基础下载计划

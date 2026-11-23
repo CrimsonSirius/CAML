@@ -251,6 +251,63 @@ class ClasspathBuilderTest {
         );
     }
 
+    @Test
+    void placesOptiFineAfterClientJarForLegacyLaunchWrapper() {
+        Library forge = library(
+                "net.minecraftforge:forge:1.12.2-14.23.5.2861",
+                "net/minecraftforge/forge/1.12.2-14.23.5.2861/forge-1.12.2-14.23.5.2861.jar",
+                List.of(),
+                Map.of()
+        );
+        Library optiFine = library(
+                "optifine:OptiFine:1.12.2_HD_U_G5",
+                "optifine/OptiFine/1.12.2_HD_U_G5/OptiFine-1.12.2_HD_U_G5.jar",
+                List.of(),
+                Map.of()
+        );
+        VersionInfo manifest = new VersionInfo(
+                "forge-optifine", "release", null, "net.minecraft.launchwrapper.Launch",
+                null, null, null, null, null, null, List.of(forge, optiFine), null,
+                null, null, null, null, "1.12.2"
+        );
+        InstalledVersion instance = new InstalledVersion(
+                "forge-optifine",
+                manifest,
+                gameDirectory,
+                gameDirectory.resolve("versions/forge-optifine"),
+                gameDirectory.resolve("versions/forge-optifine/forge-optifine.json"),
+                gameDirectory.resolve("versions/1.12.2/1.12.2.jar"),
+                gameDirectory.resolve("libraries"),
+                gameDirectory.resolve("assets"),
+                null
+        );
+        LaunchPlan plan = new LaunchPlan(
+                instance,
+                manifest,
+                new AuthSession("Steve", UUID.randomUUID(), "token", "legacy", "{}"),
+                new JavaRuntime(Path.of("/tmp/java"), "1.8.0", 8, "test", "x86_64", 64, true),
+                LaunchOptions.defaults(),
+                gameDirectory,
+                gameDirectory.resolve("assets"),
+                gameDirectory.resolve("versions/forge-optifine/natives")
+        );
+
+        List<Path> classpath = new ClasspathBuilder(
+                new RuleEvaluator("linux", "x86_64", "6.0", Map.of())
+        ).build(plan);
+
+        Path forgeJar = gameDirectory.resolve(
+                "libraries/net/minecraftforge/forge/1.12.2-14.23.5.2861/forge-1.12.2-14.23.5.2861.jar"
+        ).toAbsolutePath().normalize();
+        Path optiFineJar = gameDirectory.resolve(
+                "libraries/optifine/OptiFine/1.12.2_HD_U_G5/OptiFine-1.12.2_HD_U_G5.jar"
+        ).toAbsolutePath().normalize();
+        Path clientJar = gameDirectory.resolve("versions/1.12.2/1.12.2.jar")
+                .toAbsolutePath().normalize();
+
+        assertEquals(List.of(forgeJar, clientJar, optiFineJar), classpath);
+    }
+
     private static Library library(
             String name,
             String path,

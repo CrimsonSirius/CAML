@@ -131,4 +131,16 @@ class DownloadTelemetryTest {
         assertEquals(125, halfSecondPlan.downloadedBytes());
         assertEquals(2, halfSecondPlan.completedItems());
     }
+
+    @Test
+    void reportsWhenCurrentPlanLearnsItsByteTotal() {
+        DownloadTelemetry telemetry = new DownloadTelemetry();
+        telemetry.onSummary(new DownloadListener.DownloadSummary(0, 0, 0, 4));
+
+        assertFalse(telemetry.snapshot().currentPlanBytesKnown());
+
+        telemetry.onSummary(new DownloadListener.DownloadSummary(25, 100, 0, 4));
+
+        assertTrue(telemetry.snapshot().currentPlanBytesKnown());
+    }
 }

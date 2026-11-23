@@ -81,7 +81,8 @@ JavaRequirement requirement = JavaRequirement.from(versionInfo);
 - `~/.jdks`。
 - `~/.gradle/jdks`。
 - `~/.sdkman/candidates/java`。
-- `~/.caml/java`。
+- `~/.caml/java`，递归检查 `<platform>/<name>/bin/java` 等托管布局；自动模式因此能找到
+  CAML 自己安装的旧版 Java，而不是只看到系统 PATH 中的新版本。
 - Linux/macOS 的 `/usr/lib/jvm`、`/usr/java`、`/opt`。
 - Windows 的 `ProgramFiles` 下常见 JDK 目录和 `LOCALAPPDATA/Programs`。
 

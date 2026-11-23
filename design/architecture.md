@@ -170,6 +170,9 @@ CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
 - 跳过 `clientreq=false`。
 - 按 `group:artifact:classifier` 与目标路径去重，子版本优先。
 - 子版本库排在父版本库前，客户端 jar 按 `jar` 字段追加在最后。
+- LaunchWrapper 版本若带 OptiFine，原版客户端 jar 改为排在 OptiFine 补丁 jar 前。
+  OptiFine 归档自带 `anb.class`，若它先被 FML 读到，Forge 的 binpatch 会因 Adler-32
+  不一致直接退出；这样排序后 FML 读取的是 Mojang 原版类。
 - 使用平台路径分隔符拼接。
 
 ### 3.8 启动参数
@@ -197,6 +200,8 @@ CAMLBackend Java 核心，负责元数据、下载、账号、Java 和启动
 - 构建最终 `java + JVM 参数 + mainClass + 游戏参数` 命令。
 - 设置工作目录和环境变量。
 - 继承系统环境变量，不改写 `APPDATA`。
+- Linux 启动游戏时把 `~/.local/bin` 前插到子进程 `PATH`，供 LWJGL 2 调用外部 `xrandr -q`
+  枚举显示模式；系统包对应 `xorg-xrandr`。
 - 使用 `ProcessBuilder` 启动。
 - 后台线程读取 stdout/stderr；Minecraft Log4j `LegacyXMLLayout` 事件转换为
   `[HH:mm:ss] [线程/级别]: 消息` 后再转发到界面。

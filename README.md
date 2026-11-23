@@ -148,6 +148,10 @@ CAML/
 
 需要本机安装 JDK 25。
 
+Linux 上运行使用 LWJGL 2 的旧版本（如 1.12.2）还需要 `xrandr` 命令，对应 Arch 包
+`xorg-xrandr`。CAML 启动游戏时会把 `~/.local/bin` 前插到子进程 `PATH`，因此用户级安装的
+`xrandr` 也能被 LWJGL 2 找到。
+
 ```bash
 # Windows
 .\gradlew.bat build

@@ -38,6 +38,12 @@ public final class DownloadExecutor {
         download(items, concurrency, listener, task, new DownloadCancellationToken());
     }
 
+    public static void downloadSingle(DownloadItem item, DownloadListener listener,
+                                      DownloadTask task, DownloadCancellationToken token)
+            throws IOException, InterruptedException {
+        download(List.of(item), 1, listener, task, token);
+    }
+
     public static void download(List<DownloadItem> items, int concurrency,
                                 DownloadListener listener, DownloadTask task,
                                 DownloadCancellationToken token)
@@ -57,9 +63,13 @@ public final class DownloadExecutor {
         });
         CompletionService<Void> completion = new ExecutorCompletionService<>(executor);
         DownloadListener actualListener = listener == null ? DownloadListener.NONE : listener;
-        long totalBytes = items.stream()
+        long[] itemTotalBytes = items.stream()
                 .mapToLong(item -> Math.max(0L, item.size()))
-                .sum();
+                .toArray();
+        long[] aggregateTotalBytes = {0L};
+        for (long bytes : itemTotalBytes) {
+            aggregateTotalBytes[0] += bytes;
+        }
         long[] itemDownloaded = new long[items.size()];
         long[] aggregateDownloaded = {0L};
         int[] completedItems = {0};
@@ -69,7 +79,7 @@ public final class DownloadExecutor {
         try {
             token.throwIfCancelled();
             actualListener.onSummary(new DownloadListener.DownloadSummary(
-                    0L, totalBytes, 0, items.size()));
+                    0L, aggregateTotalBytes[0], 0, items.size()));
 
             int itemIndex = 0;
             for (DownloadItem item : items) {
@@ -82,11 +92,20 @@ public final class DownloadExecutor {
 
                         synchronized (summaryLock) {
                             long previous = itemDownloaded[index];
-                            itemDownloaded[index] = progress.downloaded();
-                            aggregateDownloaded[0] += progress.downloaded() - previous;
+                            long downloaded = Math.max(0L, progress.downloaded());
+                            itemDownloaded[index] = downloaded;
+                            aggregateDownloaded[0] += downloaded - previous;
+
+                            // 安装器库经常只带 Maven 坐标而没有 size；首个响应拿到
+                            // Content-Length 后要把它计入总进度，否则进度条会一直停在 0。
+                            long reportedTotal = Math.max(0L, progress.total());
+                            if (reportedTotal > itemTotalBytes[index]) {
+                                aggregateTotalBytes[0] += reportedTotal - itemTotalBytes[index];
+                                itemTotalBytes[index] = reportedTotal;
+                            }
                             actualListener.onSummary(new DownloadListener.DownloadSummary(
                                     aggregateDownloaded[0],
-                                    totalBytes,
+                                    aggregateTotalBytes[0],
                                     completedItems[0],
                                     items.size()
                             ));
@@ -97,7 +116,7 @@ public final class DownloadExecutor {
                         completedItems[0]++;
                         actualListener.onSummary(new DownloadListener.DownloadSummary(
                                 aggregateDownloaded[0],
-                                totalBytes,
+                                aggregateTotalBytes[0],
                                 completedItems[0],
                                 items.size()
                         ));

@@ -1225,6 +1225,17 @@
     -fx-spacing: 1em;
 }
 
+.app-download-progress-scroll {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-border-color: transparent;
+    -fx-padding: 0;
+}
+
+.app-download-progress-scroll > .viewport {
+    -fx-background-color: transparent;
+}
+
 .app-download-speed-card {
     -fx-spacing: 0.75em;
     -fx-max-width: 16.25em;

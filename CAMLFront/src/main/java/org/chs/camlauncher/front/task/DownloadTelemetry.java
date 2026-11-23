@@ -36,6 +36,7 @@ public final class DownloadTelemetry implements DownloadListener {
     private int lastPlanCompletedItems;
     private int lastPlanTotalItems;
     private boolean hasPlanSummary;
+    private boolean currentPlanBytesKnown;
     private boolean finished;
     private boolean failed;
     private boolean cancelled;
@@ -89,6 +90,7 @@ public final class DownloadTelemetry implements DownloadListener {
             lastPlanCompletedItems = summary.completedItems();
             lastPlanTotalItems = summary.totalItems();
             hasPlanSummary = true;
+            currentPlanBytesKnown = summary.total() > 0;
 
             downloadedBytes = completedPlanBytes + summary.downloaded();
             totalBytes = completedPlanBytes + summary.total();
@@ -205,6 +207,7 @@ public final class DownloadTelemetry implements DownloadListener {
                     completedItems,
                     totalItems,
                     bytesPerSecond,
+                    currentPlanBytesKnown,
                     finished,
                     failed,
                     cancelled,
@@ -232,6 +235,7 @@ public final class DownloadTelemetry implements DownloadListener {
             int completedItems,
             int totalItems,
             long bytesPerSecond,
+            boolean currentPlanBytesKnown,
             boolean finished,
             boolean failed,
             boolean cancelled,
