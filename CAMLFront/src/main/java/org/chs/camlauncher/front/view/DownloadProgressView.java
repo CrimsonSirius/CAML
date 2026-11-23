@@ -6,6 +6,7 @@ import javafx.animation.Timeline;
 import javafx.geometry.Pos;
 import javafx.scene.control.Label;
 import javafx.scene.control.ProgressBar;
+import javafx.scene.control.ScrollPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
@@ -99,9 +100,17 @@ final class DownloadProgressView extends VBox implements PageLifecycle {
         body.getStyleClass().add("app-download-progress-body");
         body.setAlignment(Pos.TOP_LEFT);
         body.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
-        VBox.setVgrow(body, Priority.ALWAYS);
 
-        getChildren().addAll(header, body);
+        ScrollPane bodyScroll = new ScrollPane(body);
+        bodyScroll.getStyleClass().add("app-download-progress-scroll");
+        bodyScroll.setFitToWidth(true);
+        bodyScroll.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+        bodyScroll.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
+        bodyScroll.setMinHeight(0);
+        bodyScroll.setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
+        VBox.setVgrow(bodyScroll, Priority.ALWAYS);
+
+        getChildren().addAll(header, bodyScroll);
 
         refreshTimeline = new Timeline(new KeyFrame(REFRESH_INTERVAL, event -> refreshNow()));
         refreshTimeline.setCycleCount(Animation.INDEFINITE);
@@ -189,7 +198,7 @@ final class DownloadProgressView extends VBox implements PageLifecycle {
             return;
         }
 
-        if (snapshot.totalBytes() > 0) {
+        if (snapshot.totalBytes() > 0 && snapshot.currentPlanBytesKnown()) {
             double progress = Math.max(0, Math.min(1,
                     snapshot.downloadedBytes() / (double) snapshot.totalBytes()));
             if (snapshot.completedItems() < snapshot.totalItems()) {

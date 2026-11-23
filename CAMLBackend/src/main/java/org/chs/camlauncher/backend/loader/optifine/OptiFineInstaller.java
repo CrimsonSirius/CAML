@@ -10,6 +10,7 @@ import org.chs.camlauncher.backend.download.DownloadListener;
 import org.chs.camlauncher.backend.download.DownloadStage;
 import org.chs.camlauncher.backend.error.BackendException;
 import org.chs.camlauncher.backend.download.FileDownloader;
+import org.chs.camlauncher.backend.download.io.DownloadExecutor;
 import org.chs.camlauncher.backend.download.model.DownloadItem;
 import org.chs.camlauncher.backend.download.source.DownloadSource;
 import org.chs.camlauncher.backend.download.source.DownloadSources;
@@ -186,13 +187,17 @@ public final class OptiFineInstaller {
             URI installerUri = optiFineService.resolveDownloadUri(optiFineVersion);
             DownloadListener.notifyStage(listener, DownloadStage.of("optifine.installer.download"));
             token.throwIfCancelled();
-            fileDownloader.download(new DownloadItem(
-                    "OptiFine installer",
-                    DownloadSources.candidates(sources, installerUri.toString()),
-                    installer,
-                    null,
-                    -1
-            ), listener, OptiFineInstaller::validateInstallerArchive, token);
+            DownloadExecutor.downloadSingle(new DownloadItem(
+                            "OptiFine installer",
+                            DownloadSources.candidates(sources, installerUri.toString()),
+                            installer,
+                            null,
+                            -1
+                    ),
+                    listener,
+                    (item, itemListener) -> fileDownloader.download(
+                            item, itemListener, OptiFineInstaller::validateInstallerArchive, token),
+                    token);
 
             token.throwIfCancelled();
             prepareStaging(staging, gameVersion, base);

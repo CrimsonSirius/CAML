@@ -5,6 +5,7 @@ import org.chs.camlauncher.backend.download.DownloadCancellationToken;
 import org.chs.camlauncher.backend.download.DownloadListener;
 import org.chs.camlauncher.backend.download.DownloadStage;
 import org.chs.camlauncher.backend.download.FileDownloader;
+import org.chs.camlauncher.backend.download.io.DownloadExecutor;
 import org.chs.camlauncher.backend.download.source.DownloadSource;
 import org.chs.camlauncher.backend.download.source.DownloadSources;
 import org.chs.camlauncher.backend.download.source.OfficialDownloadSource;
@@ -141,13 +142,16 @@ public final class FabricInstaller {
             throw new IOException("Fabric API 文件名越界: " + apiVersion.filename());
         }
 
-        fileDownloader.download(new DownloadItem(
-                apiVersion.name(),
-                DownloadSources.candidates(sources, apiVersion.downloadUri().toString()),
-                destination,
-                apiVersion.sha1(),
-                apiVersion.size()
-        ), listener, null, token);
+        DownloadExecutor.downloadSingle(new DownloadItem(
+                        apiVersion.name(),
+                        DownloadSources.candidates(sources, apiVersion.downloadUri().toString()),
+                        destination,
+                        apiVersion.sha1(),
+                        apiVersion.size()
+                ),
+                listener,
+                (item, itemListener) -> fileDownloader.download(item, itemListener, null, token),
+                token);
         return destination;
     }
 

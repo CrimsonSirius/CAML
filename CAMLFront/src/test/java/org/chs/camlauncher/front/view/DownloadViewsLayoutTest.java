@@ -10,6 +10,7 @@ import javafx.scene.layout.VBox;
 import org.chs.camlauncher.backend.language.LanguageService;
 import org.chs.camlauncher.backend.metadata.model.VersionManifest;
 import org.chs.camlauncher.backend.settings.SettingsService;
+import org.chs.camlauncher.front.task.DownloadTelemetry;
 import org.chs.camlauncher.front.text.UiText;
 import org.chs.camlauncher.language.contract.LanguageSelectionMode;
 import org.chs.camlauncher.ui.theme.CamlTheme;
@@ -107,6 +108,48 @@ class DownloadViewsLayoutTest {
         assertTrue(measured[2], "高度不足时应显示纵向滚动条");
         assertTrue(measured[3], "选项内容必须放进滚动容器");
         assertTrue(measured[4], "滚动区应占用页面剩余高度");
+    }
+
+    @Test
+    void progressPageKeepsHeaderVisibleAndScrollsLongStageLists() throws Exception {
+        boolean[] measured = onFxThread(() -> {
+            DownloadTelemetry telemetry = new DownloadTelemetry();
+            for (int index = 0; index < 80; index++) {
+                telemetry.onStage("install-stage-" + index);
+            }
+            DownloadRequest request = new DownloadRequest(
+                    versions(1).getFirst(), "forge-optifine-test", dataDirectory,
+                    null, null, null, null, null, null, null);
+            DownloadProgressView view = new DownloadProgressView(request, telemetry, () -> { });
+
+            VBox root = new VBox(view);
+            VBox.setVgrow(view, Priority.ALWAYS);
+            root.setPrefSize(900, 520);
+            Scene scene = new Scene(root, 900, 520);
+            CamlTheme.install(scene);
+            addStylesheet(scene, "/themes/mango.css");
+            addStylesheet(scene, "/styles/app.css");
+            root.applyCss();
+            root.resize(900, 520);
+            root.applyCss();
+            root.layout();
+
+            ScrollPane scroll = (ScrollPane) view.lookup(".app-download-progress-scroll");
+            Node header = view.lookup(".app-download-header");
+            boolean result = scroll != null
+                    && header != null
+                    && scroll.isFitToWidth()
+                    && scroll.getHbarPolicy() == ScrollPane.ScrollBarPolicy.NEVER
+                    && scroll.getVbarPolicy() == ScrollPane.ScrollBarPolicy.AS_NEEDED
+                    && VBox.getVgrow(scroll) == Priority.ALWAYS
+                    && header.getBoundsInParent().getHeight() > 0
+                    && scroll.getContent().getBoundsInLocal().getHeight()
+                    > scroll.getViewportBounds().getHeight();
+            view.dispose();
+            return new boolean[]{result};
+        });
+
+        assertTrue(measured[0], "阶段很多时页面应只滚动内容，并保持标题和返回按钮可见");
     }
 
     private static List<VersionManifest.Version> versions(int count) {

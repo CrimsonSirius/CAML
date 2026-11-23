@@ -14,7 +14,9 @@ import java.io.File;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -55,6 +57,21 @@ class ProcessLauncherTest {
             assertTrue(listener.exited.await(5, TimeUnit.SECONDS));
             assertTrue(listener.output.toString().contains("fake-main-hello"));
         }
+    }
+
+    @Test
+    void prependsUserLocalBinWithoutDuplicatingPathEntry() {
+        Path localBin = gameDirectory.resolve("local-bin");
+        Map<String, String> environment = new HashMap<>();
+        environment.put("PATH", "/usr/bin" + File.pathSeparator + "/bin");
+
+        ProcessLauncher.prependPathEntry(environment, localBin);
+        ProcessLauncher.prependPathEntry(environment, localBin);
+
+        assertEquals(
+                localBin.toAbsolutePath().normalize() + File.pathSeparator + "/usr/bin" + File.pathSeparator + "/bin",
+                environment.get("PATH")
+        );
     }
 
     private LaunchPlan plan(Path javaExecutable) {

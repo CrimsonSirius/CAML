@@ -188,6 +188,8 @@ public final class JavaLocator {
         for (Path root : commonRoots()) {
             addChildren(candidates, root);
         }
+        candidates.addAll(managedJavaExecutables(
+                Path.of(System.getProperty("user.home"), ".caml", "java")));
         return candidates;
     }
 
@@ -220,13 +222,28 @@ public final class JavaLocator {
         }
     }
 
+    static List<Path> managedJavaExecutables(Path repositoryRoot) {
+        if (!Files.isDirectory(repositoryRoot)) {
+            return List.of();
+        }
+        try (Stream<Path> paths = Files.walk(repositoryRoot, 6)) {
+            return paths
+                    .filter(Files::isRegularFile)
+                    .filter(path -> path.getFileName().toString().equals(JAVA_EXECUTABLE))
+                    .filter(path -> path.getParent() != null
+                            && path.getParent().getFileName().toString().equals("bin"))
+                    .toList();
+        } catch (IOException e) {
+            return List.of();
+        }
+    }
+
     private static List<Path> commonRoots() {
         String userHome = System.getProperty("user.home");
         List<Path> roots = new ArrayList<>(List.of(
                 Path.of(userHome, ".jdks"),
                 Path.of(userHome, ".gradle", "jdks"),
-                Path.of(userHome, ".sdkman", "candidates", "java"),
-                Path.of(userHome, ".caml", "java")
+                Path.of(userHome, ".sdkman", "candidates", "java")
         ));
 
         if (isWindows()) {

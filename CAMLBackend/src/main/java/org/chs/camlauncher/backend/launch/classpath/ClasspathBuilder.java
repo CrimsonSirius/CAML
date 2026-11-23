@@ -31,6 +31,9 @@ public final class ClasspathBuilder {
         Set<Path> classpath = new LinkedHashSet<>();
         Set<String> coordinates = new LinkedHashSet<>();
         Set<Path> paths = new LinkedHashSet<>();
+        Path deferredOptiFine = null;
+        boolean legacyLaunchWrapper = "net.minecraft.launchwrapper.Launch"
+                .equals(plan.manifest().mainClass());
 
         for (Library library : plan.manifest().libraries()) {
             if (!ruleEvaluator.isAllowed(library.rules())
@@ -49,12 +52,22 @@ public final class ClasspathBuilder {
             }
             Path artifact = SafePaths.resolveUnder(librariesDirectory, relativePath, "library");
             if (paths.add(artifact)) {
-                classpath.add(artifact);
+                if (legacyLaunchWrapper && isOptiFinePatch(library)) {
+                    deferredOptiFine = artifact;
+                } else {
+                    classpath.add(artifact);
+                }
             }
         }
 
         if (!usesBootstrapLauncher(plan.manifest().mainClass())) {
             classpath.add(plan.instance().clientJar().toAbsolutePath().normalize());
+        }
+        // OptiFine 补丁 jar 自带一个 anb.class。LaunchWrapper 会先按 classpath
+        // 找到它，Forge 再拿这个类去比对原版 binpatch 时就会因 Adler-32 不同而退出。
+        // 把补丁 jar 放到原版 jar 之后，FML 才能读到干净的输入类。
+        if (deferredOptiFine != null) {
+            classpath.add(deferredOptiFine);
         }
         return List.copyOf(classpath);
     }
@@ -77,5 +90,12 @@ public final class ClasspathBuilder {
     private static boolean usesBootstrapLauncher(String mainClass) {
         return mainClass != null
                 && mainClass.startsWith("cpw.mods.bootstraplauncher.BootstrapLauncher");
+    }
+
+    private static boolean isOptiFinePatch(Library library) {
+        String[] parts = library.name().split(":");
+        return parts.length >= 2
+                && "optifine".equals(parts[0])
+                && "OptiFine".equals(parts[1]);
     }
 }

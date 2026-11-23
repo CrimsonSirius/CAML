@@ -1,6 +1,7 @@
 package org.chs.camlauncher.backend.runtime;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -10,6 +11,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class JavaLocatorTest {
+    @TempDir
+    Path tempDirectory;
+
     @Test
     void inspectsCurrentJavaRuntime() {
         Path home = Path.of(System.getProperty("java.home"));
@@ -37,5 +41,17 @@ class JavaLocatorTest {
 
         assertEquals(1, manualCandidates.size());
         assertTrue(manualCandidates.getFirst().available());
+    }
+
+    @Test
+    void scansNestedManagedJavaRepository() throws Exception {
+        Path repository = tempDirectory.resolve("java");
+        Path executable = repository.resolve("linux-x86_64/zulu-8-jdk/bin/java");
+        Files.createDirectories(executable.getParent());
+        Files.createFile(executable);
+
+        List<Path> executables = JavaLocator.managedJavaExecutables(repository);
+
+        assertEquals(List.of(executable), executables);
     }
 }

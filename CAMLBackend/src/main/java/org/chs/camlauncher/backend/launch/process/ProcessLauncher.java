@@ -6,14 +6,18 @@ import org.chs.camlauncher.backend.launch.LaunchFailure;
 import org.chs.camlauncher.backend.launch.LaunchPlan;
 import org.chs.camlauncher.backend.launch.command.LaunchCommand;
 import org.chs.camlauncher.backend.launch.command.LaunchCommandBuilder;
+import org.chs.camlauncher.backend.metadata.rule.RuleEvaluator;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.regex.Pattern;
 
 public final class ProcessLauncher {
     private final LaunchCommandBuilder commandBuilder;
@@ -130,6 +134,31 @@ public final class ProcessLauncher {
         ProcessBuilder builder = new ProcessBuilder(commandLine);
         builder.directory(workingDirectory.toFile());
         builder.environment().putAll(environment);
+        addUserLocalBin(builder.environment());
         return new GameProcess(builder.start(), commandLine, listener, cleanupFile);
+    }
+
+    private static void addUserLocalBin(Map<String, String> environment) {
+        if (!"linux".equals(RuleEvaluator.currentOsName())) {
+            return;
+        }
+        Path localBin = Path.of(System.getProperty("user.home"), ".local", "bin");
+        if (Files.isDirectory(localBin)) {
+            prependPathEntry(environment, localBin);
+        }
+    }
+
+    static void prependPathEntry(Map<String, String> environment, Path entry) {
+        String value = environment.getOrDefault("PATH", System.getenv("PATH"));
+        String entryString = entry.toAbsolutePath().normalize().toString();
+        if (value == null || value.isBlank()) {
+            environment.put("PATH", entryString);
+            return;
+        }
+        boolean present = Arrays.stream(value.split(Pattern.quote(File.pathSeparator)))
+                .anyMatch(part -> part.equals(entryString));
+        if (!present) {
+            environment.put("PATH", entryString + File.pathSeparator + value);
+        }
     }
 }
