@@ -10,11 +10,9 @@ import org.chs.camlauncher.backend.runtime.JavaCandidate;
 import org.chs.camlauncher.backend.runtime.JavaSelectionMode;
 import org.chs.camlauncher.front.controller.SettingsController;
 import org.chs.camlauncher.front.text.UiText;
-import org.chs.camlauncher.ui.control.CamlButton;
 import org.chs.camlauncher.ui.control.CamlComboBox;
 import org.chs.camlauncher.ui.control.CamlRadioButton;
 
-import java.io.File;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -27,8 +25,6 @@ final class JavaSettingsView extends VBox {
     private final CamlRadioButton automatic = new CamlRadioButton(UiText.tr("settings.game.java.auto"));
     private final CamlRadioButton manual = new CamlRadioButton(UiText.tr("settings.game.java.manual"));
     private final CamlComboBox<JavaCandidate> javaBox = new CamlComboBox<>();
-    private final CamlButton rescanButton = CamlButton.outlined(UiText.tr("settings.game.java.rescan"));
-    private final CamlButton addButton = CamlButton.outlined(UiText.tr("settings.game.java.add"));
     private final Label detailLabel = new Label();
     private boolean scanning;
     private boolean updatingMode;
@@ -52,14 +48,6 @@ final class JavaSettingsView extends VBox {
         HBox modeRow = new HBox(automatic, manual);
         modeRow.getStyleClass().add("app-settings-row");
         modeRow.setAlignment(Pos.CENTER_LEFT);
-
-        rescanButton.getStyleClass().add("app-java-tool-button");
-        addButton.getStyleClass().add("app-java-tool-button");
-        rescanButton.setOnAction(event -> scanJava());
-        addButton.setOnAction(event -> chooseJavaFile());
-        HBox tools = new HBox(rescanButton, addButton);
-        tools.getStyleClass().add("app-settings-inline");
-        tools.setAlignment(Pos.CENTER_LEFT);
 
         javaBox.setMaxWidth(Double.MAX_VALUE);
         javaBox.setPromptText(UiText.tr("settings.game.java.scanning"));
@@ -95,7 +83,7 @@ final class JavaSettingsView extends VBox {
         detailLabel.getStyleClass().addAll("caml-body-small", "field-hint");
         detailLabel.setWrapText(true);
 
-        VBox manualBlock = new VBox(tools, javaBox, detailLabel);
+        VBox manualBlock = new VBox(javaBox, detailLabel);
         manualBlock.getStyleClass().add("app-settings-sublock");
         manualBlock.setMaxWidth(Double.MAX_VALUE);
 
@@ -119,13 +107,11 @@ final class JavaSettingsView extends VBox {
             return;
         }
         scanning = true;
-        rescanButton.setDisable(true);
         javaBox.setPromptText(UiText.tr("settings.game.java.scanning"));
         detailLabel.setText(UiText.tr("settings.game.java.scanningAll"));
         detailLabel.getStyleClass().remove("field-hint-error");
         controller.scanJavaCandidates(this::applyCandidates, message -> {
             scanning = false;
-            rescanButton.setDisable(false);
             javaBox.setPromptText(UiText.tr("settings.game.java.scanFailedPrompt"));
             detailLabel.setText(UiText.tr("settings.game.java.scanFailed", message));
             detailLabel.getStyleClass().remove("field-hint");
@@ -135,7 +121,6 @@ final class JavaSettingsView extends VBox {
 
     private void applyCandidates(List<JavaCandidate> candidates) {
         scanning = false;
-        rescanButton.setDisable(false);
         Path desired = launchSettings.selectedJavaPath();
         List<JavaCandidate> sorted = new ArrayList<>(candidates);
         sortCandidates(sorted);
@@ -171,71 +156,8 @@ final class JavaSettingsView extends VBox {
         updateDetail();
     }
 
-    private void chooseJavaFile() {
-        if (getScene() == null) {
-            return;
-        }
-        Path current = launchSettings.selectedJavaPath();
-        Path parent = current == null ? null : current.getParent();
-        if (parent == null) {
-            showJavaChooser(null);
-            return;
-        }
-
-        addButton.setDisable(true);
-        controller.checkDirectory(parent,
-                exists -> {
-                    addButton.setDisable(false);
-                    showJavaChooser(exists ? parent : null);
-                },
-                message -> {
-                    addButton.setDisable(false);
-                    showJavaChooser(null);
-                });
-    }
-
-    private void showJavaChooser(Path initialDirectory) {
-        if (getScene() == null) {
-            return;
-        }
-        javafx.stage.FileChooser chooser = new javafx.stage.FileChooser();
-        chooser.setTitle(UiText.tr("settings.game.java.chooserTitle"));
-        if (initialDirectory != null) {
-            chooser.setInitialDirectory(initialDirectory.toFile());
-        }
-        File selected = chooser.showOpenDialog(getScene().getWindow());
-        if (selected == null) {
-            addButton.setDisable(false);
-            return;
-        }
-
-        addButton.setDisable(true);
-        detailLabel.setText(UiText.tr("settings.game.java.checking"));
-        detailLabel.getStyleClass().remove("field-hint-error");
-        controller.addManualJava(selected.toPath(), candidate -> {
-            addButton.setDisable(false);
-            List<JavaCandidate> currentItems = new ArrayList<>(javaBox.getItems());
-            currentItems.removeIf(item -> samePath(item.executable(), candidate.executable()));
-            currentItems.add(candidate);
-            sortCandidates(currentItems);
-            javaBox.getItems().setAll(currentItems);
-            javaBox.refreshDisplay();
-            if (!manual.isSelected()) {
-                updatingMode = true;
-                manual.setSelected(true);
-                updatingMode = false;
-            }
-            applyMode(true, false);
-            javaBox.setValue(candidate);
-            launchSettings.setSelectedJavaPath(candidate.executable());
-            saveSelection();
-            updateDetail();
-        }, message -> {
-            addButton.setDisable(false);
-            detailLabel.setText(UiText.tr("settings.game.java.addFailed", message));
-            detailLabel.getStyleClass().remove("field-hint");
-            detailLabel.getStyleClass().add("field-hint-error");
-        });
+    void setCandidates(List<JavaCandidate> candidates) {
+        applyCandidates(candidates);
     }
 
     private void applyMode(boolean manualMode, boolean persist) {
@@ -283,7 +205,7 @@ final class JavaSettingsView extends VBox {
             return;
         }
         if (selected == null) {
-            detailLabel.setText(UiText.tr("settings.game.java.selectOrAdd"));
+            detailLabel.setText(UiText.tr("settings.game.java.select"));
             return;
         }
         if (!selected.available()) {

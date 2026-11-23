@@ -38,6 +38,7 @@ public abstract class LanguageTranslationGenerator {
         WorkspaceTexts.populateDefaults(translations);
         AccountTexts.populateDefaults(translations);
         AboutTexts.populateDefaults(translations);
+        JavaManagementTexts.populateDefaults(translations);
     }
 
     /** 生成翻译文件，返回写入路径。 */

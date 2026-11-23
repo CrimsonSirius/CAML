@@ -506,10 +506,6 @@
     -fx-border-radius: 0.75em;
 }
 
-.app-settings-inline {
-    -fx-spacing: 0.625em;
-}
-
 .app-settings-sublock {
     -fx-spacing: 0.5em;
 }
@@ -526,14 +522,79 @@
     -fx-min-width: 4.5em;
 }
 
-.app-java-tool-button {
-    -fx-background-radius: 0.571429em;
-    -fx-min-height: 2.857143em;
-}
-
 .app-java-detail {
     -fx-font-size: 0.875em;
     -fx-text-fill: -caml-on-surface-muted;
+}
+
+.app-java-management {
+    -fx-spacing: 0.75em;
+}
+
+.app-java-management-toolbar {
+    -fx-spacing: 0.5em;
+    -fx-alignment: center-left;
+}
+
+.app-java-management-list {
+    -fx-spacing: 0;
+}
+
+.app-java-management-row {
+    -fx-spacing: 0.875em;
+    -fx-padding: 0.75em 0.25em;
+    -fx-alignment: top-left;
+    -fx-border-color: transparent transparent -caml-border-subtle transparent;
+    -fx-border-width: 0 0 1 0;
+}
+
+.app-java-management-row-unavailable {
+    -fx-opacity: 0.72;
+}
+
+.app-java-version-badge {
+    -fx-min-width: 2.5em;
+    -fx-min-height: 2.5em;
+    -fx-alignment: center;
+    -fx-background-color: -caml-accent-container;
+    -fx-background-radius: 0.5em;
+    -fx-text-fill: -caml-on-accent-container;
+    -fx-font-weight: bold;
+    -fx-font-size: 0.875em;
+}
+
+.app-java-management-info {
+    -fx-spacing: 0.125em;
+}
+
+.app-java-management-name-row {
+    -fx-spacing: 0.5em;
+    -fx-alignment: center-left;
+}
+
+.app-java-management-name {
+    -fx-font-size: 1em;
+    -fx-font-weight: bold;
+    -fx-text-fill: -caml-on-surface;
+}
+
+.app-java-management-meta {
+    -fx-font-size: 0.875em;
+    -fx-text-fill: -caml-on-surface-muted;
+}
+
+.app-java-management-path {
+    -fx-font-family: "Monospaced";
+    -fx-font-size: 0.8125em;
+    -fx-text-fill: -caml-on-surface-muted;
+}
+
+.app-java-management-badge {
+    -fx-background-color: -caml-surface-high;
+    -fx-background-radius: 100;
+    -fx-padding: 0.125em 0.5em;
+    -fx-text-fill: -caml-on-surface-muted;
+    -fx-font-size: 0.75em;
 }
 
 .app-instance-picker {

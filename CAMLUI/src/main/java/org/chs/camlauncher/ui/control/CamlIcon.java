@@ -21,6 +21,7 @@ public final class CamlIcon extends StackPane {
         DOWNLOAD,
         SETTINGS,
         ACCOUNT,
+        JAVA,
         PLAY,
         FOLDER,
         GRID,
@@ -100,6 +101,12 @@ public final class CamlIcon extends StackPane {
             case ACCOUNT -> new Shape[]{
                     filled(new Circle(12, 7, 4)),
                     filled(accountBody())
+            };
+            case JAVA -> new Shape[]{
+                    stroked(new Rectangle(4, 9, 11, 9)),
+                    stroked(new Polyline(15, 11, 20, 11, 20, 15, 15, 15)),
+                    stroked(new Line(8, 6, 8, 3)),
+                    stroked(new Line(12, 6, 12, 3))
             };
             case PLAY -> new Shape[]{
                     filled(new Polygon(8, 5, 20, 12, 8, 19))

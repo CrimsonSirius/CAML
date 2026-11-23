@@ -235,6 +235,7 @@ public final class ZHTWGenerator extends LanguageTranslationGenerator {
 
         // 設定頁導覽
         t.put("settings.section.game", "遊戲設定");
+        t.put("settings.section.java", "Java 管理");
         t.put("settings.section.download", "下載設定");
         t.put("settings.section.appearance", "外觀");
 
@@ -268,6 +269,13 @@ public final class ZHTWGenerator extends LanguageTranslationGenerator {
         t.put("settings.about.dependency.author", "作者：%s");
         t.put("settings.about.dependency.license", "授權條款：%s");
         t.put("settings.about.unknown", "未知");
+
+        // Java 管理
+        t.put("settings.javaManagement.count", "共 %d 個 Java 執行環境");
+        t.put("settings.javaManagement.empty", "未發現 Java 執行環境");
+        t.put("settings.javaManagement.manual", "手動新增");
+        t.put("settings.javaManagement.unavailable", "不可用");
+        t.put("settings.javaManagement.meta", "%s · %d 位%s");
 
         // 遊戲位置
         t.put("settings.game.location.title", "遊戲位置");

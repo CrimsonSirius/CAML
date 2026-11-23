@@ -30,6 +30,7 @@ import java.util.function.IntConsumer;
 final class SettingsView extends VBox implements SidebarPage, PageLifecycle {
     enum Section {
         GAME,
+        JAVA,
         DOWNLOAD,
         ACCOUNT,
         APPEARANCE,
@@ -37,6 +38,7 @@ final class SettingsView extends VBox implements SidebarPage, PageLifecycle {
     }
 
     private final GameSettingsView gameSettings;
+    private final JavaManagementView javaManagement;
     private final DownloadSettingsView downloadSettings;
     private final LauncherSettingsView launcherSettings;
     private final AccountSettingsView accountSettings;
@@ -44,6 +46,7 @@ final class SettingsView extends VBox implements SidebarPage, PageLifecycle {
     private final SettingsController controller;
     private final CamlSideNav sideNav;
     private final CamlSideNavItem gameItem;
+    private final CamlSideNavItem javaItem;
     private final CamlSideNavItem downloadItem;
     private final CamlSideNavItem launcherItem;
     private final CamlSideNavItem accountItem;
@@ -67,6 +70,8 @@ final class SettingsView extends VBox implements SidebarPage, PageLifecycle {
         gameSettings = new GameSettingsView(
                 launchSettings, onMemoryChanged, onVersionIsolationChanged, systemMemory, controller);
         controller.setOnSystemMemoryUpdated(gameSettings::updateSystemMemory);
+        javaManagement = new JavaManagementView(
+                controller, launchSettings, gameSettings.javaSettings()::setCandidates);
         downloadSettings = new DownloadSettingsView(
                 controller.downloadConcurrency(),
                 controller::saveDownloadConcurrencyAsync,
@@ -90,6 +95,9 @@ final class SettingsView extends VBox implements SidebarPage, PageLifecycle {
         gameItem = new CamlSideNavItem(
                 new CamlIcon(CamlIcon.Glyph.SETTINGS, 20),
                 UiText.tr("settings.section.game"));
+        javaItem = new CamlSideNavItem(
+                new CamlIcon(CamlIcon.Glyph.JAVA, 20),
+                UiText.tr("settings.section.java"));
         downloadItem = new CamlSideNavItem(
                 new CamlIcon(CamlIcon.Glyph.DOWNLOAD, 20),
                 UiText.tr("settings.section.download"));
@@ -103,6 +111,7 @@ final class SettingsView extends VBox implements SidebarPage, PageLifecycle {
                 new CamlIcon(CamlIcon.Glyph.INFO, 20),
                 UiText.tr("settings.section.about"));
         sideNav.addItem(gameItem);
+        sideNav.addItem(javaItem);
         sideNav.addItem(downloadItem);
         sideNav.addItem(accountItem);
         sideNav.addItem(launcherItem);
@@ -133,6 +142,7 @@ final class SettingsView extends VBox implements SidebarPage, PageLifecycle {
         contentScroll.viewportBoundsProperty().addListener((observable, oldValue, newValue) -> {
             double innerWidth = Math.max(0, newValue.getWidth());
             gameSettings.setPrefWidth(innerWidth);
+            javaManagement.setPrefWidth(innerWidth);
             downloadSettings.setPrefWidth(innerWidth);
             accountSettings.setPrefWidth(innerWidth);
             launcherSettings.setPrefWidth(innerWidth);
@@ -142,6 +152,10 @@ final class SettingsView extends VBox implements SidebarPage, PageLifecycle {
             if (selected == aboutItem) {
                 currentSection = Section.ABOUT;
                 showContent(aboutSettings);
+            } else if (selected == javaItem) {
+                currentSection = Section.JAVA;
+                javaManagement.onShow();
+                showContent(javaManagement);
             } else if (selected == launcherItem) {
                 currentSection = Section.APPEARANCE;
                 showContent(launcherSettings);
@@ -179,6 +193,7 @@ final class SettingsView extends VBox implements SidebarPage, PageLifecycle {
         Section target = section == null ? Section.GAME : section;
         sideNav.select(switch (target) {
             case GAME -> gameItem;
+            case JAVA -> javaItem;
             case DOWNLOAD -> downloadItem;
             case ACCOUNT -> accountItem;
             case APPEARANCE -> launcherItem;
@@ -215,6 +230,7 @@ final class SettingsView extends VBox implements SidebarPage, PageLifecycle {
             contentTransition.stop();
             contentTransition = null;
         }
+        javaManagement.dispose();
     }
 
     private void showContent(Node next) {

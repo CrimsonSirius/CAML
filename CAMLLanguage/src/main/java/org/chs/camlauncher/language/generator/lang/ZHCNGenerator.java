@@ -230,6 +230,7 @@ public final class ZHCNGenerator extends LanguageTranslationGenerator {
 
         // 设置页导航
         t.put("settings.section.game", "游戏设置");
+        t.put("settings.section.java", "Java 管理");
         t.put("settings.section.download", "下载设置");
         t.put("settings.section.appearance", "外观");
 
@@ -263,6 +264,13 @@ public final class ZHCNGenerator extends LanguageTranslationGenerator {
         t.put("settings.about.dependency.author", "作者：%s");
         t.put("settings.about.dependency.license", "许可证：%s");
         t.put("settings.about.unknown", "未知");
+
+        // Java 管理
+        t.put("settings.javaManagement.count", "共 %d 个 Java 运行时");
+        t.put("settings.javaManagement.empty", "未发现 Java 运行时");
+        t.put("settings.javaManagement.manual", "手动添加");
+        t.put("settings.javaManagement.unavailable", "不可用");
+        t.put("settings.javaManagement.meta", "%s · %d 位%s");
 
         // 游戏位置
         t.put("settings.game.location.title", "游戏位置");
