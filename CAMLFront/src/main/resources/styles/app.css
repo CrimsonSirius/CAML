@@ -365,6 +365,24 @@
     -fx-text-fill: -caml-on-surface;
 }
 
+.app-about-row {
+    -fx-spacing: 0.125em;
+    -fx-padding: 0.25em 0;
+}
+
+.app-about-label {
+    -fx-text-fill: -caml-on-surface-muted;
+}
+
+.app-about-value {
+    -fx-text-fill: -caml-on-surface;
+}
+
+.app-about-path {
+    -fx-font-family: "Monospaced";
+    -fx-font-size: 0.8125em;
+}
+
 /* 分组内部的间距梯度：选项列表 12px、滑块块 10px、单选行 18px、工具按钮行与字段行 8~10px。 */
 .app-settings-options {
     -fx-spacing: 0.75em;

@@ -24,6 +24,7 @@ public final class CamlIcon extends StackPane {
         PLAY,
         FOLDER,
         GRID,
+        INFO,
         APPEARANCE,
         CHECK,
         WARNING,
@@ -111,6 +112,11 @@ public final class CamlIcon extends StackPane {
                     filled(new Rectangle(14, 3, 7, 7)),
                     filled(new Rectangle(3, 14, 7, 7)),
                     filled(new Rectangle(14, 14, 7, 7))
+            };
+            case INFO -> new Shape[]{
+                    stroked(new Circle(12, 12, 9)),
+                    filled(new Circle(12, 7, 1.4)),
+                    filled(new Rectangle(10.8, 10.5, 2.4, 7))
             };
             case APPEARANCE -> new Shape[]{
                     filled(new Polygon(12, 2, 14.2, 9.8, 22, 12, 14.2, 14.2,

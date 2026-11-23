@@ -26,25 +26,28 @@ import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.IntConsumer;
 
-/** 设置页：左侧子导航，右侧游戏/下载/外观设置内容。 */
+/** 设置页：左侧子导航，右侧游戏/下载/账号/外观/关于内容。 */
 final class SettingsView extends VBox implements SidebarPage, PageLifecycle {
     enum Section {
         GAME,
         DOWNLOAD,
         ACCOUNT,
-        APPEARANCE
+        APPEARANCE,
+        ABOUT
     }
 
     private final GameSettingsView gameSettings;
     private final DownloadSettingsView downloadSettings;
     private final LauncherSettingsView launcherSettings;
     private final AccountSettingsView accountSettings;
+    private final AboutSettingsView aboutSettings;
     private final SettingsController controller;
     private final CamlSideNav sideNav;
     private final CamlSideNavItem gameItem;
     private final CamlSideNavItem downloadItem;
     private final CamlSideNavItem launcherItem;
     private final CamlSideNavItem accountItem;
+    private final CamlSideNavItem aboutItem;
     private final ScrollPane contentScroll = new ScrollPane();
     private final Label saveErrorLabel = new Label();
     private final StackPane contentHost;
@@ -76,6 +79,9 @@ final class SettingsView extends VBox implements SidebarPage, PageLifecycle {
                 initialLanguageMode, initialLanguage,
                 initialFallbackMode, initialFallbackLocale,
                 onLanguageChanged, onLanguageFallbackChanged);
+        aboutSettings = new AboutSettingsView(
+                controller.backendStatus(), controller.systemInfo(), controller.deviceInfo(),
+                launchSettings.gameDirectoryProperty());
 
         sideNav = new CamlSideNav();
         sideNav.getStyleClass().add("app-settings-sidebar");
@@ -92,10 +98,14 @@ final class SettingsView extends VBox implements SidebarPage, PageLifecycle {
         launcherItem = new CamlSideNavItem(
                 new CamlIcon(CamlIcon.Glyph.APPEARANCE, 20),
                 UiText.tr("settings.section.appearance"));
+        aboutItem = new CamlSideNavItem(
+                new CamlIcon(CamlIcon.Glyph.INFO, 20),
+                UiText.tr("settings.section.about"));
         sideNav.addItem(gameItem);
         sideNav.addItem(downloadItem);
         sideNav.addItem(accountItem);
         sideNav.addItem(launcherItem);
+        sideNav.addItem(aboutItem);
         sideNav.select(gameItem);
 
         contentScroll.setFitToWidth(true);
@@ -125,9 +135,13 @@ final class SettingsView extends VBox implements SidebarPage, PageLifecycle {
             downloadSettings.setPrefWidth(innerWidth);
             accountSettings.setPrefWidth(innerWidth);
             launcherSettings.setPrefWidth(innerWidth);
+            aboutSettings.setPrefWidth(innerWidth);
         });
         sideNav.selectedItemProperty().addListener((observable, oldValue, selected) -> {
-            if (selected == launcherItem) {
+            if (selected == aboutItem) {
+                currentSection = Section.ABOUT;
+                showContent(aboutSettings);
+            } else if (selected == launcherItem) {
                 currentSection = Section.APPEARANCE;
                 showContent(launcherSettings);
             } else if (selected == downloadItem) {
@@ -167,6 +181,7 @@ final class SettingsView extends VBox implements SidebarPage, PageLifecycle {
             case DOWNLOAD -> downloadItem;
             case ACCOUNT -> accountItem;
             case APPEARANCE -> launcherItem;
+            case ABOUT -> aboutItem;
         });
     }
 

@@ -37,6 +37,7 @@ public abstract class LanguageTranslationGenerator {
     protected void populateSharedDefaults(TranslationTable translations) {
         WorkspaceTexts.populateDefaults(translations);
         AccountTexts.populateDefaults(translations);
+        AboutTexts.populateDefaults(translations);
     }
 
     /** 生成翻译文件，返回写入路径。 */
