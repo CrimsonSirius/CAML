@@ -81,6 +81,7 @@ final class SettingsView extends VBox implements SidebarPage, PageLifecycle {
                 onLanguageChanged, onLanguageFallbackChanged);
         aboutSettings = new AboutSettingsView(
                 controller.backendStatus(), controller.systemInfo(), controller.deviceInfo(),
+                controller.projectDependencies(),
                 launchSettings.gameDirectoryProperty());
 
         sideNav = new CamlSideNav();

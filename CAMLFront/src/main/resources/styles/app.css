@@ -383,6 +383,21 @@
     -fx-font-size: 0.8125em;
 }
 
+.app-about-dependency {
+    -fx-spacing: 0.125em;
+    -fx-padding: 0.5em 0;
+    -fx-border-color: transparent transparent -caml-border-subtle transparent;
+    -fx-border-width: 0 0 1 0;
+}
+
+.app-about-dependency-name {
+    -fx-text-fill: -caml-on-surface;
+}
+
+.app-about-dependency-meta {
+    -fx-text-fill: -caml-on-surface-muted;
+}
+
 /* 分组内部的间距梯度：选项列表 12px、滑块块 10px、单选行 18px、工具按钮行与字段行 8~10px。 */
 .app-settings-options {
     -fx-spacing: 0.75em;

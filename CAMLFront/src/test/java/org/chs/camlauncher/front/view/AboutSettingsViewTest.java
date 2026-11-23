@@ -8,6 +8,7 @@ import org.chs.camlauncher.backend.api.BackendStatus;
 import org.chs.camlauncher.backend.language.LanguageService;
 import org.chs.camlauncher.backend.settings.SettingsService;
 import org.chs.camlauncher.backend.system.DeviceInfo;
+import org.chs.camlauncher.backend.system.ProjectDependency;
 import org.chs.camlauncher.backend.system.SystemInfo;
 import org.chs.camlauncher.front.text.UiText;
 import org.chs.camlauncher.language.contract.LanguageSelectionMode;
@@ -77,7 +78,12 @@ class AboutSettingsViewTest {
                     List.of(),
                     32768
             );
-            AboutSettingsView view = new AboutSettingsView(status, linux, device, gameDirectory);
+            List<ProjectDependency> dependencies = List.of(
+                    new ProjectDependency("OpenJFX (JavaFX)", "25.0.3", "OpenJFX",
+                            "GPL-2.0 with Classpath Exception"),
+                    new ProjectDependency("Gson", "2.15.0", "Google", "Apache-2.0"));
+            AboutSettingsView view = new AboutSettingsView(
+                    status, linux, device, dependencies, gameDirectory);
 
             VBox root = new VBox(view);
             root.setPrefSize(900, 700);
@@ -103,6 +109,11 @@ class AboutSettingsViewTest {
                     .filter(node -> node instanceof Label label
                             && "32.0 GB".equals(label.getText()))
                     .count();
+            long dependencyNames = view.lookupAll(".app-about-dependency-name").size();
+            long dependencyAuthors = view.lookupAll(".app-about-dependency-meta").stream()
+                    .filter(node -> node instanceof Label label
+                            && "作者：OpenJFX".equals(label.getText()))
+                    .count();
 
             gameDirectory.set(Path.of("/tmp/other-game"));
             root.applyCss();
@@ -111,13 +122,18 @@ class AboutSettingsViewTest {
                     .filter(node -> node instanceof Label label
                             && "/tmp/other-game".equals(label.getText()))
                     .count();
-            return new long[]{groups, kernelLabels, updatedPaths, runtimeTitles, memoryValues};
+            return new long[]{
+                    groups, kernelLabels, updatedPaths, runtimeTitles, memoryValues,
+                    dependencyNames, dependencyAuthors
+            };
         });
 
-        assertEquals(6, measured[0], "关于页应包含六个信息组");
+        assertEquals(7, measured[0], "关于页应包含七个信息组");
         assertEquals(1, measured[1], "Linux 应显示内核版本标签");
         assertEquals(1, measured[2], "游戏目录应随共享设置实时更新");
         assertEquals(1, measured[3], "运行环境组应改名为启动器运行环境");
         assertEquals(1, measured[4], "运行内存只显示总容量");
+        assertEquals(2, measured[5], "项目依赖组应逐项显示依赖名称");
+        assertEquals(1, measured[6], "项目依赖组应显示作者");
     }
 }

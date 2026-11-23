@@ -259,6 +259,9 @@ public final class ZHCNGenerator extends LanguageTranslationGenerator {
         t.put("settings.about.project.title", "项目");
         t.put("settings.about.projectName", "名称");
         t.put("settings.about.copyright", "版权");
+        t.put("settings.about.dependencies.title", "项目依赖");
+        t.put("settings.about.dependency.author", "作者：%s");
+        t.put("settings.about.dependency.license", "许可证：%s");
         t.put("settings.about.unknown", "未知");
 
         // 游戏位置

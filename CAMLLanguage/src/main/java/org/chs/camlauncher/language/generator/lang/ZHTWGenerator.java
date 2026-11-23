@@ -264,6 +264,9 @@ public final class ZHTWGenerator extends LanguageTranslationGenerator {
         t.put("settings.about.project.title", "專案");
         t.put("settings.about.projectName", "名稱");
         t.put("settings.about.copyright", "版權");
+        t.put("settings.about.dependencies.title", "專案依賴");
+        t.put("settings.about.dependency.author", "作者：%s");
+        t.put("settings.about.dependency.license", "授權條款：%s");
         t.put("settings.about.unknown", "未知");
 
         // 遊戲位置

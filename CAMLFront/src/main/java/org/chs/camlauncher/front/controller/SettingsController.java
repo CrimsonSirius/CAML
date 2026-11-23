@@ -12,6 +12,7 @@ import org.chs.camlauncher.backend.language.LanguageSnapshot;
 import org.chs.camlauncher.backend.runtime.JavaCandidate;
 import org.chs.camlauncher.backend.runtime.JavaSelectionMode;
 import org.chs.camlauncher.backend.system.DeviceInfo;
+import org.chs.camlauncher.backend.system.ProjectDependency;
 import org.chs.camlauncher.backend.system.SystemInfo;
 import org.chs.camlauncher.backend.system.SystemMemoryInfo;
 import org.chs.camlauncher.language.contract.LanguageSelectionMode;
@@ -62,6 +63,10 @@ public final class SettingsController {
 
     public DeviceInfo deviceInfo() {
         return context.backend().deviceInfo();
+    }
+
+    public List<ProjectDependency> projectDependencies() {
+        return context.backend().projectDependencies();
     }
 
     public int downloadConcurrency() {

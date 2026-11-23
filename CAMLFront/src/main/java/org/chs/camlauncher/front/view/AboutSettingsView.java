@@ -7,6 +7,7 @@ import javafx.scene.control.Label;
 import javafx.scene.layout.VBox;
 import org.chs.camlauncher.backend.api.BackendStatus;
 import org.chs.camlauncher.backend.system.DeviceInfo;
+import org.chs.camlauncher.backend.system.ProjectDependency;
 import org.chs.camlauncher.backend.system.SystemInfo;
 import org.chs.camlauncher.front.text.UiText;
 
@@ -18,6 +19,7 @@ import java.util.Locale;
 final class AboutSettingsView extends VBox {
 
     AboutSettingsView(BackendStatus status, SystemInfo systemInfo, DeviceInfo deviceInfo,
+                      List<ProjectDependency> dependencies,
                       ObservableValue<Path> gameDirectory) {
         setMinWidth(0);
         setMaxWidth(Double.MAX_VALUE);
@@ -52,7 +54,8 @@ final class AboutSettingsView extends VBox {
                 group("settings.about.project.title",
                         infoRow("settings.about.projectName", "CAML"),
                         infoRow("settings.about.copyright",
-                                "Copyright (C) 2026 CrimsonSirius, namelessgod2008"))
+                                "Copyright (C) 2026 CrimsonSirius, namelessgod2008")),
+                dependencyGroup(dependencies)
         );
     }
 
@@ -88,6 +91,33 @@ final class AboutSettingsView extends VBox {
 
         VBox row = new VBox(label, value);
         row.getStyleClass().add("app-about-row");
+        row.setMaxWidth(Double.MAX_VALUE);
+        return row;
+    }
+
+    private static VBox dependencyGroup(List<ProjectDependency> dependencies) {
+        Node[] rows = dependencies == null
+                ? new Node[0]
+                : dependencies.stream().map(AboutSettingsView::dependencyRow)
+                .toArray(Node[]::new);
+        return group("settings.about.dependencies.title", rows);
+    }
+
+    private static VBox dependencyRow(ProjectDependency dependency) {
+        String name = dependency.version() == null || dependency.version().isBlank()
+                ? dependency.name()
+                : dependency.name() + " " + dependency.version();
+        Label nameLabel = new Label(name);
+        nameLabel.getStyleClass().addAll("caml-title-small", "app-about-dependency-name");
+        Label authorLabel = new Label(
+                UiText.tr("settings.about.dependency.author", dependency.author()));
+        authorLabel.getStyleClass().addAll("caml-body-small", "app-about-dependency-meta");
+        Label licenseLabel = new Label(
+                UiText.tr("settings.about.dependency.license", dependency.license()));
+        licenseLabel.getStyleClass().addAll("caml-body-small", "app-about-dependency-meta");
+
+        VBox row = new VBox(nameLabel, authorLabel, licenseLabel);
+        row.getStyleClass().add("app-about-dependency");
         row.setMaxWidth(Double.MAX_VALUE);
         return row;
     }
