@@ -276,4 +276,14 @@ final class LauncherSettingsView extends VBox {
             }
         });
     }
+
+    void focusLanguageSetting() {
+        if (!languageBox.isDisabled()) {
+            languageBox.requestFocus();
+        } else if (!fallbackLanguageBox.isDisabled()) {
+            fallbackLanguageBox.requestFocus();
+        } else {
+            themeBox.requestFocus();
+        }
+    }
 }

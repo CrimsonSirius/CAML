@@ -250,9 +250,10 @@ public final class MainView extends BorderPane {
     }
 
     public State snapshotState() {
-        Page page = activePage == downloadsView
+        CamlTopNavItem selected = navigation.selectedItemProperty().get();
+        Page page = selected == downloadsNavItem
                 ? Page.DOWNLOADS
-                : activePage == settingsView ? Page.SETTINGS : Page.HOME;
+                : selected == settingsNavItem ? Page.SETTINGS : Page.HOME;
         return new State(page, settingsView.currentSection(), downloadsView.currentCategory());
     }
 
@@ -267,6 +268,13 @@ public final class MainView extends BorderPane {
         });
         settingsView.showSection(target.settingsSection);
         downloadsView.showCategory(target.downloadCategory);
+    }
+
+    /** 语言重建后把焦点交回设置页，避免焦点落回顶栏第一个导航胶囊。 */
+    public void focusAfterRebuild() {
+        if (activePage == settingsView) {
+            settingsView.focusLanguageSetting();
+        }
     }
 
     public void dispose() {
