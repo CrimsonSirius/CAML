@@ -76,7 +76,7 @@ class ThemeServiceTest {
         ThemeInfo active = new ThemeService(dataDirectory).activeTheme();
         assertEquals("night", active.id());
         String content = Files.readString(active.file());
-        assertTrue(content.contains("-caml-background: #141517"));
+        assertTrue(content.contains("-caml-background: #111214"));
         assertTrue(content.contains("-caml-on-surface: #d7d9dd"));
     }
 
@@ -92,6 +92,7 @@ class ThemeServiceTest {
 
         assertTrue(background < group, "页面背景必须比分组更暗");
         assertTrue(group < input, "分组必须比输入框/选择框更暗");
+        assertTrue(input < 0.05, "输入框/选择框不能重新变得过亮");
     }
 
     @Test

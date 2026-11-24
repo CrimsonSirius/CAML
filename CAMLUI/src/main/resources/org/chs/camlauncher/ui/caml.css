@@ -571,12 +571,12 @@
 
 .caml-side-nav-item:selected {
     -fx-background-color: -caml-accent-container;
-    -fx-border-color: -caml-on-surface;
+    -fx-border-color: -caml-nav-border;
     -fx-text-fill: -caml-on-accent-container;
 }
 
 .caml-side-nav-item:focused {
-    -fx-border-color: -caml-accent;
+    -fx-border-color: -caml-nav-focus-border;
 }
 
 /* Top navigation. */
@@ -609,12 +609,12 @@
 
 .caml-top-nav-item:selected {
     -fx-background-color: -caml-accent-container;
-    -fx-border-color: -caml-on-surface;
+    -fx-border-color: -caml-nav-border;
     -fx-text-fill: -caml-on-accent-container;
 }
 
 .caml-top-nav-item:focused {
-    -fx-border-color: -caml-accent;
+    -fx-border-color: -caml-nav-focus-border;
 }
 
 /* Vector icons. */

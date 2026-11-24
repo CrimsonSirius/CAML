@@ -9,6 +9,7 @@ import javafx.scene.control.ToggleButton;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
+import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
 import org.chs.camlauncher.ui.control.CamlCheckBox;
 import org.chs.camlauncher.ui.control.CamlPageHost;
@@ -92,6 +93,26 @@ class FocusStyleTest {
     }
 
     @Test
+    void nightNavigationCapsulesDropSelectedAndFocusBorders() throws Exception {
+        boolean transparent = onFxThread(() -> {
+            CamlTopNavItem top = new CamlTopNavItem("主页");
+            CamlSideNavItem side = new CamlSideNavItem("设置");
+            VBox root = new VBox(top, side);
+            applyStyles(root, "/themes/night.css");
+
+            top.setSelected(true);
+            side.setSelected(true);
+            top.pseudoClassStateChanged(FOCUSED, true);
+            side.pseudoClassStateChanged(FOCUSED, true);
+            applyStyles(root);
+
+            return isTransparent(top) && isTransparent(side);
+        });
+
+        assertTrue(transparent, "night 主题下导航胶囊不应显示选中或焦点边框");
+    }
+
+    @Test
     void radioButtonDoesNotJoinFocusTraversalOrShowFocusRing() throws Exception {
         boolean[] result = onFxThread(() -> {
             CamlRadioButton radio = new CamlRadioButton("默认");
@@ -157,6 +178,14 @@ class FocusStyleTest {
         return region.getBorder().getStrokes().get(0).getTopStroke();
     }
 
+    private static boolean isTransparent(Region region) {
+        if (region.getBorder() == null || region.getBorder().getStrokes().isEmpty()) {
+            return true;
+        }
+        Paint stroke = region.getBorder().getStrokes().getFirst().getTopStroke();
+        return stroke == null || Color.TRANSPARENT.equals(stroke);
+    }
+
     @Test
     void replacingSceneRootDoesNotFocusFirstButton() throws Exception {
         boolean homeFocused = onFxThread(() -> {
@@ -205,10 +234,14 @@ class FocusStyleTest {
     }
 
     private static void applyStyles(Parent root) {
+        applyStyles(root, "/themes/mango.css");
+    }
+
+    private static void applyStyles(Parent root, String themePath) {
         if (root.getScene() == null) {
             Scene scene = new Scene(root, 400, 300);
             CamlTheme.install(scene);
-            addStylesheet(scene, "/themes/mango.css");
+            addStylesheet(scene, themePath);
             addStylesheet(scene, "/styles/app.css");
         }
         root.applyCss();
