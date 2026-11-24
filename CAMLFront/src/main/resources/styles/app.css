@@ -88,7 +88,6 @@
 
 .app-download-version-list:focused .app-download-version-cell:selected .app-download-version-item {
     -fx-border-color: -caml-accent;
-    -fx-effect: dropshadow(gaussian, -caml-accent, 4, 0.75, 0, 0);
 }
 
 .app-download-version-id {
@@ -908,7 +907,7 @@
     -fx-background-color: -caml-surface-container;
     -fx-padding: 1.5em;
     -fx-spacing: 0.75em;
-    -fx-background-radius: 1em;
+    -fx-background-radius: 0;
 }
 
 .app-log-header {
@@ -923,15 +922,21 @@
 
 .app-log-preview {
     -fx-background-color: -caml-surface-lowest;
-    -fx-background-radius: 0.5em;
+    -fx-background-radius: 0;
     -fx-border-color: -caml-border-subtle;
     -fx-border-width: 1;
-    -fx-border-radius: 0.5em;
+    -fx-border-radius: 0;
     -fx-padding: 0.75em 1em;
     -fx-font-family: "Monospaced";
     -fx-font-size: 0.75em;
     -fx-text-fill: -caml-on-surface-muted;
     -fx-max-height: 9em;
+}
+
+/* 日志按工具窗口处理，面板与内容区都保持直角，避免深色主题下四个圆角形成明显缺口。 */
+.app-log-area {
+    -fx-background-radius: 0;
+    -fx-border-radius: 0;
 }
 
 /* 日志文本区的高度由 MainView 按断点设置：CSS 声明会覆盖代码设置，因此此处不写 -fx-min-height / -fx-pref-height。 */
@@ -1216,7 +1221,9 @@
 }
 
 .app-instance-mod-toggle:focused {
-    -fx-effect: dropshadow(gaussian, -caml-on-surface, 4, 0.65, 0, 0);
+    -fx-border-color: -caml-accent;
+    -fx-border-width: 2;
+    -fx-border-radius: 100;
 }
 
 .app-instance-mod-title-row {

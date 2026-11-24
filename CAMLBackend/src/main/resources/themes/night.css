@@ -1,0 +1,42 @@
+/*
+ * CAML 深色主题 night：参考 IntelliJ IDEA 深色界面的黑灰表面与浅色文字。
+ * 这个文件会在首次启动时复制到 <data>/themes/night.css。
+ * 用户可以直接修改它，或添加新的 *.css 主题文件。
+ */
+
+.caml-root {
+    -caml-accent: #3574f0;
+    -caml-on-accent: #ffffff;
+    -caml-accent-text: #6a9cff;
+    -caml-accent-container: #214283;
+    -caml-on-accent-container: #dbe7ff;
+
+    -caml-neutral: #a3a8b0;
+    -caml-on-neutral: #141517;
+    -caml-neutral-container: #33363b;
+    -caml-on-neutral-container: #e3e5e8;
+
+    -caml-danger: #ff6b68;
+    -caml-on-danger: #141517;
+    -caml-danger-container: #4d2525;
+    -caml-on-danger-container: #ffd6d6;
+
+    -caml-background: #141517;
+    -caml-on-background: #d7d9dd;
+    -caml-surface: #1f2124;
+    -caml-on-surface: #d7d9dd;
+    -caml-surface-muted: #222427;
+    -caml-on-surface-muted: #a3a8b0;
+    -caml-surface-lowest: #42454b;
+    -caml-surface-low: #1a1c1f;
+    -caml-surface-container: #292c30;
+    -caml-surface-high: #33363b;
+    -caml-surface-highest: #3a3d43;
+
+    -caml-border: #5c6068;
+    -caml-border-subtle: #2f3237;
+    -caml-inverse-surface: #d7d9dd;
+    -caml-inverse-on-surface: #141517;
+    -caml-inverse-accent: #214283;
+    -caml-shadow-color: rgba(0, 0, 0, 0.7);
+}

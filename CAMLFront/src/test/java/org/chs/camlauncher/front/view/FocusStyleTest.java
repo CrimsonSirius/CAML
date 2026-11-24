@@ -9,11 +9,13 @@ import javafx.scene.control.ToggleButton;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
+import javafx.scene.paint.Paint;
 import org.chs.camlauncher.ui.control.CamlCheckBox;
 import org.chs.camlauncher.ui.control.CamlPageHost;
 import org.chs.camlauncher.ui.control.CamlRadioButton;
 import org.chs.camlauncher.ui.control.CamlSideNav;
 import org.chs.camlauncher.ui.control.CamlSideNavItem;
+import org.chs.camlauncher.ui.control.CamlTopNavItem;
 import org.chs.camlauncher.ui.theme.CamlTheme;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -55,13 +57,38 @@ class FocusStyleTest {
             VBox root = new VBox(nav);
             applyStyles(root);
             assertNull(item.getEffect(), "未聚焦时不应显示焦点环");
+            Paint unfocusedBorder = topStroke(item);
 
             item.pseudoClassStateChanged(FOCUSED, true);
             applyStyles(root);
-            return item.getEffect() != null;
+            return item.getEffect() == null
+                    && topStroke(item) != null
+                    && !topStroke(item).equals(unfocusedBorder);
         });
 
-        assertTrue(visible, "已选中的侧栏项获得焦点时仍必须显示焦点环");
+        assertTrue(visible, "已选中的侧栏项获得焦点时仍必须显示边框焦点环，且不能给文字加阴影");
+    }
+
+    @Test
+    void topNavigationFocusRingDoesNotShadowText() throws Exception {
+        boolean visible = onFxThread(() -> {
+            CamlTopNavItem item = new CamlTopNavItem("下载");
+            VBox root = new VBox(item);
+            applyStyles(root);
+            Paint unfocusedBorder = topStroke(item);
+
+            item.pseudoClassStateChanged(FOCUSED, true);
+            applyStyles(root);
+            boolean unselectedFocusIsBorderOnly = item.getEffect() == null
+                    && topStroke(item) != null
+                    && !topStroke(item).equals(unfocusedBorder);
+
+            item.setSelected(true);
+            applyStyles(root);
+            return unselectedFocusIsBorderOnly && item.getEffect() == null;
+        });
+
+        assertTrue(visible, "顶部导航在选中和未选中时都应只改变边框，不能用整节点阴影加粗文字");
     }
 
     @Test
@@ -111,13 +138,23 @@ class FocusStyleTest {
             VBox root = new VBox(toggle);
             applyStyles(root);
             assertNull(toggle.getEffect(), "未聚焦时不应显示焦点环");
+            Paint unfocusedBorder = topStroke(toggle);
 
             toggle.pseudoClassStateChanged(FOCUSED, true);
             applyStyles(root);
-            return toggle.getEffect() != null;
+            return toggle.getEffect() == null
+                    && topStroke(toggle) != null
+                    && !topStroke(toggle).equals(unfocusedBorder);
         });
 
-        assertTrue(visible, "模组启停按钮获得焦点时必须显示焦点环");
+        assertTrue(visible, "模组启停按钮获得焦点时必须显示边框焦点环，不能给文字加阴影");
+    }
+
+    private static Paint topStroke(Region region) {
+        if (region.getBorder() == null || region.getBorder().getStrokes().isEmpty()) {
+            return null;
+        }
+        return region.getBorder().getStrokes().get(0).getTopStroke();
     }
 
     @Test

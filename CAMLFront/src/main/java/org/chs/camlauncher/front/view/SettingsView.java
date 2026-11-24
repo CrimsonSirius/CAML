@@ -255,12 +255,18 @@ final class SettingsView extends VBox implements SidebarPage, PageLifecycle {
         if (currentContent == next) {
             return;
         }
+        boolean focusBeforeOverlay = FocusSupport.containsFocus(currentContent, getScene());
         hideOverlay.run();
+        final boolean focusInsideContent = focusBeforeOverlay
+                || FocusSupport.containsFocus(currentContent, getScene());
         if (next != launcherSettings) {
             focusLanguageWhenContentReady = false;
         }
         if (CamlMotion.reduceMotion()) {
             setContent(next);
+            if (focusInsideContent) {
+                FocusSupport.focusFirst(next, contentHost);
+            }
             return;
         }
 
@@ -272,6 +278,9 @@ final class SettingsView extends VBox implements SidebarPage, PageLifecycle {
         fadeOut.setToValue(0);
         fadeOut.setOnFinished(event -> {
             setContent(next);
+            if (focusInsideContent) {
+                FocusSupport.focusFirst(next, contentHost);
+            }
             contentScroll.setOpacity(0);
             contentTransition = new FadeTransition(Duration.millis(180), contentScroll);
             contentTransition.setFromValue(0);

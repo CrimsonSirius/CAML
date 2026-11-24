@@ -297,7 +297,7 @@ public final class CAMLBackend implements AutoCloseable {
 
         try {
             BackendPaths.ensure(config);
-            themeService.ensureDefaultTheme();
+            themeService.ensureBundledThemes();
             latestLogService.start();
             languageService.initialize();
         } catch (IOException e) {

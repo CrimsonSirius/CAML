@@ -55,11 +55,11 @@ CAML/
 │  │  ├─ runtime/     Java 运行时检测与匹配
 │  │  ├─ launch/      启动编排；command/classpath/prepare/process/patch 子包
 │  │  ├─ loader/      Fabric/Quilt/Forge/NeoForge/OptiFine 安装编排
-│  │  ├─ theme/       主题目录、默认主题复制和当前主题配置
+│  │  ├─ theme/       主题目录、内置主题复制和当前主题配置
 │  │  ├─ settings/    启动器设置持久化
 │  │  ├─ system/      物理内存读取（Linux MemAvailable）
 │  │  └─ json/        通用 JSON 文件读写
-│  ├─ src/main/resources/themes/      打包的默认主题
+│  ├─ src/main/resources/themes/      打包的内置主题
 │  └─ src/test/java/                  后端单元测试与集成测试
 ├─ CAMLUI/                            纯 JavaFX + CSS 的 CAML 组件库
 │  ├─ src/main/java/org/chs/camlauncher/ui/

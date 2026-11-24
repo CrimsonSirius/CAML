@@ -1,11 +1,16 @@
 package org.chs.camlauncher.front;
 
+import javafx.animation.FadeTransition;
+import javafx.animation.Interpolator;
 import javafx.application.Application;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.Scene;
 import javafx.scene.image.Image;
+import javafx.scene.layout.Region;
+import javafx.scene.paint.Paint;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
+import javafx.util.Duration;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.chs.camlauncher.backend.api.CAMLBackend;
@@ -21,6 +26,7 @@ import org.chs.camlauncher.backend.theme.ThemeInfo;
 import org.chs.camlauncher.front.controller.MainController;
 import org.chs.camlauncher.front.text.UiText;
 import org.chs.camlauncher.front.view.MainView;
+import org.chs.camlauncher.ui.theme.CamlMotion;
 import org.chs.camlauncher.ui.theme.CamlTheme;
 
 import java.io.IOException;
@@ -60,6 +66,7 @@ public final class CAMLApplication extends Application {
     private long languageChangeGeneration;
     private long languageFallbackChangeGeneration;
     private WindowState savedWindowState;
+    private FadeTransition themeTransition;
     private volatile boolean stopping;
 
     @Override
@@ -206,17 +213,76 @@ public final class CAMLApplication extends Application {
                 (long) screen.getWidth(), (long) screen.getHeight());
     }
 
-    /** 立即应用主题，并把选择写入 ~/.caml/theme.txt。 */
+    /** 应用主题，并把选择写入 ~/.caml/theme.txt；非减少动画模式下使用短暂的淡出/淡入。 */
     private void switchTheme(Scene scene, ThemeInfo theme) {
+        if (CamlMotion.reduceMotion() || scene.getRoot() == null) {
+            if (themeTransition != null) {
+                themeTransition.stop();
+                themeTransition = null;
+                if (scene.getRoot() != null) {
+                    scene.getRoot().setOpacity(1);
+                }
+            }
+            applyTheme(scene, theme);
+            return;
+        }
+
+        if (themeTransition != null) {
+            themeTransition.stop();
+            themeTransition = null;
+        }
+        if (scene.getRoot() instanceof Region region) {
+            Paint fill = backgroundFill(region);
+            if (fill != null) {
+                scene.setFill(fill);
+            }
+        }
+        FadeTransition fadeOut = new FadeTransition(Duration.millis(90), scene.getRoot());
+        fadeOut.setToValue(0.6);
+        fadeOut.setInterpolator(Interpolator.EASE_IN);
+        fadeOut.setOnFinished(event -> {
+            if (!applyTheme(scene, theme)) {
+                scene.getRoot().setOpacity(1);
+                themeTransition = null;
+                return;
+            }
+            if (scene.getRoot() instanceof Region region) {
+                region.applyCss();
+                Paint fill = backgroundFill(region);
+                if (fill != null) {
+                    scene.setFill(fill);
+                }
+            }
+            FadeTransition fadeIn = new FadeTransition(Duration.millis(180), scene.getRoot());
+            fadeIn.setFromValue(0.6);
+            fadeIn.setToValue(1);
+            fadeIn.setInterpolator(Interpolator.EASE_OUT);
+            fadeIn.setOnFinished(finished -> themeTransition = null);
+            themeTransition = fadeIn;
+            fadeIn.play();
+        });
+        themeTransition = fadeOut;
+        fadeOut.play();
+    }
+
+    private boolean applyTheme(Scene scene, ThemeInfo theme) {
         try {
             CamlTheme.applyTheme(scene, theme.file());
         } catch (RuntimeException e) {
             logger.warn("无法应用主题: {}", theme.file(), e);
-            return;
+            return false;
         }
         activeTheme = theme;
 
         controller.settingsController().saveThemeAsync(theme.id());
+        return true;
+    }
+
+    private static Paint backgroundFill(Region region) {
+        if (region.getBackground() == null || region.getBackground().getFills().isEmpty()) {
+            return null;
+        }
+        return region.getBackground().getFills().getFirst().getFill();
     }
 
     private static Screen screenFor(WindowState state) {
@@ -332,6 +398,10 @@ public final class CAMLApplication extends Application {
     @Override
     public void stop() {
         stopping = true;
+        if (themeTransition != null) {
+            themeTransition.stop();
+            themeTransition = null;
+        }
         // 5. 清理资源：先提交最后一次设置，再排空设置线程并关闭后端
         if (stage != null && controller != null) {
             try {
