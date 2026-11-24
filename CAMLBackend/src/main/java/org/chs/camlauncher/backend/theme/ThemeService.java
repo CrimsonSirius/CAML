@@ -23,9 +23,10 @@ import java.util.stream.Stream;
 public final class ThemeService {
     public static final String DEFAULT_THEME_ID = "mango";
 
+    private static final List<String> BUNDLED_THEME_IDS = List.of(DEFAULT_THEME_ID, "night");
     private static final String THEMES_DIRECTORY = "themes";
     private static final String THEME_EXTENSION = ".css";
-    private static final String DEFAULT_THEME_RESOURCE = "/themes/mango.css";
+    private static final String THEME_RESOURCE_PATTERN = "/themes/%s.css";
     private static final String CONFIG_FILE = "theme.txt";
 
     private final Path themesDirectory;
@@ -37,17 +38,24 @@ public final class ThemeService {
         this.configFile = dataDirectory.resolve(CONFIG_FILE);
     }
 
-    /** 创建主题目录，并在缺少默认主题时从 classpath 复制一份。 */
-    public void ensureDefaultTheme() throws IOException {
+    /** 创建主题目录，并复制所有缺失的内置主题；已有文件不会被覆盖。 */
+    public void ensureBundledThemes() throws IOException {
         Files.createDirectories(themesDirectory);
-        Path target = themesDirectory.resolve(DEFAULT_THEME_ID + THEME_EXTENSION);
+        for (String id : BUNDLED_THEME_IDS) {
+            copyBundledTheme(id);
+        }
+    }
+
+    private void copyBundledTheme(String id) throws IOException {
+        Path target = themesDirectory.resolve(id + THEME_EXTENSION);
         if (Files.exists(target)) {
             return;
         }
 
-        try (InputStream input = ThemeService.class.getResourceAsStream(DEFAULT_THEME_RESOURCE)) {
+        String resource = THEME_RESOURCE_PATTERN.formatted(id);
+        try (InputStream input = ThemeService.class.getResourceAsStream(resource)) {
             if (input == null) {
-                throw new IOException("缺少内置默认主题: " + DEFAULT_THEME_RESOURCE);
+                throw new IOException("缺少内置主题: " + resource);
             }
             try {
                 Files.copy(input, target);
@@ -59,7 +67,7 @@ public final class ThemeService {
 
     /** @return 按文件名排序的主题列表 */
     public List<ThemeInfo> listThemes() throws IOException {
-        ensureDefaultTheme();
+        ensureBundledThemes();
         try (Stream<Path> files = Files.list(themesDirectory)) {
             return files
                     .filter(Files::isRegularFile)

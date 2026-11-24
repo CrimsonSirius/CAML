@@ -16,24 +16,26 @@ class ThemeServiceTest {
     Path dataDirectory;
 
     @Test
-    void copiesBundledDefaultThemeOnFirstUse() throws Exception {
+    void copiesBundledThemesOnFirstUse() throws Exception {
         ThemeService service = new ThemeService(dataDirectory);
 
-        service.ensureDefaultTheme();
+        service.ensureBundledThemes();
 
-        Path theme = dataDirectory.resolve("themes").resolve("mango.css");
-        assertTrue(Files.isRegularFile(theme));
-        String content = Files.readString(theme);
-        assertTrue(content.contains("-caml-accent:"));
-        assertTrue(content.contains("-caml-background:"));
-        assertTrue(content.contains("-caml-on-surface:"));
-        assertTrue(content.contains("-caml-on-surface-muted:"));
+        for (String id : List.of("mango", "night")) {
+            Path theme = dataDirectory.resolve("themes").resolve(id + ".css");
+            assertTrue(Files.isRegularFile(theme), "缺少内置主题 " + id);
+            String content = Files.readString(theme);
+            assertTrue(content.contains("-caml-accent:"), id);
+            assertTrue(content.contains("-caml-background:"), id);
+            assertTrue(content.contains("-caml-on-surface:"), id);
+            assertTrue(content.contains("-caml-on-surface-muted:"), id);
+        }
     }
 
     @Test
     void listsCssThemesSortedAndIgnoresOtherFiles() throws Exception {
         ThemeService service = new ThemeService(dataDirectory);
-        service.ensureDefaultTheme();
+        service.ensureBundledThemes();
         Path themes = dataDirectory.resolve("themes");
         Files.writeString(themes.resolve("z.css"), ".caml-root {}");
         Files.writeString(themes.resolve("a.css"), ".caml-root {}");
@@ -41,7 +43,7 @@ class ThemeServiceTest {
 
         List<String> ids = service.listThemes().stream().map(ThemeInfo::id).toList();
 
-        assertEquals(List.of("a", "mango", "z"), ids);
+        assertEquals(List.of("a", "mango", "night", "z"), ids);
     }
 
     @Test
@@ -54,7 +56,7 @@ class ThemeServiceTest {
     @Test
     void selectedThemeIsPersistedForNextStartup() throws Exception {
         ThemeService service = new ThemeService(dataDirectory);
-        service.ensureDefaultTheme();
+        service.ensureBundledThemes();
         Files.writeString(dataDirectory.resolve("themes").resolve("custom.css"), ".caml-root {}");
 
         service.selectTheme("custom");
@@ -63,15 +65,46 @@ class ThemeServiceTest {
     }
 
     @Test
-    void existingDefaultThemeIsNotOverwritten() throws Exception {
+    void nightThemeCanBeSelectedAndContainsDarkPalette() throws Exception {
         ThemeService service = new ThemeService(dataDirectory);
-        service.ensureDefaultTheme();
-        Path theme = dataDirectory.resolve("themes").resolve("mango.css");
-        Files.writeString(theme, "my custom default");
+        service.ensureBundledThemes();
 
-        service.ensureDefaultTheme();
+        service.selectTheme("night");
 
-        assertEquals("my custom default", Files.readString(theme));
+        ThemeInfo active = new ThemeService(dataDirectory).activeTheme();
+        assertEquals("night", active.id());
+        String content = Files.readString(active.file());
+        assertTrue(content.contains("-caml-background: #1e1f22"));
+        assertTrue(content.contains("-caml-on-surface: #dfe1e5"));
+    }
+
+    @Test
+    void existingBundledThemesAreNotOverwritten() throws Exception {
+        ThemeService service = new ThemeService(dataDirectory);
+        service.ensureBundledThemes();
+        Path themes = dataDirectory.resolve("themes");
+        Path mango = themes.resolve("mango.css");
+        Path night = themes.resolve("night.css");
+        Files.writeString(mango, "my custom mango");
+        Files.writeString(night, "my custom night");
+
+        service.ensureBundledThemes();
+
+        assertEquals("my custom mango", Files.readString(mango));
+        assertEquals("my custom night", Files.readString(night));
+    }
+
+    @Test
+    void addsMissingBundledThemeForExistingInstallations() throws Exception {
+        Path themes = dataDirectory.resolve("themes");
+        Files.createDirectories(themes);
+        Path mango = themes.resolve("mango.css");
+        Files.writeString(mango, "my custom mango");
+
+        new ThemeService(dataDirectory).ensureBundledThemes();
+
+        assertEquals("my custom mango", Files.readString(mango));
+        assertTrue(Files.isRegularFile(themes.resolve("night.css")));
     }
 
     @Test
