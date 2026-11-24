@@ -88,7 +88,6 @@
 
 .app-download-version-list:focused .app-download-version-cell:selected .app-download-version-item {
     -fx-border-color: -caml-accent;
-    -fx-effect: dropshadow(gaussian, -caml-accent, 4, 0.75, 0, 0);
 }
 
 .app-download-version-id {
@@ -1216,7 +1215,9 @@
 }
 
 .app-instance-mod-toggle:focused {
-    -fx-effect: dropshadow(gaussian, -caml-on-surface, 4, 0.65, 0, 0);
+    -fx-border-color: -caml-accent;
+    -fx-border-width: 2;
+    -fx-border-radius: 100;
 }
 
 .app-instance-mod-title-row {

@@ -577,7 +577,6 @@
 
 .caml-side-nav-item:focused {
     -fx-border-color: -caml-accent;
-    -fx-effect: dropshadow(gaussian, -caml-accent, 4, 0.75, 0, 0);
 }
 
 /* Top navigation. */
@@ -616,7 +615,6 @@
 
 .caml-top-nav-item:focused {
     -fx-border-color: -caml-accent;
-    -fx-effect: dropshadow(gaussian, -caml-accent, 4, 0.75, 0, 0);
 }
 
 /* Vector icons. */

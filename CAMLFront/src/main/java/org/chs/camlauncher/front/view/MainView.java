@@ -316,14 +316,15 @@ public final class MainView extends StackPane {
     }
 
     private void hideOverlay() {
+        boolean wasVisible = overlayLayer.isVisible();
         Node restoreFocus = overlayFocusOwner;
         overlayFocusOwner = null;
-        if (restoreFocus != null && restoreFocus.getScene() == getScene()) {
-            restoreFocus.requestFocus();
-        }
         overlayLayer.setVisible(false);
         overlayLayer.setManaged(false);
         overlayContent.getChildren().clear();
+        if (wasVisible) {
+            FocusSupport.restoreFocus(restoreFocus, pageHost);
+        }
     }
 
     /**
