@@ -76,8 +76,22 @@ class ThemeServiceTest {
         ThemeInfo active = new ThemeService(dataDirectory).activeTheme();
         assertEquals("night", active.id());
         String content = Files.readString(active.file());
-        assertTrue(content.contains("-caml-background: #1e1f22"));
-        assertTrue(content.contains("-caml-on-surface: #dfe1e5"));
+        assertTrue(content.contains("-caml-background: #141517"));
+        assertTrue(content.contains("-caml-on-surface: #d7d9dd"));
+    }
+
+    @Test
+    void nightSurfaceHierarchyKeepsInputsLightest() throws Exception {
+        ThemeService service = new ThemeService(dataDirectory);
+        service.ensureBundledThemes();
+        Path night = dataDirectory.resolve("themes").resolve("night.css");
+
+        double background = luminance(token(night, "-caml-background"));
+        double group = luminance(token(night, "-caml-surface-container"));
+        double input = luminance(token(night, "-caml-surface-lowest"));
+
+        assertTrue(background < group, "页面背景必须比分组更暗");
+        assertTrue(group < input, "分组必须比输入框/选择框更暗");
     }
 
     @Test
@@ -136,5 +150,32 @@ class ThemeServiceTest {
                 .filter(line -> line.startsWith("-caml-") && line.contains(":"))
                 .map(line -> line.substring(0, line.indexOf(':')))
                 .collect(Collectors.toSet());
+    }
+
+    private static String token(Path theme, String name) throws Exception {
+        String prefix = name + ":";
+        return Files.readAllLines(theme).stream()
+                .map(String::trim)
+                .filter(line -> line.startsWith(prefix))
+                .map(line -> line.substring(prefix.length()).trim())
+                .map(value -> value.endsWith(";")
+                        ? value.substring(0, value.length() - 1).trim()
+                        : value)
+                .findFirst()
+                .orElseThrow(() -> new AssertionError("缺少颜色令牌 " + name));
+    }
+
+    private static double luminance(String hex) {
+        int rgb = Integer.parseInt(hex.substring(1), 16);
+        return 0.2126 * channel((rgb >> 16) & 0xff)
+                + 0.7152 * channel((rgb >> 8) & 0xff)
+                + 0.0722 * channel(rgb & 0xff);
+    }
+
+    private static double channel(int value) {
+        double channel = value / 255.0;
+        return channel <= 0.04045
+                ? channel / 12.92
+                : Math.pow((channel + 0.055) / 1.055, 2.4);
     }
 }

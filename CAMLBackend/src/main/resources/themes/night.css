@@ -11,32 +11,32 @@
     -caml-accent-container: #214283;
     -caml-on-accent-container: #dbe7ff;
 
-    -caml-neutral: #a1a6ad;
-    -caml-on-neutral: #1e1f22;
-    -caml-neutral-container: #3a3d41;
-    -caml-on-neutral-container: #e6e8eb;
+    -caml-neutral: #a3a8b0;
+    -caml-on-neutral: #141517;
+    -caml-neutral-container: #33363b;
+    -caml-on-neutral-container: #e3e5e8;
 
     -caml-danger: #ff6b68;
-    -caml-on-danger: #1e1f22;
-    -caml-danger-container: #5a2b2b;
+    -caml-on-danger: #141517;
+    -caml-danger-container: #4d2525;
     -caml-on-danger-container: #ffd6d6;
 
-    -caml-background: #1e1f22;
-    -caml-on-background: #dfe1e5;
-    -caml-surface: #2b2d30;
-    -caml-on-surface: #dfe1e5;
-    -caml-surface-muted: #2f3134;
-    -caml-on-surface-muted: #a1a6ad;
-    -caml-surface-lowest: #1b1c1f;
-    -caml-surface-low: #252629;
-    -caml-surface-container: #313338;
-    -caml-surface-high: #3c3f41;
-    -caml-surface-highest: #4a4d51;
+    -caml-background: #141517;
+    -caml-on-background: #d7d9dd;
+    -caml-surface: #1f2124;
+    -caml-on-surface: #d7d9dd;
+    -caml-surface-muted: #222427;
+    -caml-on-surface-muted: #a3a8b0;
+    -caml-surface-lowest: #42454b;
+    -caml-surface-low: #1a1c1f;
+    -caml-surface-container: #292c30;
+    -caml-surface-high: #33363b;
+    -caml-surface-highest: #3a3d43;
 
-    -caml-border: #4e5157;
-    -caml-border-subtle: #3a3d41;
-    -caml-inverse-surface: #dfe1e5;
-    -caml-inverse-on-surface: #1e1f22;
+    -caml-border: #5c6068;
+    -caml-border-subtle: #2f3237;
+    -caml-inverse-surface: #d7d9dd;
+    -caml-inverse-on-surface: #141517;
     -caml-inverse-accent: #214283;
-    -caml-shadow-color: rgba(0, 0, 0, 0.55);
+    -caml-shadow-color: rgba(0, 0, 0, 0.7);
 }
