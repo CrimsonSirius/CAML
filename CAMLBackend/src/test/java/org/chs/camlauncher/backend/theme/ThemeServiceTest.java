@@ -6,6 +6,8 @@ import org.junit.jupiter.api.io.TempDir;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -108,11 +110,31 @@ class ThemeServiceTest {
     }
 
     @Test
+    void bundledThemesDefineTheSameColorTokens() throws Exception {
+        ThemeService service = new ThemeService(dataDirectory);
+        service.ensureBundledThemes();
+        Path themes = dataDirectory.resolve("themes");
+
+        assertEquals(
+                colorTokens(themes.resolve("mango.css")),
+                colorTokens(themes.resolve("night.css"))
+        );
+    }
+
+    @Test
     void rejectsThemeIdsThatEscapeTheThemeDirectory() {
         ThemeService service = new ThemeService(dataDirectory);
 
         assertThrows(IllegalArgumentException.class, () -> service.selectTheme("../outside"));
         assertThrows(IllegalArgumentException.class, () -> service.selectTheme(".."));
         assertThrows(IllegalArgumentException.class, () -> service.selectTheme(""));
+    }
+
+    private static Set<String> colorTokens(Path theme) throws Exception {
+        return Files.readAllLines(theme).stream()
+                .map(String::trim)
+                .filter(line -> line.startsWith("-caml-") && line.contains(":"))
+                .map(line -> line.substring(0, line.indexOf(':')))
+                .collect(Collectors.toSet());
     }
 }
