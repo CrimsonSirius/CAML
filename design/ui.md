@@ -288,7 +288,8 @@ Linux 系统组显示发行版名称和内核版本；Windows/macOS 显示系统
 - 文本：`-caml-on-background`、`-caml-on-surface`、`-caml-on-surface-muted`；
 - 强调：`-caml-accent`、`-caml-on-accent`、`-caml-accent-text`、`-caml-accent-container`、`-caml-on-accent-container`；
 - 错误：`-caml-danger`、`-caml-danger-container`、`-caml-on-danger-container`；
-- 边框：`-caml-border`、`-caml-border-subtle`。
+- 边框：`-caml-border`、`-caml-border-subtle`；
+- 导航胶囊：`-caml-nav-border`、`-caml-nav-focus-border`。
 
 内置主题 `mango`：白/米色表面、深棕文字、焦糖橙强调色；`night`：参考 IntelliJ IDEA 深色界面的黑灰表面、浅色文字和蓝色强调色。默认仍为 `mango`，两者都按令牌成对使用文字色。
 
