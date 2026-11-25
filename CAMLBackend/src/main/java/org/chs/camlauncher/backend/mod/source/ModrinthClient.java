@@ -73,7 +73,7 @@ public final class ModrinthClient {
         JsonArray versions = http.get(
                 base.resolve("project/" + encodePath(idOrSlug) + "/version"), Map.of())
                 .getAsJsonArray();
-        Map<String, String> names = new LinkedHashMap<>();
+        Map<String, String> names = loadDependencyNames(versions);
         List<ModFile> files = new ArrayList<>();
         for (JsonElement element : versions) {
             if (element.isJsonObject()) {
@@ -82,6 +82,52 @@ public final class ModrinthClient {
         }
         String body = string(root, "body");
         return new ModProjectDetail(summary, body, List.copyOf(files));
+    }
+
+    private Map<String, String> loadDependencyNames(JsonArray versions) throws InterruptedException {
+        Set<String> projectIds = new LinkedHashSet<>();
+        for (JsonElement element : versions) {
+            if (!element.isJsonObject()) {
+                continue;
+            }
+            JsonArray dependencies = element.getAsJsonObject().getAsJsonArray("dependencies");
+            if (dependencies == null) {
+                continue;
+            }
+            for (JsonElement dependency : dependencies) {
+                if (dependency.isJsonObject()) {
+                    String projectId = string(dependency.getAsJsonObject(), "project_id");
+                    if (projectId != null && !projectId.isBlank()) {
+                        projectIds.add(projectId);
+                    }
+                }
+            }
+        }
+        Map<String, String> names = new LinkedHashMap<>();
+        if (projectIds.isEmpty()) {
+            return names;
+        }
+        JsonArray ids = new JsonArray();
+        projectIds.forEach(ids::add);
+        try {
+            JsonArray projects = http.get(
+                    base.resolve("projects?ids=" + encode(ids.toString())), Map.of())
+                    .getAsJsonArray();
+            for (JsonElement element : projects) {
+                if (!element.isJsonObject()) {
+                    continue;
+                }
+                JsonObject project = element.getAsJsonObject();
+                String id = string(project, "id", "project_id");
+                String name = string(project, "title", "slug");
+                if (id != null && name != null) {
+                    names.put(id, name);
+                }
+            }
+        } catch (IOException | RuntimeException ignored) {
+            // 批量查询失败时保留空表，parseDependencies 会按单个依赖回退。
+        }
+        return names;
     }
 
     /**

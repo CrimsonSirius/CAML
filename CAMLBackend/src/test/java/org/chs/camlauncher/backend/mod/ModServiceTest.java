@@ -88,6 +88,42 @@ class ModServiceTest {
     }
 
     @Test
+    void loadsModrinthDependencyNamesInOneBulkRequest() throws Exception {
+        HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        server.createContext("/v2/project/bulkmod", exchange -> respond(exchange, """
+                {"id":"bulkmod","slug":"bulkmod","title":"Bulk Mod","description":"",
+                "icon_url":"","downloads":1,"date_modified":"2026-01-01T00:00:00Z",
+                "categories":[],"game_versions":["1.20.1"],"loaders":["fabric"]}
+                """));
+        server.createContext("/v2/project/bulkmod/version", exchange -> respond(exchange, """
+                [{"id":"v1","project_id":"bulkmod","name":"Bulk 1","version_number":"1.0",
+                "game_versions":["1.20.1"],"loaders":["fabric"],
+                "date_published":"2026-01-01T00:00:00Z","downloads":1,
+                "dependencies":[{"project_id":"bulkdep","dependency_type":"required"}],
+                "files":[{"url":"http://example.invalid/bulk.jar","filename":"bulk.jar",
+                "primary":true,"size":10,"hashes":{"sha1":"abc"}}]}]
+                """));
+        server.createContext("/v2/projects", exchange -> {
+            assertTrue(exchange.getRequestURI().getRawQuery().contains("bulkdep"));
+            respond(exchange, """
+                    [{"id":"bulkdep","slug":"bulkdep","title":"Bulk Dependency"}]
+                    """);
+        });
+        server.start();
+
+        try {
+            ModService service = service(serverRoot(server) + "v2/",
+                    "https://example.invalid/v1/", "");
+            ModProjectDetail detail = service.project(ModSource.MODRINTH, "bulkmod");
+
+            assertEquals("Bulk Dependency",
+                    detail.files().getFirst().dependencies().getFirst().name());
+        } finally {
+            server.stop(0);
+        }
+    }
+
+    @Test
     void parsesCurseForgeSearchAndDependencies() throws Exception {
         HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
         server.createContext("/v1/mods/search", exchange -> respond(exchange, """
@@ -106,13 +142,16 @@ class ModServiceTest {
                 "logo":{"thumbnailUrl":""},"authors":[{"name":"mezz"}],
                 "categories":[{"name":"API"}],"latestFilesIndexes":[]}}
                 """));
-        server.createContext("/v1/mods/123/files", exchange -> respond(exchange, """
+        server.createContext("/v1/mods/123/files", exchange -> {
+            assertTrue(exchange.getRequestURI().getRawQuery().contains("pageSize=10000"));
+            respond(exchange, """
                 {"data":[{"id":9,"modId":123,"displayName":"JEI 1","fileName":"jei.jar",
                 "fileDate":"2026-01-01T00:00:00Z","fileLength":100,"downloadCount":5,
                 "downloadUrl":"http://example.invalid/jei.jar","gameVersions":["1.20.1","Fabric"],
                 "hashes":[{"value":"abc","algo":1}],"dependencies":[{"modId":456,"relationType":3}]}],
                 "pagination":{"index":0,"pageSize":50,"resultCount":1,"totalCount":1}}
-                """));
+                """);
+        });
         server.createContext("/v1/mods", exchange -> {
             if (!"POST".equals(exchange.getRequestMethod())) {
                 exchange.sendResponseHeaders(405, -1);
