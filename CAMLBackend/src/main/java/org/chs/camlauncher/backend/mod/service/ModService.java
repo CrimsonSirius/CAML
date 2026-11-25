@@ -26,12 +26,14 @@ import org.chs.camlauncher.backend.mod.source.CurseForgeClient;
 import org.chs.camlauncher.backend.mod.source.ModrinthClient;
 
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.UUID;
 
 /** 聚合 Modrinth 与 CurseForge 的搜索、详情和文件下载。 */
 public final class ModService {
@@ -53,6 +55,20 @@ public final class ModService {
 
     public ModSearchPage search(ModSearchQuery query) throws IOException, InterruptedException {
         ModSearchQuery normalized = normalize(query);
+        if (!normalized.type().supportsModrinth()) {
+            if (normalized.source() == ModSource.MODRINTH) {
+                return new ModSearchPage(List.of(), normalized.pageIndex(),
+                        normalized.pageSize(), 0, false);
+            }
+            return curseForge.search(normalized);
+        }
+        if (!normalized.type().supportsCurseForge()) {
+            if (normalized.source() == ModSource.CURSEFORGE) {
+                return new ModSearchPage(List.of(), normalized.pageIndex(),
+                        normalized.pageSize(), 0, false);
+            }
+            return modrinth.search(normalized);
+        }
         if (normalized.source() == ModSource.MODRINTH) {
             return modrinth.search(normalized);
         }
@@ -125,6 +141,9 @@ public final class ModService {
         Objects.requireNonNull(type, "type");
         Objects.requireNonNull(isolationMode, "isolationMode");
         Objects.requireNonNull(token, "token");
+        if (type == ModContentType.WORLD) {
+            return downloadWorld(file, gameDirectory, instanceId, isolationMode, listener, token);
+        }
         if (!file.hasDownloadUri()) {
             throw new BackendException(BackendError.of("mod.error.downloadUrlMissing", file.name()));
         }
@@ -148,11 +167,50 @@ public final class ModService {
         fileDownloader.download(item, listener, validator, token);
         String contentType = switch (type) {
             case MOD -> "Mod";
+            case MODPACK -> "整合包";
             case SHADER -> "光影包";
             case RESOURCE_PACK -> "资源包";
+            case WORLD -> "地图";
         };
         LOGGER.info("{} 下载完成: {} -> {}", contentType, file.name(), destination);
         return new ModDownloadResult(destination, file);
+    }
+
+    private ModDownloadResult downloadWorld(
+            ModFile file,
+            Path gameDirectory,
+            String instanceId,
+            VersionIsolationMode isolationMode,
+            DownloadListener listener,
+            DownloadCancellationToken token
+    ) throws IOException, InterruptedException {
+        if (!file.hasDownloadUri()) {
+            throw new BackendException(BackendError.of("mod.error.downloadUrlMissing", file.name()));
+        }
+        String instance = InstanceNameRules.validate(instanceId);
+        Path savesDirectory = contentDirectory(
+                gameDirectory, instance, isolationMode, ModContentType.WORLD);
+        Files.createDirectories(savesDirectory);
+        Path archive = savesDirectory.resolve(".caml-world-" + UUID.randomUUID() + ".zip");
+        try {
+            Map<String, String> headers = file.source() == ModSource.CURSEFORGE
+                    ? curseForge.downloadHeaders()
+                    : Map.of();
+            DownloadItem item = new DownloadItem(
+                    file.name(),
+                    file.downloadUris(),
+                    archive,
+                    file.sha1(),
+                    file.size(),
+                    headers
+            );
+            fileDownloader.download(item, listener, md5Validator(file), token);
+            Path installed = new WorldInstaller().install(archive, savesDirectory, file.fileName());
+            LOGGER.info("地图下载完成: {} -> {}", file.name(), installed);
+            return new ModDownloadResult(installed, file);
+        } finally {
+            Files.deleteIfExists(archive);
+        }
     }
 
     private static DownloadValidator md5Validator(ModFile file) {

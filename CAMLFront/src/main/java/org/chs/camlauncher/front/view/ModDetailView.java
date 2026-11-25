@@ -27,6 +27,7 @@ import org.chs.camlauncher.front.task.DownloadTask;
 import org.chs.camlauncher.front.task.DownloadTelemetry;
 import org.chs.camlauncher.ui.control.CamlButton;
 import org.chs.camlauncher.ui.control.CamlComboBox;
+import org.chs.camlauncher.ui.control.CamlTextField;
 import org.chs.camlauncher.ui.theme.CamlMotion;
 
 import java.util.ArrayList;
@@ -50,6 +51,7 @@ final class ModDetailView extends VBox implements PageLifecycle {
     private final Label summaryLabel = new Label();
     private final CamlComboBox<ModChoice<String>> versionBox = new CamlComboBox<>();
     private final CamlComboBox<ModChoice<String>> loaderBox = new CamlComboBox<>();
+    private final CamlTextField modpackNameField = new CamlTextField();
     private final VBox headerCard;
     private final VBox filterHost = new VBox();
     private final VBox groupsBox = new VBox();
@@ -93,6 +95,16 @@ final class ModDetailView extends VBox implements PageLifecycle {
         metaLabel.getStyleClass().add("app-mod-meta");
 
         headerCard = new VBox(titleRow, summaryLabel, metaLabel);
+        if (type == ModContentType.MODPACK) {
+            Label instanceLabel = new Label(UiText.tr("modpacks.install.instanceName"));
+            instanceLabel.getStyleClass().add("caml-body-small");
+            modpackNameField.setText(defaultInstanceName(summary));
+            modpackNameField.setPromptText(UiText.tr("modpacks.install.instanceName"));
+            HBox nameRow = new HBox(8, instanceLabel, modpackNameField);
+            nameRow.setAlignment(Pos.CENTER_LEFT);
+            HBox.setHgrow(modpackNameField, Priority.ALWAYS);
+            headerCard.getChildren().add(nameRow);
+        }
         headerCard.getStyleClass().addAll("app-download-card", "app-mod-detail-header");
         headerCard.setMaxWidth(Double.MAX_VALUE);
 
@@ -371,7 +383,10 @@ final class ModDetailView extends VBox implements PageLifecycle {
         top.setAlignment(Pos.CENTER_LEFT);
         HBox.setHgrow(title, Priority.ALWAYS);
 
-        CamlButton download = CamlButton.filled(UiText.tr("mods.detail.download"));
+        CamlButton download = CamlButton.filled(UiText.tr(
+                type == ModContentType.MODPACK
+                        ? "modpacks.detail.install"
+                        : "mods.detail.download"));
         download.setMinWidth(plan().paginationButtonWidth());
         download.setDisable(!file.hasDownloadUri());
         download.setOnAction(event -> startDownload(file, download));
@@ -398,9 +413,16 @@ final class ModDetailView extends VBox implements PageLifecycle {
     }
 
     private void startDownload(ModFile file, CamlButton button) {
-        String instance = launchSettings.selectedVersion();
+        boolean modpack = type == ModContentType.MODPACK;
+        String instance = modpack
+                ? modpackNameField.getText().trim()
+                : launchSettings.selectedVersion();
         if (launchSettings.gameDirectory() == null) {
             setStatus(UiText.tr("mods.detail.noGameDirectory"), true);
+            return;
+        }
+        if (modpack && instance.isBlank()) {
+            setStatus(UiText.tr("modpacks.install.instanceNameEmpty"), true);
             return;
         }
         if (instance == null || instance.isBlank()) {
@@ -412,8 +434,10 @@ final class ModDetailView extends VBox implements PageLifecycle {
         DownloadCancellationToken token = new DownloadCancellationToken();
         String titleKey = switch (type) {
             case MOD -> "operation.downloadMod";
+            case MODPACK -> "operation.installModpack";
             case SHADER -> "operation.downloadShader";
             case RESOURCE_PACK -> "operation.downloadResourcePack";
+            case WORLD -> "operation.downloadMap";
         };
         DownloadTask task = new DownloadTask(
                 titleKey,
@@ -436,30 +460,58 @@ final class ModDetailView extends VBox implements PageLifecycle {
         downloadTaskListeners.put(task, listener);
 
         button.setDisable(true);
-        setStatus(UiText.tr("mods.detail.downloading", file.name()), false);
-        AsyncTaskHandle<?> running = controller.downloadContent(
-                type,
-                file,
-                launchSettings.gameDirectory(),
-                instance,
-                launchSettings.fullVersionIsolation(),
-                telemetry,
-                token,
-                result -> {
-                    task.complete();
-                    if (disposed) {
-                        return;
+        setStatus(UiText.tr(modpack
+                ? "modpacks.detail.installing"
+                : "mods.detail.downloading", file.name()), false);
+        AsyncTaskHandle<?> running;
+        if (modpack) {
+            running = controller.installModpack(
+                    file,
+                    launchSettings.gameDirectory(),
+                    instance,
+                    telemetry,
+                    token,
+                    result -> {
+                        task.complete();
+                        if (disposed) {
+                            return;
+                        }
+                        launchSettings.setSelectedVersion(instance);
+                        setStatus(UiText.tr("modpacks.detail.installed", result.path()), false);
+                    },
+                    message -> {
+                        task.fail(message);
+                        if (disposed) {
+                            return;
+                        }
+                        setStatus(text("search.failed", message), true);
                     }
-                    setStatus(UiText.tr("mods.detail.downloaded", result.path()), false);
-                },
-                message -> {
-                    task.fail(message);
-                    if (disposed) {
-                        return;
+            );
+        } else {
+            running = controller.downloadContent(
+                    type,
+                    file,
+                    launchSettings.gameDirectory(),
+                    instance,
+                    launchSettings.fullVersionIsolation(),
+                    telemetry,
+                    token,
+                    result -> {
+                        task.complete();
+                        if (disposed) {
+                            return;
+                        }
+                        setStatus(UiText.tr("mods.detail.downloaded", result.path()), false);
+                    },
+                    message -> {
+                        task.fail(message);
+                        if (disposed) {
+                            return;
+                        }
+                        setStatus(text("search.failed", message), true);
                     }
-                    setStatus(text("search.failed", message), true);
-                }
-        );
+            );
+        }
         task.attach(running::cancel);
     }
 
@@ -488,10 +540,21 @@ final class ModDetailView extends VBox implements PageLifecycle {
     private String text(String suffix, Object... arguments) {
         String prefix = switch (type) {
             case MOD -> "mods";
+            case MODPACK -> "modpacks";
             case SHADER -> "shaders";
             case RESOURCE_PACK -> "resourcepacks";
+            case WORLD -> "maps";
         };
         return UiText.tr(prefix + "." + suffix, arguments);
+    }
+
+    private static String defaultInstanceName(ModProjectSummary summary) {
+        String name = summary.name() == null ? "modpack" : summary.name();
+        String cleaned = name
+                .replaceAll("[\\\\/:*?\"<>|\\p{Cntrl}]", "_")
+                .trim()
+                .replaceAll("[. ]+$", "");
+        return cleaned.isBlank() ? "modpack" : cleaned;
     }
 
     private void setStatus(String text, boolean error) {

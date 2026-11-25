@@ -20,6 +20,7 @@ import org.chs.camlauncher.backend.mod.source.ModrinthClient;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import java.io.ByteArrayOutputStream;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -27,6 +28,9 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Map;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -460,6 +464,103 @@ class ModServiceTest {
         }
     }
 
+    @Test
+    void searchesMapsThroughCurseForgeClassId() throws Exception {
+        HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        server.createContext("/v1/mods/search", exchange -> {
+            assertTrue(exchange.getRequestURI().getRawQuery().contains("classId=17"));
+            respond(exchange, """
+                    {"data":[{"id":9001,"name":"Test World","slug":"test-world",
+                    "summary":"A map","downloadCount":10,
+                    "dateModified":"2026-01-01T00:00:00Z","categories":[],
+                    "latestFiles":[],"links":{"websiteUrl":"https://example.invalid/world"}}],
+                    "pagination":{"totalCount":1}}
+                    """);
+        });
+        server.start();
+
+        try {
+            ModService service = service("https://example.invalid/v2/",
+                    serverRoot(server) + "v1/", "test-key");
+            ModSearchPage page = service.search(new ModSearchQuery(
+                    "world", null, "1.20.1", null, 0, 20, ModContentType.WORLD));
+
+            assertEquals(1, page.items().size());
+            assertEquals("Test World", page.items().getFirst().name());
+        } finally {
+            server.stop(0);
+        }
+    }
+
+    @Test
+    void searchesModpacksOnlyThroughModrinth() throws Exception {
+        HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        server.createContext("/v2/search", exchange -> {
+            assertTrue(exchange.getRequestURI().getRawQuery()
+                    .contains("project_type%3Amodpack"));
+            respond(exchange, """
+                    {"hits":[{"project_id":"pack","slug":"pack","title":"Test Pack",
+                    "description":"A modpack","categories":["fabric"],"versions":["1.20.1"],
+                    "downloads":100,"date_modified":"2026-01-01T00:00:00Z"}],
+                    "offset":0,"limit":20,"total_hits":1}
+                    """);
+        });
+        server.start();
+
+        try {
+            ModService service = service(serverRoot(server) + "v2/",
+                    "https://example.invalid/v1/", "");
+            ModSearchPage page = service.search(new ModSearchQuery(
+                    "pack", null, "1.20.1", null, 0, 20, ModContentType.MODPACK));
+
+            assertEquals(1, page.items().size());
+            assertEquals("Test Pack", page.items().getFirst().name());
+        } finally {
+            server.stop(0);
+        }
+    }
+
+    @Test
+    void downloadsMapArchiveIntoInstanceSaves() throws Exception {
+        byte[] archive = zipBytes(Map.of(
+                "MyWorld/level.dat", "level".getBytes(StandardCharsets.UTF_8),
+                "MyWorld/region/r.0.0.mca", "region".getBytes(StandardCharsets.UTF_8)
+        ));
+        HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        server.createContext("/map.zip", exchange -> {
+            exchange.sendResponseHeaders(200, archive.length);
+            try (var output = exchange.getResponseBody()) {
+                output.write(archive);
+            }
+        });
+        server.start();
+
+        try {
+            Path gameDirectory = tempDirectory.resolve("map-game");
+            ModFile file = new ModFile(
+                    ModSource.CURSEFORGE, "project", "version", "Test Map", "1.0",
+                    "test-map.zip", List.of(URI.create(serverRoot(server) + "map.zip")),
+                    HashVerifier.sha1(archive), null, archive.length,
+                    List.of("1.20.1"), List.of(), List.of(), "", 1
+            );
+            ModService service = service("https://example.invalid/v2/",
+                    "https://example.invalid/v1/", "test-key");
+
+            var result = service.download(
+                    file, ModContentType.WORLD, gameDirectory, "instance",
+                    VersionIsolationMode.FULL, DownloadListener.NONE);
+
+            Path saves = gameDirectory.resolve("versions/instance/saves");
+            assertEquals(saves.resolve("MyWorld"), result.path());
+            assertEquals("level", Files.readString(result.path().resolve("level.dat")));
+            try (var files = Files.list(saves)) {
+                assertFalse(files.anyMatch(path -> path.getFileName().toString().endsWith(".zip")));
+            }
+        } finally {
+            server.stop(0);
+        }
+    }
+
     private ModService service(String modrinthBase, String curseBase, String curseKey) {
         HttpClient client = HttpClient.newBuilder()
                 .followRedirects(HttpClient.Redirect.NORMAL)
@@ -469,6 +570,18 @@ class ModServiceTest {
                 new CurseForgeClient(client, URI.create(curseBase), curseKey),
                 new FileDownloader()
         );
+    }
+
+    private static byte[] zipBytes(Map<String, byte[]> entries) throws Exception {
+        ByteArrayOutputStream output = new ByteArrayOutputStream();
+        try (ZipOutputStream zip = new ZipOutputStream(output)) {
+            for (Map.Entry<String, byte[]> entry : entries.entrySet()) {
+                zip.putNextEntry(new ZipEntry(entry.getKey()));
+                zip.write(entry.getValue());
+                zip.closeEntry();
+            }
+        }
+        return output.toByteArray();
     }
 
     private static void respond(HttpExchange exchange, String body) throws java.io.IOException {

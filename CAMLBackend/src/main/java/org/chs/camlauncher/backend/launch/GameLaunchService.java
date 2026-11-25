@@ -16,6 +16,7 @@ import org.chs.camlauncher.backend.launch.prepare.VirtualAssetInstaller;
 import org.chs.camlauncher.backend.launch.process.GameProcess;
 import org.chs.camlauncher.backend.launch.process.ProcessLauncher;
 import org.chs.camlauncher.backend.launch.process.ProcessListener;
+import org.chs.camlauncher.backend.modpack.ModpackLayout;
 import org.chs.camlauncher.backend.runtime.JavaLocator;
 import org.chs.camlauncher.backend.runtime.JavaRequirement;
 import org.chs.camlauncher.backend.runtime.JavaRuntime;
@@ -174,10 +175,13 @@ public final class GameLaunchService {
 
         JavaRuntime java = selectJava(installed);
 
+        VersionIsolationMode effectiveIsolation = ModpackLayout.isModpack(installed.versionDirectory())
+                ? VersionIsolationMode.FULL
+                : isolationMode;
         Path gameDataDirectory = GameDataLayout.resolve(
                 installed.gameDirectory(),
                 installed.versionDirectory(),
-                isolationMode
+                effectiveIsolation
         );
         if (autoGameLanguage) {
             GameLanguageInitializer.apply(gameDataDirectory, launcherLocale);

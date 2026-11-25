@@ -372,6 +372,18 @@ public final class DEDEGenerator extends LanguageTranslationGenerator {
         // Mod-Downloads
         t.put("downloads.section.instances", "Spielinstanzen");
         t.put("downloads.section.content", "Spielinhalte");
+        t.put("maps.nav", "Karten");
+        t.put("maps.search.title", "Karten suchen");
+        t.put("maps.search.nameHint", "Kartenname eingeben");
+        t.put("maps.search.loading", "Karten werden gesucht...");
+        t.put("maps.search.empty", "Keine passenden Karten gefunden");
+        t.put("maps.search.failed", "Karten konnten nicht geladen werden: %s");
+        t.put("maps.list.meta", "Version: %s · Downloads %s · Aktualisiert %s");
+        t.put("maps.detail.loading", "Kartendetails werden geladen...");
+        t.put("operation.searchMaps", "Karten suchen %s");
+        t.put("operation.fetchMapProject", "Kartenprojekt abrufen %s");
+        t.put("operation.downloadMap", "Karte herunterladen %s");
+        t.put("mod.error.worldArchiveInvalid", "Ungültiges Kartenarchiv: %s");
         t.put("mods.nav", "Mods");
         t.put("shaders.nav", "Shader");
         t.put("shaders.search.title", "Shader suchen");

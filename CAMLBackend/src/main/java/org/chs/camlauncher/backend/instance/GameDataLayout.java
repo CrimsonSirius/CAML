@@ -29,6 +29,7 @@ public final class GameDataLayout {
             "config",
             "resourcepacks",
             "shaderpacks",
+            ".caml-modpack.json",
             "usercache.json",
             "command_history.txt"
     );

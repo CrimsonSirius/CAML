@@ -53,9 +53,11 @@ final class DownloadsView extends HBox implements SidebarPage, PageLifecycle {
     private VersionCategory currentCategory = VersionCategory.RELEASE;
     private boolean showingVersionList = true;
     private PageLifecycle activeContentPage;
+    private ModSearchView modpacksView;
     private ModSearchView modsView;
     private ModSearchView shadersView;
     private ModSearchView resourcePacksView;
+    private ModSearchView mapsView;
     private boolean shown;
     private boolean disposed;
 
@@ -72,17 +74,21 @@ final class DownloadsView extends HBox implements SidebarPage, PageLifecycle {
         releaseItem = new CamlSideNavItem(VersionCategory.RELEASE.label());
         snapshotItem = new CamlSideNavItem(VersionCategory.SNAPSHOT.label());
         oldItem = new CamlSideNavItem(VersionCategory.OLD.label());
+        CamlSideNavItem modpackItem = new CamlSideNavItem(UiText.tr("modpacks.nav"));
         CamlSideNavItem modItem = new CamlSideNavItem(UiText.tr("mods.nav"));
         CamlSideNavItem shaderItem = new CamlSideNavItem(UiText.tr("shaders.nav"));
         CamlSideNavItem resourcePackItem = new CamlSideNavItem(UiText.tr("resourcepacks.nav"));
+        CamlSideNavItem mapItem = new CamlSideNavItem(UiText.tr("maps.nav"));
         sidebar.addSection(UiText.tr("downloads.section.instances"));
         sidebar.addItem(releaseItem);
         sidebar.addItem(snapshotItem);
         sidebar.addItem(oldItem);
+        sidebar.addItem(modpackItem);
         sidebar.addSection(UiText.tr("downloads.section.content"));
         sidebar.addItem(modItem);
         sidebar.addItem(shaderItem);
         sidebar.addItem(resourcePackItem);
+        sidebar.addItem(mapItem);
         sidebar.select(releaseItem);
 
         DownloadVersionsView initialView = versionsView(VersionCategory.RELEASE);
@@ -106,9 +112,11 @@ final class DownloadsView extends HBox implements SidebarPage, PageLifecycle {
                 event -> showVersions(VersionCategory.SNAPSHOT));
         oldItem.addEventHandler(ActionEvent.ACTION,
                 event -> showVersions(VersionCategory.OLD));
+        modpackItem.addEventHandler(ActionEvent.ACTION, event -> showModpacks());
         modItem.addEventHandler(ActionEvent.ACTION, event -> showMods());
         shaderItem.addEventHandler(ActionEvent.ACTION, event -> showShaders());
         resourcePackItem.addEventHandler(ActionEvent.ACTION, event -> showResourcePacks());
+        mapItem.addEventHandler(ActionEvent.ACTION, event -> showMaps());
 
         getChildren().add(contentColumn);
         getStyleClass().add("app-download-page");
@@ -185,6 +193,16 @@ final class DownloadsView extends HBox implements SidebarPage, PageLifecycle {
         setContentPage(modsView);
     }
 
+    private void showModpacks() {
+        setDownloadNavigationVisible(true);
+        showingVersionList = false;
+        if (modpacksView == null) {
+            modpacksView = new ModSearchView(controller, ModContentType.MODPACK,
+                    this::showModpackDetail);
+        }
+        setContentPage(modpacksView);
+    }
+
     private void showShaders() {
         setDownloadNavigationVisible(true);
         showingVersionList = false;
@@ -205,6 +223,15 @@ final class DownloadsView extends HBox implements SidebarPage, PageLifecycle {
         setContentPage(resourcePacksView);
     }
 
+    private void showMaps() {
+        setDownloadNavigationVisible(true);
+        showingVersionList = false;
+        if (mapsView == null) {
+            mapsView = new ModSearchView(controller, ModContentType.WORLD, this::showMapDetail);
+        }
+        setContentPage(mapsView);
+    }
+
     private void showModDetail(ModProjectSummary project) {
         setDownloadNavigationVisible(true);
         showingVersionList = false;
@@ -214,6 +241,18 @@ final class DownloadsView extends HBox implements SidebarPage, PageLifecycle {
                 ModContentType.MOD,
                 project,
                 this::showMods
+        ));
+    }
+
+    private void showModpackDetail(ModProjectSummary project) {
+        setDownloadNavigationVisible(true);
+        showingVersionList = false;
+        setContentPage(new ModDetailView(
+                controller,
+                launchSettings,
+                ModContentType.MODPACK,
+                project,
+                this::showModpacks
         ));
     }
 
@@ -238,6 +277,18 @@ final class DownloadsView extends HBox implements SidebarPage, PageLifecycle {
                 ModContentType.RESOURCE_PACK,
                 project,
                 this::showResourcePacks
+        ));
+    }
+
+    private void showMapDetail(ModProjectSummary project) {
+        setDownloadNavigationVisible(true);
+        showingVersionList = false;
+        setContentPage(new ModDetailView(
+                controller,
+                launchSettings,
+                ModContentType.WORLD,
+                project,
+                this::showMaps
         ));
     }
 
@@ -510,6 +561,10 @@ final class DownloadsView extends HBox implements SidebarPage, PageLifecycle {
             modsView.dispose();
             modsView = null;
         }
+        if (modpacksView != null) {
+            modpacksView.dispose();
+            modpacksView = null;
+        }
         if (shadersView != null) {
             shadersView.dispose();
             shadersView = null;
@@ -517,6 +572,10 @@ final class DownloadsView extends HBox implements SidebarPage, PageLifecycle {
         if (resourcePacksView != null) {
             resourcePacksView.dispose();
             resourcePacksView = null;
+        }
+        if (mapsView != null) {
+            mapsView.dispose();
+            mapsView = null;
         }
     }
 

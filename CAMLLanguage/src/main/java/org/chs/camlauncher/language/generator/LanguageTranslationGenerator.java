@@ -39,6 +39,7 @@ public abstract class LanguageTranslationGenerator {
         AccountTexts.populateDefaults(translations);
         AboutTexts.populateDefaults(translations);
         JavaManagementTexts.populateDefaults(translations);
+        ModpackTexts.populateDefaults(translations);
     }
 
     /** 生成翻译文件，返回写入路径。 */

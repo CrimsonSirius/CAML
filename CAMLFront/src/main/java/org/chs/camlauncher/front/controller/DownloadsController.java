@@ -87,7 +87,8 @@ public final class DownloadsController {
             Consumer<String> onError) {
         String operation = UiText.tr(contentOperation(query.type(),
                 "operation.searchMods", "operation.searchShaders",
-                "operation.searchResourcePacks"), query.text());
+                "operation.searchResourcePacks", "operation.searchMaps",
+                "operation.searchModpacks"), query.text());
         return context.runMetadata(operation,
                 () -> context.backend().searchMods(query), onLoaded, onError);
     }
@@ -109,7 +110,8 @@ public final class DownloadsController {
             Consumer<String> onError) {
         return context.runMetadata(UiText.tr(contentOperation(type,
                         "operation.fetchModProject", "operation.fetchShaderProject",
-                        "operation.fetchResourcePackProject"), projectId),
+                        "operation.fetchResourcePackProject", "operation.fetchMapProject",
+                        "operation.fetchModpackProject"), projectId),
                 () -> context.backend().fetchModProject(source, projectId), onLoaded, onError);
     }
 
@@ -166,7 +168,8 @@ public final class DownloadsController {
             Consumer<String> onError) {
         return context.runDownload(UiText.tr(contentOperation(type,
                         "operation.downloadMod", "operation.downloadShader",
-                        "operation.downloadResourcePack"), file.name()),
+                        "operation.downloadResourcePack", "operation.downloadMap",
+                        "operation.installModpack"), file.name()),
                 () -> context.backend().downloadContent(
                         type,
                         file,
@@ -182,13 +185,32 @@ public final class DownloadsController {
                 onError);
     }
 
+    public AsyncTaskHandle<ModDownloadResult> installModpack(
+            ModFile file,
+            Path gameDirectory,
+            String instanceName,
+            DownloadListener listener,
+            DownloadCancellationToken token,
+            Consumer<ModDownloadResult> onSuccess,
+            Consumer<String> onError) {
+        return context.runDownload(
+                UiText.tr("operation.installModpack", file.name()),
+                () -> context.backend().installModpack(
+                        file, gameDirectory, instanceName, listener, token),
+                onSuccess,
+                onError);
+    }
+
     private static String contentOperation(ModContentType type,
                                            String modKey, String shaderKey,
-                                           String resourcePackKey) {
+                                           String resourcePackKey, String mapKey,
+                                           String modpackKey) {
         return switch (type) {
             case MOD -> modKey;
+            case MODPACK -> modpackKey;
             case SHADER -> shaderKey;
             case RESOURCE_PACK -> resourcePackKey;
+            case WORLD -> mapKey;
         };
     }
 

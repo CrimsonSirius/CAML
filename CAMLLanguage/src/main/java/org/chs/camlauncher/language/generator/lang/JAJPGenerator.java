@@ -372,6 +372,18 @@ public final class JAJPGenerator extends LanguageTranslationGenerator {
         // MOD ダウンロード
         t.put("downloads.section.instances", "ゲームインスタンス");
         t.put("downloads.section.content", "ゲームコンテンツ");
+        t.put("maps.nav", "マップ");
+        t.put("maps.search.title", "マップを検索");
+        t.put("maps.search.nameHint", "マップ名を入力");
+        t.put("maps.search.loading", "マップを検索中...");
+        t.put("maps.search.empty", "一致するマップが見つかりません");
+        t.put("maps.search.failed", "マップの読み込みに失敗しました：%s");
+        t.put("maps.list.meta", "バージョン：%s · ダウンロード %s · 更新 %s");
+        t.put("maps.detail.loading", "マップの詳細を読み込み中...");
+        t.put("operation.searchMaps", "マップを検索 %s");
+        t.put("operation.fetchMapProject", "マッププロジェクトを取得 %s");
+        t.put("operation.downloadMap", "マップをダウンロード %s");
+        t.put("mod.error.worldArchiveInvalid", "マップアーカイブが無効です：%s");
         t.put("mods.nav", "MOD");
         t.put("shaders.nav", "シェーダー");
         t.put("shaders.search.title", "シェーダーを検索");

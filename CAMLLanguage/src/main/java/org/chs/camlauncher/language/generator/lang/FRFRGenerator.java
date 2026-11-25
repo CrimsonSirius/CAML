@@ -372,6 +372,18 @@ public final class FRFRGenerator extends LanguageTranslationGenerator {
         // Téléchargement de mods
         t.put("downloads.section.instances", "Instances de jeu");
         t.put("downloads.section.content", "Contenu de jeu");
+        t.put("maps.nav", "Cartes");
+        t.put("maps.search.title", "Rechercher des cartes");
+        t.put("maps.search.nameHint", "Nom de la carte");
+        t.put("maps.search.loading", "Recherche des cartes...");
+        t.put("maps.search.empty", "Aucune carte trouvée");
+        t.put("maps.search.failed", "Échec du chargement des cartes : %s");
+        t.put("maps.list.meta", "Version : %s · Téléchargements %s · Mise à jour %s");
+        t.put("maps.detail.loading", "Chargement des détails de la carte...");
+        t.put("operation.searchMaps", "Rechercher des cartes %s");
+        t.put("operation.fetchMapProject", "Récupérer le projet de carte %s");
+        t.put("operation.downloadMap", "Télécharger la carte %s");
+        t.put("mod.error.worldArchiveInvalid", "Archive de carte invalide : %s");
         t.put("mods.nav", "Mods");
         t.put("shaders.nav", "Shaders");
         t.put("shaders.search.title", "Rechercher des shaders");

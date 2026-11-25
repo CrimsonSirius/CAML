@@ -16,6 +16,8 @@ final class MinecraftVersionComparator {
     static int compare(String left, String right) {
         List<Token> leftTokens = tokenize(left);
         List<Token> rightTokens = tokenize(right);
+        leftTokens.add(Token.END);
+        rightTokens.add(Token.END);
         int index = 0;
         while (index < leftTokens.size() && index < rightTokens.size()) {
             int result = leftTokens.get(index).compareTo(rightTokens.get(index));
@@ -24,13 +26,7 @@ final class MinecraftVersionComparator {
             }
             index++;
         }
-        if (index == leftTokens.size() && index == rightTokens.size()) {
-            return 0;
-        }
-        if (index == leftTokens.size()) {
-            return isPrerelease(rightTokens.get(index)) ? 1 : -1;
-        }
-        return isPrerelease(leftTokens.get(index)) ? -1 : 1;
+        return 0;
     }
 
     static int compareGroupKey(String left, String right) {
@@ -47,8 +43,8 @@ final class MinecraftVersionComparator {
         return leftLoader.compareToIgnoreCase(rightLoader);
     }
 
-    private static boolean isPrerelease(Token token) {
-        return !token.numeric && switch (token.text) {
+    private static boolean isPrerelease(String text) {
+        return switch (text) {
             case "pre", "rc", "alpha", "beta", "snapshot", "experimental" -> true;
             default -> false;
         };
@@ -85,23 +81,40 @@ final class MinecraftVersionComparator {
             current.setLength(0);
             return;
         }
-        tokens.add(new Token(numeric, current.toString()));
+        String text = current.toString();
+        Kind kind = numeric
+                ? Kind.NUMERIC
+                : isPrerelease(text) ? Kind.PRERELEASE : Kind.TEXT;
+        tokens.add(new Token(kind, text));
         current.setLength(0);
     }
 
-    private record Token(boolean numeric, String text) implements Comparable<Token> {
+    /** 固定顺序保证比较器满足全序：预发布 < 结尾哨兵 < 数字 < 普通文本。 */
+    private enum Kind {
+        PRERELEASE,
+        END,
+        NUMERIC,
+        TEXT
+    }
+
+    private record Token(Kind kind, String text) implements Comparable<Token> {
+        private static final Token END = new Token(Kind.END, "");
+
         @Override
         public int compareTo(Token other) {
-            if (numeric && other.numeric) {
+            if (kind != other.kind) {
+                return Integer.compare(kind.ordinal(), other.kind.ordinal());
+            }
+            if (kind == Kind.END) {
+                return 0;
+            }
+            if (kind == Kind.NUMERIC) {
                 String left = stripLeadingZeros(text);
                 String right = stripLeadingZeros(other.text);
                 if (left.length() != right.length()) {
                     return Integer.compare(left.length(), right.length());
                 }
                 return left.compareTo(right);
-            }
-            if (numeric != other.numeric) {
-                return numeric ? -1 : 1;
             }
             return text.compareTo(other.text);
         }
