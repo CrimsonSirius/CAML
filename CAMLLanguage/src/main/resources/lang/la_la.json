@@ -231,6 +231,8 @@
   "download.versions.empty": "Fons depositi nullas versiones %s deponibiles reddidit",
   "download.versions.error": "Index %s legi non potuit: %s",
   "download.versions.loading": "Index %2$s ex %1$s legitur...",
+  "downloads.section.content": "Contentum ludi",
+  "downloads.section.instances": "Instantiae ludi",
   "error.unknown": "Error incognitus accidit. Commentarium inspice.",
   "footer.backend.notReady": "Non paratus",
   "footer.backend.ready": "Paratus",

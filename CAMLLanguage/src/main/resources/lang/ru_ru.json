@@ -231,6 +231,8 @@
   "download.versions.empty": "Источник загрузки не вернул ни одной доступной версии %s",
   "download.versions.error": "Не удалось загрузить список %s: %s",
   "download.versions.loading": "Загрузка списка %2$s из %1$s...",
+  "downloads.section.content": "Игровой контент",
+  "downloads.section.instances": "Игровые экземпляры",
   "error.unknown": "Произошла неизвестная ошибка. Проверьте журнал.",
   "footer.backend.notReady": "Не готов",
   "footer.backend.ready": "Готов",

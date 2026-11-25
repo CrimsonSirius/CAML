@@ -370,6 +370,8 @@ public final class JAJPGenerator extends LanguageTranslationGenerator {
         t.put("instances.manage.resourcePacks.version", "バージョン：%s");
 
         // MOD ダウンロード
+        t.put("downloads.section.instances", "ゲームインスタンス");
+        t.put("downloads.section.content", "ゲームコンテンツ");
         t.put("mods.nav", "MOD");
         t.put("shaders.nav", "シェーダー");
         t.put("shaders.search.title", "シェーダーを検索");

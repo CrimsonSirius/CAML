@@ -231,6 +231,8 @@
   "download.versions.empty": "下载源没有返回可下载的%s",
   "download.versions.error": "获取%s列表失败：%s",
   "download.versions.loading": "正在从%1$s获取%2$s列表...",
+  "downloads.section.content": "游戏内容",
+  "downloads.section.instances": "游戏实例",
   "error.unknown": "发生未知错误，请查看日志。",
   "footer.backend.notReady": "未就绪",
   "footer.backend.ready": "已就绪",

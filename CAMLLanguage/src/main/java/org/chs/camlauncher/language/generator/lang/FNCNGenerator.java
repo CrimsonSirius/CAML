@@ -371,6 +371,8 @@ public final class FNCNGenerator extends LanguageTranslationGenerator {
         t.put("instances.manage.resourcePacks.version", "版本：%s");
 
         // 零件下载
+        t.put("downloads.section.instances", "游戏实例");
+        t.put("downloads.section.content", "游戏内容");
         t.put("mods.nav", "零件");
         t.put("shaders.nav", "光影包");
         t.put("shaders.search.title", "找光影包");

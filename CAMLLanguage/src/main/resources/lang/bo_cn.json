@@ -231,6 +231,8 @@
   "download.versions.empty": "ཕབ་ལེན་འབྱུང་ཁུངས་ཀྱིས་ཕབ་ལེན་རུང་བའི་ %s མ་སྤྲད",
   "download.versions.error": "%s ཐོ་གཞུང་ལེན་མ་ཐུབ: %s",
   "download.versions.loading": "%1$s ནས་ %2$s ཐོ་གཞུང་ལེན་བཞིན...",
+  "downloads.section.content": "Game content",
+  "downloads.section.instances": "Game instances",
   "error.unknown": "རྒྱུ་མཚན་མེད་པའི་ནོར་འཁྲུལ་བྱུང་། དྲན་ཐོ་ལ་གཟིགས།",
   "footer.backend.notReady": "གྲ་སྒྲིག་མིན",
   "footer.backend.ready": "གྲ་སྒྲིག་ཟིན",

@@ -436,6 +436,8 @@ public final class ZHCNGenerator extends LanguageTranslationGenerator {
         t.put("instances.manage.resourcePacks.version", "版本：%s");
 
         // Mod 下载
+        t.put("downloads.section.instances", "游戏实例");
+        t.put("downloads.section.content", "游戏内容");
         t.put("mods.nav", "模组");
         t.put("shaders.nav", "光影包");
         t.put("shaders.search.title", "搜索光影包");

@@ -3,6 +3,8 @@ package org.chs.camlauncher.ui.control;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.event.ActionEvent;
+import javafx.scene.control.Label;
+import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 
 import java.util.ArrayList;
@@ -28,6 +30,22 @@ public final class CamlSideNav extends VBox {
         if (selectedItem.get() == null) {
             select(item);
         }
+    }
+
+    /** 在侧栏当前位置插入分组标题和分隔线；标题不参与选中和焦点遍历。 */
+    public void addSection(String title) {
+        Label label = new Label(title);
+        label.getStyleClass().add("caml-side-nav-section-title");
+        label.setMaxWidth(Double.MAX_VALUE);
+
+        Region divider = new Region();
+        divider.getStyleClass().add("caml-side-nav-section-divider");
+        divider.setMaxWidth(Double.MAX_VALUE);
+
+        VBox section = new VBox(label, divider);
+        section.getStyleClass().add("caml-side-nav-section");
+        section.setFillWidth(true);
+        getChildren().add(section);
     }
 
     public void select(CamlSideNavItem item) {

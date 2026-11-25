@@ -231,6 +231,8 @@
   "download.versions.empty": "向下装载来源没有送回能装载的 %s",
   "download.versions.error": "获取 %s 列表失败：%s",
   "download.versions.loading": "正在从 %1$s 获取 %2$s 列表...",
+  "downloads.section.content": "游戏内容",
+  "downloads.section.instances": "游戏实例",
   "error.unknown": "撞见无名错乱，请去翻阅原木。",
   "footer.backend.notReady": "后部末端未开窍",
   "footer.backend.ready": "后部末端已开窍",

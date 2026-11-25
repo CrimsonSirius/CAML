@@ -370,6 +370,8 @@ public final class LALAGenerator extends LanguageTranslationGenerator {
         t.put("instances.manage.resourcePacks.version", "Versio: %s");
 
         // Deposita modorum
+        t.put("downloads.section.instances", "Instantiae ludi");
+        t.put("downloads.section.content", "Contentum ludi");
         t.put("mods.nav", "Modi");
         t.put("shaders.nav", "Umbrae");
         t.put("shaders.search.title", "Umbras quaerere");

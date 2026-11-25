@@ -231,6 +231,8 @@
   "download.versions.empty": "The download source returned no downloadable %s versions",
   "download.versions.error": "Failed to load %s list: %s",
   "download.versions.loading": "Loading %2$s list from %1$s...",
+  "downloads.section.content": "Game content",
+  "downloads.section.instances": "Game instances",
   "error.unknown": "An unknown error occurred. Check the logs.",
   "footer.backend.notReady": "Not ready",
   "footer.backend.ready": "Ready",

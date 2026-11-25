@@ -1,10 +1,12 @@
 package org.chs.camlauncher.front.view;
 
 import javafx.scene.Scene;
+import javafx.scene.control.Label;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
+import javafx.scene.layout.VBox;
 import org.chs.camlauncher.ui.control.CamlSideNav;
 import org.chs.camlauncher.ui.control.CamlSideNavItem;
 import org.chs.camlauncher.ui.theme.CamlTheme;
@@ -85,6 +87,32 @@ class SidebarWidthRegressionTest {
 
         assertTrue(metrics[0] + 0.5 >= metrics[1], "首次挂载时导航项宽度必须容纳完整标签");
         assertTrue(metrics[2] + 0.5 >= metrics[1], "重新挂载后导航项宽度仍必须容纳完整标签");
+    }
+
+    @Test
+    void sideNavigationSectionAddsHeaderWithoutChangingSelection() throws Exception {
+        boolean valid = onFxThread(() -> {
+            CamlSideNav sidebar = new CamlSideNav();
+            sidebar.addSection("游戏实例");
+            CamlSideNavItem release = new CamlSideNavItem("正式版");
+            sidebar.addItem(release);
+            sidebar.addSection("游戏内容");
+            sidebar.addItem(new CamlSideNavItem("Mod"));
+
+            VBox instances = (VBox) sidebar.getChildren().get(0);
+            VBox content = (VBox) sidebar.getChildren().get(2);
+            Label instancesLabel = (Label) instances.getChildren().get(0);
+            Region instancesDivider = (Region) instances.getChildren().get(1);
+            Label contentLabel = (Label) content.getChildren().get(0);
+
+            return sidebar.getChildren().size() == 4
+                    && "游戏实例".equals(instancesLabel.getText())
+                    && "游戏内容".equals(contentLabel.getText())
+                    && instancesDivider.getStyleClass().contains("caml-side-nav-section-divider")
+                    && sidebar.selectedItemProperty().get() == release;
+        });
+
+        assertTrue(valid, "分组标题和分隔线不能改变默认选中项");
     }
 
     private static void layout(HBox root, Scene scene) {

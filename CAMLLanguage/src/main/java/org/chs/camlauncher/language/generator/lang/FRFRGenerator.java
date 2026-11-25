@@ -370,6 +370,8 @@ public final class FRFRGenerator extends LanguageTranslationGenerator {
         t.put("instances.manage.resourcePacks.version", "Version : %s");
 
         // Téléchargement de mods
+        t.put("downloads.section.instances", "Instances de jeu");
+        t.put("downloads.section.content", "Contenu de jeu");
         t.put("mods.nav", "Mods");
         t.put("shaders.nav", "Shaders");
         t.put("shaders.search.title", "Rechercher des shaders");
