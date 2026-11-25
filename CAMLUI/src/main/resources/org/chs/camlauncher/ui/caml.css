@@ -564,7 +564,7 @@
     -fx-min-height: 1;
     -fx-pref-height: 1;
     -fx-max-height: 1;
-    -fx-background-color: -caml-border-subtle;
+    -fx-background-color: -caml-nav-divider;
 }
 
 .caml-side-nav-item {
