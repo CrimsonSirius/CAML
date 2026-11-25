@@ -7,6 +7,7 @@ import javafx.scene.layout.Pane;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
+import javafx.scene.paint.Color;
 import org.chs.camlauncher.ui.control.CamlSideNav;
 import org.chs.camlauncher.ui.control.CamlSideNavItem;
 import org.chs.camlauncher.ui.theme.CamlTheme;
@@ -113,6 +114,54 @@ class SidebarWidthRegressionTest {
         });
 
         assertTrue(valid, "分组标题和分隔线不能改变默认选中项");
+    }
+
+    @Test
+    void nightSideNavigationDividerIsVisibleAgainstSidebar() throws Exception {
+        boolean visible = onFxThread(() -> {
+            CamlSideNav sidebar = new CamlSideNav();
+            sidebar.getStyleClass().add("app-sidebar");
+            sidebar.addSection("游戏实例");
+            sidebar.addItem(new CamlSideNavItem("正式版"));
+
+            HBox root = new HBox(sidebar);
+            root.setPrefSize(300, 400);
+            Scene scene = new Scene(root, 300, 400);
+            CamlTheme.install(scene);
+            addStylesheet(scene, "/themes/night.css");
+            addStylesheet(scene, "/styles/app.css");
+            root.applyCss();
+            root.resize(300, 400);
+            root.applyCss();
+            root.layout();
+
+            Region divider = (Region) sidebar.lookup(".caml-side-nav-section-divider");
+            Color dividerColor = (Color) divider.getBackground().getFills().getFirst().getFill();
+            Color sidebarColor = (Color) sidebar.getBackground().getFills().getFirst().getFill();
+            return contrast(dividerColor, sidebarColor) > 1.5;
+        });
+
+        assertTrue(visible, "night 侧栏分隔线必须与侧栏背景可区分");
+    }
+
+    private static double contrast(Color first, Color second) {
+        double firstLuminance = luminance(first);
+        double secondLuminance = luminance(second);
+        double lighter = Math.max(firstLuminance, secondLuminance);
+        double darker = Math.min(firstLuminance, secondLuminance);
+        return (lighter + 0.05) / (darker + 0.05);
+    }
+
+    private static double luminance(Color color) {
+        return 0.2126 * linear(color.getRed())
+                + 0.7152 * linear(color.getGreen())
+                + 0.0722 * linear(color.getBlue());
+    }
+
+    private static double linear(double channel) {
+        return channel <= 0.04045
+                ? channel / 12.92
+                : Math.pow((channel + 0.055) / 1.055, 2.4);
     }
 
     private static void layout(HBox root, Scene scene) {

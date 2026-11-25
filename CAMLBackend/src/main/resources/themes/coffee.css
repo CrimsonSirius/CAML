@@ -37,6 +37,7 @@
     -caml-border-subtle: #d8cfc2;
     -caml-nav-border: -caml-on-surface;
     -caml-nav-focus-border: -caml-accent;
+    -caml-nav-divider: -caml-border-subtle;
     -caml-inverse-surface: #2b2119;
     -caml-inverse-on-surface: #fff7ef;
     -caml-inverse-accent: #ffd180;
