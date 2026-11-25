@@ -368,7 +368,7 @@ GitHub Actions 的 `Build` workflow 会在所有 PR 和所有分支 push（包�
 
 ```java
 CamlTheme.install(scene);
-CamlTheme.applyTheme(scene, Path.of(System.getProperty("user.home"), ".caml/themes/mango.css"));
+CamlTheme.applyTheme(scene, Path.of(System.getProperty("user.home"), ".caml/themes/coffee.css"));
 
 CamlCard card = new CamlCard(
         new Label("启动游戏"),

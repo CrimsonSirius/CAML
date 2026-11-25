@@ -67,7 +67,7 @@ class InputContrastTest {
     private static void applyStyles(VBox root) {
         Scene scene = new Scene(root, 400, 300);
         CamlTheme.install(scene);
-        addStylesheet(scene, "/themes/mango.css");
+        addStylesheet(scene, "/themes/coffee.css");
         addStylesheet(scene, "/styles/app.css");
         root.applyCss();
         root.resize(400, 300);

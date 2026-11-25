@@ -91,7 +91,7 @@ class AppCssScaleTest {
 
         Scene scene = new Scene(root, 900, 600);
         CamlTheme.install(scene);
-        addStylesheet(scene, "/themes/mango.css");
+        addStylesheet(scene, "/themes/coffee.css");
         addStylesheet(scene, "/styles/app.css");
         root.applyCss();
         root.resize(900, 600);

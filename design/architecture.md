@@ -64,7 +64,7 @@ CAMLFront ──> CAMLBackend ──> CAMLLanguage
 `CAMLBackend.start()` 的固定顺序：
 
 1. `BackendPaths.ensure()` 创建数据目录、`logs`、`cache`、`themes`、`java`、游戏目录和 `versions`。
-2. `ThemeService.ensureBundledThemes()` 复制缺失的内置主题 `mango.css` / `night.css`，不覆盖已有文件。
+2. `ThemeService.ensureBundledThemes()` 复制缺失的内置主题 `coffee.css` / `night.css`，默认主题为 `night`；旧版 `mango.css` 会自动迁移为 `coffee.css`，不覆盖已有文件。
 3. `LatestLogService.start()` 截断并打开 `logs/latest.log`。
 4. `LanguageService.initialize()` 同步内置语言、读取语言设置并建立语言快照。
 5. 读取下载并发数和下载源，应用到版本安装器、外部加载器安装器和全部 HTTP 客户端。
@@ -85,7 +85,7 @@ CAMLFront ──> CAMLBackend ──> CAMLLanguage
 |---|---|
 | `~/.caml/settings.properties` | 游戏位置、隔离、内存、JVM 参数、下载、Java、语言、窗口、账号绑定、禁用 Mod 等 |
 | `~/.caml/theme.txt` | 当前主题 ID |
-| `~/.caml/themes/*.css` | 外部主题；内置 `mango.css` / `night.css` 首次启动复制 |
+| `~/.caml/themes/*.css` | 外部主题；内置 `coffee.css` / `night.css` 首次启动复制 |
 | `~/.caml/lang/*.json` | 运行时语言文件；内置语言随启动器版本同步 |
 | `~/.caml/logs/latest.log` | 本次 UI 日志；有失败时退出额外生成 `.log.gz` 归档 |
 | `~/.caml/cache/version_manifest_v2.json` | 版本清单缓存 |

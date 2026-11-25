@@ -291,7 +291,7 @@ Linux 系统组显示发行版名称和内核版本；Windows/macOS 显示系统
 - 边框：`-caml-border`、`-caml-border-subtle`；
 - 导航胶囊：`-caml-nav-border`、`-caml-nav-focus-border`。
 
-内置主题 `mango`：白/米色表面、深棕文字、焦糖橙强调色；`night`：参考 IntelliJ IDEA 深色界面的黑灰表面、浅色文字和蓝色强调色。默认仍为 `mango`，两者都按令牌成对使用文字色。
+内置主题 `coffee`：白/米色表面、深棕文字、焦糖橙强调色；`night`：参考 IntelliJ IDEA 深色界面的黑灰表面、浅色文字和蓝色强调色。默认主题为 `night`，两者都按令牌成对使用文字色。
 
 深色主题的明度层级固定为：页面背景最暗，分组/卡片居中，输入框/选择框使用 `-caml-surface-lowest` 作为最亮表面；该顺序由后端主题测试锁定。
 

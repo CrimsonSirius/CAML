@@ -23,7 +23,7 @@ class ThemeServiceTest {
 
         service.ensureBundledThemes();
 
-        for (String id : List.of("mango", "night")) {
+        for (String id : List.of("coffee", "night")) {
             Path theme = dataDirectory.resolve("themes").resolve(id + ".css");
             assertTrue(Files.isRegularFile(theme), "缺少内置主题 " + id);
             String content = Files.readString(theme);
@@ -45,14 +45,15 @@ class ThemeServiceTest {
 
         List<String> ids = service.listThemes().stream().map(ThemeInfo::id).toList();
 
-        assertEquals(List.of("a", "mango", "night", "z"), ids);
+        assertEquals(List.of("a", "coffee", "night", "z"), ids);
     }
 
     @Test
     void activeThemeFallsBackToDefaultWhenNotConfigured() throws Exception {
         ThemeService service = new ThemeService(dataDirectory);
 
-        assertEquals(ThemeService.DEFAULT_THEME_ID, service.activeTheme().id());
+        assertEquals("night", ThemeService.DEFAULT_THEME_ID);
+        assertEquals("night", service.activeTheme().id());
     }
 
     @Test
@@ -100,14 +101,14 @@ class ThemeServiceTest {
         ThemeService service = new ThemeService(dataDirectory);
         service.ensureBundledThemes();
         Path themes = dataDirectory.resolve("themes");
-        Path mango = themes.resolve("mango.css");
+        Path coffee = themes.resolve("coffee.css");
         Path night = themes.resolve("night.css");
-        Files.writeString(mango, "my custom mango");
+        Files.writeString(coffee, "my custom coffee");
         Files.writeString(night, "my custom night");
 
         service.ensureBundledThemes();
 
-        assertEquals("my custom mango", Files.readString(mango));
+        assertEquals("my custom coffee", Files.readString(coffee));
         assertEquals("my custom night", Files.readString(night));
     }
 
@@ -115,13 +116,43 @@ class ThemeServiceTest {
     void addsMissingBundledThemeForExistingInstallations() throws Exception {
         Path themes = dataDirectory.resolve("themes");
         Files.createDirectories(themes);
-        Path mango = themes.resolve("mango.css");
-        Files.writeString(mango, "my custom mango");
+        Path coffee = themes.resolve("coffee.css");
+        Files.writeString(coffee, "my custom coffee");
 
         new ThemeService(dataDirectory).ensureBundledThemes();
 
-        assertEquals("my custom mango", Files.readString(mango));
+        assertEquals("my custom coffee", Files.readString(coffee));
         assertTrue(Files.isRegularFile(themes.resolve("night.css")));
+    }
+
+    @Test
+    void migratesLegacyMangoThemeAndConfigToCoffee() throws Exception {
+        Path themes = dataDirectory.resolve("themes");
+        Files.createDirectories(themes);
+        Path mango = themes.resolve("mango.css");
+        Files.writeString(mango, "my custom mango");
+        Files.writeString(dataDirectory.resolve("theme.txt"), "mango\n");
+
+        new ThemeService(dataDirectory).ensureBundledThemes();
+
+        Path coffee = themes.resolve("coffee.css");
+        assertTrue(Files.notExists(mango));
+        assertEquals("my custom mango", Files.readString(coffee));
+        assertEquals("coffee", new ThemeService(dataDirectory).activeTheme().id());
+    }
+
+    @Test
+    void migratesLegacyMangoConfigWhenCoffeeAlreadyExists() throws Exception {
+        Path themes = dataDirectory.resolve("themes");
+        Files.createDirectories(themes);
+        Path coffee = themes.resolve("coffee.css");
+        Files.writeString(coffee, "my custom coffee");
+        Files.writeString(dataDirectory.resolve("theme.txt"), "mango\n");
+
+        new ThemeService(dataDirectory).ensureBundledThemes();
+
+        assertEquals("my custom coffee", Files.readString(coffee));
+        assertEquals("coffee", new ThemeService(dataDirectory).activeTheme().id());
     }
 
     @Test
@@ -131,7 +162,7 @@ class ThemeServiceTest {
         Path themes = dataDirectory.resolve("themes");
 
         assertEquals(
-                colorTokens(themes.resolve("mango.css")),
+                colorTokens(themes.resolve("coffee.css")),
                 colorTokens(themes.resolve("night.css"))
         );
     }

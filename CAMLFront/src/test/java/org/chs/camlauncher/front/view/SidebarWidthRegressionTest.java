@@ -40,7 +40,7 @@ class SidebarWidthRegressionTest {
             root.setPrefSize(1568, 900);
             Scene scene = new Scene(root, 1568, 900);
             CamlTheme.install(scene);
-            addStylesheet(scene, "/themes/mango.css");
+            addStylesheet(scene, "/themes/coffee.css");
             addStylesheet(scene, "/styles/app.css");
             layout(root, scene);
             double first = sidebar.getWidth();
@@ -71,7 +71,7 @@ class SidebarWidthRegressionTest {
             root.setPrefSize(1568, 900);
             Scene scene = new Scene(root, 1568, 900);
             CamlTheme.install(scene);
-            addStylesheet(scene, "/themes/mango.css");
+            addStylesheet(scene, "/themes/coffee.css");
             addStylesheet(scene, "/styles/app.css");
             layout(root, scene);
 
