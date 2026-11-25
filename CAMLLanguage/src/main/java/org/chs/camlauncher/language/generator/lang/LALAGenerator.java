@@ -372,6 +372,18 @@ public final class LALAGenerator extends LanguageTranslationGenerator {
         // Deposita modorum
         t.put("downloads.section.instances", "Instantiae ludi");
         t.put("downloads.section.content", "Contentum ludi");
+        t.put("maps.nav", "Tabulae");
+        t.put("maps.search.title", "Quaerere tabulas");
+        t.put("maps.search.nameHint", "Nomen tabulae");
+        t.put("maps.search.loading", "Quaeruntur tabulae...");
+        t.put("maps.search.empty", "Nullae tabulae inventae");
+        t.put("maps.search.failed", "Tabulae legi non potuerunt: %s");
+        t.put("maps.list.meta", "Versio: %s · Descensiones %s · Renovata %s");
+        t.put("maps.detail.loading", "Tabulae singula leguntur...");
+        t.put("operation.searchMaps", "Quaerere tabulas %s");
+        t.put("operation.fetchMapProject", "Tabulae projectum %s");
+        t.put("operation.downloadMap", "Describere tabulam %s");
+        t.put("mod.error.worldArchiveInvalid", "Archivum tabulae invalidum: %s");
         t.put("mods.nav", "Modi");
         t.put("shaders.nav", "Umbrae");
         t.put("shaders.search.title", "Umbras quaerere");

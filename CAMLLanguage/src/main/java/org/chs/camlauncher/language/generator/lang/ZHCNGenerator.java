@@ -438,6 +438,18 @@ public final class ZHCNGenerator extends LanguageTranslationGenerator {
         // Mod 下载
         t.put("downloads.section.instances", "游戏实例");
         t.put("downloads.section.content", "游戏内容");
+        t.put("maps.nav", "地图");
+        t.put("maps.search.title", "搜索地图");
+        t.put("maps.search.nameHint", "输入地图名称");
+        t.put("maps.search.loading", "正在搜索地图...");
+        t.put("maps.search.empty", "没有找到匹配的地图");
+        t.put("maps.search.failed", "加载地图失败：%s");
+        t.put("maps.list.meta", "版本：%s · 下载 %s · 更新 %s");
+        t.put("maps.detail.loading", "正在加载地图详情...");
+        t.put("operation.searchMaps", "搜索地图 %s");
+        t.put("operation.fetchMapProject", "获取地图项目 %s");
+        t.put("operation.downloadMap", "下载地图 %s");
+        t.put("mod.error.worldArchiveInvalid", "地图压缩包无效：%s");
         t.put("mods.nav", "模组");
         t.put("shaders.nav", "光影包");
         t.put("shaders.search.title", "搜索光影包");

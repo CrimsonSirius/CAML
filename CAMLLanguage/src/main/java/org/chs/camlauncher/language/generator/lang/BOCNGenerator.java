@@ -372,6 +372,18 @@ public final class BOCNGenerator extends LanguageTranslationGenerator {
         // MOD ཕབ་ལེན
         t.put("downloads.section.instances", "Game instances");
         t.put("downloads.section.content", "Game content");
+        t.put("maps.nav", "Maps");
+        t.put("maps.search.title", "Search maps");
+        t.put("maps.search.nameHint", "Enter a map name");
+        t.put("maps.search.loading", "Searching maps...");
+        t.put("maps.search.empty", "No matching maps found");
+        t.put("maps.search.failed", "Failed to load maps: %s");
+        t.put("maps.list.meta", "Version: %s · Downloads %s · Updated %s");
+        t.put("maps.detail.loading", "Loading map details...");
+        t.put("operation.searchMaps", "Search maps %s");
+        t.put("operation.fetchMapProject", "Fetch map project %s");
+        t.put("operation.downloadMap", "Download map %s");
+        t.put("mod.error.worldArchiveInvalid", "Invalid map archive: %s");
         t.put("mods.nav", "MOD");
         t.put("shaders.nav", "Shaders");
         t.put("shaders.search.title", "Search shaders");

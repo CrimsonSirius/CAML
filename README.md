@@ -22,6 +22,7 @@ CAML 是一个基于 **Java 25 + JavaFX** 的 Minecraft 启动器，采用前后
 | Mod 下载 | 下载页新增 Mod 子页；通过 Modrinth/CurseForge 官方 API 搜索、分页、查看详情、按加载器和游戏版本分组、显示依赖并下载到当前实例 `mods` 目录；不使用镜像源；CurseForge 文件地址为空时按 fileId 回退 CDN，兼容旧 CDN 域名变体并透传 `x-api-key`，SHA-1 缺失时回退 MD5，大小 0 视为未知；Modrinth 的 WebP 图标在后端转换为 PNG 后显示 |
 | 光影包下载 | 下载页在 Mod 子页下方新增光影包子页；复用搜索、分页、详情和图标链路，Modrinth 使用 `project_type:shader`，CurseForge 使用 `classId=6552`，按游戏版本筛选并下载到当前实例 `shaderpacks` 目录 |
 | 资源包下载 | 下载页新增资源包子页；Modrinth 使用 `project_type:resourcepack`，CurseForge 使用 `classId=12`，按游戏版本筛选并下载到当前实例 `resourcepacks` 目录 |
+| 地图下载 | 下载页新增地图子页；仅使用 CurseForge `classId=17`，按游戏版本筛选；下载 ZIP 后解压到当前实例 `saves/<世界名>`，重名自动追加序号，失败时清理临时文件 |
 | 实例管理 | “管理实例”提供 Mod 与资源包两个入口；Mod 显示本地版本、支持启停和更新检查；资源包扫描实例 `resourcepacks` 中的 zip/目录，读取 `pack.mcmeta` 的 `pack_format` 显示版本，并用 `.disabled` 后缀切换启用状态 |
 | 版本安装 | 本地已安装版本直接复用（支持第三方启动器/整合包的自定义版本 ID），下载时可用自定义实例名；官方版本 ID 负责元数据，实例 ID 作为 `versions/<id>` 目录名；支持 Fabric Loader/Fabric API、Quilt Loader/Quilted Fabric API、Forge、NeoForge、OptiFine（仅 Forge）安装；Forge/NeoForge 版本列表优先从 BMCLAPI JSON 接口获取，官方源使用 Maven 元数据和 NeoForge 版本号映射匹配 Minecraft 版本；支持旧式 Forge library、Maven 路径推导和子版本库优先去重；缺失文件自动补齐；兼容 PCL/HMCL 版本隔离布局；基础文件完成后才写入版本 JSON |
 | 账号 | 离线登录、稳定离线 UUID；微软设备码登录，OAuth → Xbox Live → XSTS → Minecraft Services，启动时按过期时间自动 refresh；第三方 Yggdrasil（LittleSkin 等）账密登录，启动时 `refresh` 自动续期并自愈未绑定角色的 token；支持多角色切换；authlib-injector 运行时按需下载一次、每次启动 SHA-256 校验后以 `-javaagent` 注入；metadata 三级缓存（网络/内存/磁盘）保证皮肤站不可用时仍能启动；设置页维护全局账号与默认账号，主页二级页为每个实例单独指定账号，未指定时回退默认；accessToken/refresh token 使用 AES-GCM 加密落盘（未勾选“记住登录”时只留在内存），密码不保存 |
@@ -470,6 +471,10 @@ statusLabel.setText(UiText.tr("home.instance.current", version));
 
 资源包也复用同一套下载页和详情页：Modrinth 使用 `project_type:resourcepack`，
 CurseForge 使用 `classId=12`；文件写入实例实际数据目录下的 `resourcepacks`。
+
+地图复用同一套下载页和详情页，但 Modrinth 没有 world 项目类型，因此只查询
+CurseForge `classId=17`。下载的 ZIP 会解压为实例数据目录下的 `saves/<世界名>`；
+同名世界不会覆盖，自动追加 `(2)` 等序号。
 
 - Modrinth 使用 `https://api.modrinth.com/v2` 官方 API，无需额外配置。
 - CurseForge 使用 `https://api.curseforge.com/v1` 官方 API，必须配置 API Key。

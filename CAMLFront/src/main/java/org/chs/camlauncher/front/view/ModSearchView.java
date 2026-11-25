@@ -103,11 +103,17 @@ final class ModSearchView extends VBox implements PageLifecycle {
 
         queryField.setPromptText(text("search.nameHint"));
         gameVersionField.setPromptText(UiText.tr("mods.search.versionHint"));
-        sourceBox.getItems().setAll(
-                new ModChoice<>(UiText.tr("mods.search.allSources"), null),
-                new ModChoice<>(UiText.tr("mods.source.modrinth"), ModSource.MODRINTH),
-                new ModChoice<>(UiText.tr("mods.source.curseforge"), ModSource.CURSEFORGE)
-        );
+        if (type.supportsModrinth()) {
+            sourceBox.getItems().setAll(
+                    new ModChoice<>(UiText.tr("mods.search.allSources"), null),
+                    new ModChoice<>(UiText.tr("mods.source.modrinth"), ModSource.MODRINTH),
+                    new ModChoice<>(UiText.tr("mods.source.curseforge"), ModSource.CURSEFORGE)
+            );
+        } else {
+            sourceBox.getItems().setAll(
+                    new ModChoice<>(UiText.tr("mods.source.curseforge"), ModSource.CURSEFORGE)
+            );
+        }
         sourceBox.setValue(sourceBox.getItems().getFirst());
         loaderBox.getItems().setAll(
                 new ModChoice<>(UiText.tr("mods.search.allLoaders"), null),
@@ -596,6 +602,7 @@ final class ModSearchView extends VBox implements PageLifecycle {
             case MOD -> "mods";
             case SHADER -> "shaders";
             case RESOURCE_PACK -> "resourcepacks";
+            case WORLD -> "maps";
         };
         return UiText.tr(prefix + "." + suffix, arguments);
     }

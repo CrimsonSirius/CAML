@@ -20,7 +20,7 @@ CAML 已经覆盖一条可运行的完整链路：
 同时具备：
 
 - Forge、NeoForge、Fabric、Quilt、OptiFine 组合安装；
-- 多来源 Mod/光影/资源包搜索与下载；
+- 多来源 Mod/光影/资源包/地图搜索与下载；
 - Microsoft/Yggdrasil/离线账号；
 - Java 扫描、手动添加、Foojay 托管下载；
 - 外部 CSS 主题和 11 种内置语言；
@@ -103,7 +103,7 @@ CAML/
 ### 3.7 内容服务
 
 - Modrinth/CurseForge 搜索、详情、版本和文件。
-- MOD/SHADER/RESOURCE_PACK 三类目录。
+- MOD/SHADER/RESOURCE_PACK/WORLD 四类内容；地图下载后解压到 `saves/<世界名>`。
 - SHA-1；CurseForge 可回退 MD5。
 - Mod API 图标下载和 WebP→PNG 缓存。
 - 本地 Mod 更新检查：Modrinth hash、CurseForge MurmurHash2 fingerprint。
@@ -120,7 +120,7 @@ CAML/
 ### 4.1 页面
 
 - 主页：启动表单、日志、实例选择、实例管理、实例账号。
-- 下载页：正式/快照/远古/Mod/光影/资源包；版本设置、进度、任务条、Mod 搜索/详情。
+- 下载页：正式/快照/远古/Mod/光影/资源包/地图；版本设置、进度、任务条、内容搜索/详情。
 - 设置页：游戏、Java 管理、下载、账号、外观、关于。
 
 ### 4.2 线程模型

@@ -414,6 +414,7 @@ final class ModDetailView extends VBox implements PageLifecycle {
             case MOD -> "operation.downloadMod";
             case SHADER -> "operation.downloadShader";
             case RESOURCE_PACK -> "operation.downloadResourcePack";
+            case WORLD -> "operation.downloadMap";
         };
         DownloadTask task = new DownloadTask(
                 titleKey,
@@ -490,6 +491,7 @@ final class ModDetailView extends VBox implements PageLifecycle {
             case MOD -> "mods";
             case SHADER -> "shaders";
             case RESOURCE_PACK -> "resourcepacks";
+            case WORLD -> "maps";
         };
         return UiText.tr(prefix + "." + suffix, arguments);
     }

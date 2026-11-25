@@ -372,6 +372,18 @@ public final class RURUGenerator extends LanguageTranslationGenerator {
         // Загрузка модов
         t.put("downloads.section.instances", "Игровые экземпляры");
         t.put("downloads.section.content", "Игровой контент");
+        t.put("maps.nav", "Карты");
+        t.put("maps.search.title", "Поиск карт");
+        t.put("maps.search.nameHint", "Введите название карты");
+        t.put("maps.search.loading", "Поиск карт...");
+        t.put("maps.search.empty", "Подходящие карты не найдены");
+        t.put("maps.search.failed", "Не удалось загрузить карты: %s");
+        t.put("maps.list.meta", "Версия: %s · Загрузки %s · Обновлено %s");
+        t.put("maps.detail.loading", "Загрузка сведений о карте...");
+        t.put("operation.searchMaps", "Поиск карт %s");
+        t.put("operation.fetchMapProject", "Получение проекта карты %s");
+        t.put("operation.downloadMap", "Скачать карту %s");
+        t.put("mod.error.worldArchiveInvalid", "Недопустимый архив карты: %s");
         t.put("mods.nav", "Моды");
         t.put("shaders.nav", "Шейдеры");
         t.put("shaders.search.title", "Поиск шейдеров");

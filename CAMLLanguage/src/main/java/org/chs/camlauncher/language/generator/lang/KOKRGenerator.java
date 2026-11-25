@@ -372,6 +372,18 @@ public final class KOKRGenerator extends LanguageTranslationGenerator {
         // 모드 다운로드
         t.put("downloads.section.instances", "게임 인스턴스");
         t.put("downloads.section.content", "게임 콘텐츠");
+        t.put("maps.nav", "지도");
+        t.put("maps.search.title", "지도 검색");
+        t.put("maps.search.nameHint", "지도 이름 입력");
+        t.put("maps.search.loading", "지도 검색 중...");
+        t.put("maps.search.empty", "일치하는 지도를 찾지 못했습니다");
+        t.put("maps.search.failed", "지도 로드 실패: %s");
+        t.put("maps.list.meta", "버전: %s · 다운로드 %s · 업데이트 %s");
+        t.put("maps.detail.loading", "지도 상세 정보 로드 중...");
+        t.put("operation.searchMaps", "지도 검색 %s");
+        t.put("operation.fetchMapProject", "지도 프로젝트 가져오기 %s");
+        t.put("operation.downloadMap", "지도 다운로드 %s");
+        t.put("mod.error.worldArchiveInvalid", "지도 압축 파일이 유효하지 않습니다: %s");
         t.put("mods.nav", "모드");
         t.put("shaders.nav", "셰이더");
         t.put("shaders.search.title", "셰이더 검색");

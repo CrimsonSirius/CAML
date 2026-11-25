@@ -443,6 +443,18 @@ public final class ZHTWGenerator extends LanguageTranslationGenerator {
         // Mod 下載
         t.put("downloads.section.instances", "遊戲實例");
         t.put("downloads.section.content", "遊戲內容");
+        t.put("maps.nav", "地圖");
+        t.put("maps.search.title", "搜尋地圖");
+        t.put("maps.search.nameHint", "輸入地圖名稱");
+        t.put("maps.search.loading", "正在搜尋地圖...");
+        t.put("maps.search.empty", "沒有找到符合的地圖");
+        t.put("maps.search.failed", "載入地圖失敗：%s");
+        t.put("maps.list.meta", "版本：%s · 下載 %s · 更新 %s");
+        t.put("maps.detail.loading", "正在載入地圖詳情...");
+        t.put("operation.searchMaps", "搜尋地圖 %s");
+        t.put("operation.fetchMapProject", "取得地圖專案 %s");
+        t.put("operation.downloadMap", "下載地圖 %s");
+        t.put("mod.error.worldArchiveInvalid", "地圖壓縮檔無效：%s");
         t.put("mods.nav", "模組");
         t.put("shaders.nav", "光影包");
         t.put("shaders.search.title", "搜尋光影包");

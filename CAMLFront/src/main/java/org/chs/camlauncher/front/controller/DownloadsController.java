@@ -87,7 +87,7 @@ public final class DownloadsController {
             Consumer<String> onError) {
         String operation = UiText.tr(contentOperation(query.type(),
                 "operation.searchMods", "operation.searchShaders",
-                "operation.searchResourcePacks"), query.text());
+                "operation.searchResourcePacks", "operation.searchMaps"), query.text());
         return context.runMetadata(operation,
                 () -> context.backend().searchMods(query), onLoaded, onError);
     }
@@ -109,7 +109,7 @@ public final class DownloadsController {
             Consumer<String> onError) {
         return context.runMetadata(UiText.tr(contentOperation(type,
                         "operation.fetchModProject", "operation.fetchShaderProject",
-                        "operation.fetchResourcePackProject"), projectId),
+                        "operation.fetchResourcePackProject", "operation.fetchMapProject"), projectId),
                 () -> context.backend().fetchModProject(source, projectId), onLoaded, onError);
     }
 
@@ -166,7 +166,7 @@ public final class DownloadsController {
             Consumer<String> onError) {
         return context.runDownload(UiText.tr(contentOperation(type,
                         "operation.downloadMod", "operation.downloadShader",
-                        "operation.downloadResourcePack"), file.name()),
+                        "operation.downloadResourcePack", "operation.downloadMap"), file.name()),
                 () -> context.backend().downloadContent(
                         type,
                         file,
@@ -184,11 +184,12 @@ public final class DownloadsController {
 
     private static String contentOperation(ModContentType type,
                                            String modKey, String shaderKey,
-                                           String resourcePackKey) {
+                                           String resourcePackKey, String mapKey) {
         return switch (type) {
             case MOD -> modKey;
             case SHADER -> shaderKey;
             case RESOURCE_PACK -> resourcePackKey;
+            case WORLD -> mapKey;
         };
     }
 

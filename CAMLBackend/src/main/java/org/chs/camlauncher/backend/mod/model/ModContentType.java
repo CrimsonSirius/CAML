@@ -4,7 +4,8 @@ package org.chs.camlauncher.backend.mod.model;
 public enum ModContentType {
     MOD("mod", 6, "mods"),
     SHADER("shader", 6552, "shaderpacks"),
-    RESOURCE_PACK("resourcepack", 12, "resourcepacks");
+    RESOURCE_PACK("resourcepack", 12, "resourcepacks"),
+    WORLD("world", 17, "saves");
 
     private final String modrinthProjectType;
     private final int curseForgeClassId;
@@ -26,5 +27,10 @@ public enum ModContentType {
 
     public String directoryName() {
         return directoryName;
+    }
+
+    /** Modrinth 没有 world 项目类型，地图只查询 CurseForge。 */
+    public boolean supportsModrinth() {
+        return this != WORLD;
     }
 }
