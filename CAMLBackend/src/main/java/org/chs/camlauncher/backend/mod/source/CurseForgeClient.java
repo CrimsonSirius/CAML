@@ -36,7 +36,7 @@ import java.util.Set;
 public final class CurseForgeClient {
     private static final URI DEFAULT_BASE = URI.create("https://api.curseforge.com/v1/");
     private static final int MINECRAFT_GAME_ID = 432;
-    private static final int FILE_PAGE_SIZE = 50;
+    private static final int FILE_PAGE_SIZE = 10_000;
 
     private static final String BUNDLED_KEY_RESOURCE = "/caml.properties";
     /** 构建期写入的编码 Key，见 CAMLBackend/build.gradle.kts 的 generateBuildProperties。 */
