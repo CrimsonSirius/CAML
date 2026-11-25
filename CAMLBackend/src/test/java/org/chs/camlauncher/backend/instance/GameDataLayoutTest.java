@@ -68,5 +68,14 @@ class GameDataLayoutTest {
                 GameDataLayout.resolve(gameDirectory, versionDirectory, VersionIsolationMode.NONE)
         );
     }
+
+    @Test
+    void modpackMarkerCountsAsIsolatedLayout() throws Exception {
+        Path versionDirectory = gameDirectory.resolve("versions").resolve("My Modpack");
+        Files.createDirectories(versionDirectory);
+        Files.writeString(versionDirectory.resolve(".caml-modpack.json"), "{}");
+
+        assertTrue(GameDataLayout.isIsolated(versionDirectory));
+    }
 }
 

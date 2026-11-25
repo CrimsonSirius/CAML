@@ -82,6 +82,7 @@ import org.chs.camlauncher.backend.mod.model.ModProjectDetail;
 import org.chs.camlauncher.backend.mod.model.ModSearchPage;
 import org.chs.camlauncher.backend.mod.model.ModSearchQuery;
 import org.chs.camlauncher.backend.mod.model.ModSource;
+import org.chs.camlauncher.backend.modpack.ModpackInstaller;
 import org.chs.camlauncher.backend.mod.service.ModService;
 import org.chs.camlauncher.backend.mod.service.ModIconService;
 import org.chs.camlauncher.backend.mod.source.CurseForgeClient;
@@ -153,6 +154,7 @@ public final class CAMLBackend implements AutoCloseable {
     private final AssetDownloadPlanner assetDownloadPlanner;
     private final FileDownloader fileDownloader;
     private final ModService modService;
+    private final ModpackInstaller modpackInstaller;
     private final ModIconService modIconService;
     private final VersionInstaller versionInstaller;
     private final FabricService fabricService;
@@ -241,6 +243,15 @@ public final class CAMLBackend implements AutoCloseable {
                 VersionManifestService.DEFAULT_MANIFEST_URI,
                 config.dataDirectory().resolve("cache").resolve("version_manifest_v2.json")
         );
+        this.modpackInstaller = new ModpackInstaller(
+                versionInstaller,
+                fabricInstaller,
+                quiltInstaller,
+                externalLoaderInstaller,
+                fileDownloader,
+                VersionManifestService.DEFAULT_MANIFEST_URI,
+                config.dataDirectory().resolve("cache").resolve("version_manifest_v2.json")
+        );
         this.optiFineInstaller = new OptiFineInstaller(
                 versionInstaller,
                 externalLoaderInstaller,
@@ -312,6 +323,7 @@ public final class CAMLBackend implements AutoCloseable {
         }
         versionInstaller.setDownloadConcurrency(downloadConcurrency);
         externalLoaderInstaller.setDownloadConcurrency(downloadConcurrency);
+        modpackInstaller.setDownloadConcurrency(downloadConcurrency);
         try {
             downloadSourceMode = settingsService.downloadSourceMode();
             customDownloadApi = settingsService.customDownloadApi();
@@ -458,6 +470,7 @@ public final class CAMLBackend implements AutoCloseable {
         downloadConcurrency = value;
         versionInstaller.setDownloadConcurrency(value);
         externalLoaderInstaller.setDownloadConcurrency(value);
+        modpackInstaller.setDownloadConcurrency(value);
     }
 
     public DownloadSourceMode downloadSourceMode() {
@@ -713,6 +726,16 @@ public final class CAMLBackend implements AutoCloseable {
             DownloadCancellationToken token
     ) throws IOException, InterruptedException {
         return modService.download(file, type, gameDirectory, instanceId, isolationMode, listener, token);
+    }
+
+    public ModDownloadResult installModpack(
+            ModFile file,
+            Path gameDirectory,
+            String instanceName,
+            DownloadListener listener,
+            DownloadCancellationToken token
+    ) throws IOException, InterruptedException {
+        return modpackInstaller.install(file, gameDirectory, instanceName, listener, token);
     }
 
     public boolean curseForgeConfigured() {

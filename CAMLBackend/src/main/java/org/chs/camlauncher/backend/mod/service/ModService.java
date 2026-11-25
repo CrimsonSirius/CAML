@@ -62,6 +62,13 @@ public final class ModService {
             }
             return curseForge.search(normalized);
         }
+        if (!normalized.type().supportsCurseForge()) {
+            if (normalized.source() == ModSource.CURSEFORGE) {
+                return new ModSearchPage(List.of(), normalized.pageIndex(),
+                        normalized.pageSize(), 0, false);
+            }
+            return modrinth.search(normalized);
+        }
         if (normalized.source() == ModSource.MODRINTH) {
             return modrinth.search(normalized);
         }
@@ -160,6 +167,7 @@ public final class ModService {
         fileDownloader.download(item, listener, validator, token);
         String contentType = switch (type) {
             case MOD -> "Mod";
+            case MODPACK -> "整合包";
             case SHADER -> "光影包";
             case RESOURCE_PACK -> "资源包";
             case WORLD -> "地图";

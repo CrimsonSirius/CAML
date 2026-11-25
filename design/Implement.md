@@ -21,6 +21,7 @@ CAML 已经覆盖一条可运行的完整链路：
 
 - Forge、NeoForge、Fabric、Quilt、OptiFine 组合安装；
 - 多来源 Mod/光影/资源包/地图搜索与下载；
+- Modrinth `.mrpack` 整合包搜索与安装为新实例；
 - Microsoft/Yggdrasil/离线账号；
 - Java 扫描、手动添加、Foojay 托管下载；
 - 外部 CSS 主题和 11 种内置语言；

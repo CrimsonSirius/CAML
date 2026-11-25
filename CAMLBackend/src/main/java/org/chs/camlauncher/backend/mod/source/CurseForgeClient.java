@@ -653,6 +653,7 @@ public final class CurseForgeClient {
 
     private static HttpClient defaultClient() {
         return HttpClient.newBuilder()
+                .version(HttpClient.Version.HTTP_1_1)
                 .followRedirects(HttpClient.Redirect.NORMAL)
                 .connectTimeout(java.time.Duration.ofSeconds(15))
                 .build();

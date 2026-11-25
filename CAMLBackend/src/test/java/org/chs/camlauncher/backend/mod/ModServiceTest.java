@@ -493,6 +493,34 @@ class ModServiceTest {
     }
 
     @Test
+    void searchesModpacksOnlyThroughModrinth() throws Exception {
+        HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        server.createContext("/v2/search", exchange -> {
+            assertTrue(exchange.getRequestURI().getRawQuery()
+                    .contains("project_type%3Amodpack"));
+            respond(exchange, """
+                    {"hits":[{"project_id":"pack","slug":"pack","title":"Test Pack",
+                    "description":"A modpack","categories":["fabric"],"versions":["1.20.1"],
+                    "downloads":100,"date_modified":"2026-01-01T00:00:00Z"}],
+                    "offset":0,"limit":20,"total_hits":1}
+                    """);
+        });
+        server.start();
+
+        try {
+            ModService service = service(serverRoot(server) + "v2/",
+                    "https://example.invalid/v1/", "");
+            ModSearchPage page = service.search(new ModSearchQuery(
+                    "pack", null, "1.20.1", null, 0, 20, ModContentType.MODPACK));
+
+            assertEquals(1, page.items().size());
+            assertEquals("Test Pack", page.items().getFirst().name());
+        } finally {
+            server.stop(0);
+        }
+    }
+
+    @Test
     void downloadsMapArchiveIntoInstanceSaves() throws Exception {
         byte[] archive = zipBytes(Map.of(
                 "MyWorld/level.dat", "level".getBytes(StandardCharsets.UTF_8),
