@@ -231,6 +231,8 @@
   "download.versions.empty": "La source de téléchargement n’a renvoyé aucune version %s téléchargeable",
   "download.versions.error": "Échec du chargement de la liste %s : %s",
   "download.versions.loading": "Chargement de la liste %2$s depuis %1$s...",
+  "downloads.section.content": "Contenu de jeu",
+  "downloads.section.instances": "Instances de jeu",
   "error.unknown": "Une erreur inconnue s’est produite. Consultez les journaux.",
   "footer.backend.notReady": "Non prêt",
   "footer.backend.ready": "Prêt",

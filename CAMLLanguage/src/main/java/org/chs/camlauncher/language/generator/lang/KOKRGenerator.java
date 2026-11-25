@@ -370,6 +370,8 @@ public final class KOKRGenerator extends LanguageTranslationGenerator {
         t.put("instances.manage.resourcePacks.version", "버전: %s");
 
         // 모드 다운로드
+        t.put("downloads.section.instances", "게임 인스턴스");
+        t.put("downloads.section.content", "게임 콘텐츠");
         t.put("mods.nav", "모드");
         t.put("shaders.nav", "셰이더");
         t.put("shaders.search.title", "셰이더 검색");

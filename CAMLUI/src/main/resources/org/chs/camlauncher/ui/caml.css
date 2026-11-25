@@ -548,6 +548,25 @@
     -fx-spacing: 0.25em;
 }
 
+.caml-side-nav-section {
+    -fx-spacing: 0.25em;
+    -fx-padding: 0.5em 0 0.125em 0;
+}
+
+.caml-side-nav-section-title {
+    -fx-text-fill: -caml-on-surface-muted;
+    -fx-font-size: 0.75em;
+    -fx-font-weight: bold;
+    -fx-padding: 0 0.75em;
+}
+
+.caml-side-nav-section-divider {
+    -fx-min-height: 1;
+    -fx-pref-height: 1;
+    -fx-max-height: 1;
+    -fx-background-color: -caml-border-subtle;
+}
+
 .caml-side-nav-item {
     -fx-background-color: transparent;
     -fx-background-radius: 100;

@@ -231,6 +231,8 @@
   "download.versions.empty": "下載來源沒有回傳可下載的%s",
   "download.versions.error": "取得%s清單失敗：%s",
   "download.versions.loading": "正在從%1$s取得%2$s清單...",
+  "downloads.section.content": "遊戲內容",
+  "downloads.section.instances": "遊戲實例",
   "error.unknown": "發生未知錯誤，請查看日誌。",
   "footer.backend.notReady": "未就緒",
   "footer.backend.ready": "已就緒",

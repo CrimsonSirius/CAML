@@ -370,6 +370,8 @@ public final class BOCNGenerator extends LanguageTranslationGenerator {
         t.put("instances.manage.resourcePacks.version", "Version: %s");
 
         // MOD ཕབ་ལེན
+        t.put("downloads.section.instances", "Game instances");
+        t.put("downloads.section.content", "Game content");
         t.put("mods.nav", "MOD");
         t.put("shaders.nav", "Shaders");
         t.put("shaders.search.title", "Search shaders");

@@ -370,6 +370,8 @@ public final class DEDEGenerator extends LanguageTranslationGenerator {
         t.put("instances.manage.resourcePacks.version", "Version: %s");
 
         // Mod-Downloads
+        t.put("downloads.section.instances", "Spielinstanzen");
+        t.put("downloads.section.content", "Spielinhalte");
         t.put("mods.nav", "Mods");
         t.put("shaders.nav", "Shader");
         t.put("shaders.search.title", "Shader suchen");

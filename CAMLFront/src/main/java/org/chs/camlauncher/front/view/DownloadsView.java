@@ -75,9 +75,11 @@ final class DownloadsView extends HBox implements SidebarPage, PageLifecycle {
         CamlSideNavItem modItem = new CamlSideNavItem(UiText.tr("mods.nav"));
         CamlSideNavItem shaderItem = new CamlSideNavItem(UiText.tr("shaders.nav"));
         CamlSideNavItem resourcePackItem = new CamlSideNavItem(UiText.tr("resourcepacks.nav"));
+        sidebar.addSection(UiText.tr("downloads.section.instances"));
         sidebar.addItem(releaseItem);
         sidebar.addItem(snapshotItem);
         sidebar.addItem(oldItem);
+        sidebar.addSection(UiText.tr("downloads.section.content"));
         sidebar.addItem(modItem);
         sidebar.addItem(shaderItem);
         sidebar.addItem(resourcePackItem);

@@ -231,6 +231,8 @@
   "download.versions.empty": "Die Download-Quelle hat keine herunterladbaren %s zurückgegeben",
   "download.versions.error": "Laden der %s-Liste fehlgeschlagen: %s",
   "download.versions.loading": "Lade %2$s-Liste von %1$s...",
+  "downloads.section.content": "Spielinhalte",
+  "downloads.section.instances": "Spielinstanzen",
   "error.unknown": "Ein unbekannter Fehler ist aufgetreten. Prüfe die Protokolle.",
   "footer.backend.notReady": "Nicht bereit",
   "footer.backend.ready": "Bereit",

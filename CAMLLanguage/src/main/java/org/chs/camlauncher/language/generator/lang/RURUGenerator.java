@@ -370,6 +370,8 @@ public final class RURUGenerator extends LanguageTranslationGenerator {
         t.put("instances.manage.resourcePacks.version", "Версия: %s");
 
         // Загрузка модов
+        t.put("downloads.section.instances", "Игровые экземпляры");
+        t.put("downloads.section.content", "Игровой контент");
         t.put("mods.nav", "Моды");
         t.put("shaders.nav", "Шейдеры");
         t.put("shaders.search.title", "Поиск шейдеров");

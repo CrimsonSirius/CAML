@@ -231,6 +231,8 @@
   "download.versions.empty": "ダウンロード元からダウンロード可能な %s が返されませんでした",
   "download.versions.error": "%s 一覧の取得に失敗しました: %s",
   "download.versions.loading": "%1$s から %2$s 一覧を取得しています...",
+  "downloads.section.content": "ゲームコンテンツ",
+  "downloads.section.instances": "ゲームインスタンス",
   "error.unknown": "不明なエラーが発生しました。ログを確認してください。",
   "footer.backend.notReady": "未準備",
   "footer.backend.ready": "準備完了",
