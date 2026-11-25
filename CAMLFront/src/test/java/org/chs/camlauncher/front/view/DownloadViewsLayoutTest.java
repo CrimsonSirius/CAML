@@ -61,7 +61,7 @@ class DownloadViewsLayoutTest {
             root.setPrefSize(900, 600);
             Scene scene = new Scene(root, 900, 600);
             CamlTheme.install(scene);
-            addStylesheet(scene, "/themes/mango.css");
+            addStylesheet(scene, "/themes/coffee.css");
             addStylesheet(scene, "/styles/app.css");
             root.applyCss();
             root.resize(900, 600);
@@ -127,7 +127,7 @@ class DownloadViewsLayoutTest {
             root.setPrefSize(900, 520);
             Scene scene = new Scene(root, 900, 520);
             CamlTheme.install(scene);
-            addStylesheet(scene, "/themes/mango.css");
+            addStylesheet(scene, "/themes/coffee.css");
             addStylesheet(scene, "/styles/app.css");
             root.applyCss();
             root.resize(900, 520);

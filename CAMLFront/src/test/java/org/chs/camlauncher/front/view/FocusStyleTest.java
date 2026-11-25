@@ -194,7 +194,7 @@ class FocusStyleTest {
             VBox root1 = new VBox(home1, settings1);
             Scene scene = new Scene(root1, 400, 300);
             CamlTheme.install(scene);
-            addStylesheet(scene, "/themes/mango.css");
+            addStylesheet(scene, "/themes/coffee.css");
             addStylesheet(scene, "/styles/app.css");
             root1.applyCss();
             root1.resize(400, 300);
@@ -221,7 +221,7 @@ class FocusStyleTest {
             VBox root = new VBox(child);
             Scene scene = new Scene(root, 400, 300);
             CamlTheme.install(scene);
-            addStylesheet(scene, "/themes/mango.css");
+            addStylesheet(scene, "/themes/coffee.css");
             addStylesheet(scene, "/styles/app.css");
             root.applyCss();
             root.resize(400, 300);
@@ -234,7 +234,7 @@ class FocusStyleTest {
     }
 
     private static void applyStyles(Parent root) {
-        applyStyles(root, "/themes/mango.css");
+        applyStyles(root, "/themes/coffee.css");
     }
 
     private static void applyStyles(Parent root, String themePath) {

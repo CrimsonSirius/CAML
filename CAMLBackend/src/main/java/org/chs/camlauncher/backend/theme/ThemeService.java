@@ -21,9 +21,12 @@ import java.util.stream.Stream;
  * 添加、删除或修改主题文件。</p>
  */
 public final class ThemeService {
-    public static final String DEFAULT_THEME_ID = "mango";
+    public static final String DEFAULT_THEME_ID = "night";
 
-    private static final List<String> BUNDLED_THEME_IDS = List.of(DEFAULT_THEME_ID, "night");
+    private static final String LIGHT_THEME_ID = "coffee";
+    private static final String LEGACY_LIGHT_THEME_ID = "mango";
+    private static final List<String> BUNDLED_THEME_IDS =
+            List.of(LIGHT_THEME_ID, DEFAULT_THEME_ID);
     private static final String THEMES_DIRECTORY = "themes";
     private static final String THEME_EXTENSION = ".css";
     private static final String THEME_RESOURCE_PATTERN = "/themes/%s.css";
@@ -38,11 +41,36 @@ public final class ThemeService {
         this.configFile = dataDirectory.resolve(CONFIG_FILE);
     }
 
-    /** 创建主题目录，并复制所有缺失的内置主题；已有文件不会被覆盖。 */
+    /**
+     * 创建主题目录，迁移旧版 {@code mango.css}，并复制所有缺失的内置主题。
+     * 已有主题文件不会被覆盖。
+     */
     public void ensureBundledThemes() throws IOException {
         Files.createDirectories(themesDirectory);
+        migrateLegacyLightTheme();
         for (String id : BUNDLED_THEME_IDS) {
             copyBundledTheme(id);
+        }
+        migrateLegacyLightThemeConfig();
+    }
+
+    private void migrateLegacyLightTheme() throws IOException {
+        Path legacy = themesDirectory.resolve(LEGACY_LIGHT_THEME_ID + THEME_EXTENSION);
+        Path renamed = themesDirectory.resolve(LIGHT_THEME_ID + THEME_EXTENSION);
+        if (Files.isRegularFile(legacy) && !Files.exists(renamed)) {
+            Files.move(legacy, renamed);
+        }
+    }
+
+    private void migrateLegacyLightThemeConfig() throws IOException {
+        Path legacy = themesDirectory.resolve(LEGACY_LIGHT_THEME_ID + THEME_EXTENSION);
+        Path renamed = themesDirectory.resolve(LIGHT_THEME_ID + THEME_EXTENSION);
+        Optional<String> configured = readConfiguredIdValue();
+        if (configured.isPresent()
+                && configured.get().equals(LEGACY_LIGHT_THEME_ID)
+                && Files.isRegularFile(renamed)
+                && !Files.exists(legacy)) {
+            writeConfiguredId(LIGHT_THEME_ID);
         }
     }
 
@@ -106,8 +134,7 @@ public final class ThemeService {
         if (!Files.isRegularFile(file)) {
             throw new IOException("主题不存在: " + id);
         }
-        Files.writeString(configFile, id + System.lineSeparator(),
-                StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
+        writeConfiguredId(id);
     }
 
     public Path themesDirectory() {
@@ -115,11 +142,20 @@ public final class ThemeService {
     }
 
     private String readConfiguredId() throws IOException {
+        return readConfiguredIdValue().orElse(DEFAULT_THEME_ID);
+    }
+
+    private Optional<String> readConfiguredIdValue() throws IOException {
         if (!Files.isRegularFile(configFile)) {
-            return DEFAULT_THEME_ID;
+            return Optional.empty();
         }
         String id = Files.readString(configFile).trim();
-        return id.isEmpty() ? DEFAULT_THEME_ID : id;
+        return id.isEmpty() ? Optional.empty() : Optional.of(id);
+    }
+
+    private void writeConfiguredId(String id) throws IOException {
+        Files.writeString(configFile, id + System.lineSeparator(),
+                StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
     }
 
     private ThemeInfo toThemeInfo(Path file) {

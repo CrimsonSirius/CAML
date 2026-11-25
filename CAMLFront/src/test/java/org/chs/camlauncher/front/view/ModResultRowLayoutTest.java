@@ -104,7 +104,7 @@ class ModResultRowLayoutTest {
         root.setStyle("-fx-font-size: " + (int) UiScale.baseFontPx(plan.factor()) + "px;");
         Scene scene = new Scene(root, width, 400);
         CamlTheme.install(scene);
-        addStylesheet(scene, "/themes/mango.css");
+        addStylesheet(scene, "/themes/coffee.css");
         addStylesheet(scene, "/styles/app.css");
         root.applyCss();
         root.resize(width, 400);

@@ -50,7 +50,7 @@ class ComboBoxTextLayoutTest {
         root.setStyle("-fx-font-size: " + (int) UiScale.baseFontPx(factor) + "px;");
         Scene scene = new Scene(root, 800, 300);
         CamlTheme.install(scene);
-        addStylesheet(scene, "/themes/mango.css");
+        addStylesheet(scene, "/themes/coffee.css");
         addStylesheet(scene, "/styles/app.css");
         root.applyCss();
         root.resize(800, 300);

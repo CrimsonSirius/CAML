@@ -84,7 +84,7 @@ class FocusSupportTest {
     private static void show(VBox root) {
         Scene scene = new Scene(root, 400, 300);
         CamlTheme.install(scene);
-        FxTestSupport.addStylesheet(scene, "/themes/mango.css");
+        FxTestSupport.addStylesheet(scene, "/themes/coffee.css");
         FxTestSupport.addStylesheet(scene, "/styles/app.css");
         root.applyCss();
         root.resize(400, 300);

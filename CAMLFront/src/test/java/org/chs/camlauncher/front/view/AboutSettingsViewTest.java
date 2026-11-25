@@ -89,7 +89,7 @@ class AboutSettingsViewTest {
             root.setPrefSize(900, 700);
             Scene scene = new Scene(root, 900, 700);
             CamlTheme.install(scene);
-            addStylesheet(scene, "/themes/mango.css");
+            addStylesheet(scene, "/themes/coffee.css");
             addStylesheet(scene, "/styles/app.css");
             root.applyCss();
             root.resize(900, 700);

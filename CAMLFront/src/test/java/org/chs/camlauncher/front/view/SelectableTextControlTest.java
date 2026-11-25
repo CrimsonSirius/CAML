@@ -32,7 +32,7 @@ class SelectableTextControlTest {
             root.setPrefSize(420, 120);
             Scene scene = new Scene(root, 420, 120);
             CamlTheme.install(scene);
-            addStylesheet(scene, "/themes/mango.css");
+            addStylesheet(scene, "/themes/coffee.css");
             addStylesheet(scene, "/styles/app.css");
             root.applyCss();
             root.resize(420, 120);
