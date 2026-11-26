@@ -47,13 +47,13 @@ class VersionManifestCacheTest {
         try (CAMLBackend backend = new CAMLBackend(new BackendConfig(
                 tempDirectory.resolve("data"), tempDirectory.resolve("game")))) {
             backend.start();
-            backend.setDownloadSource(
+            backend.downloads().setDownloadSource(
                     DownloadSourceMode.CUSTOM,
                     "http://127.0.0.1:" + server.getAddress().getPort()
             );
 
-            VersionManifest first = backend.fetchVersionManifest();
-            VersionManifest second = backend.fetchVersionManifest();
+            VersionManifest first = backend.downloads().fetchVersionManifest();
+            VersionManifest second = backend.downloads().fetchVersionManifest();
 
             assertEquals("1.21.5", first.latest().release());
             assertEquals("1.21.5", second.latest().release());

@@ -43,7 +43,7 @@ class InstanceModUpdateTest {
             Files.writeString(mods.resolve("old.jar"), "old-mod");
             CAMLBackend backend = new CAMLBackend(new BackendConfig(root.resolve("data"), game));
             try (backend) {
-                backend.setModDisabled(game, "1.21.4", "old.jar", true);
+                backend.instances().setModDisabled(game, "1.21.4", "old.jar", true);
                 ModFile latest = new ModFile(
                         ModSource.MODRINTH, "project", "version", "New", "2.0", "new.jar",
                         List.of(URI.create("http://127.0.0.1:" + server.getAddress().getPort()
@@ -51,7 +51,8 @@ class InstanceModUpdateTest {
                         HashVerifier.sha1(content), null, content.length,
                         List.of("1.21.4"), List.of("fabric"), List.of(), "", 1);
 
-                backend.updateInstanceMod(game, "1.21.4", "old.jar", latest, DownloadListener.NONE);
+                backend.instances().updateInstanceMod(
+                        game, "1.21.4", "old.jar", latest, DownloadListener.NONE);
 
                 assertFalse(Files.exists(mods.resolve("old.jar")));
                 assertFalse(Files.exists(mods.resolve("old.jar.disabled")));

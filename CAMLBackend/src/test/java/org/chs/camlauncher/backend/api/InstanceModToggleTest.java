@@ -25,19 +25,21 @@ class InstanceModToggleTest {
 
         CAMLBackend backend = new CAMLBackend(new BackendConfig(root.resolve("data"), game));
         try (backend) {
-            backend.setModDisabled(game, "1.21.4", "demo.jar", true);
+            backend.instances().setModDisabled(game, "1.21.4", "demo.jar", true);
 
             Path disabled = mods.resolve("demo.jar.disabled");
             assertFalse(Files.exists(enabled));
             assertTrue(Files.isRegularFile(disabled));
-            assertFalse(backend.inspectInstance(game, "1.21.4").mods().get(0).enabled());
+            assertFalse(backend.instances().inspectInstance(game, "1.21.4")
+                    .mods().get(0).enabled());
             assertTrue(new SettingsService(root.resolve("data"))
                     .disabledMods(game, "1.21.4").contains("demo.jar"));
 
-            backend.setModDisabled(game, "1.21.4", "demo.jar", false);
+            backend.instances().setModDisabled(game, "1.21.4", "demo.jar", false);
             assertTrue(Files.isRegularFile(enabled));
             assertFalse(Files.exists(disabled));
-            assertTrue(backend.inspectInstance(game, "1.21.4").mods().get(0).enabled());
+            assertTrue(backend.instances().inspectInstance(game, "1.21.4")
+                    .mods().get(0).enabled());
         }
     }
 }

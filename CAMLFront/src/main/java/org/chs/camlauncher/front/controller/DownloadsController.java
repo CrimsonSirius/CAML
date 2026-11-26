@@ -65,19 +65,19 @@ public final class DownloadsController {
     }
 
     public String downloadSourceLabel() {
-        DownloadSourceMode mode = context.backend().downloadSourceMode();
+        DownloadSourceMode mode = context.downloads().downloadSourceMode();
         return switch (mode) {
             case MIRROR -> UiText.tr("download.source.mirror");
             case OFFICIAL -> UiText.tr("download.source.official");
             case CUSTOM -> DownloadSourceFactory.isValidCustomApi(
-                    context.backend().customDownloadApi())
+                    context.downloads().customDownloadApi())
                     ? UiText.tr("download.source.custom")
                     : UiText.tr("download.source.official");
         };
     }
 
     public boolean curseForgeConfigured() {
-        return context.backend().curseForgeConfigured();
+        return context.downloads().curseForgeConfigured();
     }
 
     public AsyncTaskHandle<ModSearchPage> searchMods(
@@ -89,7 +89,7 @@ public final class DownloadsController {
                 "operation.searchResourcePacks", "operation.searchMaps",
                 "operation.searchModpacks"), query.text());
         return context.runMetadata(operation,
-                () -> context.backend().searchMods(query), onLoaded, onError);
+                () -> context.downloads().searchMods(query), onLoaded, onError);
     }
 
     public AsyncTaskHandle<ModProjectDetail> fetchModProject(
@@ -98,7 +98,7 @@ public final class DownloadsController {
             Consumer<ModProjectDetail> onLoaded,
             Consumer<String> onError) {
         return context.runMetadata(UiText.tr("operation.fetchModProject", projectId),
-                () -> context.backend().fetchModProject(source, projectId), onLoaded, onError);
+                () -> context.downloads().fetchModProject(source, projectId), onLoaded, onError);
     }
 
     public AsyncTaskHandle<ModProjectDetail> fetchContentProject(
@@ -111,7 +111,7 @@ public final class DownloadsController {
                         "operation.fetchModProject", "operation.fetchShaderProject",
                         "operation.fetchResourcePackProject", "operation.fetchMapProject",
                         "operation.fetchModpackProject"), projectId),
-                () -> context.backend().fetchModProject(source, projectId), onLoaded, onError);
+                () -> context.downloads().fetchModProject(source, projectId), onLoaded, onError);
     }
 
     public AsyncTaskHandle<byte[]> loadModIcon(
@@ -119,7 +119,7 @@ public final class DownloadsController {
             Consumer<byte[]> onLoaded,
             Consumer<String> onError) {
         return context.runIcon(UiText.tr("operation.loadModIcon"),
-                () -> context.backend().loadModIcon(iconUrl), onLoaded, onError);
+                () -> context.downloads().loadModIcon(iconUrl), onLoaded, onError);
     }
 
     public AsyncTaskHandle<byte[]> retryModIcon(
@@ -128,7 +128,7 @@ public final class DownloadsController {
             Consumer<byte[]> onLoaded,
             Consumer<String> onError) {
         return context.runIconRetry(UiText.tr("operation.loadModIcon"), delayMillis,
-                () -> context.backend().loadModIcon(iconUrl), onLoaded, onError);
+                () -> context.downloads().loadModIcon(iconUrl), onLoaded, onError);
     }
 
     public AsyncTaskHandle<ModDownloadResult> downloadMod(
@@ -141,7 +141,7 @@ public final class DownloadsController {
             Consumer<ModDownloadResult> onSuccess,
             Consumer<String> onError) {
         return context.runDownload(UiText.tr("operation.downloadMod", file.name()),
-                () -> context.backend().downloadMod(
+                () -> context.downloads().downloadMod(
                         file,
                         gameDirectory,
                         instanceId,
@@ -169,7 +169,7 @@ public final class DownloadsController {
                         "operation.downloadMod", "operation.downloadShader",
                         "operation.downloadResourcePack", "operation.downloadMap",
                         "operation.installModpack"), file.name()),
-                () -> context.backend().downloadContent(
+                () -> context.downloads().downloadContent(
                         type,
                         file,
                         gameDirectory,
@@ -194,7 +194,7 @@ public final class DownloadsController {
             Consumer<String> onError) {
         return context.runDownload(
                 UiText.tr("operation.installModpack", file.name()),
-                () -> context.backend().installModpack(
+                () -> context.downloads().installModpack(
                         file, gameDirectory, instanceName, listener, token),
                 onSuccess,
                 onError);
@@ -217,7 +217,7 @@ public final class DownloadsController {
                                                           Consumer<InstanceNameCheck> onChecked,
                                                           Consumer<String> onError) {
         return context.runCheck(UiText.tr("operation.checkInstanceName"),
-                () -> context.backend().checkInstanceName(gameDirectory, instanceId),
+                () -> context.instances().checkInstanceName(gameDirectory, instanceId),
                 onChecked, onError);
     }
 
@@ -251,7 +251,7 @@ public final class DownloadsController {
             Consumer<List<VersionManifest.Version>> onLoaded,
             Consumer<String> onError) {
         return context.runMetadata(UiText.tr("operation.fetchVersionList", category),
-                () -> selector.apply(context.backend().fetchVersionManifest()),
+                () -> selector.apply(context.downloads().fetchVersionManifest()),
                 onLoaded,
                 onError);
     }
@@ -267,7 +267,7 @@ public final class DownloadsController {
             Consumer<String> onError) {
         Objects.requireNonNull(gameDirectory, "gameDirectory");
         return context.runDownload(UiText.tr("operation.installVanilla", instanceId),
-                () -> context.backend().installVersion(
+                () -> context.downloads().installVersion(
                         versionId, instanceId, gameDirectory, listener, token),
                 installed -> {
                     LOGGER.info("官方原版实例安装完成: {} / {} -> {}",
@@ -283,7 +283,7 @@ public final class DownloadsController {
             Consumer<List<FabricLoaderVersion>> onLoaded,
             Consumer<String> onError) {
         return context.runMetadata(UiText.tr("operation.fetchFabricLoader"),
-                () -> context.backend().fetchFabricLoaderVersions(gameVersion),
+                () -> context.downloads().fetchFabricLoaderVersions(gameVersion),
                 onLoaded, onError);
     }
 
@@ -292,7 +292,7 @@ public final class DownloadsController {
             Consumer<List<FabricApiVersion>> onLoaded,
             Consumer<String> onError) {
         return context.runMetadata(UiText.tr("operation.fetchFabricApi"),
-                () -> context.backend().fetchFabricApiVersions(gameVersion),
+                () -> context.downloads().fetchFabricApiVersions(gameVersion),
                 onLoaded, onError);
     }
 
@@ -308,7 +308,7 @@ public final class DownloadsController {
             Consumer<String> onError) {
         Objects.requireNonNull(gameDirectory, "gameDirectory");
         return context.runDownload(UiText.tr("operation.installFabric", instanceId),
-                () -> context.backend().installFabricVersion(
+                () -> context.downloads().installFabricVersion(
                         gameVersion,
                         instanceId,
                         loaderVersion,
@@ -332,7 +332,7 @@ public final class DownloadsController {
             Consumer<List<QuiltLoaderVersion>> onLoaded,
             Consumer<String> onError) {
         return context.runMetadata(UiText.tr("operation.fetchQuiltLoader"),
-                () -> context.backend().fetchQuiltLoaderVersions(gameVersion),
+                () -> context.downloads().fetchQuiltLoaderVersions(gameVersion),
                 onLoaded, onError);
     }
 
@@ -341,7 +341,7 @@ public final class DownloadsController {
             Consumer<List<QuiltApiVersion>> onLoaded,
             Consumer<String> onError) {
         return context.runMetadata(UiText.tr("operation.fetchQuiltApi"),
-                () -> context.backend().fetchQuiltApiVersions(gameVersion),
+                () -> context.downloads().fetchQuiltApiVersions(gameVersion),
                 onLoaded, onError);
     }
 
@@ -357,7 +357,7 @@ public final class DownloadsController {
             Consumer<String> onError) {
         Objects.requireNonNull(gameDirectory, "gameDirectory");
         return context.runDownload(UiText.tr("operation.installQuilt", instanceId),
-                () -> context.backend().installQuiltVersion(
+                () -> context.downloads().installQuiltVersion(
                         gameVersion,
                         instanceId,
                         loaderVersion,
@@ -381,7 +381,7 @@ public final class DownloadsController {
             Consumer<List<ForgeVersion>> onLoaded,
             Consumer<String> onError) {
         return context.runMetadata(UiText.tr("operation.fetchForge"),
-                () -> context.backend().fetchForgeVersions(gameVersion),
+                () -> context.downloads().fetchForgeVersions(gameVersion),
                 onLoaded, onError);
     }
 
@@ -390,7 +390,7 @@ public final class DownloadsController {
             Consumer<List<NeoForgeVersion>> onLoaded,
             Consumer<String> onError) {
         return context.runMetadata(UiText.tr("operation.fetchNeoForge"),
-                () -> context.backend().fetchNeoForgeVersions(gameVersion),
+                () -> context.downloads().fetchNeoForgeVersions(gameVersion),
                 onLoaded, onError);
     }
 
@@ -399,7 +399,7 @@ public final class DownloadsController {
             Consumer<List<OptiFineVersion>> onLoaded,
             Consumer<String> onError) {
         return context.runMetadata(UiText.tr("operation.fetchOptiFine"),
-                () -> context.backend().fetchOptiFineVersions(gameVersion),
+                () -> context.downloads().fetchOptiFineVersions(gameVersion),
                 onLoaded, onError);
     }
 
@@ -413,7 +413,7 @@ public final class DownloadsController {
             Runnable onSuccess,
             Consumer<String> onError) {
         return downloadExternalLoaderVersion("Forge", instanceId, gameDirectory,
-                () -> context.backend().installForgeVersion(gameVersion, instanceId, version,
+                () -> context.downloads().installForgeVersion(gameVersion, instanceId, version,
                         gameDirectory, listener, token),
                 onSuccess, onError);
     }
@@ -428,7 +428,7 @@ public final class DownloadsController {
             Runnable onSuccess,
             Consumer<String> onError) {
         return downloadExternalLoaderVersion("NeoForge", instanceId, gameDirectory,
-                () -> context.backend().installNeoForgeVersion(gameVersion, instanceId, version,
+                () -> context.downloads().installNeoForgeVersion(gameVersion, instanceId, version,
                         gameDirectory, listener, token),
                 onSuccess, onError);
     }
@@ -444,7 +444,7 @@ public final class DownloadsController {
             Runnable onSuccess,
             Consumer<String> onError) {
         return downloadExternalLoaderVersion("Forge + OptiFine", instanceId, gameDirectory,
-                () -> context.backend().installForgeOptiFineVersion(
+                () -> context.downloads().installForgeOptiFineVersion(
                         gameVersion, instanceId, forgeVersion, optiFineVersion,
                         gameDirectory, listener, token),
                 onSuccess, onError);

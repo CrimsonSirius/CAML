@@ -5,6 +5,12 @@ import org.chs.camlauncher.front.task.AsyncTaskHandle;
 import javafx.application.Platform;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.chs.camlauncher.backend.api.BackendAccounts;
+import org.chs.camlauncher.backend.api.BackendDownloads;
+import org.chs.camlauncher.backend.api.BackendInstances;
+import org.chs.camlauncher.backend.api.BackendJava;
+import org.chs.camlauncher.backend.api.BackendLaunch;
+import org.chs.camlauncher.backend.api.BackendSettings;
 import org.chs.camlauncher.backend.api.CAMLBackend;
 import org.chs.camlauncher.backend.instance.GameDirectoryInfo;
 import org.chs.camlauncher.backend.error.BackendError;
@@ -86,6 +92,30 @@ final class ControllerContext {
 
     CAMLBackend backend() {
         return backend;
+    }
+
+    BackendSettings settings() {
+        return backend.settings();
+    }
+
+    BackendJava java() {
+        return backend.java();
+    }
+
+    BackendAccounts accounts() {
+        return backend.accounts();
+    }
+
+    BackendDownloads downloads() {
+        return backend.downloads();
+    }
+
+    BackendInstances instances() {
+        return backend.instances();
+    }
+
+    BackendLaunch launch() {
+        return backend.launch();
     }
 
     void setLogSink(Consumer<String> logSink) {
@@ -296,7 +326,7 @@ final class ControllerContext {
         }
 
         return runDownload(UiText.tr("operation.inspectGameDirectory"),
-                () -> backend.inspectGameDirectory(directory), callback, onError);
+                () -> instances().inspectGameDirectory(directory), callback, onError);
     }
 
     AsyncTaskHandle<Boolean> checkDirectory(Path directory, Consumer<Boolean> callback,
@@ -305,7 +335,7 @@ final class ControllerContext {
             return null;
         }
         return runCheck(UiText.tr("operation.inspectGameDirectory"),
-                () -> backend.directoryExists(directory), callback, onError);
+                () -> settings().directoryExists(directory), callback, onError);
     }
 
     /** 统一错误动作：记录日志、写入 UI 日志，并把可读消息切回 JavaFX 线程。 */

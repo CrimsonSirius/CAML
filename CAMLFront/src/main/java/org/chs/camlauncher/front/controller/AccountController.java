@@ -35,7 +35,7 @@ public final class AccountController {
 
     public List<String> presetApiRoots() {
         try {
-            return context.backend().authServerPresets();
+            return context.accounts().authServerPresets();
         } catch (RuntimeException e) {
             return List.of();
         }
@@ -44,7 +44,7 @@ public final class AccountController {
     /** 预设服务器地址 → 展示名；失败时退化为空表（下拉框仍显示地址）。 */
     public Map<String, String> presetServerNames() {
         try {
-            return context.backend().authServerPresetNames();
+            return context.accounts().authServerPresetNames();
         } catch (RuntimeException e) {
             return Map.of();
         }
@@ -53,7 +53,7 @@ public final class AccountController {
     public AsyncTaskHandle<List<AccountSummary>> loadAccounts(
             Consumer<List<AccountSummary>> onLoaded, Consumer<String> onError) {
         return context.runSettings(UiText.tr("operation.loadAccounts"),
-                () -> context.backend().listAccounts(), accounts -> {
+                () -> context.accounts().listAccounts(), accounts -> {
                     cachedAccounts = accounts;
                     if (onLoaded != null) {
                         onLoaded.accept(accounts);
@@ -65,7 +65,7 @@ public final class AccountController {
             String apiRoot, String username, String password, boolean remember,
             Consumer<AccountSummary> onLoaded, Consumer<String> onError) {
         return context.runMetadata(UiText.tr("operation.loginAccount"),
-                () -> context.backend().loginYggdrasil(apiRoot, username, password, remember),
+                () -> context.accounts().loginYggdrasil(apiRoot, username, password, remember),
                 onLoaded, onError);
     }
 
@@ -74,7 +74,7 @@ public final class AccountController {
             Consumer<MicrosoftDeviceCode> onDeviceCode,
             Consumer<AccountSummary> onLoaded, Consumer<String> onError) {
         return context.runMetadata(UiText.tr("operation.loginMicrosoftAccount"),
-                () -> context.backend().loginMicrosoft(code -> {
+                () -> context.accounts().loginMicrosoft(code -> {
                     if (onDeviceCode != null) {
                         Platform.runLater(() -> onDeviceCode.accept(code));
                     }
@@ -84,26 +84,26 @@ public final class AccountController {
     public AsyncTaskHandle<AccountSummary> addOfflineAccount(
             String username, Consumer<AccountSummary> onLoaded, Consumer<String> onError) {
         return context.runSettings(UiText.tr("operation.addOfflineAccount"),
-                () -> context.backend().addOfflineAccount(username), onLoaded, onError);
+                () -> context.accounts().addOfflineAccount(username), onLoaded, onError);
     }
 
     public AsyncTaskHandle<AuthServerInfo> fetchAuthServer(
             String apiRoot, Consumer<AuthServerInfo> onLoaded, Consumer<String> onError) {
         return context.runMetadata(UiText.tr("operation.fetchAuthServer"),
-                () -> context.backend().fetchAuthServer(apiRoot), onLoaded, onError);
+                () -> context.accounts().fetchAuthServer(apiRoot), onLoaded, onError);
     }
 
     public AsyncTaskHandle<String> loadDefaultAccountId(
             Consumer<String> onLoaded, Consumer<String> onError) {
         return context.runSettings(UiText.tr("operation.loadAccounts"),
-                () -> context.backend().defaultAccount().map(AccountSummary::id).orElse(null),
+                () -> context.accounts().defaultAccount().map(AccountSummary::id).orElse(null),
                 onLoaded, onError);
     }
 
     public AsyncTaskHandle<Void> saveDefaultAccount(
             String accountId, Runnable onSaved, Consumer<String> onError) {
         return context.runSettings(UiText.tr("operation.saveDefaultAccount"), () -> {
-            context.backend().setDefaultAccountId(accountId);
+            context.accounts().setDefaultAccountId(accountId);
             return null;
         }, ignored -> run(onSaved), onError);
     }
@@ -111,7 +111,7 @@ public final class AccountController {
     public AsyncTaskHandle<Void> removeAccount(
             String accountId, Runnable onRemoved, Consumer<String> onError) {
         return context.runSettings(UiText.tr("operation.removeAccount"), () -> {
-            context.backend().removeAccount(accountId);
+            context.accounts().removeAccount(accountId);
             return null;
         }, ignored -> run(onRemoved), onError);
     }
@@ -121,7 +121,7 @@ public final class AccountController {
             String accountId, String profileId,
             Consumer<AccountSummary> onSwitched, Consumer<String> onError) {
         return context.runMetadata(UiText.tr("operation.switchProfile"),
-                () -> context.backend().switchAccountProfile(accountId, profileId),
+                () -> context.accounts().switchAccountProfile(accountId, profileId),
                 onSwitched, onError);
     }
 
@@ -132,7 +132,7 @@ public final class AccountController {
             return null;
         }
         return context.runSettings(UiText.tr("operation.loadInstanceAccount"),
-                () -> context.backend().instanceAccountId(gameDirectory, instanceId).orElse(null),
+                () -> context.accounts().instanceAccountId(gameDirectory, instanceId).orElse(null),
                 onLoaded, onError);
     }
 
@@ -143,7 +143,7 @@ public final class AccountController {
             return null;
         }
         return context.runSettings(UiText.tr("operation.saveInstanceAccount"), () -> {
-            context.backend().setInstanceAccountId(gameDirectory, instanceId, accountId);
+            context.accounts().setInstanceAccountId(gameDirectory, instanceId, accountId);
             return null;
         }, ignored -> run(onSaved), onError);
     }
@@ -156,7 +156,7 @@ public final class AccountController {
             return null;
         }
         return context.runSettings(UiText.tr("operation.loadInstanceAccount"),
-                () -> context.backend().staleInstanceAccounts(gameDirectory, instances).orElse(null),
+                () -> context.accounts().staleInstanceAccounts(gameDirectory, instances).orElse(null),
                 onLoaded, onError);
     }
 
@@ -168,21 +168,21 @@ public final class AccountController {
             return null;
         }
         return context.runSettings(UiText.tr("operation.saveInstanceAccount"),
-                () -> context.backend().reapplyInstanceAccounts(gameDirectory, instances),
+                () -> context.accounts().reapplyInstanceAccounts(gameDirectory, instances),
                 onApplied, onError);
     }
 
     public AsyncTaskHandle<Path> loadInjectorPath(
             Consumer<Path> onLoaded, Consumer<String> onError) {
         return context.runSettings(UiText.tr("operation.loadAccounts"),
-                () -> context.backend().authlibInjectorPath().orElse(null),
+                () -> context.accounts().authlibInjectorPath().orElse(null),
                 onLoaded, onError);
     }
 
     public AsyncTaskHandle<Void> saveInjectorPath(
             Path jar, Runnable onSaved, Consumer<String> onError) {
         return context.runSettings(UiText.tr("operation.saveInjectorPath"), () -> {
-            context.backend().setAuthlibInjectorPath(jar);
+            context.accounts().setAuthlibInjectorPath(jar);
             return null;
         }, ignored -> run(onSaved), onError);
     }

@@ -24,18 +24,18 @@ class InstanceResourcePackToggleTest {
 
         CAMLBackend backend = new CAMLBackend(new BackendConfig(root.resolve("data"), game));
         try (backend) {
-            backend.setResourcePackDisabled(game, "1.21.4", "demo.zip", true);
+            backend.instances().setResourcePackDisabled(game, "1.21.4", "demo.zip", true);
 
             Path disabled = resourcePacks.resolve("demo.zip.disabled");
             assertFalse(Files.exists(enabled));
             assertTrue(Files.isRegularFile(disabled));
-            assertFalse(backend.inspectInstance(game, "1.21.4")
+            assertFalse(backend.instances().inspectInstance(game, "1.21.4")
                     .resourcePacks().get(0).enabled());
 
-            backend.setResourcePackDisabled(game, "1.21.4", "demo.zip", false);
+            backend.instances().setResourcePackDisabled(game, "1.21.4", "demo.zip", false);
             assertTrue(Files.isRegularFile(enabled));
             assertFalse(Files.exists(disabled));
-            assertTrue(backend.inspectInstance(game, "1.21.4")
+            assertTrue(backend.instances().inspectInstance(game, "1.21.4")
                     .resourcePacks().get(0).enabled());
         }
     }

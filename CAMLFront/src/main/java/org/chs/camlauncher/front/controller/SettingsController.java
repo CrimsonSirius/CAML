@@ -58,55 +58,55 @@ public final class SettingsController {
     }
 
     public SystemInfo systemInfo() {
-        return context.backend().systemInfo();
+        return context.settings().systemInfo();
     }
 
     public DeviceInfo deviceInfo() {
-        return context.backend().deviceInfo();
+        return context.settings().deviceInfo();
     }
 
     public List<ProjectDependency> projectDependencies() {
-        return context.backend().projectDependencies();
+        return context.settings().projectDependencies();
     }
 
     public int downloadConcurrency() {
-        return context.backend().downloadConcurrency();
+        return context.downloads().downloadConcurrency();
     }
 
     public DownloadSourceMode downloadSourceMode() {
-        return context.backend().downloadSourceMode();
+        return context.downloads().downloadSourceMode();
     }
 
     public String customDownloadApi() {
-        return context.backend().customDownloadApi();
+        return context.downloads().customDownloadApi();
     }
 
     public int archiveMaxEntries() {
-        return context.backend().archiveMaxEntries();
+        return context.downloads().archiveMaxEntries();
     }
 
     public long archiveMaxEntryMiB() {
-        return context.backend().archiveMaxEntryMiB();
+        return context.downloads().archiveMaxEntryMiB();
     }
 
     public long archiveMaxTotalMiB() {
-        return context.backend().archiveMaxTotalMiB();
+        return context.downloads().archiveMaxTotalMiB();
     }
 
     public AsyncTaskHandle<List<JavaCandidate>> scanJavaCandidates(
             Consumer<List<JavaCandidate>> onLoaded, Consumer<String> onError) {
         return context.runJava(UiText.tr("operation.scanJava"),
-                () -> context.backend().listJavaCandidates(), onLoaded, onError);
+                () -> context.java().listJavaCandidates(), onLoaded, onError);
     }
 
     public AsyncTaskHandle<JavaCandidate> addManualJava(
             Path executable, Consumer<JavaCandidate> onAdded, Consumer<String> onError) {
         return context.runJava(UiText.tr("operation.addManualJava"),
-                () -> context.backend().addManualJavaPath(executable), onAdded, onError);
+                () -> context.java().addManualJavaPath(executable), onAdded, onError);
     }
 
     public List<JavaDistributionOption> javaDownloadDistributions() {
-        return context.backend().javaDownloadDistributions();
+        return context.java().javaDownloadDistributions();
     }
 
     public AsyncTaskHandle<List<JavaDownloadOption>> listJavaDownloadOptions(
@@ -114,7 +114,7 @@ public final class SettingsController {
             Consumer<List<JavaDownloadOption>> onLoaded, Consumer<String> onError) {
         return context.runMetadata(
                 UiText.tr("operation.fetchJavaDownloadList", distributionId),
-                () -> context.backend().listJavaDownloadOptions(distributionId, packageType),
+                () -> context.java().listJavaDownloadOptions(distributionId, packageType),
                 onLoaded, onError);
     }
 
@@ -122,7 +122,7 @@ public final class SettingsController {
             JavaDownloadOption option, String name, DownloadListener listener,
             Consumer<JavaCandidate> onInstalled, Consumer<String> onError) {
         return context.runJava(UiText.tr("operation.downloadJava", option.javaVersion()),
-                () -> context.backend().downloadAndInstallJava(
+                () -> context.java().downloadAndInstallJava(
                         option, name, listener, new org.chs.camlauncher.backend.download.DownloadCancellationToken()),
                 onInstalled, onError);
     }
@@ -130,7 +130,7 @@ public final class SettingsController {
     public AsyncTaskHandle<Void> openJavaFolder(
             Path executable, Runnable onOpened, Consumer<String> onError) {
         return context.runJava(UiText.tr("operation.openJavaFolder"), () -> {
-            context.backend().openJavaFolder(executable);
+            context.java().openJavaFolder(executable);
             return null;
         }, ignored -> {
             if (onOpened != null) {
@@ -141,7 +141,7 @@ public final class SettingsController {
 
     public void saveJavaSelectionAsync(JavaSelectionMode mode, Path selectedJavaPath) {
         save(UiText.tr("operation.saveJavaSelection"),
-                () -> context.backend().setJavaSelection(mode, selectedJavaPath));
+                () -> context.java().setJavaSelection(mode, selectedJavaPath));
     }
 
     public AsyncTaskHandle<GameDirectoryInfo> inspectGameDirectory(
@@ -162,14 +162,14 @@ public final class SettingsController {
     /** 异步保存最大内存，避免在 JavaFX Application Thread 上写文件。 */
     public void saveMaxMemoryMbAsync(int maxMemoryMb) {
         save(UiText.tr("operation.saveMaxMemory"),
-                () -> context.backend().setMaxMemoryMb(maxMemoryMb));
+                () -> context.settings().setMaxMemoryMb(maxMemoryMb));
     }
 
     public AsyncTaskHandle<String> saveJvmArgumentsAsync(
             String arguments, Consumer<String> onSaved, Consumer<String> onError) {
         String normalized = arguments == null ? "" : arguments.trim();
         return context.runSettings(UiText.tr("operation.saveJvmArguments"), () -> {
-            context.backend().setJvmArguments(normalized);
+            context.settings().setJvmArguments(normalized);
             return normalized;
         }, onSaved, onError);
     }
@@ -181,37 +181,37 @@ public final class SettingsController {
 
     public void saveGameDirectoryAsync(Path gameDirectory, Runnable onSaved) {
         save(UiText.tr("operation.saveGameDirectory"),
-                () -> context.backend().setGameDirectory(gameDirectory), onSaved);
+                () -> context.settings().setGameDirectory(gameDirectory), onSaved);
     }
 
     public void saveWindowStateAsync(WindowState state) {
         Objects.requireNonNull(state, "state");
         context.executeSettings(UiText.tr("operation.saveWindowState"),
-                () -> context.backend().saveWindowState(state));
+                () -> context.settings().saveWindowState(state));
     }
 
     /** 异步保存版本隔离选择，避免在 JavaFX Application Thread 上写文件。 */
     public void saveVersionIsolationAsync(boolean fullVersionIsolation) {
         save(UiText.tr("operation.saveVersionIsolation"),
-                () -> context.backend().setVersionIsolationMode(fullVersionIsolation
+                () -> context.settings().setVersionIsolationMode(fullVersionIsolation
                         ? VersionIsolationMode.FULL
                         : VersionIsolationMode.NONE));
     }
 
     public void saveAutoGameLanguageAsync(boolean enabled) {
         save(UiText.tr("operation.saveAutoGameLanguage"),
-                () -> context.backend().setAutoGameLanguage(enabled));
+                () -> context.settings().setAutoGameLanguage(enabled));
     }
 
     /** 异步保存下载并发数，并立即更新后端下载器。 */
     public void saveDownloadConcurrencyAsync(int downloadConcurrency) {
         save(UiText.tr("operation.saveDownloadConcurrency"),
-                () -> context.backend().setDownloadConcurrency(downloadConcurrency));
+                () -> context.downloads().setDownloadConcurrency(downloadConcurrency));
     }
 
     public void saveDownloadSourceAsync(DownloadSourceMode mode, String customApi) {
         save(UiText.tr("operation.saveDownloadSource"),
-                () -> context.backend().setDownloadSource(mode, customApi),
+                () -> context.downloads().setDownloadSource(mode, customApi),
                 () -> {
                     Runnable listener = onDownloadSourceSaved;
                     if (listener != null) {
@@ -223,7 +223,7 @@ public final class SettingsController {
     public void saveArchiveExtractionLimitsAsync(int maxEntries, long maxEntryMiB,
                                                   long maxTotalMiB) {
         save(UiText.tr("operation.saveArchiveExtractionLimits"),
-                () -> context.backend().setArchiveExtractionLimits(
+                () -> context.downloads().setArchiveExtractionLimits(
                         maxEntries, maxEntryMiB, maxTotalMiB));
     }
 
@@ -231,7 +231,7 @@ public final class SettingsController {
     public void saveThemeAsync(String themeId) {
         Objects.requireNonNull(themeId, "themeId");
         save(UiText.tr("operation.saveTheme"),
-                () -> context.backend().selectTheme(themeId));
+                () -> context.settings().selectTheme(themeId));
     }
 
     /** 在设置线程完成语言持久化与重载，成功后把快照切回 JavaFX 线程。 */
@@ -240,7 +240,7 @@ public final class SettingsController {
             Consumer<LanguageSnapshot> onLoaded, Consumer<String> onError) {
         String operation = UiText.tr("operation.saveLanguage");
         return context.runSettings(operation,
-                () -> context.backend().setLanguage(mode, locale),
+                () -> context.settings().setLanguage(mode, locale),
                 snapshot -> {
                     notifySaveSucceeded(operation);
                     if (onLoaded != null) {
@@ -260,7 +260,7 @@ public final class SettingsController {
             Consumer<LanguageSnapshot> onLoaded, Consumer<String> onError) {
         String operation = UiText.tr("operation.saveLanguageFallback");
         return context.runSettings(operation,
-                () -> context.backend().setLanguageFallback(mode, locale),
+                () -> context.settings().setLanguageFallback(mode, locale),
                 snapshot -> {
                     notifySaveSucceeded(operation);
                     if (onLoaded != null) {
@@ -331,7 +331,7 @@ public final class SettingsController {
             return;
         }
         memoryMonitorFuture = memoryExecutor.scheduleAtFixedRate(() -> {
-            SystemMemoryInfo memory = context.backend().systemMemory();
+            SystemMemoryInfo memory = context.settings().systemMemory();
             Consumer<SystemMemoryInfo> current = onSystemMemoryUpdated;
             if (current != null) {
                 Platform.runLater(() -> current.accept(memory));
