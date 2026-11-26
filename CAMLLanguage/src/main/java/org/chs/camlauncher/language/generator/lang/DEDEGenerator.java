@@ -310,8 +310,8 @@ public final class DEDEGenerator extends LanguageTranslationGenerator {
         t.put("settings.appearance.title", "Darstellung");
         t.put("settings.appearance.description", "Passe das Erscheinungsbild des Launchers an.");
         t.put("settings.appearance.themeHint", "Themes stammen aus ~/.caml/themes; Änderungen gelten sofort");
-        t.put("settings.appearance.theme", "Theme");
-        t.put("settings.appearance.theme.accessible", "Theme");
+        t.put("settings.appearance.theme", "Design");
+        t.put("settings.appearance.theme.accessible", "Design");
         t.put("settings.appearance.language.title", "Sprache");
         t.put("settings.appearance.language.description", "Wähle, wie die Sprache der Launcher-Oberfläche ausgewählt wird.");
         t.put("settings.appearance.language.auto", "Automatisch");
@@ -527,5 +527,10 @@ public final class DEDEGenerator extends LanguageTranslationGenerator {
         t.put("operation.fetchQuiltApi", "Quilted-Fabric-API-Versionen abrufen");
         t.put("operation.installQuilt", "Quilt-Instanz %s installieren");
     }
-}
 
+    @Override
+    protected void populateSharedDefaults(TranslationTable translations) {
+        DEDESharedTexts.populate(translations);
+        super.populateSharedDefaults(translations);
+    }
+}

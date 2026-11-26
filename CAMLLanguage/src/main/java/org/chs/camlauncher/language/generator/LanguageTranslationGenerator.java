@@ -79,7 +79,8 @@ public abstract class LanguageTranslationGenerator {
         populateSharedDefaults(translations);
         Files.createDirectories(outputDirectory);
         Path file = outputDirectory.resolve(locale() + ".json");
-        String json = GSON.toJson(translations) + System.lineSeparator();
+        // 固定使用 LF，保证不同系统上生成的 JSON 逐字节一致。
+        String json = GSON.toJson(translations) + "\n";
         Files.writeString(file, json, StandardCharsets.UTF_8);
         return file;
     }
