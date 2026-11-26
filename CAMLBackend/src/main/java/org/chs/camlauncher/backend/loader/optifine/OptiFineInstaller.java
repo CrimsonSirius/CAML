@@ -18,6 +18,7 @@ import org.chs.camlauncher.backend.download.source.DownloadSource;
 import org.chs.camlauncher.backend.download.source.DownloadSources;
 import org.chs.camlauncher.backend.download.source.OfficialDownloadSource;
 import org.chs.camlauncher.backend.instance.InstalledVersion;
+import org.chs.camlauncher.backend.instance.InstanceInstallLock;
 import org.chs.camlauncher.backend.instance.InstanceNameRules;
 import org.chs.camlauncher.backend.instance.SharedLibraryTransaction;
 import org.chs.camlauncher.backend.instance.VersionInstaller;
@@ -131,10 +132,13 @@ public final class OptiFineInstaller {
             DownloadCancellationToken token
     ) throws IOException, InterruptedException {
         Objects.requireNonNull(gameDirectory, "gameDirectory");
+        String normalizedInstanceId = InstanceNameRules.validate(instanceId);
         try (SharedLibraryTransaction libraryTransaction = SharedLibraryTransaction.begin(
-                gameDirectory.resolve("libraries"))) {
+                gameDirectory.resolve("libraries"));
+             InstanceInstallLock ignored = InstanceInstallLock.acquire(
+                     gameDirectory, normalizedInstanceId)) {
             InstalledVersion installed = install(
-                    gameVersion, instanceId, forgeVersion, optiFineVersion,
+                    gameVersion, normalizedInstanceId, forgeVersion, optiFineVersion,
                     gameDirectory, listener, token, libraryTransaction);
             libraryTransaction.commit();
             return installed;
@@ -218,6 +222,7 @@ public final class OptiFineInstaller {
         Path installerDirectory = Files.createTempDirectory("caml-optifine-");
         Path installer = installerDirectory.resolve("installer.jar");
         Path staging = null;
+        Path versionStaging = null;
         try {
             URI installerUri = optiFineService.resolveDownloadUri(optiFineVersion);
             DownloadListener.notifyStage(listener, DownloadStage.of("optifine.installer.download"));
@@ -274,20 +279,25 @@ public final class OptiFineInstaller {
 
             JsonObject forgeJson = parseJson(forge.versionJson());
             mergeManifest(forgeJson, generated.json());
-            writeJson(forge.versionJson(), forgeJson);
-            InstalledVersion installed = versionInstaller.install(
+            versionStaging = Files.createTempDirectory(
+                    gameDirectory.resolve("versions"), ".caml-optifine-version-");
+            InstalledVersion installed = versionInstaller.installProfileInto(
                     instanceId,
                     gameDirectory,
-                    manifestUri,
-                    manifestCacheFile,
+                    versionStaging,
+                    new Gson().toJson(forgeJson),
                     listener,
-                    token
+                    token,
+                    libraryTransaction
             );
             ExternalLoaderInstaller.verifyInstalledLibraries("OptiFine", installed);
-            return installed;
+            token.throwIfCancelled();
+            move(versionStaging.resolve(instanceId + ".json"), forge.versionJson());
+            return installed.relocateVersionDirectory(forge.versionDirectory());
         } finally {
             deleteRecursively(installerDirectory);
             deleteRecursively(staging);
+            deleteRecursively(versionStaging);
         }
     }
 
@@ -483,20 +493,6 @@ public final class OptiFineInstaller {
     private static JsonObject parseJson(Path file) throws IOException {
         return JsonParser.parseString(Files.readString(file, StandardCharsets.UTF_8))
                 .getAsJsonObject();
-    }
-
-    private static void writeJson(Path file, JsonObject json) throws IOException {
-        Path parent = file.toAbsolutePath().getParent();
-        if (parent != null) {
-            Files.createDirectories(parent);
-        }
-        Path temporary = Files.createTempFile(parent, "caml-optifine-", ".json");
-        try {
-            Files.writeString(temporary, new Gson().toJson(json), StandardCharsets.UTF_8);
-            move(temporary, file);
-        } finally {
-            Files.deleteIfExists(temporary);
-        }
     }
 
     private static void removeModsToml(Path optifineLibraries) throws IOException {

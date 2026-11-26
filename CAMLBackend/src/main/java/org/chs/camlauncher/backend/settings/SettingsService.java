@@ -7,6 +7,7 @@ import org.apache.logging.log4j.Logger;
 import org.chs.camlauncher.backend.api.WindowState;
 import org.chs.camlauncher.backend.download.DownloadConcurrency;
 import org.chs.camlauncher.backend.download.source.DownloadSourceMode;
+import org.chs.camlauncher.backend.io.ArchiveExtractionGuard;
 import org.chs.camlauncher.backend.instance.VersionIsolationMode;
 import org.chs.camlauncher.backend.runtime.JavaSelectionMode;
 import org.chs.camlauncher.language.contract.LanguageSelectionMode;
@@ -46,6 +47,15 @@ public final class SettingsService {
     public static final int MAX_DOWNLOAD_CONCURRENCY = DownloadConcurrency.MAX;
     public static final int DEFAULT_DOWNLOAD_CONCURRENCY = DownloadConcurrency.DEFAULT;
     public static final DownloadSourceMode DEFAULT_DOWNLOAD_SOURCE = DownloadSourceMode.MIRROR;
+    public static final int DEFAULT_ARCHIVE_MAX_ENTRIES = ArchiveExtractionGuard.DEFAULT_MAX_ENTRIES;
+    public static final long DEFAULT_ARCHIVE_MAX_ENTRY_MIB =
+            ArchiveExtractionGuard.DEFAULT_MAX_ENTRY_BYTES / (1024L * 1024L);
+    public static final long DEFAULT_ARCHIVE_MAX_TOTAL_MIB =
+            ArchiveExtractionGuard.DEFAULT_MAX_TOTAL_BYTES / (1024L * 1024L);
+    public static final int MIN_ARCHIVE_MAX_ENTRIES = 1;
+    public static final int MAX_ARCHIVE_MAX_ENTRIES = 1_000_000;
+    public static final long MIN_ARCHIVE_SIZE_MIB = 1;
+    public static final long MAX_ARCHIVE_SIZE_MIB = 1_048_576;
 
     private static final String MAX_MEMORY_KEY = "maxMemoryMb";
     private static final String JVM_ARGUMENTS_KEY = "jvmArguments";
@@ -54,6 +64,9 @@ public final class SettingsService {
     private static final String DOWNLOAD_CONCURRENCY_KEY = "downloadConcurrency";
     private static final String DOWNLOAD_SOURCE_KEY = "downloadSource";
     private static final String CUSTOM_DOWNLOAD_API_KEY = "customDownloadApi";
+    private static final String ARCHIVE_MAX_ENTRIES_KEY = "archiveMaxEntries";
+    private static final String ARCHIVE_MAX_ENTRY_MIB_KEY = "archiveMaxEntryMiB";
+    private static final String ARCHIVE_MAX_TOTAL_MIB_KEY = "archiveMaxTotalMiB";
     private static final String LAST_LAUNCHED_INSTANCE_KEY = "lastInstanceId";
     private static final String JAVA_SELECTION_MODE_KEY = "javaSelectionMode";
     private static final String SELECTED_JAVA_PATH_KEY = "selectedJavaPath";
@@ -216,6 +229,37 @@ public final class SettingsService {
         }
         update(properties -> properties.setProperty(
                 DOWNLOAD_CONCURRENCY_KEY, Integer.toString(value)));
+    }
+
+    public int archiveMaxEntries() throws IOException {
+        return parseArchiveEntries(load().getProperty(ARCHIVE_MAX_ENTRIES_KEY));
+    }
+
+    public long archiveMaxEntryMiB() throws IOException {
+        return parseArchiveSize(load().getProperty(ARCHIVE_MAX_ENTRY_MIB_KEY),
+                DEFAULT_ARCHIVE_MAX_ENTRY_MIB);
+    }
+
+    public long archiveMaxTotalMiB() throws IOException {
+        return parseArchiveSize(load().getProperty(ARCHIVE_MAX_TOTAL_MIB_KEY),
+                DEFAULT_ARCHIVE_MAX_TOTAL_MIB);
+    }
+
+    public void setArchiveExtractionLimits(int maxEntries, long maxEntryMiB, long maxTotalMiB)
+            throws IOException {
+        if (maxEntries < MIN_ARCHIVE_MAX_ENTRIES || maxEntries > MAX_ARCHIVE_MAX_ENTRIES) {
+            throw new IllegalArgumentException("压缩包条目上限超出范围");
+        }
+        if (maxEntryMiB < MIN_ARCHIVE_SIZE_MIB || maxEntryMiB > MAX_ARCHIVE_SIZE_MIB
+                || maxTotalMiB < MIN_ARCHIVE_SIZE_MIB || maxTotalMiB > MAX_ARCHIVE_SIZE_MIB
+                || maxTotalMiB < maxEntryMiB) {
+            throw new IllegalArgumentException("压缩包大小限制超出范围");
+        }
+        update(properties -> {
+            properties.setProperty(ARCHIVE_MAX_ENTRIES_KEY, Integer.toString(maxEntries));
+            properties.setProperty(ARCHIVE_MAX_ENTRY_MIB_KEY, Long.toString(maxEntryMiB));
+            properties.setProperty(ARCHIVE_MAX_TOTAL_MIB_KEY, Long.toString(maxTotalMiB));
+        });
     }
 
     public DownloadSourceMode downloadSourceMode() throws IOException {
@@ -642,6 +686,32 @@ public final class SettingsService {
             return Optional.of(Path.of(raw.trim()).toAbsolutePath().normalize());
         } catch (InvalidPathException ignored) {
             return Optional.empty();
+        }
+    }
+
+    private static int parseArchiveEntries(String raw) {
+        if (raw == null) {
+            return DEFAULT_ARCHIVE_MAX_ENTRIES;
+        }
+        try {
+            int value = Integer.parseInt(raw.trim());
+            return value >= MIN_ARCHIVE_MAX_ENTRIES && value <= MAX_ARCHIVE_MAX_ENTRIES
+                    ? value : DEFAULT_ARCHIVE_MAX_ENTRIES;
+        } catch (NumberFormatException ignored) {
+            return DEFAULT_ARCHIVE_MAX_ENTRIES;
+        }
+    }
+
+    private static long parseArchiveSize(String raw, long defaultValue) {
+        if (raw == null) {
+            return defaultValue;
+        }
+        try {
+            long value = Long.parseLong(raw.trim());
+            return value >= MIN_ARCHIVE_SIZE_MIB && value <= MAX_ARCHIVE_SIZE_MIB
+                    ? value : defaultValue;
+        } catch (NumberFormatException ignored) {
+            return defaultValue;
         }
     }
     private void update(Consumer<Properties> change) throws IOException {

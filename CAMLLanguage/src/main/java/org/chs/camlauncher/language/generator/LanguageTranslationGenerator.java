@@ -46,6 +46,21 @@ public abstract class LanguageTranslationGenerator {
                 "This game requires Java %s, but Java %s is selected. Force launching may fail.");
         translations.putIfAbsent("launch.warning.java.stop", "Stop");
         translations.putIfAbsent("launch.warning.java.force", "Force launch");
+        translations.putIfAbsent("common.reset", "Reset");
+        translations.putIfAbsent("operation.saveArchiveExtractionLimits",
+                "Save archive extraction limits");
+        translations.putIfAbsent("download.settings.archive.title", "Archive extraction limits");
+        translations.putIfAbsent("download.settings.archive.description",
+                "Limits applied when extracting modpacks and worlds.");
+        translations.putIfAbsent("download.settings.archive.entries", "Maximum entries");
+        translations.putIfAbsent("download.settings.archive.entrySize",
+                "Maximum entry size (MiB)");
+        translations.putIfAbsent("download.settings.archive.totalSize",
+                "Maximum total extracted size (MiB)");
+        translations.putIfAbsent("download.settings.archive.saved",
+                "Archive extraction limits saved.");
+        translations.putIfAbsent("download.settings.archive.invalid",
+                "Enter valid limits. Total size must be at least the entry limit.");
     }
 
     /** 生成翻译文件，返回写入路径。 */

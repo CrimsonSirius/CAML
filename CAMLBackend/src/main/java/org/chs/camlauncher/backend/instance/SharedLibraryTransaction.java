@@ -124,20 +124,7 @@ public final class SharedLibraryTransaction implements AutoCloseable {
                 continue;
             }
 
-            Change change = changes.get(destination);
-            if (change == null) {
-                Path backup = exists
-                        ? backupRoot.resolve(relative).normalize()
-                        : null;
-                if (backup != null) {
-                    ensureWithinBackup(backup);
-                    Files.createDirectories(backup.getParent());
-                    Files.copy(destination, backup, StandardCopyOption.REPLACE_EXISTING);
-                }
-                appendJournal(exists ? "R\t" + relative : "C\t" + relative);
-                change = new Change(destination, backup);
-                changes.put(destination, change);
-            }
+            recordChange(destination);
 
             Files.createDirectories(destination.getParent());
             Path temporary = Files.createTempFile(
@@ -149,6 +136,45 @@ public final class SharedLibraryTransaction implements AutoCloseable {
                 Files.deleteIfExists(temporary);
             }
         }
+    }
+
+    /**
+     * 在调用方直接写入目标文件前登记回滚信息。
+     *
+     * <p>版本安装器会把下载计划中的库直接写到最终路径；先登记再下载，
+     * 可以让这些写入与 {@link #merge(Path)} 共用同一份 journal 和回滚语义。</p>
+     */
+    public void track(Path destination) throws IOException {
+        ensureOpen();
+        Objects.requireNonNull(destination, "destination");
+        Path normalized = destination.toAbsolutePath().normalize();
+        if (!normalized.startsWith(librariesRoot)) {
+            throw new IOException("共享库事务目标越界: " + destination);
+        }
+        if (normalized.equals(librariesRoot.resolve(LOCK_FILE))
+                || normalized.startsWith(backupRoot)) {
+            throw new IOException("共享库事务目标占用内部文件: " + destination);
+        }
+        if (Files.isDirectory(normalized)) {
+            throw new IOException("共享库事务目标不是文件: " + destination);
+        }
+        recordChange(normalized);
+    }
+
+    private void recordChange(Path destination) throws IOException {
+        if (changes.containsKey(destination)) {
+            return;
+        }
+        Path relative = librariesRoot.relativize(destination);
+        boolean exists = Files.isRegularFile(destination);
+        Path backup = exists ? backupRoot.resolve(relative).normalize() : null;
+        if (backup != null) {
+            ensureWithinBackup(backup);
+            Files.createDirectories(backup.getParent());
+            Files.copy(destination, backup, StandardCopyOption.REPLACE_EXISTING);
+        }
+        appendJournal(exists ? "R\t" + relative : "C\t" + relative);
+        changes.put(destination, new Change(destination, backup));
     }
 
     /** 标记事务成功；实际清理和锁释放发生在 {@link #close()}。 */

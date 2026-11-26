@@ -10,15 +10,21 @@ import org.chs.camlauncher.backend.download.source.DownloadSource;
 import org.chs.camlauncher.backend.download.source.DownloadSources;
 import org.chs.camlauncher.backend.download.source.OfficialDownloadSource;
 import org.chs.camlauncher.backend.instance.InstalledVersion;
+import org.chs.camlauncher.backend.instance.InstanceInstallLock;
 import org.chs.camlauncher.backend.instance.InstanceNameRules;
+import org.chs.camlauncher.backend.instance.SharedLibraryTransaction;
+import org.chs.camlauncher.backend.instance.VersionDirectoryStage;
 import org.chs.camlauncher.backend.instance.VersionInstaller;
 import org.chs.camlauncher.backend.io.SafePaths;
+import org.chs.camlauncher.backend.loader.ExternalLoaderInstaller;
 
 import java.io.IOException;
 import java.net.URI;
+import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
 import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Stream;
@@ -71,7 +77,28 @@ public final class FabricInstaller {
             DownloadListener listener,
             DownloadCancellationToken token
     ) throws IOException, InterruptedException {
+        try (SharedLibraryTransaction libraryTransaction = SharedLibraryTransaction.begin(
+                gameDirectory.resolve("libraries"))) {
+            InstalledVersion installed = install(gameVersion, instanceId, loaderVersion, apiVersion,
+                    gameDirectory, listener, token, libraryTransaction);
+            libraryTransaction.commit();
+            return installed;
+        }
+    }
+
+    /** 把 loader 库变更纳入调用方事务；调用方负责最终 commit/rollback。 */
+    public InstalledVersion install(
+            String gameVersion,
+            String instanceId,
+            String loaderVersion,
+            FabricApiVersion apiVersion,
+            Path gameDirectory,
+            DownloadListener listener,
+            DownloadCancellationToken token,
+            SharedLibraryTransaction libraryTransaction
+    ) throws IOException, InterruptedException {
         Objects.requireNonNull(token, "token");
+        Objects.requireNonNull(libraryTransaction, "libraryTransaction");
         token.throwIfCancelled();
         Objects.requireNonNull(gameVersion, "gameVersion");
         Objects.requireNonNull(instanceId, "instanceId");
@@ -81,12 +108,12 @@ public final class FabricInstaller {
         if (normalizedInstanceId.equals(gameVersion)) {
             throw new IllegalArgumentException("安装 Fabric 时实例名不能与游戏版本号相同");
         }
-        InstanceNameRules.ensureNewInstance(gameDirectory, normalizedInstanceId);
-
         Path targetVersionDirectory = SafePaths.resolveChild(
                 gameDirectory.resolve("versions"), normalizedInstanceId, "version id");
-        InstalledVersion installed = null;
-        try {
+        boolean versionCommitted = false;
+        try (InstanceInstallLock ignored = InstanceInstallLock.acquire(
+                gameDirectory, normalizedInstanceId)) {
+            InstanceNameRules.ensureNewInstance(gameDirectory, normalizedInstanceId);
             versionInstaller.install(
                     gameVersion,
                     gameVersion,
@@ -101,27 +128,43 @@ public final class FabricInstaller {
             token.throwIfCancelled();
             String profileJson = fabricService.fetchLoaderProfile(gameVersion, loaderVersion);
             DownloadListener.notifyStage(listener, DownloadStage.of("fabric.loader.install"));
-            installed = versionInstaller.installProfile(
-                    normalizedInstanceId,
-                    gameDirectory,
-                    profileJson,
-                    listener,
-                    token
-            );
+            try (VersionDirectoryStage stage = VersionDirectoryStage.create(
+                    gameDirectory, normalizedInstanceId)) {
+                InstalledVersion installed = versionInstaller.installProfileInto(
+                        normalizedInstanceId,
+                        gameDirectory,
+                        stage.directory(),
+                        profileJson,
+                        listener,
+                        token,
+                        libraryTransaction
+                );
 
-            if (apiVersion != null) {
-                DownloadListener.notifyStage(listener, DownloadStage.of("fabric.api.download"));
-                Path versionMods = targetVersionDirectory.resolve("mods");
-                Path apiFile = downloadApi(apiVersion, versionMods, listener, token);
-                Path rootMods = gameDirectory.resolve("mods");
-                Path rootApiFile = SafePaths.resolveChild(
-                        rootMods, apiFile.getFileName().toString(), "Fabric API file");
-                copyIfDifferent(apiFile, rootApiFile);
+                Path apiFile = null;
+                if (apiVersion != null) {
+                    DownloadListener.notifyStage(listener, DownloadStage.of("fabric.api.download"));
+                    apiFile = downloadApi(apiVersion, stage.directory().resolve("mods"),
+                            listener, token);
+                }
+
+                DownloadListener.notifyStage(listener, DownloadStage.of("fabric.verify"));
+                ExternalLoaderInstaller.verifyInstalledLibraries("Fabric", installed);
+                token.throwIfCancelled();
+                installed = stage.commit(installed);
+                versionCommitted = true;
+
+                if (apiFile != null) {
+                    Path rootMods = gameDirectory.resolve("mods");
+                    Path rootApiFile = SafePaths.resolveChild(
+                            rootMods, apiFile.getFileName().toString(), "Fabric API file");
+                    Path installedApiFile = installed.versionDirectory().resolve("mods")
+                            .resolve(apiFile.getFileName().toString());
+                    copyIfDifferent(installedApiFile, rootApiFile);
+                }
+                return installed;
             }
-            DownloadListener.notifyStage(listener, DownloadStage.of("fabric.verify"));
-            return installed;
         } catch (IOException | RuntimeException | InterruptedException e) {
-            if (installed != null) {
+            if (versionCommitted) {
                 deleteRecursively(targetVersionDirectory);
             }
             throw e;
@@ -165,7 +208,18 @@ public final class FabricInstaller {
             return;
         }
         Files.createDirectories(target.getParent());
-        Files.copy(source, target, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+        Path temporary = Files.createTempFile(target.getParent(), ".caml-fabric-mod-", ".part");
+        try {
+            Files.copy(source, temporary, StandardCopyOption.REPLACE_EXISTING);
+            try {
+                Files.move(temporary, target, StandardCopyOption.ATOMIC_MOVE,
+                        StandardCopyOption.REPLACE_EXISTING);
+            } catch (AtomicMoveNotSupportedException e) {
+                Files.move(temporary, target, StandardCopyOption.REPLACE_EXISTING);
+            }
+        } finally {
+            Files.deleteIfExists(temporary);
+        }
     }
 
     private static void deleteRecursively(Path root) {

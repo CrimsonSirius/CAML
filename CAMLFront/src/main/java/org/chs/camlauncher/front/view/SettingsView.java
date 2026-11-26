@@ -84,7 +84,11 @@ final class SettingsView extends VBox implements SidebarPage, PageLifecycle {
                 controller::saveDownloadConcurrencyAsync,
                 controller.downloadSourceMode(),
                 controller.customDownloadApi(),
-                controller::saveDownloadSourceAsync
+                controller::saveDownloadSourceAsync,
+                controller.archiveMaxEntries(),
+                controller.archiveMaxEntryMiB(),
+                controller.archiveMaxTotalMiB(),
+                controller::saveArchiveExtractionLimitsAsync
         );
         accountSettings = new AccountSettingsView(accountController);
         launcherSettings = new LauncherSettingsView(

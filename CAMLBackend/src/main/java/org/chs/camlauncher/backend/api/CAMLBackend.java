@@ -188,6 +188,9 @@ public final class CAMLBackend implements AutoCloseable {
     private final AuthlibInjectorService authlibInjectorService;
     private final AccountService accountService;
     private volatile int downloadConcurrency = DownloadConcurrency.DEFAULT;
+    private volatile int archiveMaxEntries = SettingsService.DEFAULT_ARCHIVE_MAX_ENTRIES;
+    private volatile long archiveMaxEntryMiB = SettingsService.DEFAULT_ARCHIVE_MAX_ENTRY_MIB;
+    private volatile long archiveMaxTotalMiB = SettingsService.DEFAULT_ARCHIVE_MAX_TOTAL_MIB;
     private volatile DownloadSourceMode downloadSourceMode = SettingsService.DEFAULT_DOWNLOAD_SOURCE;
     private volatile String customDownloadApi = "";
     private volatile boolean autoGameLanguage = true;
@@ -328,6 +331,17 @@ public final class CAMLBackend implements AutoCloseable {
         versionInstaller.setDownloadConcurrency(downloadConcurrency);
         externalLoaderInstaller.setDownloadConcurrency(downloadConcurrency);
         modpackInstaller.setDownloadConcurrency(downloadConcurrency);
+        try {
+            archiveMaxEntries = settingsService.archiveMaxEntries();
+            archiveMaxEntryMiB = settingsService.archiveMaxEntryMiB();
+            archiveMaxTotalMiB = settingsService.archiveMaxTotalMiB();
+        } catch (IOException e) {
+            LOGGER.warn("无法读取压缩包限制，使用默认值", e);
+            archiveMaxEntries = SettingsService.DEFAULT_ARCHIVE_MAX_ENTRIES;
+            archiveMaxEntryMiB = SettingsService.DEFAULT_ARCHIVE_MAX_ENTRY_MIB;
+            archiveMaxTotalMiB = SettingsService.DEFAULT_ARCHIVE_MAX_TOTAL_MIB;
+        }
+        applyArchiveExtractionLimits();
         try {
             downloadSourceMode = settingsService.downloadSourceMode();
             customDownloadApi = settingsService.customDownloadApi();
@@ -475,6 +489,34 @@ public final class CAMLBackend implements AutoCloseable {
         versionInstaller.setDownloadConcurrency(value);
         externalLoaderInstaller.setDownloadConcurrency(value);
         modpackInstaller.setDownloadConcurrency(value);
+    }
+
+    public int archiveMaxEntries() {
+        return archiveMaxEntries;
+    }
+
+    public long archiveMaxEntryMiB() {
+        return archiveMaxEntryMiB;
+    }
+
+    public long archiveMaxTotalMiB() {
+        return archiveMaxTotalMiB;
+    }
+
+    public void setArchiveExtractionLimits(int maxEntries, long maxEntryMiB, long maxTotalMiB)
+            throws IOException {
+        settingsService.setArchiveExtractionLimits(maxEntries, maxEntryMiB, maxTotalMiB);
+        archiveMaxEntries = maxEntries;
+        archiveMaxEntryMiB = maxEntryMiB;
+        archiveMaxTotalMiB = maxTotalMiB;
+        applyArchiveExtractionLimits();
+    }
+
+    private void applyArchiveExtractionLimits() {
+        long entryBytes = archiveMaxEntryMiB * 1024L * 1024L;
+        long totalBytes = archiveMaxTotalMiB * 1024L * 1024L;
+        modService.setArchiveExtractionLimits(archiveMaxEntries, entryBytes, totalBytes);
+        modpackInstaller.setArchiveExtractionLimits(archiveMaxEntries, entryBytes, totalBytes);
     }
 
     public DownloadSourceMode downloadSourceMode() {

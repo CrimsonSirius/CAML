@@ -230,7 +230,8 @@ class ModpackInstallerTest {
         )));
         Path instance = temporaryDirectory.resolve("content-override");
         ModpackInstaller installer = installer();
-        installer.extractOverrides(archive, instance, "Conflict.mrpack");
+        installer.extractOverrides(archive, instance, "Conflict.mrpack",
+                new ArchiveExtractionGuard());
         ModrinthModpackIndex index = new ModrinthModpackIndex(
                 "Conflict", "1", "", Map.of("minecraft", "1.20.1"),
                 List.of(new ModrinthModpackIndex.File(
@@ -250,7 +251,8 @@ class ModpackInstallerTest {
                 "client-overrides/config/value.txt", "two".getBytes(StandardCharsets.UTF_8)));
 
         assertThrows(BackendException.class, () -> installer().extractOverrides(
-                archive, temporaryDirectory.resolve("duplicate-override"), "Duplicate.mrpack"));
+                archive, temporaryDirectory.resolve("duplicate-override"), "Duplicate.mrpack",
+                new ArchiveExtractionGuard()));
     }
 
     @Test
@@ -260,9 +262,9 @@ class ModpackInstallerTest {
                 "overrides/mods/b.jar", "b".getBytes(StandardCharsets.UTF_8)
         )));
 
-        assertThrows(BackendException.class, () -> installer(
-                new ArchiveExtractionGuard(1, 1024, 1024))
-                .extractOverrides(archive, temporaryDirectory.resolve("many"), "Many.mrpack"));
+        assertThrows(BackendException.class, () -> installer().extractOverrides(
+                archive, temporaryDirectory.resolve("many"), "Many.mrpack",
+                new ArchiveExtractionGuard(1, 1024, 1024)));
     }
 
     @Test
@@ -271,16 +273,12 @@ class ModpackInstallerTest {
                 "overrides/config/value.txt", "toolarge".getBytes(StandardCharsets.UTF_8)
         )));
 
-        assertThrows(BackendException.class, () -> installer(
-                new ArchiveExtractionGuard(10, 4, 1024))
-                .extractOverrides(archive, temporaryDirectory.resolve("large"), "Large.mrpack"));
+        assertThrows(BackendException.class, () -> installer().extractOverrides(
+                archive, temporaryDirectory.resolve("large"), "Large.mrpack",
+                new ArchiveExtractionGuard(10, 4, 1024)));
     }
 
     private ModpackInstaller installer() {
-        return installer(new ArchiveExtractionGuard());
-    }
-
-    private ModpackInstaller installer(ArchiveExtractionGuard guard) {
         VersionInstaller versionInstaller = new VersionInstaller();
         FileDownloader downloader = new FileDownloader();
         URI manifest = URI.create("https://example.invalid/version_manifest_v2.json");
@@ -293,8 +291,7 @@ class ModpackInstallerTest {
                         new MetadataService(), manifest, cache),
                 downloader,
                 manifest,
-                cache,
-                guard
+                cache
         );
     }
 

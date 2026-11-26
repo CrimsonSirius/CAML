@@ -151,6 +151,32 @@ class SettingsServiceTest {
     }
 
     @Test
+    void archiveExtractionLimitsDefaultAndPersist() throws Exception {
+        SettingsService service = new SettingsService(dataDirectory);
+
+        assertEquals(SettingsService.DEFAULT_ARCHIVE_MAX_ENTRIES, service.archiveMaxEntries());
+        assertEquals(SettingsService.DEFAULT_ARCHIVE_MAX_ENTRY_MIB, service.archiveMaxEntryMiB());
+        assertEquals(SettingsService.DEFAULT_ARCHIVE_MAX_TOTAL_MIB, service.archiveMaxTotalMiB());
+
+        service.setArchiveExtractionLimits(1234, 64, 512);
+
+        SettingsService loaded = new SettingsService(dataDirectory);
+        assertEquals(1234, loaded.archiveMaxEntries());
+        assertEquals(64, loaded.archiveMaxEntryMiB());
+        assertEquals(512, loaded.archiveMaxTotalMiB());
+    }
+
+    @Test
+    void rejectsInvalidArchiveExtractionLimits() {
+        SettingsService service = new SettingsService(dataDirectory);
+
+        assertThrows(IllegalArgumentException.class,
+                () -> service.setArchiveExtractionLimits(0, 64, 512));
+        assertThrows(IllegalArgumentException.class,
+                () -> service.setArchiveExtractionLimits(100, 512, 64));
+    }
+
+    @Test
     void persistsDownloadConcurrencyAcrossInstances() throws Exception {
         new SettingsService(dataDirectory).setDownloadConcurrency(64);
 

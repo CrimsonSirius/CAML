@@ -85,6 +85,18 @@ public final class SettingsController {
         return context.backend().customDownloadApi();
     }
 
+    public int archiveMaxEntries() {
+        return context.backend().archiveMaxEntries();
+    }
+
+    public long archiveMaxEntryMiB() {
+        return context.backend().archiveMaxEntryMiB();
+    }
+
+    public long archiveMaxTotalMiB() {
+        return context.backend().archiveMaxTotalMiB();
+    }
+
     public AsyncTaskHandle<List<JavaCandidate>> scanJavaCandidates(
             Consumer<List<JavaCandidate>> onLoaded, Consumer<String> onError) {
         return context.runJava(UiText.tr("operation.scanJava"),
@@ -210,6 +222,13 @@ public final class SettingsController {
                         listener.run();
                     }
                 });
+    }
+
+    public void saveArchiveExtractionLimitsAsync(int maxEntries, long maxEntryMiB,
+                                                  long maxTotalMiB) {
+        save(UiText.tr("operation.saveArchiveExtractionLimits"),
+                () -> context.backend().setArchiveExtractionLimits(
+                        maxEntries, maxEntryMiB, maxTotalMiB));
     }
 
     /** 异步保存主题选择，确保关闭启动器时也能等待写入完成。 */
