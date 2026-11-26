@@ -13,6 +13,7 @@ import org.chs.camlauncher.backend.error.BackendException;
 import org.chs.camlauncher.backend.instance.GameDataLayout;
 import org.chs.camlauncher.backend.instance.InstanceNameRules;
 import org.chs.camlauncher.backend.instance.VersionIsolationMode;
+import org.chs.camlauncher.backend.io.ArchiveExtractionGuard;
 import org.chs.camlauncher.backend.io.SafePaths;
 import org.chs.camlauncher.backend.mod.model.ModDownloadResult;
 import org.chs.camlauncher.backend.mod.model.ModContentType;
@@ -41,6 +42,9 @@ public final class ModService {
     private final ModrinthClient modrinth;
     private final CurseForgeClient curseForge;
     private final FileDownloader fileDownloader;
+    private volatile int archiveMaxEntries = ArchiveExtractionGuard.DEFAULT_MAX_ENTRIES;
+    private volatile long archiveMaxEntryBytes = ArchiveExtractionGuard.DEFAULT_MAX_ENTRY_BYTES;
+    private volatile long archiveMaxTotalBytes = ArchiveExtractionGuard.DEFAULT_MAX_TOTAL_BYTES;
 
     public ModService(ModrinthClient modrinth, CurseForgeClient curseForge,
                       FileDownloader fileDownloader) {
@@ -51,6 +55,13 @@ public final class ModService {
 
     public boolean curseForgeConfigured() {
         return curseForge.configured();
+    }
+
+    public void setArchiveExtractionLimits(int maxEntries, long maxEntryBytes, long maxTotalBytes) {
+        new ArchiveExtractionGuard(maxEntries, maxEntryBytes, maxTotalBytes);
+        this.archiveMaxEntries = maxEntries;
+        this.archiveMaxEntryBytes = maxEntryBytes;
+        this.archiveMaxTotalBytes = maxTotalBytes;
     }
 
     public ModSearchPage search(ModSearchQuery query) throws IOException, InterruptedException {
@@ -205,7 +216,9 @@ public final class ModService {
                     headers
             );
             fileDownloader.download(item, listener, md5Validator(file), token);
-            Path installed = new WorldInstaller().install(archive, savesDirectory, file.fileName());
+            Path installed = new WorldInstaller(new ArchiveExtractionGuard(
+                    archiveMaxEntries, archiveMaxEntryBytes, archiveMaxTotalBytes))
+                    .install(archive, savesDirectory, file.fileName());
             LOGGER.info("地图下载完成: {} -> {}", file.name(), installed);
             return new ModDownloadResult(installed, file);
         } finally {

@@ -26,6 +26,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Stream;
@@ -138,14 +139,16 @@ public final class VersionInstaller {
         if (Files.isRegularFile(localVersionFile)) {
             DownloadListener.notifyStage(listener, DownloadStage.of("version.checkLocal"));
             String localJson = Files.readString(localVersionFile, StandardCharsets.UTF_8);
-            return complete(instanceId, gameDirectory, localJson, listener, token, false);
+            return complete(instanceId, gameDirectory, localJson, listener, token, false,
+                    null, null);
         }
 
         try (InstanceInstallLock ignored = InstanceInstallLock.acquire(gameDirectory, instanceId)) {
             if (Files.isRegularFile(localVersionFile)) {
                 DownloadListener.notifyStage(listener, DownloadStage.of("version.checkLocal"));
                 String localJson = Files.readString(localVersionFile, StandardCharsets.UTF_8);
-                return complete(instanceId, gameDirectory, localJson, listener, token, false);
+                return complete(instanceId, gameDirectory, localJson, listener, token, false,
+                        null, null);
             }
             InstanceNameRules.ensureNewInstance(gameDirectory, instanceId);
 
@@ -160,7 +163,8 @@ public final class VersionInstaller {
                                     + " (本地未安装，官方版本清单中也不存在该版本 ID)"));
 
             String versionJson = manifestService.fetchVersionJson(remoteVersion);
-            return completeNewInstance(instanceId, gameDirectory, versionJson, listener, token);
+            return completeNewInstance(instanceId, gameDirectory, versionJson, listener, token,
+                    null);
         }
     }
 
@@ -184,13 +188,54 @@ public final class VersionInstaller {
             DownloadListener listener,
             DownloadCancellationToken token
     ) throws IOException, InterruptedException {
+        return installProfile(instanceId, gameDirectory, versionJson, listener, token, null);
+    }
+
+    /**
+     * 安装 profile，并把 profile 下载的库登记到调用方的共享库事务。
+     */
+    public InstalledVersion installProfile(
+            String instanceId,
+            Path gameDirectory,
+            String versionJson,
+            DownloadListener listener,
+            DownloadCancellationToken token,
+            SharedLibraryTransaction libraryTransaction
+    ) throws IOException, InterruptedException {
         Objects.requireNonNull(token, "token");
         token.throwIfCancelled();
         instanceId = validateInstanceId(instanceId);
         Objects.requireNonNull(versionJson, "versionJson");
         try (InstanceInstallLock ignored = InstanceInstallLock.acquire(gameDirectory, instanceId)) {
             InstanceNameRules.ensureNewInstance(gameDirectory, instanceId);
-            return completeNewInstance(instanceId, gameDirectory, versionJson, listener, token);
+            return completeNewInstance(
+                    instanceId, gameDirectory, versionJson, listener, token, libraryTransaction);
+        }
+    }
+
+    /**
+     * 把 profile 写入指定版本目录，供调用方在提交前做最终校验和原子移动。
+     *
+     * <p>目标目录必须在游戏目录内；通常位于 {@code versions/} 下的临时 staging。
+     * 调用方仍需持有实例锁，并负责 staging 的清理或提交。</p>
+     */
+    public InstalledVersion installProfileInto(
+            String instanceId,
+            Path gameDirectory,
+            Path versionDirectory,
+            String versionJson,
+            DownloadListener listener,
+            DownloadCancellationToken token,
+            SharedLibraryTransaction libraryTransaction
+    ) throws IOException, InterruptedException {
+        Objects.requireNonNull(token, "token");
+        token.throwIfCancelled();
+        instanceId = validateInstanceId(instanceId);
+        Objects.requireNonNull(versionJson, "versionJson");
+        Path stagedDirectory = validateStagedVersionDirectory(gameDirectory, versionDirectory);
+        try (InstanceInstallLock ignored = InstanceInstallLock.acquire(gameDirectory, instanceId)) {
+            return complete(instanceId, gameDirectory, versionJson, listener, token, true,
+                    libraryTransaction, stagedDirectory);
         }
     }
 
@@ -199,13 +244,15 @@ public final class VersionInstaller {
             Path gameDirectory,
             String versionJson,
             DownloadListener listener,
-            DownloadCancellationToken token
+            DownloadCancellationToken token,
+            SharedLibraryTransaction libraryTransaction
     ) throws IOException, InterruptedException {
         Path versionDirectory = SafePaths.resolveChild(
                 gameDirectory.resolve("versions"), instanceId, "version id");
         boolean existed = Files.exists(versionDirectory);
         try {
-            return complete(instanceId, gameDirectory, versionJson, listener, token, true);
+            return complete(instanceId, gameDirectory, versionJson, listener, token, true,
+                    libraryTransaction, null);
         } catch (IOException | RuntimeException | InterruptedException e) {
             if (!existed) {
                 deleteRecursively(versionDirectory);
@@ -225,14 +272,18 @@ public final class VersionInstaller {
             String versionJson,
             DownloadListener listener,
             DownloadCancellationToken token,
-            boolean writeVersionJson
+            boolean writeVersionJson,
+            SharedLibraryTransaction libraryTransaction,
+            Path versionDirectoryOverride
     ) throws IOException, InterruptedException {
         token.throwIfCancelled();
         VersionInfo parsed = metadata.parseVersionInfo(versionJson);
         VersionInfo resolved = resolve(parsed, gameDirectory, versionId);
 
         Path versionsDirectory = gameDirectory.resolve("versions");
-        Path versionDirectory = SafePaths.resolveChild(versionsDirectory, versionId, "version id");
+        Path versionDirectory = versionDirectoryOverride == null
+                ? SafePaths.resolveChild(versionsDirectory, versionId, "version id")
+                : versionDirectoryOverride;
         Path versionFile = SafePaths.resolveChild(
                 versionDirectory, versionId + ".json", "version json");
         String clientJarId = resolveClientJarId(parsed, resolved, versionDirectory, versionId);
@@ -245,7 +296,8 @@ public final class VersionInstaller {
 
         token.throwIfCancelled();
         DownloadListener.notifyStage(listener, DownloadStage.of("version.downloadFiles"));
-        downloadPlan(downloadPlanner.plan(resolved, gameDirectory, clientJarId), listener, token);
+        downloadPlan(downloadPlanner.plan(resolved, gameDirectory, clientJarId), gameDirectory,
+                listener, token, libraryTransaction);
 
         Path assetIndexFile = null;
         if (resolved.assetIndex() != null) {
@@ -256,7 +308,8 @@ public final class VersionInstaller {
                     resolved.assetIndex().id() + ".json",
                     "asset index");
             AssetIndexFile index = metadata.readAssetIndex(assetIndexFile);
-            downloadPlan(assetDownloadPlanner.plan(index, assetsDirectory), listener, token);
+            downloadPlan(assetDownloadPlanner.plan(index, assetsDirectory), gameDirectory,
+                    listener, token, libraryTransaction);
         }
 
         if (writeVersionJson) {
@@ -285,11 +338,22 @@ public final class VersionInstaller {
         return SafePaths.resolveChild(versionDirectory, versionId + ".json", "version json");
     }
 
-    private void downloadPlan(DownloadPlan plan, DownloadListener listener,
-                              DownloadCancellationToken token)
+    private void downloadPlan(DownloadPlan plan, Path gameDirectory, DownloadListener listener,
+                              DownloadCancellationToken token,
+                              SharedLibraryTransaction libraryTransaction)
             throws IOException, InterruptedException {
+        List<DownloadItem> missing = plan.missing();
+        if (libraryTransaction != null) {
+            Path librariesRoot = gameDirectory.resolve("libraries").toAbsolutePath().normalize();
+            for (DownloadItem item : missing) {
+                Path destination = item.destination().toAbsolutePath().normalize();
+                if (destination.startsWith(librariesRoot)) {
+                    libraryTransaction.track(destination);
+                }
+            }
+        }
         DownloadExecutor.download(
-                plan.missing(),
+                missing,
                 downloadConcurrency,
                 listener,
                 (item, itemListener) -> fileDownloader.download(item, itemListener, null, token),
@@ -319,6 +383,17 @@ public final class VersionInstaller {
 
     private static String validateInstanceId(String instanceId) {
         return InstanceNameRules.validate(instanceId);
+    }
+
+    private static Path validateStagedVersionDirectory(Path gameDirectory, Path versionDirectory)
+            throws IOException {
+        Objects.requireNonNull(versionDirectory, "versionDirectory");
+        Path gameRoot = gameDirectory.toAbsolutePath().normalize();
+        Path staged = versionDirectory.toAbsolutePath().normalize();
+        if (!staged.startsWith(gameRoot)) {
+            throw new IOException("版本 staging 目录越界: " + versionDirectory);
+        }
+        return staged;
     }
 
     /**

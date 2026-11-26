@@ -120,6 +120,35 @@ class SharedLibraryTransactionTest {
     }
 
     @Test
+    void trackRestoresExistingFileOverwrittenByDownloadOnRollback() throws Exception {
+        Path libraries = temporaryDirectory.resolve("libraries");
+        Path target = libraries.resolve("org/example/demo/1.0/demo-1.0.jar");
+        Files.createDirectories(target.getParent());
+        Files.writeString(target, "old", StandardCharsets.UTF_8);
+
+        try (SharedLibraryTransaction transaction = SharedLibraryTransaction.begin(libraries)) {
+            transaction.track(target);
+            Files.writeString(target, "downloaded", StandardCharsets.UTF_8);
+        }
+
+        assertEquals("old", Files.readString(target));
+    }
+
+    @Test
+    void trackDeletesFileCreatedByDownloadOnRollback() throws Exception {
+        Path libraries = temporaryDirectory.resolve("libraries");
+        Path target = libraries.resolve("org/example/demo/1.0/demo-1.0.jar");
+        Files.createDirectories(target.getParent());
+
+        try (SharedLibraryTransaction transaction = SharedLibraryTransaction.begin(libraries)) {
+            transaction.track(target);
+            Files.writeString(target, "downloaded", StandardCharsets.UTF_8);
+        }
+
+        assertFalse(Files.exists(target));
+    }
+
+    @Test
     void keepsCommittedTransactionAfterCrash() throws Exception {
         Path libraries = temporaryDirectory.resolve("libraries");
         Path staged = temporaryDirectory.resolve("staged");

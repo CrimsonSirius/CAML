@@ -103,6 +103,15 @@ public final class ZHCNGenerator extends LanguageTranslationGenerator {
         t.put("launch.warning.java.message", "该游戏需要 Java %s，当前选择的是 Java %s。强制启动可能导致游戏崩溃。");
         t.put("launch.warning.java.stop", "停止");
         t.put("launch.warning.java.force", "强制启动");
+        t.put("common.reset", "恢复默认");
+        t.put("operation.saveArchiveExtractionLimits", "保存解压限制");
+        t.put("download.settings.archive.title", "解压限制");
+        t.put("download.settings.archive.description", "应用于整合包和地图解压过程。");
+        t.put("download.settings.archive.entries", "压缩包条目上限");
+        t.put("download.settings.archive.entrySize", "单个条目大小限制（MiB）");
+        t.put("download.settings.archive.totalSize", "单次解压大小限制（MiB）");
+        t.put("download.settings.archive.saved", "解压限制已保存。");
+        t.put("download.settings.archive.invalid", "请输入有效限制，单次解压大小不能小于单个条目限制。");
 
         // 下载版本类别与来源
         t.put("download.category.release", "正式版");

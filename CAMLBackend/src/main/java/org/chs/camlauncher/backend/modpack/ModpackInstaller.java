@@ -47,8 +47,10 @@ public final class ModpackInstaller {
     private final FileDownloader fileDownloader;
     private final URI manifestUri;
     private final Path manifestCacheFile;
-    private final ArchiveExtractionGuard extractionGuard;
     private volatile int downloadConcurrency = DownloadConcurrency.DEFAULT;
+    private volatile int archiveMaxEntries = ArchiveExtractionGuard.DEFAULT_MAX_ENTRIES;
+    private volatile long archiveMaxEntryBytes = ArchiveExtractionGuard.DEFAULT_MAX_ENTRY_BYTES;
+    private volatile long archiveMaxTotalBytes = ArchiveExtractionGuard.DEFAULT_MAX_TOTAL_BYTES;
 
     public ModpackInstaller(
             VersionInstaller versionInstaller,
@@ -59,20 +61,6 @@ public final class ModpackInstaller {
             URI manifestUri,
             Path manifestCacheFile
     ) {
-        this(versionInstaller, fabricInstaller, quiltInstaller, externalLoaderInstaller,
-                fileDownloader, manifestUri, manifestCacheFile, new ArchiveExtractionGuard());
-    }
-
-    ModpackInstaller(
-            VersionInstaller versionInstaller,
-            FabricInstaller fabricInstaller,
-            QuiltInstaller quiltInstaller,
-            ExternalLoaderInstaller externalLoaderInstaller,
-            FileDownloader fileDownloader,
-            URI manifestUri,
-            Path manifestCacheFile,
-            ArchiveExtractionGuard extractionGuard
-    ) {
         this.versionInstaller = Objects.requireNonNull(versionInstaller, "versionInstaller");
         this.fabricInstaller = Objects.requireNonNull(fabricInstaller, "fabricInstaller");
         this.quiltInstaller = Objects.requireNonNull(quiltInstaller, "quiltInstaller");
@@ -81,11 +69,18 @@ public final class ModpackInstaller {
         this.fileDownloader = Objects.requireNonNull(fileDownloader, "fileDownloader");
         this.manifestUri = Objects.requireNonNull(manifestUri, "manifestUri");
         this.manifestCacheFile = Objects.requireNonNull(manifestCacheFile, "manifestCacheFile");
-        this.extractionGuard = Objects.requireNonNull(extractionGuard, "extractionGuard");
     }
 
     public void setDownloadConcurrency(int downloadConcurrency) {
         this.downloadConcurrency = DownloadConcurrency.clamp(downloadConcurrency);
+    }
+
+    public void setArchiveExtractionLimits(int maxEntries, long maxEntryBytes, long maxTotalBytes) {
+        ArchiveExtractionGuard guard = new ArchiveExtractionGuard(
+                maxEntries, maxEntryBytes, maxTotalBytes);
+        this.archiveMaxEntries = maxEntries;
+        this.archiveMaxEntryBytes = maxEntryBytes;
+        this.archiveMaxTotalBytes = maxTotalBytes;
     }
 
     public ModDownloadResult install(
@@ -105,21 +100,18 @@ public final class ModpackInstaller {
         Path archive = Files.createTempFile(gameDirectory, ".caml-modpack-", ".mrpack");
         Path instanceDirectory = gameDirectory.resolve("versions").resolve(instance);
         boolean loaderInstalled = false;
+        ArchiveExtractionGuard extractionGuard = new ArchiveExtractionGuard(
+                archiveMaxEntries, archiveMaxEntryBytes, archiveMaxTotalBytes);
         try {
             downloadArchive(file, archive, listener, token);
-            ModrinthModpackIndex index = readIndex(archive, file.fileName());
-            if (usesExternalLoader(index)) {
-                try (SharedLibraryTransaction libraryTransaction = SharedLibraryTransaction.begin(
-                        gameDirectory.resolve("libraries"))) {
-                    installLoader(index, instance, gameDirectory, listener, token, libraryTransaction);
-                    loaderInstalled = true;
-                    installContent(archive, instanceDirectory, index, file, listener, token);
-                    libraryTransaction.commit();
-                }
-            } else {
-                installLoader(index, instance, gameDirectory, listener, token, null);
+            ModrinthModpackIndex index = readIndex(archive, file.fileName(), extractionGuard);
+            try (SharedLibraryTransaction libraryTransaction = SharedLibraryTransaction.begin(
+                    gameDirectory.resolve("libraries"))) {
+                installLoader(index, instance, gameDirectory, listener, token, libraryTransaction);
                 loaderInstalled = true;
-                installContent(archive, instanceDirectory, index, file, listener, token);
+                installContent(archive, instanceDirectory, index, file, listener, token,
+                        extractionGuard);
+                libraryTransaction.commit();
             }
             return new ModDownloadResult(instanceDirectory, file);
         } catch (IOException | RuntimeException | InterruptedException e) {
@@ -138,9 +130,10 @@ public final class ModpackInstaller {
             ModrinthModpackIndex index,
             ModFile file,
             DownloadListener listener,
-            DownloadCancellationToken token
+            DownloadCancellationToken token,
+            ArchiveExtractionGuard extractionGuard
     ) throws IOException, InterruptedException {
-        extractOverrides(archive, instanceDirectory, file.fileName());
+        extractOverrides(archive, instanceDirectory, file.fileName(), extractionGuard);
         downloadFiles(index, instanceDirectory, file.fileName(), listener, token);
         ModpackLayout.writeMarker(instanceDirectory, index, file);
     }
@@ -164,7 +157,9 @@ public final class ModpackInstaller {
         ), listener, null, token);
     }
 
-    private ModrinthModpackIndex readIndex(Path archive, String displayName) throws IOException {
+    private ModrinthModpackIndex readIndex(Path archive, String displayName,
+                                           ArchiveExtractionGuard extractionGuard)
+            throws IOException {
         try (ZipFile zip = new ZipFile(archive.toFile())) {
             ZipEntry entry = zip.getEntry("modrinth.index.json");
             if (entry == null) {
@@ -210,9 +205,21 @@ public final class ModpackInstaller {
             }
         }
         if (fabric != null && !fabric.isBlank()) {
-            fabricInstaller.install(minecraft, instance, fabric, null, gameDirectory, listener, token);
+            if (libraryTransaction == null) {
+                fabricInstaller.install(minecraft, instance, fabric, null,
+                        gameDirectory, listener, token);
+            } else {
+                fabricInstaller.install(minecraft, instance, fabric, null,
+                        gameDirectory, listener, token, libraryTransaction);
+            }
         } else if (quilt != null && !quilt.isBlank()) {
-            quiltInstaller.install(minecraft, instance, quilt, null, gameDirectory, listener, token);
+            if (libraryTransaction == null) {
+                quiltInstaller.install(minecraft, instance, quilt, null,
+                        gameDirectory, listener, token);
+            } else {
+                quiltInstaller.install(minecraft, instance, quilt, null,
+                        gameDirectory, listener, token, libraryTransaction);
+            }
         } else if (neoforge != null && !neoforge.isBlank()) {
             installExternalLoader(
                     "neoforge", minecraft, instance, neoforgeInstaller(neoforge),
@@ -248,16 +255,6 @@ public final class ModpackInstaller {
         }
     }
 
-    private static boolean usesExternalLoader(ModrinthModpackIndex index) {
-        for (String key : List.of("forge", "neoforge", "neo-forge")) {
-            String version = index.dependencies().get(key);
-            if (version != null && !version.isBlank()) {
-                return true;
-            }
-        }
-        return false;
-    }
-
     private static URI forgeInstaller(String minecraft, String loader) {
         String full = loader.startsWith(minecraft + "-") ? loader : minecraft + "-" + loader;
         return URI.create("https://maven.minecraftforge.net/net/minecraftforge/forge/"
@@ -269,12 +266,15 @@ public final class ModpackInstaller {
                 + loader + "/neoforge-" + loader + "-installer.jar");
     }
 
-    void extractOverrides(Path archive, Path instanceDirectory, String displayName)
+    void extractOverrides(Path archive, Path instanceDirectory, String displayName,
+                          ArchiveExtractionGuard extractionGuard)
             throws IOException {
         try (ZipFile zip = new ZipFile(archive.toFile())) {
             Set<Path> extractedFiles = new HashSet<>();
-            extractPrefix(zip, "overrides/", instanceDirectory, displayName, extractedFiles);
-            extractPrefix(zip, "client-overrides/", instanceDirectory, displayName, extractedFiles);
+            extractPrefix(zip, "overrides/", instanceDirectory, displayName,
+                    extractedFiles, extractionGuard);
+            extractPrefix(zip, "client-overrides/", instanceDirectory, displayName,
+                    extractedFiles, extractionGuard);
         } catch (BackendException e) {
             throw e;
         } catch (IOException | RuntimeException e) {
@@ -287,7 +287,8 @@ public final class ModpackInstaller {
             String prefix,
             Path instanceDirectory,
             String displayName,
-            Set<Path> extractedFiles
+            Set<Path> extractedFiles,
+            ArchiveExtractionGuard extractionGuard
     ) throws IOException {
         Enumeration<? extends ZipEntry> entries = zip.entries();
         while (entries.hasMoreElements()) {

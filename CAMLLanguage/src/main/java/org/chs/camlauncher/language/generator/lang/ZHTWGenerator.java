@@ -108,6 +108,15 @@ public final class ZHTWGenerator extends LanguageTranslationGenerator {
         t.put("launch.warning.java.message", "此遊戲需要 Java %s，目前選擇的是 Java %s。強制啟動可能導致遊戲崩潰。");
         t.put("launch.warning.java.stop", "停止");
         t.put("launch.warning.java.force", "強制啟動");
+        t.put("common.reset", "恢復預設");
+        t.put("operation.saveArchiveExtractionLimits", "儲存解壓限制");
+        t.put("download.settings.archive.title", "解壓限制");
+        t.put("download.settings.archive.description", "套用於整合包和地圖解壓過程。");
+        t.put("download.settings.archive.entries", "壓縮包條目上限");
+        t.put("download.settings.archive.entrySize", "單一條目大小限制（MiB）");
+        t.put("download.settings.archive.totalSize", "單次解壓大小限制（MiB）");
+        t.put("download.settings.archive.saved", "解壓限制已儲存。");
+        t.put("download.settings.archive.invalid", "請輸入有效限制，單次解壓大小不能小於單一條目限制。");
 
         // 下載版本類別與來源
         t.put("download.category.release", "正式版");

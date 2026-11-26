@@ -5,12 +5,16 @@ import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.Label;
 import javafx.scene.control.ToggleGroup;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
+import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 import javafx.util.Duration;
 import org.chs.camlauncher.backend.download.source.DownloadSourceMode;
 import org.chs.camlauncher.backend.settings.SettingsService;
 import org.chs.camlauncher.front.text.UiText;
 import org.chs.camlauncher.ui.control.CamlRadioButton;
+import org.chs.camlauncher.ui.control.CamlButton;
 import org.chs.camlauncher.ui.control.CamlSlider;
 import org.chs.camlauncher.ui.control.CamlTextField;
 
@@ -25,8 +29,13 @@ final class DownloadSettingsView extends VBox {
     private final CamlRadioButton officialSource;
     private final CamlRadioButton customSource;
     private final CamlTextField customApiField;
+    private final CamlTextField archiveEntriesField;
+    private final CamlTextField archiveEntrySizeField;
+    private final CamlTextField archiveTotalSizeField;
+    private final Label archiveStatus = new Label();
     private final IntConsumer onConcurrencyChanged;
     private final BiConsumer<DownloadSourceMode, String> onSourceChanged;
+    private final ArchiveLimitsConsumer onArchiveLimitsChanged;
     private boolean concurrencySavePending;
     private boolean apiSavePending;
     private final PauseTransition saveDebounce = new PauseTransition(Duration.millis(300));
@@ -37,10 +46,15 @@ final class DownloadSettingsView extends VBox {
             IntConsumer onConcurrencyChanged,
             DownloadSourceMode initialSource,
             String initialCustomApi,
-            BiConsumer<DownloadSourceMode, String> onSourceChanged
+            BiConsumer<DownloadSourceMode, String> onSourceChanged,
+            int initialArchiveMaxEntries,
+            long initialArchiveMaxEntryMiB,
+            long initialArchiveMaxTotalMiB,
+            ArchiveLimitsConsumer onArchiveLimitsChanged
     ) {
         this.onConcurrencyChanged = onConcurrencyChanged;
         this.onSourceChanged = onSourceChanged;
+        this.onArchiveLimitsChanged = onArchiveLimitsChanged;
         int initial = Math.max(
                 SettingsService.MIN_DOWNLOAD_CONCURRENCY,
                 Math.min(SettingsService.MAX_DOWNLOAD_CONCURRENCY, initialConcurrency)
@@ -88,6 +102,9 @@ final class DownloadSettingsView extends VBox {
         );
         customApiField.setMaxWidth(Double.MAX_VALUE);
         customApiField.setDisable(initialSource != DownloadSourceMode.CUSTOM);
+        archiveEntriesField = numericField(Integer.toString(initialArchiveMaxEntries));
+        archiveEntrySizeField = numericField(Long.toString(initialArchiveMaxEntryMiB));
+        archiveTotalSizeField = numericField(Long.toString(initialArchiveMaxTotalMiB));
 
         sourceGroup.selectedToggleProperty().addListener((observable, oldValue, selected) -> {
             if (selected == null) {
@@ -177,7 +194,102 @@ final class DownloadSettingsView extends VBox {
         setMinWidth(0);
         setMaxWidth(Double.MAX_VALUE);
         getStyleClass().add("app-settings-content");
-        getChildren().addAll(sourceGroup, concurrencyGroup);
+        getChildren().addAll(sourceGroup, concurrencyGroup, buildArchiveGroup());
+    }
+
+    private VBox buildArchiveGroup() {
+        Label heading = new Label(UiText.tr("download.settings.archive.title"));
+        heading.getStyleClass().add("app-settings-group-title");
+        Label description = new Label(UiText.tr("download.settings.archive.description"));
+        description.getStyleClass().addAll("caml-body-medium", "caml-on-surface-muted");
+        description.setWrapText(true);
+
+        VBox group = new VBox(
+                heading,
+                description,
+                archiveRow(UiText.tr("download.settings.archive.entries"),
+                        archiveEntriesField, "archive-max-entries",
+                        SettingsService.DEFAULT_ARCHIVE_MAX_ENTRIES),
+                archiveRow(UiText.tr("download.settings.archive.entrySize"),
+                        archiveEntrySizeField, "archive-max-entry-mib",
+                        SettingsService.DEFAULT_ARCHIVE_MAX_ENTRY_MIB),
+                archiveRow(UiText.tr("download.settings.archive.totalSize"),
+                        archiveTotalSizeField, "archive-max-total-mib",
+                        SettingsService.DEFAULT_ARCHIVE_MAX_TOTAL_MIB)
+        );
+        archiveStatus.setId("archive-limits-status");
+        archiveStatus.getStyleClass().addAll("caml-body-small", "field-hint");
+        archiveStatus.setWrapText(true);
+        archiveStatus.setVisible(false);
+        archiveStatus.setManaged(false);
+        CamlButton save = CamlButton.filled(UiText.tr("common.save"));
+        save.setId("archive-limits-save");
+        save.setOnAction(event -> saveArchiveLimits());
+        HBox actions = new HBox(save);
+        actions.setAlignment(Pos.CENTER_RIGHT);
+        actions.getStyleClass().add("app-settings-actions");
+        group.getChildren().addAll(archiveStatus, actions);
+        group.getStyleClass().add("app-settings-group");
+        group.setMaxWidth(Double.MAX_VALUE);
+        return group;
+    }
+
+    private HBox archiveRow(String labelText, CamlTextField field, String id, long defaultValue) {
+        Label label = new Label(labelText);
+        label.getStyleClass().add("caml-label-medium");
+        label.setMinWidth(Region.USE_PREF_SIZE);
+        field.setId(id);
+        field.setMaxWidth(260);
+        CamlButton reset = CamlButton.outlined(UiText.tr("common.reset"));
+        reset.setId(id + "-reset");
+        reset.setOnAction(event -> {
+            field.setText(Long.toString(defaultValue));
+            setArchiveStatus("", false);
+        });
+        HBox row = new HBox(label, field, reset);
+        row.setAlignment(Pos.CENTER_LEFT);
+        row.getStyleClass().add("app-settings-block");
+        HBox.setHgrow(field, Priority.ALWAYS);
+        return row;
+    }
+
+    private void saveArchiveLimits() {
+        try {
+            int entries = Integer.parseInt(archiveEntriesField.getText().trim());
+            long entryMiB = Long.parseLong(archiveEntrySizeField.getText().trim());
+            long totalMiB = Long.parseLong(archiveTotalSizeField.getText().trim());
+            if (entries < SettingsService.MIN_ARCHIVE_MAX_ENTRIES
+                    || entries > SettingsService.MAX_ARCHIVE_MAX_ENTRIES
+                    || entryMiB < SettingsService.MIN_ARCHIVE_SIZE_MIB
+                    || entryMiB > SettingsService.MAX_ARCHIVE_SIZE_MIB
+                    || totalMiB < entryMiB
+                    || totalMiB > SettingsService.MAX_ARCHIVE_SIZE_MIB) {
+                throw new NumberFormatException();
+            }
+            onArchiveLimitsChanged.accept(entries, entryMiB, totalMiB);
+            setArchiveStatus(UiText.tr("download.settings.archive.saved"), false);
+        } catch (NumberFormatException e) {
+            setArchiveStatus(UiText.tr("download.settings.archive.invalid"), true);
+        }
+    }
+
+    private void setArchiveStatus(String text, boolean error) {
+        archiveStatus.setText(text);
+        archiveStatus.setVisible(!text.isBlank());
+        archiveStatus.setManaged(!text.isBlank());
+        archiveStatus.getStyleClass().removeAll("field-hint", "field-hint-error");
+        archiveStatus.getStyleClass().add(error ? "field-hint-error" : "field-hint");
+    }
+
+    private static CamlTextField numericField(String value) {
+        CamlTextField field = new CamlTextField(value, "");
+        field.getStyleClass().add("app-number-field");
+        return field;
+    }
+
+    @FunctionalInterface
+    interface ArchiveLimitsConsumer {
+        void accept(int maxEntries, long maxEntryMiB, long maxTotalMiB);
     }
 
     private void updateValue(int value) {
