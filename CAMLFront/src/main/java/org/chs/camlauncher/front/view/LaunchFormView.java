@@ -494,6 +494,7 @@ final class LaunchFormView extends BorderPane {
             managedUsernameHint.setText(UiText.tr("home.username.managed", describeChoice(choice)));
         }
     }
+
     private String describeChoice(String choice) {
         if (AccountChoice.DEFAULT.equals(choice)) {
             for (AccountSummary account : accounts) {
@@ -509,28 +510,43 @@ final class LaunchFormView extends BorderPane {
             }
         }
         return choice;
-    }    private void refreshAccounts() {
+    }
+
+    private void refreshAccounts() {
         accountController.loadAccounts(loaded -> {
             this.accounts = loaded == null ? List.of() : loaded;
-            List<String> items = new ArrayList<>();
-            items.add(AccountChoice.DEFAULT);
-            items.add(AccountChoice.OFFLINE);
-            for (AccountSummary account : this.accounts) {
-                items.add(account.id());
-            }
-            accountBox.getItems().setAll(items);
-            accountBox.setValue(launchSettings.selectedAccountChoice());
-            applyAccountMode();
+            rebuildAccountChoices();
             loadDefaultAccount();
         }, error -> {
             showStatus(UiText.tr("home.error.loadAccounts", error), true);
             this.accounts = List.of();
-            accountBox.getItems().setAll(AccountChoice.DEFAULT, AccountChoice.OFFLINE);
-            accountBox.setValue(launchSettings.selectedAccountChoice());
-            applyAccountMode();
+            rebuildAccountChoices();
         });
     }
-    /** 读取全局默认账号，用于在"跟随默认账号"时显示具体账号名。 */
+
+    /**
+     * 重建账号下拉框。
+     *
+     * <p>已保存的选择对应的账号可能已经在设置页被删除：这时回退到“跟随默认账号”，
+     * 否则下拉框会显示空白，用户直到启动时才看到“账号不存在”。回写会经过
+     * {@code accountBox} 的监听器同步到 {@code launchSettings}。</p>
+     */
+    private void rebuildAccountChoices() {
+        List<String> items = new ArrayList<>();
+        items.add(AccountChoice.DEFAULT);
+        items.add(AccountChoice.OFFLINE);
+        for (AccountSummary account : accounts) {
+            items.add(account.id());
+        }
+        String saved = launchSettings.selectedAccountChoice();
+        accountBox.getItems().setAll(items);
+        accountBox.setValue(saved != null && items.contains(saved)
+                ? saved
+                : AccountChoice.DEFAULT);
+        applyAccountMode();
+    }
+
+    /** 读取全局默认账号，用于在“跟随默认账号”时显示具体账号名。 */
     private void loadDefaultAccount() {
         accountController.loadDefaultAccountId(id -> {
             defaultAccountId = id;

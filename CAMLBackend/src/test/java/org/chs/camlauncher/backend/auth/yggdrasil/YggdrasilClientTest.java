@@ -155,6 +155,34 @@ class YggdrasilClientTest {
         assertEquals(PROFILE_ID, session.selectedProfile().id());
     }
 
+    @Test
+    void dashedProfileIdsAreCanonicalized() throws Exception {
+        HttpServer server = start(exchange -> respond(exchange, 200, """
+                {"accessToken":"token-1","clientToken":"client-1",
+                 "selectedProfile":{"id":"2C1F0B1D-4C36-4F6C-8C19-AD0B9F77F0A1","name":"Steve"}}
+                """), exchange -> respond(exchange, 200, "{}"));
+
+        YggdrasilSession session = new YggdrasilClient().authenticate(
+                apiRoot(server), "steve", "pw", "client-1");
+
+        assertEquals(PROFILE_ID, session.profileId(),
+                "带横线/大写角色 id 应规范化为 32 位小写十六进制，才能与账号存储一致");
+    }
+
+    @Test
+    void malformedProfileIdIsRejectedInsteadOfStored() throws Exception {
+        HttpServer server = start(exchange -> respond(exchange, 200, """
+                {"accessToken":"token-1","clientToken":"client-1",
+                 "selectedProfile":{"id":"not-a-profile","name":"Steve"}}
+                """), exchange -> respond(exchange, 200, "{}"));
+
+        BackendException failure = assertThrows(BackendException.class,
+                () -> new YggdrasilClient().authenticate(apiRoot(server), "steve", "pw", "client-1"));
+
+        assertEquals("auth.error.noSelectedProfile", failure.error().code(),
+                "非法角色 id 应在登录阶段被拒绝，而不是留到启动时抛 UUID 解析异常");
+    }
+
     private HttpServer start(Handler authenticate, Handler refresh) throws IOException {
         HttpServer created = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
         if (authenticate != null) {

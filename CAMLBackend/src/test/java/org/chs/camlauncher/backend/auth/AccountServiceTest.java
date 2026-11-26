@@ -134,6 +134,29 @@ class AccountServiceTest {
         assertEquals("auth.error.profileMissing", errorOf(missing).code());
     }
 
+    @Test
+    void refreshPersistsProfileRenamedOnServer(@TempDir Path dataDirectory) throws Exception {
+        AtomicReference<String> refresh = new AtomicReference<>(okRefresh());
+        Fixture fixture = fixture(dataDirectory, refresh);
+        AccountSummary account = fixture.service.loginYggdrasil(
+                fixture.apiRoot(), "steve", "pw", true);
+        refresh.set("""
+                {"accessToken":"tok-next","clientToken":"client-token",
+                 "selectedProfile":{"id":"%s","name":"SteveRenamed"}}
+                """.formatted(PROFILE_ID));
+
+        AccountService.ResolvedAccount resolved = fixture.service.resolveById(account.id());
+
+        assertEquals("SteveRenamed", resolved.session().username(),
+                "启动参数应使用服务器返回的最新角色名");
+        AccountSummary stored = fixture.service.list().stream()
+                .filter(item -> item.id().equals(account.id()))
+                .findFirst()
+                .orElseThrow();
+        assertEquals("SteveRenamed", stored.displayName(), "最新角色名应写回账号存储");
+        assertEquals(account.uuid(), stored.uuid(), "改名不应改变角色 UUID");
+    }
+
     // ------------------------------------------------------------------ 工具
 
     private Fixture fixture(Path dataDirectory, AtomicReference<String> refreshResponse) throws Exception {
@@ -192,8 +215,20 @@ class AccountServiceTest {
         created.createContext(root + "/authserver/refresh", exchange -> {
             try (exchange) {
                 String body = refreshResponse.get();
-                int status = body.contains("Unavailable") ? 503 : 200;
-                respond(exchange, status, body);
+                if (body.contains("Unavailable")) {
+                    respond(exchange, 503, body);
+                    return;
+                }
+                // 假服务器按请求里的 selectedProfile 回包，和真实服务器行为一致：
+                // 切换角色时 refresh 返回的是被请求的那个角色。
+                if (readBody(exchange).contains(SECOND_PROFILE_ID)) {
+                    respond(exchange, 200, """
+                            {"accessToken":"tok-next","clientToken":"client-token",
+                             "selectedProfile":{"id":"%s","name":"Alex"}}
+                            """.formatted(SECOND_PROFILE_ID));
+                    return;
+                }
+                respond(exchange, 200, body);
             }
         });
         created.createContext(root + "/authserver/validate", exchange -> {
@@ -219,6 +254,12 @@ class AccountServiceTest {
         }
     }
 
+    private static String readBody(HttpExchange exchange) throws IOException {
+        try (var input = exchange.getRequestBody()) {
+            return new String(input.readAllBytes(), StandardCharsets.UTF_8);
+        }
+    }
+
     private static BackendError errorOf(Throwable failure) {
         Throwable current = failure;
         while (current != null) {
@@ -233,4 +274,3 @@ class AccountServiceTest {
     private record Fixture(AccountService service, String apiRoot) {
     }
 }
-

@@ -335,16 +335,9 @@ public final class AccountService {
                     "auth.error.loginExpired", account.displayName(), account.serverName()));
         }
         YggdrasilSession session = refreshed.get();
-        StoredAccount updated = account.withProfile(target, session.profiles(),
-                session.accessToken(), blankToEmpty(session.clientToken()));
-        StoredAccount effectiveAfterSwitch = updated;
-        if (transientSessions.containsKey(account.id())) {
-            transientSessions.put(account.id(), updated);
-        } else {
-            store.upsert(updated);
-        }
-        LOGGER.info("已为账号 {} 切换角色: {}", account.id(), target.name());
-        return summary(effectiveAfterSwitch);
+        StoredAccount updated = persistSession(account, session);
+        LOGGER.info("已为账号 {} 切换角色: {}", account.id(), updated.displayName());
+        return summary(updated);
     }
 
     // ------------------------------------------------------------------ 启动解析
@@ -406,18 +399,22 @@ public final class AccountService {
         String accessToken = account.accessToken();
         String clientToken = account.clientToken();
         String profileId = account.uuid();
+        String profileName = account.displayName();
         try {
             // 直接 refresh 而不是先 validate：refresh 会带上 selectedProfile，
             // 这样“token 未绑定角色”（LittleSkin 多角色账号）的旧凭据也能在启动时自愈，
             // 否则 token 虽然有效，进服务器时仍会被 session 服务拒绝。
             Optional<YggdrasilSession> refreshed = client.refresh(
-                    account.apiRoot(), accessToken, clientToken, profileId, account.displayName());
+                    account.apiRoot(), accessToken, clientToken, profileId, profileName);
             if (refreshed.isPresent()) {
                 YggdrasilSession session = refreshed.get();
                 accessToken = session.accessToken();
                 clientToken = blankToEmpty(session.clientToken());
                 profileId = session.profileId();
-                updateSession(account, session);
+                profileName = session.username();
+                // 角色名可能在服务器侧被修改：把最新角色信息一并写回，
+                // 否则下次启动仍会用旧名字拼接启动参数。
+                account = persistSession(account, session);
                 LOGGER.info("已刷新第三方账号 {} 的凭据", session.username());
             } else if (!client.validate(account.apiRoot(), accessToken, clientToken)) {
                 // 服务器拒绝刷新且现有 token 也无效：只能重新登录。
@@ -439,7 +436,7 @@ public final class AccountService {
         AuthlibInjector injector = injectors.ensure(account.apiRoot(), prefetched);
 
         AuthSession session = new AuthSession(
-                account.displayName(),
+                profileName,
                 YggdrasilSession.profileUuid(profileId),
                 accessToken,
                 "mojang",
@@ -448,15 +445,22 @@ public final class AccountService {
                 summary(transientSessions.getOrDefault(account.id(), account)));
     }
 
-    /** 把刷新结果写回：未记住登录的账号只更新内存，绝不把 token 落盘。 */
-    private void updateSession(StoredAccount account, YggdrasilSession session) throws IOException {
-        StoredAccount updated = account.withToken(
+    /**
+     * 把刷新结果（token + 最新角色信息）写回账号。
+     *
+     * <p>未记住登录的账号只更新内存会话，绝不把 token 落盘。</p>
+     */
+    private StoredAccount persistSession(StoredAccount account, YggdrasilSession session)
+            throws IOException {
+        StoredAccount updated = account.withProfile(
+                session.selectedProfile(), session.profiles(),
                 session.accessToken(), blankToEmpty(session.clientToken()));
         if (transientSessions.containsKey(account.id())) {
             transientSessions.put(account.id(), updated);
         } else {
             store.upsert(updated);
         }
+        return updated;
     }
 
     private ResolvedAccount resolveMicrosoft(StoredAccount account)
@@ -547,4 +551,3 @@ public final class AccountService {
         }
     }
 }
-
