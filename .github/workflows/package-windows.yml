@@ -77,6 +77,35 @@ jobs:
           distribution: zulu
           java-version: '25'
           cache: gradle
+      - name: Diagnose packaging JDK
+        # 打包失败的常见根源是 runner 上的 JDK 不含 jpackage/jlink 或供应商不符；
+        # 这里把判定依据直接写进 Run Summary，省去翻日志。
+        # 脚本正文保持 ASCII：GitHub 把 run 保存为无 BOM 的 UTF-8，
+        # 非 ASCII 字符在不同 PowerShell 版本下的解码方式可能不一致。
+        shell: pwsh
+        run: |
+          $lines = New-Object System.Collections.Generic.List[string]
+          $lines.Add('### Packaging JDK (Windows)')
+          $lines.Add('```text')
+          $lines.Add("JAVA_HOME=$env:JAVA_HOME")
+          $release = Join-Path $env:JAVA_HOME 'release'
+          if (Test-Path $release) {
+            Get-Content $release |
+              Select-String -Pattern '^(IMPLEMENTOR|JAVA_VERSION|OS_ARCH|IMAGE_TYPE)=' |
+              ForEach-Object { $lines.Add($_.Line) }
+          } else {
+            $lines.Add('release: MISSING')
+          }
+          foreach ($tool in @('jpackage.exe', 'jlink.exe', 'javac.exe')) {
+            $path = Join-Path $env:JAVA_HOME "bin\$tool"
+            $state = if (Test-Path $path) { 'ok' } else { 'MISSING' }
+            $lines.Add("${tool}: $state")
+          }
+          $lines.Add('```')
+          $report = $lines -join "`n"
+          Write-Output $report
+          Add-Content -LiteralPath $env:GITHUB_STEP_SUMMARY -Value $report
+          .\gradlew.bat printPackagingJdk --no-daemon
       - name: Ensure WiX Toolset 3.14
         id: wix
         shell: pwsh

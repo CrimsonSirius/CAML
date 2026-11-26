@@ -689,7 +689,7 @@ info.installedVersions();
 
 ## 已知问题
 
-`./gradlew test` 目前在 Windows 与 Linux 上都是 489 个用例全部通过，CI 的 `build` 与
+`./gradlew test` 目前在 Windows 与 Linux 上都是 491 个用例全部通过，CI 的 `build` 与
 `windows-test` 两个 job 会分别在两个平台各跑一遍。
 
 历史上的平台相关失败（POSIX 路径断言、`fml.toml` 换行符、`java` / `java.exe` 文件名、

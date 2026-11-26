@@ -90,7 +90,14 @@ java -XshowSettings:properties -version
 - `os.arch`；
 - `sun.arch.data.model`。
 
-识别有 5 秒超时；失败/超时的候选会被忽略。`JavaRuntimeParser` 负责版本主号、架构和位数规范化。
+识别有 20 秒超时（CI 上冷启动 JVM 明显慢于本机）。子进程输出由独立线程先读干净再等待退出：
+`-XshowSettings:properties` 的输出包含 `java.class.path`，在 Windows 上很容易超过管道缓冲区，
+先 `waitFor` 再读会直接死等到超时。
+
+进程探测失败（无法执行、超时、退出码非 0、输出无法解析、被安全软件拦截）时，
+回退读取 `<jdk>/release` 里的 `JAVA_VERSION`、`OS_ARCH`、`IMPLEMENTOR`，
+只有两者都失败才忽略该候选。这样即使运行环境禁止起子进程，也仍能识别出可用的 Java。
+`JavaRuntimeParser` 负责版本主号、架构和位数规范化。
 
 Windows 启动时，如果同目录存在 `javaw.exe`，优先使用 `javaw.exe` 避免控制台窗口。
 

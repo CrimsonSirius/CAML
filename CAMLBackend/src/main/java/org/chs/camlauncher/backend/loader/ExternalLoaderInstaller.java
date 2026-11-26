@@ -17,6 +17,8 @@ import org.chs.camlauncher.backend.download.source.OfficialDownloadSource;
 import org.chs.camlauncher.backend.download.source.SourceAwareHttpClient;
 import org.chs.camlauncher.backend.download.DownloadListener;
 import org.chs.camlauncher.backend.download.FileDownloader;
+import org.chs.camlauncher.backend.error.BackendError;
+import org.chs.camlauncher.backend.error.BackendException;
 import org.chs.camlauncher.backend.io.SafePaths;
 import org.chs.camlauncher.backend.instance.InstalledVersion;
 import org.chs.camlauncher.backend.instance.InstanceInstallLock;
@@ -178,8 +180,10 @@ public final class ExternalLoaderInstaller {
             DownloadListener.notifyStage(listener,
                     DownloadStage.of("loader.installer.prepare", loaderName));
             JavaRuntime java = javaLocator.findSuitable(JavaRequirement.from(base.manifest()))
-                    .orElseThrow(() -> new IOException(
-                            "找不到可用于运行 " + loaderName + " 安装器的 Java"));
+                    .orElseThrow(() -> new BackendException(BackendError.of(
+                            "launch.javaRequirementNotFound",
+                            JavaRequirement.from(base.manifest()).majorVersion()
+                    )));
 
             Path preparedStaging = Files.createTempDirectory(
                     gameDirectory,

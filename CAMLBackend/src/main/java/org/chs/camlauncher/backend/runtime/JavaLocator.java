@@ -2,8 +2,10 @@ package org.chs.camlauncher.backend.runtime;
 
 import org.chs.camlauncher.backend.metadata.rule.RuleEvaluator;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -19,7 +21,11 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 
 public final class JavaLocator {
-    private static final long INSPECT_TIMEOUT_SECONDS = 5;
+    /**
+     * 探测超时。CI 上冷启动 JVM 可能远慢于本机（Windows runner 常见数秒），
+     * 因此这里给足余量；真正的兜底见 {@link #fromReleaseFile(Path)}。
+     */
+    private static final long INSPECT_TIMEOUT_SECONDS = 20;
     private static final String JAVA_EXECUTABLE = isWindows() ? "java.exe" : "java";
     private static final String JAVAC_EXECUTABLE = isWindows() ? "javac.exe" : "javac";
 
@@ -120,11 +126,24 @@ public final class JavaLocator {
                         .thenComparing(runtime -> runtime.executable().toString()));
     }
 
+    /**
+     * 读取一个 Java 可执行文件的信息。
+     *
+     * <p>先尝试执行 `java -XshowSettings:properties -version`；失败（超时、退出码非 0、
+     * 输出无法解析、或被安全软件拦截）时回退到读取同目录上层的 `release` 文件。
+     *
+     * <p>回退是必要的：进程探测在受限环境里可能整体不可用，而 `release` 是 JDK 自带的
+     * 纯文本元数据，读取不受子进程、编码和超时影响。
+     */
     public Optional<JavaRuntime> inspect(Path executable) {
         if (executable == null || !Files.isRegularFile(executable)) {
             return Optional.empty();
         }
+        Optional<JavaRuntime> probed = probe(executable);
+        return probed.isPresent() ? probed : fromReleaseFile(executable);
+    }
 
+    private Optional<JavaRuntime> probe(Path executable) {
         Process process;
         try {
             process = new ProcessBuilder(
@@ -136,18 +155,31 @@ public final class JavaLocator {
             return Optional.empty();
         }
 
+        // 必须先把输出读干净再等退出：子进程写满管道缓冲区后会阻塞在 write 上，
+        // 若先 waitFor 再 readAllBytes，只能等到超时（classpath 越长越容易触发）。
+        ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+        Thread reader = new Thread(() -> {
+            try (InputStream input = process.getInputStream()) {
+                input.transferTo(buffer);
+            } catch (IOException ignored) {
+                // 进程被 destroy 时读取会中断，按“没有输出”处理。
+            }
+        }, "caml-java-inspect");
+        reader.setDaemon(true);
+        reader.start();
+
         try {
             if (!process.waitFor(INSPECT_TIMEOUT_SECONDS, TimeUnit.SECONDS)) {
                 process.destroyForcibly();
                 return Optional.empty();
             }
-
-            String output = new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+            reader.join(TimeUnit.SECONDS.toMillis(INSPECT_TIMEOUT_SECONDS));
             if (process.exitValue() != 0) {
                 return Optional.empty();
             }
 
-            Map<String, String> properties = JavaRuntimeParser.parseProperties(output);
+            Map<String, String> properties = JavaRuntimeParser.parseProperties(
+                    buffer.toString(StandardCharsets.UTF_8));
             String version = properties.get("java.version");
             String architecture = JavaRuntimeParser.normalizeArchitecture(
                     properties.getOrDefault("os.arch", ""));
@@ -158,7 +190,7 @@ public final class JavaLocator {
 
             Path home = properties.containsKey("java.home")
                     ? Path.of(properties.get("java.home"))
-                    : executable.toAbsolutePath().getParent().getParent();
+                    : parentOf(executable, 2);
             int bits = JavaRuntimeParser.parseBits(properties.get("sun.arch.data.model"), architecture);
             boolean jdk = Files.isRegularFile(home.resolve("bin").resolve(JAVAC_EXECUTABLE));
 
@@ -171,14 +203,80 @@ public final class JavaLocator {
                     bits,
                     jdk
             ));
-        } catch (IOException | InterruptedException e) {
-            if (e instanceof InterruptedException) {
-                Thread.currentThread().interrupt();
-            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
             return Optional.empty();
         } finally {
             process.destroy();
         }
+    }
+
+    /**
+     * 从 <code>&lt;jdk&gt;/release</code> 读取版本信息，作为进程探测的兜底。
+     *
+     * <p>`release` 是 JDK 安装目录下的固定文件，含 `JAVA_VERSION`、`OS_ARCH`、`IMPLEMENTOR`。
+     * 缺少该文件（例如只拷贝了 `bin`）或版本无法解析时返回空，保持原有语义。
+     */
+    private Optional<JavaRuntime> fromReleaseFile(Path executable) {
+        Path home = parentOf(executable, 2);
+        if (home == null) {
+            return Optional.empty();
+        }
+        Path release = home.resolve("release");
+        if (!Files.isRegularFile(release)) {
+            return Optional.empty();
+        }
+
+        Map<String, String> values = new LinkedHashMap<>();
+        try {
+            for (String line : Files.readAllLines(release, StandardCharsets.UTF_8)) {
+                int separator = line.indexOf('=');
+                if (separator <= 0) {
+                    continue;
+                }
+                String key = line.substring(0, separator).trim();
+                String value = line.substring(separator + 1).trim();
+                if (value.length() >= 2 && value.startsWith("\"") && value.endsWith("\"")) {
+                    value = value.substring(1, value.length() - 1);
+                }
+                values.put(key, value);
+            }
+        } catch (IOException e) {
+            return Optional.empty();
+        }
+
+        String version = values.get("JAVA_VERSION");
+        int majorVersion = JavaRuntimeParser.parseMajorVersion(version);
+        String architecture = JavaRuntimeParser.normalizeArchitecture(values.getOrDefault("OS_ARCH", ""));
+        if (version == null || majorVersion <= 0 || architecture.isBlank()) {
+            return Optional.empty();
+        }
+
+        String vendor = values.getOrDefault("IMPLEMENTOR", "unknown");
+        if (vendor.isBlank()) {
+            vendor = values.getOrDefault("IMPLEMENTOR_VERSION", "unknown");
+        }
+        return Optional.of(new JavaRuntime(
+                executable.toAbsolutePath().normalize(),
+                version,
+                majorVersion,
+                vendor,
+                architecture,
+                JavaRuntimeParser.parseBits(null, architecture),
+                Files.isRegularFile(home.resolve("bin").resolve(JAVAC_EXECUTABLE))
+        ));
+    }
+
+    /** 取第 n 层父目录；不足 n 层时返回 null。 */
+    private static Path parentOf(Path path, int levels) {
+        Path current = path.toAbsolutePath().normalize();
+        for (int i = 0; i < levels; i++) {
+            current = current.getParent();
+            if (current == null) {
+                return null;
+            }
+        }
+        return current;
     }
 
     public Path launchExecutable(JavaRuntime runtime) {

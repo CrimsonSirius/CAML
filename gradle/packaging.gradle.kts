@@ -990,6 +990,46 @@ fun runPackagingProcess(command: List<String>, workingDirectory: File, label: St
     }
 }
 
+/** 把诊断文本写进 GitHub Actions 的 Run Summary（本地运行时静默跳过）。 */
+fun appendStepSummary(text: String) {
+    val target = System.getenv("GITHUB_STEP_SUMMARY")?.trim().orEmpty()
+    if (target.isEmpty()) return
+    runCatching { File(target).appendText(text + System.lineSeparator()) }
+}
+
+/**
+ * 运行外部进程，同时打印并收集输出。
+ *
+ * <p>冒烟校验失败时必须能自证原因：把子进程的 stdout/stderr 一起收集起来，
+ * 失败时写进 Run Summary，否则 CI 上只能看到 “Process completed with exit code 1”。
+ */
+fun runPackagingProcessCaptured(
+    command: List<String>,
+    workingDirectory: File,
+    label: String,
+    sink: MutableList<String>
+): Int {
+    sink += "```text"
+    sink += "\$ ${command.joinToString(" ")}"
+    val process = ProcessBuilder(command)
+        .directory(workingDirectory)
+        .redirectErrorStream(true)
+        .start()
+    process.inputStream.bufferedReader().useLines { lines ->
+        lines.forEach { line ->
+            println(line)
+            sink += line
+        }
+    }
+    val exitCode = process.waitFor()
+    sink += "exit code = $exitCode"
+    sink += "```"
+    if (exitCode != 0) {
+        throw GradleException("$label 失败（退出码 $exitCode）")
+    }
+    return exitCode
+}
+
 /**
  * 发布包冒烟校验：用 app-image 自身的 `*.cfg` 启动后端。
  *
@@ -1004,116 +1044,156 @@ val smokeTestPackagedApp = project.tasks.register("smokeTestPackagedApp") {
     description = "用 app-image 自身的启动参数启动后端，校验模块布局与裁剪运行时。"
 
     doLast {
-        val forWindows = isWindowsHost()
-        val appImage = if (forWindows) windowsAppImage else linuxAppImage
-        if (!appImage.isDirectory) {
-            throw GradleException(
-                "未找到 app-image：${appImage.absolutePath}。请先运行 " +
-                    (if (forWindows) "packageWindowsAppImage" else "packageLinuxAppImage") + "。"
-            )
+        val diag = mutableListOf<String>()
+        fun note(text: String) {
+            logger.lifecycle(text)
+            diag += text
         }
-        val cfgFile = appImage.walkTopDown().firstOrNull { it.isFile && it.extension == "cfg" }
-            ?: throw GradleException("app-image 中缺少启动配置（*.cfg）：${appImage.absolutePath}")
-        val appDirectory = cfgFile.parentFile
-        logger.lifecycle("冒烟校验 app-image：${appImage.absolutePath}")
-        logger.lifecycle("启动配置：${cfgFile.absolutePath}")
 
-        fun expandAppDir(value: String): String =
-            value.replace("\$APPDIR", appDirectory.absolutePath).replace('\\', File.separatorChar)
-
-        val javaOptions = mutableListOf<String>()
-        val classpathEntries = mutableListOf<String>()
-        cfgFile.readLines().forEach { raw ->
-            val line = raw.trim()
-            when {
-                line.startsWith("java-options=") ->
-                    javaOptions += expandAppDir(line.removePrefix("java-options="))
-
-                line.startsWith("app.classpath=") ->
-                    classpathEntries += expandAppDir(line.removePrefix("app.classpath="))
+        try {
+            val forWindows = isWindowsHost()
+            val appImage = if (forWindows) windowsAppImage else linuxAppImage
+            note("平台：${System.getProperty("os.name")}（${System.getProperty("os.arch")}）")
+            note("app-image：${appImage.absolutePath}")
+            if (!appImage.isDirectory) {
+                throw GradleException(
+                    "未找到 app-image：${appImage.absolutePath}。请先运行 " +
+                        (if (forWindows) "packageWindowsAppImage" else "packageLinuxAppImage") + "。"
+                )
             }
-        }
-        if (classpathEntries.isEmpty()) {
-            throw GradleException("启动配置中没有 app.classpath：${cfgFile.absolutePath}")
-        }
-        val modulePathOption = "--module-path=${appDirectory.absolutePath}"
-        if (javaOptions.none { it == modulePathOption }) {
-            throw GradleException(
-                "启动配置没有把 app 目录放进 --module-path，本次校验无法复现安装包的模块布局：" +
-                    "${cfgFile.absolutePath}"
+
+            // 按内容挑 cfg：jlink 也会在运行时目录写 jvm.cfg，靠扩展名取第一个会挑错。
+            val allCfg = appImage.walkTopDown().filter { it.isFile && it.extension == "cfg" }.toList()
+            note("候选 cfg：${allCfg.joinToString { it.relativeTo(appImage).invariantSeparatorsPath }}")
+            val cfgFile = allCfg.firstOrNull { cfg ->
+                cfg.readLines().any { it.trim().startsWith("app.classpath=") }
+            } ?: throw GradleException(
+                "app-image 中没有包含 app.classpath 的启动配置：${appImage.absolutePath}"
             )
-        }
+            val appDirectory = cfgFile.parentFile
+            note("启动配置：${cfgFile.relativeTo(appImage).invariantSeparatorsPath}")
+            note("app 目录：${appDirectory.absolutePath}")
 
-        val jdkHome = runCatching { resolvePackageJdkHome(forWindows) }.getOrElse {
-            logger.lifecycle("没有找到 Zulu 25，改用当前 Gradle JVM 执行冒烟校验")
-            File(System.getProperty("java.home"))
-        }
-        val javac = File(jdkHome, if (forWindows) "bin/javac.exe" else "bin/javac")
-        val javaExecutable = File(jdkHome, if (forWindows) "bin/java.exe" else "bin/java")
-        if (!javac.isFile || !javaExecutable.isFile) {
-            throw GradleException("冒烟校验需要完整 JDK（含 javac）：${jdkHome.absolutePath}")
-        }
+            fun expandAppDir(value: String): String =
+                value.replace("\$APPDIR", appDirectory.absolutePath).replace('\\', File.separatorChar)
 
-        val smokeDirectory = project.layout.buildDirectory.dir("smoke").get().asFile
-        val classesDirectory = File(smokeDirectory, "classes")
-        project.delete(classesDirectory)
-        classesDirectory.mkdirs()
-        val appJars = File(appDirectory, "*").absolutePath
-        runPackagingProcess(
-            listOf(
-                javac.absolutePath,
-                "-encoding", "UTF-8",
-                "-d", classesDirectory.absolutePath,
-                "-cp", appJars,
-                File(packagingDirectory, "smoke/BackendSmoke.java").absolutePath
-            ),
-            project.projectDir,
-            "编译冒烟校验程序"
-        )
+            val javaOptions = mutableListOf<String>()
+            val classpathEntries = mutableListOf<String>()
+            cfgFile.readLines().forEach { raw ->
+                val line = raw.trim()
+                when {
+                    line.startsWith("java-options=") ->
+                        javaOptions += expandAppDir(line.removePrefix("java-options="))
 
-        val dataDirectory = File(smokeDirectory, "data")
-        val gameDirectory = File(smokeDirectory, "game")
-        project.delete(dataDirectory, gameDirectory)
-        runPackagingProcess(
-            listOf(javaExecutable.absolutePath) + javaOptions + listOf(
-                "-cp", classesDirectory.absolutePath + File.pathSeparator + appJars,
-                "BackendSmoke",
-                dataDirectory.absolutePath,
-                gameDirectory.absolutePath
-            ),
-            project.projectDir,
-            "启动打包后的后端"
-        )
+                    line.startsWith("app.classpath=") ->
+                        classpathEntries += expandAppDir(line.removePrefix("app.classpath="))
+                }
+            }
+            note("java-options（展开后）：")
+            javaOptions.forEach { note("  $it") }
+            if (classpathEntries.isEmpty()) {
+                throw GradleException("启动配置中没有 app.classpath：${cfgFile.absolutePath}")
+            }
+            // 安装包把 app 目录同时放进 classpath 与 --module-path；冒烟必须复现这一形态。
+            val modulePathEntries = javaOptions
+                .filter { it.startsWith("--module-path=") || it.startsWith("-p=") }
+                .map { it.substringAfter('=') }
+            note("module-path：${modulePathEntries.joinToString(File.pathSeparator)}")
+            if (modulePathEntries.isEmpty()) {
+                throw GradleException(
+                    "启动配置没有 --module-path，本次校验无法复现安装包的模块布局：" +
+                        cfgFile.absolutePath
+                )
+            }
 
-        val runtimeDirectory = appImage.walkTopDown()
-            .firstOrNull { it.isDirectory && it.name == "runtime" }
-            ?: throw GradleException("app-image 中缺少运行时目录：${appImage.absolutePath}")
-        val releaseFile = File(runtimeDirectory, "release")
-        if (!releaseFile.isFile) {
-            throw GradleException("裁剪运行时缺少 release 文件：${releaseFile.absolutePath}")
-        }
-        val modules = Regex("MODULES=\"([^\"]*)\"")
-            .find(releaseFile.readText())
-            ?.groupValues?.get(1)
-            ?.split(' ')
-            ?.filter { it.isNotBlank() }
-            ?: throw GradleException("无法解析裁剪运行时的 MODULES：${releaseFile.absolutePath}")
-        val missingModules = packagedRuntimeModules.split(',').filterNot { it in modules }
-        if (missingModules.isNotEmpty()) {
-            throw GradleException(
-                "裁剪运行时缺少模块：${missingModules.joinToString(", ")}。" +
-                    "这种安装包只会在用户点开时抛出 ClassNotFoundException，请同步 --add-modules。"
+            val jdkHome = runCatching { resolvePackageJdkHome(forWindows) }.getOrElse {
+                note("没有找到 Zulu 25，改用当前 Gradle JVM 执行冒烟校验")
+                File(System.getProperty("java.home"))
+            }
+            note("冒烟使用的 JDK：${jdkHome.absolutePath}")
+            val javac = File(jdkHome, if (forWindows) "bin/javac.exe" else "bin/javac")
+            val javaExecutable = File(jdkHome, if (forWindows) "bin/java.exe" else "bin/java")
+            if (!javac.isFile || !javaExecutable.isFile) {
+                throw GradleException("冒烟校验需要完整 JDK（含 javac）：${jdkHome.absolutePath}")
+            }
+
+            val smokeDirectory = project.layout.buildDirectory.dir("smoke").get().asFile
+            val classesDirectory = File(smokeDirectory, "classes")
+            project.delete(classesDirectory)
+            classesDirectory.mkdirs()
+            val appJars = File(appDirectory, "*").absolutePath
+            runPackagingProcessCaptured(
+                listOf(
+                    javac.absolutePath,
+                    "-encoding", "UTF-8",
+                    "-d", classesDirectory.absolutePath,
+                    "-cp", appJars,
+                    File(packagingDirectory, "smoke/BackendSmoke.java").absolutePath
+                ),
+                project.projectDir,
+                "编译冒烟校验程序",
+                diag
             )
-        }
-        val nativeLauncher = File(runtimeDirectory, if (forWindows) "bin/java.exe" else "bin/java")
-        if (nativeLauncher.isFile) {
-            throw GradleException(
-                "运行时仍带有 Java 启动器（${nativeLauncher.absolutePath}），" +
-                    "--strip-native-commands 没有生效。"
+
+            val dataDirectory = File(smokeDirectory, "data")
+            val gameDirectory = File(smokeDirectory, "game")
+            project.delete(dataDirectory, gameDirectory)
+            runPackagingProcessCaptured(
+                listOf(javaExecutable.absolutePath) + javaOptions + listOf(
+                    "-cp", classesDirectory.absolutePath + File.pathSeparator + appJars,
+                    "BackendSmoke",
+                    dataDirectory.absolutePath,
+                    gameDirectory.absolutePath
+                ),
+                project.projectDir,
+                "启动打包后的后端",
+                diag
             )
+
+            val runtimeDirectory = appImage.walkTopDown()
+                .firstOrNull { it.isDirectory && it.name == "runtime" }
+                ?: throw GradleException("app-image 中缺少运行时目录：${appImage.absolutePath}")
+            val releaseFile = File(runtimeDirectory, "release")
+            if (!releaseFile.isFile) {
+                throw GradleException("裁剪运行时缺少 release 文件：${releaseFile.absolutePath}")
+            }
+            val modules = Regex("MODULES=\"([^\"]*)\"")
+                .find(releaseFile.readText())
+                ?.groupValues?.get(1)
+                ?.split(' ')
+                ?.filter { it.isNotBlank() }
+                ?: throw GradleException("无法解析裁剪运行时的 MODULES：${releaseFile.absolutePath}")
+            note("运行时模块数：${modules.size}，app jar 数：${classpathEntries.size}")
+            val missingModules = packagedRuntimeModules.split(',').filterNot { it in modules }
+            if (missingModules.isNotEmpty()) {
+                throw GradleException(
+                    "裁剪运行时缺少模块：${missingModules.joinToString(", ")}。" +
+                        "这种安装包只会在用户点开时抛出 ClassNotFoundException，请同步 --add-modules。"
+                )
+            }
+            val nativeLauncher = File(runtimeDirectory, if (forWindows) "bin/java.exe" else "bin/java")
+            if (nativeLauncher.isFile) {
+                throw GradleException(
+                    "运行时仍带有 Java 启动器（${nativeLauncher.absolutePath}），" +
+                        "--strip-native-commands 没有生效。"
+                )
+            }
+            note("冒烟校验通过")
+            appendStepSummary("### 冒烟校验通过\n" + diag.joinToString("\n") { "- $it" })
+        } catch (error: Exception) {
+            appendStepSummary(
+                buildString {
+                    appendLine("### 冒烟校验失败")
+                    appendLine("```text")
+                    appendLine(error.message.orEmpty())
+                    appendLine("```")
+                    appendLine("<details><summary>诊断</summary>")
+                    appendLine()
+                    diag.forEach { appendLine(it) }
+                    appendLine("</details>")
+                }
+            )
+            throw error
         }
-        logger.lifecycle(
-            "冒烟校验通过：模块 ${modules.size} 个，app jar ${classpathEntries.size} 个"
-        )
     }
 }
