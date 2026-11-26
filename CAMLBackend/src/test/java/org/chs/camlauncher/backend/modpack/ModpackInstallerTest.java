@@ -5,14 +5,19 @@ import org.chs.camlauncher.backend.download.DownloadCancellationToken;
 import org.chs.camlauncher.backend.download.DownloadListener;
 import org.chs.camlauncher.backend.download.FileDownloader;
 import org.chs.camlauncher.backend.download.hash.HashVerifier;
+import org.chs.camlauncher.backend.download.plan.AssetDownloadPlanner;
+import org.chs.camlauncher.backend.download.plan.DownloadPlanner;
+import org.chs.camlauncher.backend.download.source.DownloadSource;
 import org.chs.camlauncher.backend.error.BackendException;
 import org.chs.camlauncher.backend.instance.VersionInstaller;
+import org.chs.camlauncher.backend.loader.FakeForgeInstallerMain;
 import org.chs.camlauncher.backend.loader.ExternalLoaderInstaller;
 import org.chs.camlauncher.backend.loader.fabric.FabricInstaller;
 import org.chs.camlauncher.backend.loader.fabric.FabricService;
 import org.chs.camlauncher.backend.loader.quilt.QuiltInstaller;
 import org.chs.camlauncher.backend.loader.quilt.QuiltService;
 import org.chs.camlauncher.backend.metadata.MetadataService;
+import org.chs.camlauncher.backend.metadata.VersionManifestService;
 import org.chs.camlauncher.backend.mod.model.ModFile;
 import org.chs.camlauncher.backend.mod.model.ModSource;
 import org.chs.camlauncher.backend.runtime.JavaLocator;
@@ -20,12 +25,17 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.jar.Attributes;
+import java.util.jar.JarEntry;
+import java.util.jar.JarOutputStream;
+import java.util.jar.Manifest;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
@@ -81,6 +91,105 @@ class ModpackInstallerTest {
         }
     }
 
+    @Test
+    void rollsBackLoaderLibrariesWhenModpackContentFails() throws Exception {
+        Path gameDirectory = temporaryDirectory.resolve("game-forge-rollback");
+        Path baseDirectory = gameDirectory.resolve("versions/1.20.1");
+        Files.createDirectories(baseDirectory);
+        Files.writeString(baseDirectory.resolve("1.20.1.json"), """
+                {
+                  "id": "1.20.1",
+                  "mainClass": "base.Main",
+                  "javaVersion": {"component": "test", "majorVersion": 25}
+                }
+                """, StandardCharsets.UTF_8);
+
+        Path installerJar = temporaryDirectory.resolve("fake-forge-installer.jar");
+        createFakeInstallerJar(installerJar);
+        byte[] installerSha1 = HashVerifier.sha1(installerJar)
+                .getBytes(StandardCharsets.UTF_8);
+
+        byte[] modpack = zip("""
+                {
+                  "name":"Rollback Pack",
+                  "versionId":"1",
+                  "dependencies":{"minecraft":"1.20.1","forge":"47.2.0"},
+                  "files":[{
+                    "path":"../evil.jar",
+                    "downloads":["http://127.0.0.1/evil.jar"],
+                    "hashes":{"sha1":"abc"},
+                    "fileSize":1,
+                    "env":{"client":"required"}
+                  }]
+                }
+                """);
+
+        HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        server.createContext("/installer.jar", exchange -> respond(exchange,
+                Files.readAllBytes(installerJar)));
+        server.createContext("/installer.jar.sha1", exchange -> respond(exchange, installerSha1));
+        server.createContext("/rollback.mrpack", exchange -> respond(exchange, modpack));
+        server.start();
+
+        try {
+            VersionInstaller versionInstaller = new VersionInstaller(
+                    new MetadataService(),
+                    new VersionManifestService(),
+                    new DownloadPlanner(),
+                    new AssetDownloadPlanner(),
+                    new FileDownloader()
+            );
+            FileDownloader downloader = new FileDownloader();
+            URI manifest = URI.create("https://example.invalid/version_manifest_v2.json");
+            Path cache = temporaryDirectory.resolve("rollback-manifest.json");
+            ExternalLoaderInstaller external = new ExternalLoaderInstaller(
+                    versionInstaller, new JavaLocator(), downloader,
+                    new MetadataService(), manifest, cache);
+            String forgeInstaller = "https://maven.minecraftforge.net/net/minecraftforge/forge/"
+                    + "1.20.1-47.2.0/forge-1.20.1-47.2.0-installer.jar";
+            String localInstaller = "http://127.0.0.1:"
+                    + server.getAddress().getPort() + "/installer.jar";
+            DownloadSource localSource = new DownloadSource() {
+                @Override
+                public String name() {
+                    return "test";
+                }
+
+                @Override
+                public List<URI> candidates(URI original) {
+                    String value = original.toString();
+                    if (value.equals(forgeInstaller) || value.equals(forgeInstaller + ".sha1")) {
+                        return List.of(URI.create(localInstaller + (value.endsWith(".sha1")
+                                ? ".sha1" : "")));
+                    }
+                    return List.of();
+                }
+            };
+            external.setSources(List.of(localSource));
+
+            ModpackInstaller modpackInstaller = new ModpackInstaller(
+                    versionInstaller,
+                    new FabricInstaller(versionInstaller, new FabricService(), downloader, manifest, cache),
+                    new QuiltInstaller(versionInstaller, new QuiltService(), downloader, manifest, cache),
+                    external,
+                    downloader,
+                    manifest,
+                    cache
+            );
+            ModFile file = modFile(server, "rollback.mrpack", modpack);
+
+            assertThrows(BackendException.class, () -> modpackInstaller.install(
+                    file, gameDirectory, "Rollback Pack",
+                    DownloadListener.NONE, new DownloadCancellationToken()));
+
+            assertFalse(Files.exists(gameDirectory.resolve(
+                    "libraries/org/example/loader-lib/1.0/loader-lib-1.0.jar")));
+            assertFalse(Files.exists(gameDirectory.resolve("versions/Rollback Pack")));
+        } finally {
+            server.stop(0);
+        }
+    }
+
     private ModpackInstaller installer() {
         VersionInstaller versionInstaller = new VersionInstaller();
         FileDownloader downloader = new FileDownloader();
@@ -131,6 +240,35 @@ class ModpackInstallerTest {
             zip.closeEntry();
         }
         return output.toByteArray();
+    }
+
+    private static void createFakeInstallerJar(Path jar) throws Exception {
+        Manifest manifest = new Manifest();
+        manifest.getMainAttributes().put(Attributes.Name.MANIFEST_VERSION, "1.0");
+        manifest.getMainAttributes().put(Attributes.Name.MAIN_CLASS,
+                FakeForgeInstallerMain.class.getName());
+        try (JarOutputStream output = new JarOutputStream(Files.newOutputStream(jar), manifest)) {
+            String classPath = FakeForgeInstallerMain.class.getName().replace('.', '/') + ".class";
+            output.putNextEntry(new JarEntry(classPath));
+            try (InputStream input = FakeForgeInstallerMain.class.getClassLoader()
+                    .getResourceAsStream(classPath)) {
+                if (input == null) {
+                    throw new IllegalStateException("Missing " + classPath);
+                }
+                input.transferTo(output);
+            }
+            output.closeEntry();
+            output.putNextEntry(new JarEntry("version.json"));
+            output.write("""
+                    {
+                      "id":"test-forge-id",
+                      "inheritsFrom":"1.20.1",
+                      "mainClass":"test.ForgeMain",
+                      "type":"release"
+                    }
+                    """.getBytes(StandardCharsets.UTF_8));
+            output.closeEntry();
+        }
     }
 
     private static String serverRoot(HttpServer server) {

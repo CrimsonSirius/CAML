@@ -20,6 +20,7 @@ import org.chs.camlauncher.backend.download.FileDownloader;
 import org.chs.camlauncher.backend.io.SafePaths;
 import org.chs.camlauncher.backend.instance.InstalledVersion;
 import org.chs.camlauncher.backend.instance.InstanceNameRules;
+import org.chs.camlauncher.backend.instance.SharedLibraryTransaction;
 import org.chs.camlauncher.backend.instance.VersionInstaller;
 import org.chs.camlauncher.backend.metadata.MetadataService;
 import org.chs.camlauncher.backend.metadata.model.Library;
@@ -121,7 +122,30 @@ public final class ExternalLoaderInstaller {
             DownloadListener listener,
             DownloadCancellationToken token
     ) throws IOException, InterruptedException {
+        Objects.requireNonNull(gameDirectory, "gameDirectory");
+        try (SharedLibraryTransaction libraryTransaction = SharedLibraryTransaction.begin(
+                gameDirectory.resolve("libraries"))) {
+            InstalledVersion installed = install(
+                    loaderName, gameVersion, instanceId, installerUri, gameDirectory,
+                    listener, token, libraryTransaction);
+            libraryTransaction.commit();
+            return installed;
+        }
+    }
+
+    /** 把共享库变更纳入调用方事务；调用方负责最终 commit/rollback。 */
+    public InstalledVersion install(
+            String loaderName,
+            String gameVersion,
+            String instanceId,
+            URI installerUri,
+            Path gameDirectory,
+            DownloadListener listener,
+            DownloadCancellationToken token,
+            SharedLibraryTransaction libraryTransaction
+    ) throws IOException, InterruptedException {
         Objects.requireNonNull(token, "token");
+        Objects.requireNonNull(libraryTransaction, "libraryTransaction");
         token.throwIfCancelled();
         Objects.requireNonNull(loaderName, "loaderName");
         Objects.requireNonNull(gameVersion, "gameVersion");
@@ -153,13 +177,14 @@ public final class ExternalLoaderInstaller {
                 .orElseThrow(() -> new IOException(
                         "找不到可用于运行 " + loaderName + " 安装器的 Java"));
 
-        Path staging = Files.createTempDirectory(
+        Path preparedStaging = Files.createTempDirectory(
                 gameDirectory,
-                ".caml-" + loaderName.toLowerCase() + "-install-"
+                ".caml-" + loaderName.toLowerCase() + "-install-prepare-"
         );
+        Path attemptStaging = null;
         try {
-            prepareStaging(staging, gameVersion, base);
-            Path installerJar = staging.resolve("installer.jar");
+            prepareStaging(preparedStaging, gameVersion, base);
+            Path installerJar = preparedStaging.resolve("installer.jar");
             String installerSha1 = resolveSha1(installerUri);
             DownloadListener.notifyStage(listener,
                     DownloadStage.of("loader.installer.download", loaderName));
@@ -178,30 +203,56 @@ public final class ExternalLoaderInstaller {
 
             token.throwIfCancelled();
             String installedVersionId = readInstallerVersionId(installerJar);
-            Path installedVersionDirectory = staging.resolve("versions").resolve(installedVersionId);
-            String installerOutput = "";
-            predownloadInstallerLibraries(loaderName, installerJar, staging, listener, token);
+            predownloadInstallerLibraries(
+                    loaderName, installerJar, preparedStaging, listener, token);
             DownloadListener.notifyStage(listener,
                     DownloadStage.of("loader.installer.run", loaderName));
+            IOException lastFailure = null;
             for (int attempt = 0; attempt < INSTALL_ATTEMPTS; attempt++) {
                 token.throwIfCancelled();
-                installerOutput = runInstaller(loaderName, java, installerJar, staging, token);
-                if (Files.isDirectory(installedVersionDirectory)) {
+                Path candidate = Files.createTempDirectory(
+                        gameDirectory,
+                        ".caml-" + loaderName.toLowerCase() + "-install-attempt-"
+                );
+                boolean keepCandidate = false;
+                try {
+                    copyTree(preparedStaging, candidate);
+                    String installerOutput = runInstaller(
+                            loaderName, java, candidate.resolve("installer.jar"), candidate, token);
+                    Path installedVersionDirectory = candidate.resolve("versions")
+                            .resolve(installedVersionId);
+                    if (!Files.isDirectory(installedVersionDirectory)) {
+                        throw new IOException(
+                                loaderName + " 安装器没有生成版本目录: " + installedVersionDirectory
+                                        + "\n安装器输出:\n" + installerOutput);
+                    }
+                    validateGeneratedVersion(loaderName, installedVersionDirectory, installedVersionId);
+                    attemptStaging = candidate;
+                    keepCandidate = true;
                     break;
+                } catch (IOException e) {
+                    lastFailure = e;
+                    if (attempt + 1 < INSTALL_ATTEMPTS) {
+                        LOGGER.warn("{} 安装器第 {} 次尝试失败，将使用全新 staging 重试",
+                                loaderName, attempt + 1, e);
+                    }
+                } finally {
+                    if (!keepCandidate) {
+                        deleteRecursively(candidate);
+                    }
                 }
             }
-            if (!Files.isDirectory(installedVersionDirectory)) {
-                throw new IOException(
-                        loaderName + " 安装器没有生成版本目录: " + installedVersionDirectory
-                                + "\n安装器输出:\n" + installerOutput);
+            if (attemptStaging == null) {
+                throw lastFailure == null
+                        ? new IOException(loaderName + " 安装器多次尝试后仍未生成版本目录")
+                        : lastFailure;
             }
-            validateGeneratedVersion(loaderName, installedVersionDirectory, installedVersionId);
 
             DownloadListener.notifyStage(listener, DownloadStage.of("loader.files.merge", loaderName));
             token.throwIfCancelled();
-            mergeLibraries(staging.resolve("libraries"), gameDirectory.resolve("libraries"));
+            libraryTransaction.merge(attemptStaging.resolve("libraries"));
             moveVersionDirectory(
-                    installedVersionDirectory,
+                    attemptStaging.resolve("versions").resolve(installedVersionId),
                     targetVersionDirectory,
                     installedVersionId,
                     normalizedInstanceId
@@ -221,7 +272,8 @@ public final class ExternalLoaderInstaller {
             deleteRecursively(targetVersionDirectory);
             throw e;
         } finally {
-            deleteRecursively(staging);
+            deleteRecursively(attemptStaging);
+            deleteRecursively(preparedStaging);
         }
     }
 
@@ -479,7 +531,7 @@ public final class ExternalLoaderInstaller {
         }
     }
 
-    static void verifyInstalledLibraries(String loaderName, InstalledVersion installed)
+    public static void verifyInstalledLibraries(String loaderName, InstalledVersion installed)
             throws IOException {
         RuleEvaluator evaluator = new RuleEvaluator();
         Set<String> coordinates = new LinkedHashSet<>();
@@ -511,23 +563,17 @@ public final class ExternalLoaderInstaller {
         return classifier.startsWith("natives-") || classifier.contains("-natives-");
     }
 
-    private static void mergeLibraries(Path source, Path target) throws IOException {
-        if (!Files.isDirectory(source)) {
-            return;
-        }
-        Path normalizedTarget = target.toAbsolutePath().normalize();
-        try (Stream<Path> files = Files.walk(source)) {
-            for (Path file : files.filter(Files::isRegularFile).toList()) {
-                Path destination = normalizedTarget.resolve(source.relativize(file)).normalize();
-                if (!destination.startsWith(normalizedTarget)) {
-                    throw new IOException("安装器库路径越界: " + file);
+    private static void copyTree(Path source, Path target) throws IOException {
+        Path sourceRoot = source.toAbsolutePath().normalize();
+        try (Stream<Path> paths = Files.walk(sourceRoot)) {
+            for (Path path : paths.toList()) {
+                Path destination = target.resolve(sourceRoot.relativize(path)).normalize();
+                if (Files.isDirectory(path)) {
+                    Files.createDirectories(destination);
+                } else if (Files.isRegularFile(path)) {
+                    Files.createDirectories(destination.getParent());
+                    Files.copy(path, destination, StandardCopyOption.REPLACE_EXISTING);
                 }
-                Files.createDirectories(destination.getParent());
-                if (Files.isRegularFile(destination)
-                        && Files.size(destination) == Files.size(file)) {
-                    continue;
-                }
-                Files.copy(file, destination, StandardCopyOption.REPLACE_EXISTING);
             }
         }
     }

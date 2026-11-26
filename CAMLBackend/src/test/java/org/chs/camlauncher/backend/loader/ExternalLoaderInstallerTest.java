@@ -218,6 +218,125 @@ class ExternalLoaderInstallerTest {
         }
     }
 
+    @org.junit.jupiter.api.Test
+    void replacesSameSizeInstallerLibraryWithDifferentContent() throws Exception {
+        prepareBaseVersion();
+        Path library = gameDirectory.resolve(
+                "libraries/org/example/loader-lib/1.0/loader-lib-1.0.jar");
+        Files.createDirectories(library.getParent());
+        Files.writeString(library, "x".repeat("loader-library".length()), StandardCharsets.UTF_8);
+
+        Path installerJar = gameDirectory.resolve("fake-installer.jar");
+        createFakeInstallerJar(installerJar);
+        HttpServer server = installerServer(installerJar);
+        try {
+            newInstaller().install(
+                    "Forge", "1.20.1", "same-size-instance",
+                    installerUri(server), gameDirectory, DownloadListener.NONE);
+
+            assertEquals("loader-library", Files.readString(library));
+        } finally {
+            server.stop(0);
+        }
+    }
+
+    @org.junit.jupiter.api.Test
+    void retriesNonZeroInstallerWithFreshStaging() throws Exception {
+        prepareBaseVersion();
+        Files.writeString(gameDirectory.resolve(".fake-installer-fail-once"),
+                "fail", StandardCharsets.UTF_8);
+
+        Path installerJar = gameDirectory.resolve("fake-installer.jar");
+        createFakeInstallerJar(installerJar);
+        HttpServer server = installerServer(installerJar);
+        try {
+            newInstaller().install(
+                    "Forge", "1.20.1", "retry-instance",
+                    installerUri(server), gameDirectory, DownloadListener.NONE);
+
+            assertEquals("2", Files.readString(
+                    gameDirectory.resolve(".fake-installer-attempts")).trim());
+            assertTrue(Files.isRegularFile(gameDirectory.resolve(
+                    "libraries/org/example/loader-lib/1.0/loader-lib-1.0.jar")));
+            try (var entries = Files.list(gameDirectory)) {
+                assertFalse(entries.anyMatch(path ->
+                        path.getFileName().toString().startsWith(".caml-forge-install-")));
+            }
+        } finally {
+            server.stop(0);
+        }
+    }
+
+    @org.junit.jupiter.api.Test
+    void rollsBackMergedLibrariesWhenFinalVerificationFails() throws Exception {
+        prepareBaseVersion();
+        Files.writeString(gameDirectory.resolve(".fake-installer-missing-library"),
+                "missing", StandardCharsets.UTF_8);
+
+        Path installerJar = gameDirectory.resolve("fake-installer.jar");
+        createFakeInstallerJar(installerJar);
+        HttpServer server = installerServer(installerJar);
+        try {
+            assertThrows(IOException.class, () -> newInstaller().install(
+                    "Forge", "1.20.1", "rollback-instance",
+                    installerUri(server), gameDirectory, DownloadListener.NONE));
+
+            assertFalse(Files.exists(gameDirectory.resolve(
+                    "libraries/org/example/loader-lib/1.0/loader-lib-1.0.jar")));
+            assertFalse(Files.exists(gameDirectory.resolve("versions/rollback-instance")));
+        } finally {
+            server.stop(0);
+        }
+    }
+
+    private void prepareBaseVersion() throws Exception {
+        Path baseDirectory = gameDirectory.resolve("versions/1.20.1");
+        Files.createDirectories(baseDirectory);
+        Files.writeString(baseDirectory.resolve("1.20.1.json"), """
+                {
+                  "id": "1.20.1",
+                  "mainClass": "base.Main",
+                  "javaVersion": {"component": "test", "majorVersion": 25}
+                }
+                """, StandardCharsets.UTF_8);
+        Files.write(baseDirectory.resolve("1.20.1.jar"), new byte[]{1});
+    }
+
+    private ExternalLoaderInstaller newInstaller() {
+        return new ExternalLoaderInstaller(
+                new VersionInstaller(
+                        new MetadataService(),
+                        new VersionManifestService(),
+                        new DownloadPlanner(),
+                        new AssetDownloadPlanner(),
+                        new FileDownloader()
+                ),
+                new JavaLocator(),
+                new FileDownloader(),
+                new MetadataService(),
+                URI.create("https://example.invalid/version_manifest_v2.json"),
+                gameDirectory.resolve("cache/version_manifest_v2.json")
+        );
+    }
+
+    private static HttpServer installerServer(Path installerJar) throws Exception {
+        HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        server.createContext("/installer.jar", exchange -> {
+            byte[] bytes = Files.readAllBytes(installerJar);
+            exchange.sendResponseHeaders(200, bytes.length);
+            try (var output = exchange.getResponseBody()) {
+                output.write(bytes);
+            }
+        });
+        server.start();
+        return server;
+    }
+
+    private static URI installerUri(HttpServer server) {
+        return URI.create("http://127.0.0.1:"
+                + server.getAddress().getPort() + "/installer.jar");
+    }
+
     private static void createFakeInstallerJar(Path jar) throws Exception {
         createFakeInstallerJar(jar, null);
     }
