@@ -26,6 +26,11 @@ import java.util.jar.Attributes;
 import java.util.jar.JarEntry;
 import java.util.jar.JarOutputStream;
 import java.util.jar.Manifest;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -286,6 +291,46 @@ class ExternalLoaderInstallerTest {
             assertFalse(Files.exists(gameDirectory.resolve("versions/rollback-instance")));
         } finally {
             server.stop(0);
+        }
+    }
+
+    @org.junit.jupiter.api.Test
+    void serializesConcurrentInstallOfSameInstanceName() throws Exception {
+        prepareBaseVersion();
+        Path installerJar = gameDirectory.resolve("fake-installer.jar");
+        createFakeInstallerJar(installerJar);
+        HttpServer server = installerServer(installerJar);
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+        CountDownLatch start = new CountDownLatch(1);
+        try {
+            Future<Boolean> first = executor.submit(() -> installConcurrently(
+                    installerUri(server), start));
+            Future<Boolean> second = executor.submit(() -> installConcurrently(
+                    installerUri(server), start));
+            start.countDown();
+
+            int successes = (first.get(20, TimeUnit.SECONDS) ? 1 : 0)
+                    + (second.get(20, TimeUnit.SECONDS) ? 1 : 0);
+            assertEquals(1, successes);
+            assertTrue(Files.isRegularFile(gameDirectory.resolve(
+                    "versions/concurrent-instance/concurrent-instance.json")));
+            assertTrue(Files.isRegularFile(gameDirectory.resolve(
+                    "libraries/org/example/loader-lib/1.0/loader-lib-1.0.jar")));
+        } finally {
+            executor.shutdownNow();
+            server.stop(0);
+        }
+    }
+
+    private boolean installConcurrently(URI installerUri, CountDownLatch start) {
+        try {
+            start.await(5, TimeUnit.SECONDS);
+            newInstaller().install(
+                    "Forge", "1.20.1", "concurrent-instance",
+                    installerUri, gameDirectory, DownloadListener.NONE);
+            return true;
+        } catch (Exception e) {
+            return false;
         }
     }
 

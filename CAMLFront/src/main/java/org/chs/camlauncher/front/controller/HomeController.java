@@ -30,6 +30,8 @@ public final class HomeController {
 
     private BiConsumer<String, Boolean> onStatusChanged;
     private Runnable onLaunchFinished;
+    private Runnable onGameStarted;
+    private Consumer<String> onLaunchFailed;
     private Consumer<GameDirectoryInfo> onGameDirectoryInspected;
 
     HomeController(ControllerContext context) {
@@ -46,6 +48,14 @@ public final class HomeController {
 
     public void setOnLaunchFinished(Runnable onLaunchFinished) {
         this.onLaunchFinished = onLaunchFinished;
+    }
+
+    public void setOnGameStarted(Runnable onGameStarted) {
+        this.onGameStarted = onGameStarted;
+    }
+
+    public void setOnLaunchFailed(Consumer<String> onLaunchFailed) {
+        this.onLaunchFailed = onLaunchFailed;
     }
 
     public void setOnGameDirectoryInspected(Consumer<GameDirectoryInfo> onGameDirectoryInspected) {
@@ -91,9 +101,7 @@ public AsyncTaskHandle<GameLaunch> startGame(String version, String username, St
 
         DownloadListener downloadListener = new ThrottledDownloadLogger();
         ProcessListener processListener = createProcessListener();
-        VersionIsolationMode isolationMode = fullVersionIsolation
-                ? VersionIsolationMode.FULL
-                : VersionIsolationMode.NONE;
+        VersionIsolationMode isolationMode = isolationMode(fullVersionIsolation);
 
         sendStatus(UiText.tr("status.starting", version), false);
         return context.runLaunch(UiText.tr("operation.launchGame", version),
@@ -102,11 +110,17 @@ public AsyncTaskHandle<GameLaunch> startGame(String version, String username, St
                 launch -> {
                     saveLastLaunchedInstance(version);
                     sendStatus(UiText.tr("status.started"), false);
+                    notifyGameStarted();
                 },
                 message -> {
                     sendStatus(UiText.tr("status.launchFailedDetail", message), true);
                     notifyLaunchFinished();
+                    notifyLaunchFailed(message);
                 });
+    }
+
+    static VersionIsolationMode isolationMode(boolean fullVersionIsolation) {
+        return fullVersionIsolation ? VersionIsolationMode.FULL : VersionIsolationMode.NONE;
     }
 
     private GameLaunch launch(String version, Path gameDirectory, String username,
@@ -261,6 +275,18 @@ public AsyncTaskHandle<GameLaunch> startGame(String version, String username, St
     private void notifyLaunchFinished() {
         if (onLaunchFinished != null) {
             Platform.runLater(onLaunchFinished);
+        }
+    }
+
+    private void notifyGameStarted() {
+        if (onGameStarted != null) {
+            Platform.runLater(onGameStarted);
+        }
+    }
+
+    private void notifyLaunchFailed(String message) {
+        if (onLaunchFailed != null) {
+            Platform.runLater(() -> onLaunchFailed.accept(message));
         }
     }
 

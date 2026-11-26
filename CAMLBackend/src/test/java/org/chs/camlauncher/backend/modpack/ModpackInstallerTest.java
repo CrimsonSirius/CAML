@@ -10,6 +10,7 @@ import org.chs.camlauncher.backend.download.plan.DownloadPlanner;
 import org.chs.camlauncher.backend.download.source.DownloadSource;
 import org.chs.camlauncher.backend.error.BackendException;
 import org.chs.camlauncher.backend.instance.VersionInstaller;
+import org.chs.camlauncher.backend.io.ArchiveExtractionGuard;
 import org.chs.camlauncher.backend.loader.FakeForgeInstallerMain;
 import org.chs.camlauncher.backend.loader.ExternalLoaderInstaller;
 import org.chs.camlauncher.backend.loader.fabric.FabricInstaller;
@@ -31,7 +32,9 @@ import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.jar.Attributes;
 import java.util.jar.JarEntry;
 import java.util.jar.JarOutputStream;
@@ -190,7 +193,94 @@ class ModpackInstallerTest {
         }
     }
 
+    @Test
+    void rejectsModpackFileWithoutSha1OrSize() throws Exception {
+        ModrinthModpackIndex index = new ModrinthModpackIndex(
+                "Invalid", "1", "", Map.of("minecraft", "1.20.1"),
+                List.of(new ModrinthModpackIndex.File(
+                        "mods/example.jar",
+                        List.of(URI.create("http://127.0.0.1/example.jar")),
+                        "", 0, "required")));
+
+        assertThrows(BackendException.class, () -> installer().downloadFiles(
+                index, temporaryDirectory.resolve("content"), "Invalid",
+                DownloadListener.NONE, new DownloadCancellationToken()));
+    }
+
+    @Test
+    void rejectsDuplicateModpackFilePaths() throws Exception {
+        ModrinthModpackIndex.File file = new ModrinthModpackIndex.File(
+                "mods/example.jar",
+                List.of(URI.create("http://127.0.0.1/example.jar")),
+                "abc", 1, "required");
+        ModrinthModpackIndex index = new ModrinthModpackIndex(
+                "Duplicate", "1", "", Map.of("minecraft", "1.20.1"),
+                List.of(file, file));
+
+        assertThrows(BackendException.class, () -> installer().downloadFiles(
+                index, temporaryDirectory.resolve("content-duplicate"), "Duplicate",
+                DownloadListener.NONE, new DownloadCancellationToken()));
+    }
+
+    @Test
+    void rejectsModpackFileThatConflictsWithOverride() throws Exception {
+        Path archive = writeZip("override-conflict.mrpack", zipEntries(ordered(
+                "modrinth.index.json", "{}".getBytes(StandardCharsets.UTF_8),
+                "overrides/mods/example.jar", "override".getBytes(StandardCharsets.UTF_8)
+        )));
+        Path instance = temporaryDirectory.resolve("content-override");
+        ModpackInstaller installer = installer();
+        installer.extractOverrides(archive, instance, "Conflict.mrpack");
+        ModrinthModpackIndex index = new ModrinthModpackIndex(
+                "Conflict", "1", "", Map.of("minecraft", "1.20.1"),
+                List.of(new ModrinthModpackIndex.File(
+                        "mods/example.jar",
+                        List.of(URI.create("http://127.0.0.1/example.jar")),
+                        "abc", 1, "required")));
+
+        assertThrows(BackendException.class, () -> installer.downloadFiles(
+                index, instance, "Conflict.mrpack",
+                DownloadListener.NONE, new DownloadCancellationToken()));
+    }
+
+    @Test
+    void rejectsDuplicateOverridePaths() throws Exception {
+        Path archive = writeZip("duplicate-override.mrpack", zipEntriesWithDuplicates(
+                "overrides/config/value.txt", "one".getBytes(StandardCharsets.UTF_8),
+                "client-overrides/config/value.txt", "two".getBytes(StandardCharsets.UTF_8)));
+
+        assertThrows(BackendException.class, () -> installer().extractOverrides(
+                archive, temporaryDirectory.resolve("duplicate-override"), "Duplicate.mrpack"));
+    }
+
+    @Test
+    void rejectsModpackArchiveEntryCountOverLimit() throws Exception {
+        Path archive = writeZip("many-overrides.mrpack", zipEntries(ordered(
+                "overrides/mods/a.jar", "a".getBytes(StandardCharsets.UTF_8),
+                "overrides/mods/b.jar", "b".getBytes(StandardCharsets.UTF_8)
+        )));
+
+        assertThrows(BackendException.class, () -> installer(
+                new ArchiveExtractionGuard(1, 1024, 1024))
+                .extractOverrides(archive, temporaryDirectory.resolve("many"), "Many.mrpack"));
+    }
+
+    @Test
+    void rejectsModpackOverrideOverSingleEntryLimit() throws Exception {
+        Path archive = writeZip("large-override.mrpack", zipEntries(Map.of(
+                "overrides/config/value.txt", "toolarge".getBytes(StandardCharsets.UTF_8)
+        )));
+
+        assertThrows(BackendException.class, () -> installer(
+                new ArchiveExtractionGuard(10, 4, 1024))
+                .extractOverrides(archive, temporaryDirectory.resolve("large"), "Large.mrpack"));
+    }
+
     private ModpackInstaller installer() {
+        return installer(new ArchiveExtractionGuard());
+    }
+
+    private ModpackInstaller installer(ArchiveExtractionGuard guard) {
         VersionInstaller versionInstaller = new VersionInstaller();
         FileDownloader downloader = new FileDownloader();
         URI manifest = URI.create("https://example.invalid/version_manifest_v2.json");
@@ -203,7 +293,8 @@ class ModpackInstallerTest {
                         new MetadataService(), manifest, cache),
                 downloader,
                 manifest,
-                cache
+                cache,
+                guard
         );
     }
 
@@ -233,13 +324,46 @@ class ModpackInstallerTest {
     }
 
     private static byte[] zip(String index) throws Exception {
+        return zipEntries(Map.of(
+                "modrinth.index.json", index.getBytes(StandardCharsets.UTF_8)));
+    }
+
+    private static byte[] zipEntries(Map<String, byte[]> entries) throws Exception {
         ByteArrayOutputStream output = new ByteArrayOutputStream();
         try (ZipOutputStream zip = new ZipOutputStream(output)) {
-            zip.putNextEntry(new ZipEntry("modrinth.index.json"));
-            zip.write(index.getBytes(StandardCharsets.UTF_8));
-            zip.closeEntry();
+            for (Map.Entry<String, byte[]> entry : entries.entrySet()) {
+                zip.putNextEntry(new ZipEntry(entry.getKey()));
+                zip.write(entry.getValue());
+                zip.closeEntry();
+            }
         }
         return output.toByteArray();
+    }
+
+    private static Map<String, byte[]> ordered(Object... values) {
+        Map<String, byte[]> entries = new LinkedHashMap<>();
+        for (int index = 0; index < values.length; index += 2) {
+            entries.put((String) values[index], (byte[]) values[index + 1]);
+        }
+        return entries;
+    }
+
+    private static byte[] zipEntriesWithDuplicates(Object... values) throws Exception {
+        ByteArrayOutputStream output = new ByteArrayOutputStream();
+        try (ZipOutputStream zip = new ZipOutputStream(output)) {
+            for (int index = 0; index < values.length; index += 2) {
+                zip.putNextEntry(new ZipEntry((String) values[index]));
+                zip.write((byte[]) values[index + 1]);
+                zip.closeEntry();
+            }
+        }
+        return output.toByteArray();
+    }
+
+    private Path writeZip(String name, byte[] content) throws Exception {
+        Path archive = temporaryDirectory.resolve(name);
+        Files.write(archive, content);
+        return archive;
     }
 
     private static void createFakeInstallerJar(Path jar) throws Exception {

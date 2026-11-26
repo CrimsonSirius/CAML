@@ -45,6 +45,7 @@ import java.util.Locale;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Stream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
@@ -157,12 +158,15 @@ public final class OptiFineInstaller {
         InstanceNameRules.ensureNewInstance(gameDirectory, instanceId);
         Path targetVersionDirectory = SafePaths.resolveChild(
                 gameDirectory.resolve("versions"), instanceId, "version id");
+        AtomicBoolean instanceCreated = new AtomicBoolean();
         try {
             return installInternal(
                     gameVersion, instanceId, forgeVersion, optiFineVersion, gameDirectory,
-                    listener, token, libraryTransaction);
+                    listener, token, libraryTransaction, instanceCreated);
         } catch (IOException | RuntimeException | InterruptedException e) {
-            deleteRecursively(targetVersionDirectory);
+            if (instanceCreated.get()) {
+                deleteRecursively(targetVersionDirectory);
+            }
             throw e;
         }
     }
@@ -175,7 +179,8 @@ public final class OptiFineInstaller {
             Path gameDirectory,
             DownloadListener listener,
             DownloadCancellationToken token,
-            SharedLibraryTransaction libraryTransaction
+            SharedLibraryTransaction libraryTransaction,
+            AtomicBoolean instanceCreated
     ) throws IOException, InterruptedException {
         token.throwIfCancelled();
         Objects.requireNonNull(forgeVersion, "forgeVersion");
@@ -205,6 +210,7 @@ public final class OptiFineInstaller {
                 token,
                 libraryTransaction
         );
+        instanceCreated.set(true);
 
         JavaRuntime java = javaLocator.findSuitable(JavaRequirement.from(base.manifest()))
                 .orElseThrow(() -> new IOException("找不到可用于运行 OptiFine 安装器的 Java"));

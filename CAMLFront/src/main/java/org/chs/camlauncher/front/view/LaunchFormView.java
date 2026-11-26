@@ -3,6 +3,9 @@ package org.chs.camlauncher.front.view;
 import javafx.application.Platform;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
+import javafx.scene.control.ButtonBar;
+import javafx.scene.control.ButtonType;
+import javafx.scene.control.Dialog;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.input.Clipboard;
@@ -104,6 +107,7 @@ final class LaunchFormView extends BorderPane {
 
         usernameField = new CamlTextField("player");
         usernameField.setMaxWidth(Double.MAX_VALUE);
+        usernameField.textProperty().bindBidirectional(launchSettings.offlineUsernameProperty());
 
         statusLabel = new Label();
         statusLabel.getStyleClass().addAll("caml-label-large", "status-ready");
@@ -209,9 +213,10 @@ final class LaunchFormView extends BorderPane {
 
         controller.setOnLaunchFinished(() -> {
             launchTask = null;
-            launchBtn.setDisable(false);
-            launchBtn.setText(UiText.tr("home.launch"));
+            setLaunchState(LaunchUiState.IDLE);
         });
+        controller.setOnGameStarted(() -> setLaunchState(LaunchUiState.RUNNING));
+        controller.setOnLaunchFailed(this::showLaunchError);
 
         controller.setOnGameDirectoryInspected(this::applyGameDirectoryInfo);
 
@@ -275,8 +280,7 @@ final class LaunchFormView extends BorderPane {
             return;
         }
 
-        launchBtn.setDisable(true);
-        launchBtn.setText(UiText.tr("home.launching"));
+        setLaunchState(LaunchUiState.PREPARING);
         onLaunchStarted.run();
 
         launchTask = controller.startGame(version, username, accountChoice,
@@ -285,6 +289,24 @@ final class LaunchFormView extends BorderPane {
         controller.checkXrandrWarning(version, gameDirectory, warning -> {
             if (Boolean.TRUE.equals(warning)) {
                 showXrandrWarning();
+            }
+        });
+    }
+
+    private void setLaunchState(LaunchUiState state) {
+        launchBtn.setDisable(state.disablesLaunch());
+        launchBtn.setText(UiText.tr(state.textKey()));
+    }
+
+    private void showLaunchError(String message) {
+        if (getScene() == null) {
+            return;
+        }
+        Dialog<ButtonType> dialog = LaunchErrorDialog.create(message);
+        dialog.initOwner(getScene().getWindow());
+        dialog.showAndWait().ifPresent(result -> {
+            if (result.getButtonData() == ButtonBar.ButtonData.OK_DONE) {
+                launchGame();
             }
         });
     }

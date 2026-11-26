@@ -15,6 +15,7 @@ public final class DEDEGenerator extends LanguageTranslationGenerator {
         // Allgemein
         t.put("common.back", "Zurück");
         t.put("common.cancel", "Abbrechen");
+        t.put("common.retry", "Erneut versuchen");
         t.put("common.browse", "Durchsuchen");
         t.put("common.save", "Speichern");
         t.put("common.copy", "Befehle kopieren");
@@ -33,6 +34,8 @@ public final class DEDEGenerator extends LanguageTranslationGenerator {
         t.put("home.username", "Offline-Benutzername");
         t.put("home.launch", "Spiel starten");
         t.put("home.launching", "Wird gestartet...");
+        t.put("home.running", "Spiel läuft");
+        t.put("home.launchFailedTitle", "Spielstart fehlgeschlagen");
         t.put("home.browseInstances", "Instanzen durchsuchen");
         t.put("home.manageInstances", "Instanzen verwalten");
         t.put("home.instance.current", "Aktuelle Instanz: %s");

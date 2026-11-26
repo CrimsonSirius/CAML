@@ -15,6 +15,7 @@ public final class ZHCNGenerator extends LanguageTranslationGenerator {
         // 通用
         t.put("common.back", "返回");
         t.put("common.cancel", "取消");
+        t.put("common.retry", "重试");
         t.put("common.browse", "浏览");
         t.put("common.save", "保存");
         t.put("common.copy", "复制命令");
@@ -33,6 +34,8 @@ public final class ZHCNGenerator extends LanguageTranslationGenerator {
         t.put("home.username", "离线用户名");
         t.put("home.launch", "启动游戏");
         t.put("home.launching", "启动中...");
+        t.put("home.running", "游戏运行中");
+        t.put("home.launchFailedTitle", "游戏启动失败");
         t.put("home.browseInstances", "浏览游戏实例");
         t.put("home.manageInstances", "管理实例");
         t.put("home.instance.current", "当前实例：%s");

@@ -15,6 +15,7 @@ public final class RURUGenerator extends LanguageTranslationGenerator {
         // Общее
         t.put("common.back", "Назад");
         t.put("common.cancel", "Отмена");
+        t.put("common.retry", "Повторить");
         t.put("common.browse", "Обзор");
         t.put("common.save", "Сохранить");
         t.put("common.copy", "Копировать команды");
@@ -33,6 +34,8 @@ public final class RURUGenerator extends LanguageTranslationGenerator {
         t.put("home.username", "Имя пользователя в офлайн-режиме");
         t.put("home.launch", "Запустить игру");
         t.put("home.launching", "Запуск...");
+        t.put("home.running", "Игра запущена");
+        t.put("home.launchFailedTitle", "Ошибка запуска игры");
         t.put("home.browseInstances", "Обзор сборок");
         t.put("home.manageInstances", "Управление сборками");
         t.put("home.instance.current", "Текущая сборка: %s");

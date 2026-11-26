@@ -3,6 +3,7 @@ package org.chs.camlauncher.backend.theme;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.FileAlreadyExistsException;
+import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
@@ -85,11 +86,9 @@ public final class ThemeService {
             if (input == null) {
                 throw new IOException("缺少内置主题: " + resource);
             }
-            try {
-                Files.copy(input, target);
-            } catch (FileAlreadyExistsException ignored) {
-                // 另一个启动实例已经完成了首次复制。
-            }
+            copyAtomically(input, target);
+        } catch (FileAlreadyExistsException ignored) {
+            // 另一个启动实例已经完成了首次复制。
         }
     }
 
@@ -154,8 +153,38 @@ public final class ThemeService {
     }
 
     private void writeConfiguredId(String id) throws IOException {
-        Files.writeString(configFile, id + System.lineSeparator(),
-                StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
+        Path parent = configFile.toAbsolutePath().getParent();
+        Files.createDirectories(parent);
+        Path temporary = Files.createTempFile(parent, "caml-theme-", ".tmp");
+        try {
+            Files.writeString(temporary, id + System.lineSeparator(),
+                    StandardOpenOption.TRUNCATE_EXISTING);
+            moveAtomically(temporary, configFile);
+        } finally {
+            Files.deleteIfExists(temporary);
+        }
+    }
+
+    static void copyAtomically(InputStream input, Path target) throws IOException {
+        Path parent = target.toAbsolutePath().getParent();
+        Files.createDirectories(parent);
+        Path temporary = Files.createTempFile(parent, "caml-theme-", ".part");
+        try {
+            Files.copy(input, temporary, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+            moveAtomically(temporary, target);
+        } finally {
+            Files.deleteIfExists(temporary);
+        }
+    }
+
+    private static void moveAtomically(Path source, Path target) throws IOException {
+        try {
+            Files.move(source, target,
+                    java.nio.file.StandardCopyOption.ATOMIC_MOVE,
+                    java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+        } catch (AtomicMoveNotSupportedException e) {
+            Files.move(source, target, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+        }
     }
 
     private ThemeInfo toThemeInfo(Path file) {

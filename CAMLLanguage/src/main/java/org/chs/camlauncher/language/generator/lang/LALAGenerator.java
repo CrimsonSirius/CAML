@@ -15,6 +15,7 @@ public final class LALAGenerator extends LanguageTranslationGenerator {
         // Communia
         t.put("common.back", "Retro");
         t.put("common.cancel", "Abrogare");
+        t.put("common.retry", "Retemptare");
         t.put("common.browse", "Percurrere");
         t.put("common.save", "Servare");
         t.put("common.copy", "Copiare mandata");
@@ -33,6 +34,8 @@ public final class LALAGenerator extends LanguageTranslationGenerator {
         t.put("home.username", "Nomen usoris extra rete");
         t.put("home.launch", "Ludum deducere");
         t.put("home.launching", "Deducitur...");
+        t.put("home.running", "Ludus currit");
+        t.put("home.launchFailedTitle", "Deductio defecit");
         t.put("home.browseInstances", "Instantias percurrere");
         t.put("home.manageInstances", "Instantias administrare");
         t.put("home.instance.current", "Instantia praesens: %s");

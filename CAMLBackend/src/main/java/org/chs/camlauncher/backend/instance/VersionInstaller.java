@@ -141,17 +141,27 @@ public final class VersionInstaller {
             return complete(instanceId, gameDirectory, localJson, listener, token, false);
         }
 
-        // 2. 本地没有该版本，才需要访问官方版本清单。
-        VersionManifest manifest = manifestService.fetchManifestOrCache(manifestUri, manifestCacheFile);
-        VersionManifest.Version remoteVersion = manifest.versions().stream()
-                .filter(version -> versionId.equals(version.id()))
-                .findFirst()
-                .orElseThrow(() -> new IllegalArgumentException(
-                        "Unknown version: " + versionId
-                                + " (本地未安装，官方版本清单中也不存在该版本 ID)"));
+        try (InstanceInstallLock ignored = InstanceInstallLock.acquire(gameDirectory, instanceId)) {
+            if (Files.isRegularFile(localVersionFile)) {
+                DownloadListener.notifyStage(listener, DownloadStage.of("version.checkLocal"));
+                String localJson = Files.readString(localVersionFile, StandardCharsets.UTF_8);
+                return complete(instanceId, gameDirectory, localJson, listener, token, false);
+            }
+            InstanceNameRules.ensureNewInstance(gameDirectory, instanceId);
 
-        String versionJson = manifestService.fetchVersionJson(remoteVersion);
-        return completeNewInstance(instanceId, gameDirectory, versionJson, listener, token);
+            // 2. 本地没有该版本，才需要访问官方版本清单。
+            VersionManifest manifest = manifestService.fetchManifestOrCache(
+                    manifestUri, manifestCacheFile);
+            VersionManifest.Version remoteVersion = manifest.versions().stream()
+                    .filter(version -> versionId.equals(version.id()))
+                    .findFirst()
+                    .orElseThrow(() -> new IllegalArgumentException(
+                            "Unknown version: " + versionId
+                                    + " (本地未安装，官方版本清单中也不存在该版本 ID)"));
+
+            String versionJson = manifestService.fetchVersionJson(remoteVersion);
+            return completeNewInstance(instanceId, gameDirectory, versionJson, listener, token);
+        }
     }
 
     /**
@@ -177,9 +187,11 @@ public final class VersionInstaller {
         Objects.requireNonNull(token, "token");
         token.throwIfCancelled();
         instanceId = validateInstanceId(instanceId);
-        InstanceNameRules.ensureNewInstance(gameDirectory, instanceId);
         Objects.requireNonNull(versionJson, "versionJson");
-        return completeNewInstance(instanceId, gameDirectory, versionJson, listener, token);
+        try (InstanceInstallLock ignored = InstanceInstallLock.acquire(gameDirectory, instanceId)) {
+            InstanceNameRules.ensureNewInstance(gameDirectory, instanceId);
+            return completeNewInstance(instanceId, gameDirectory, versionJson, listener, token);
+        }
     }
 
     private InstalledVersion completeNewInstance(

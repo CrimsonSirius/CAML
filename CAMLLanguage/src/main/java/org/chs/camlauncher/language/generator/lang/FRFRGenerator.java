@@ -15,6 +15,7 @@ public final class FRFRGenerator extends LanguageTranslationGenerator {
         // Général
         t.put("common.back", "Retour");
         t.put("common.cancel", "Annuler");
+        t.put("common.retry", "Réessayer");
         t.put("common.browse", "Parcourir");
         t.put("common.save", "Enregistrer");
         t.put("common.copy", "Copier les commandes");
@@ -33,6 +34,8 @@ public final class FRFRGenerator extends LanguageTranslationGenerator {
         t.put("home.username", "Nom d’utilisateur hors ligne");
         t.put("home.launch", "Lancer le jeu");
         t.put("home.launching", "Lancement...");
+        t.put("home.running", "Jeu en cours");
+        t.put("home.launchFailedTitle", "Échec du lancement");
         t.put("home.browseInstances", "Parcourir les instances");
         t.put("home.manageInstances", "Gérer les instances");
         t.put("home.instance.current", "Instance actuelle : %s");

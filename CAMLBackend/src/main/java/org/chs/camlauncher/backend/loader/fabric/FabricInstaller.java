@@ -85,6 +85,7 @@ public final class FabricInstaller {
 
         Path targetVersionDirectory = SafePaths.resolveChild(
                 gameDirectory.resolve("versions"), normalizedInstanceId, "version id");
+        InstalledVersion installed = null;
         try {
             versionInstaller.install(
                     gameVersion,
@@ -100,7 +101,7 @@ public final class FabricInstaller {
             token.throwIfCancelled();
             String profileJson = fabricService.fetchLoaderProfile(gameVersion, loaderVersion);
             DownloadListener.notifyStage(listener, DownloadStage.of("fabric.loader.install"));
-            InstalledVersion installed = versionInstaller.installProfile(
+            installed = versionInstaller.installProfile(
                     normalizedInstanceId,
                     gameDirectory,
                     profileJson,
@@ -120,7 +121,9 @@ public final class FabricInstaller {
             DownloadListener.notifyStage(listener, DownloadStage.of("fabric.verify"));
             return installed;
         } catch (IOException | RuntimeException | InterruptedException e) {
-            deleteRecursively(targetVersionDirectory);
+            if (installed != null) {
+                deleteRecursively(targetVersionDirectory);
+            }
             throw e;
         }
     }

@@ -13,6 +13,7 @@ import org.chs.camlauncher.backend.auth.yggdrasil.AuthServerInfo;
 import org.chs.camlauncher.backend.auth.yggdrasil.AuthServerService;
 import org.chs.camlauncher.backend.config.BackendConfig;
 import org.chs.camlauncher.backend.config.BackendPaths;
+import org.chs.camlauncher.backend.config.SingleInstanceLock;
 import org.chs.camlauncher.backend.download.plan.AssetDownloadPlanner;
 import org.chs.camlauncher.backend.download.DownloadCancellationToken;
 import org.chs.camlauncher.backend.download.DownloadListener;
@@ -191,6 +192,7 @@ public final class CAMLBackend implements AutoCloseable {
     private volatile String customDownloadApi = "";
     private volatile boolean autoGameLanguage = true;
     private volatile CachedVersionManifest cachedVersionManifest;
+    private SingleInstanceLock instanceLock;
     private boolean started;
 
     public CAMLBackend(BackendConfig config) {
@@ -307,10 +309,13 @@ public final class CAMLBackend implements AutoCloseable {
 
         try {
             BackendPaths.ensure(config);
+            instanceLock = SingleInstanceLock.tryAcquire(config.dataDirectory())
+                    .orElseThrow(() -> new IOException("CAML 已在运行"));
             themeService.ensureBundledThemes();
             latestLogService.start();
             languageService.initialize();
         } catch (IOException e) {
+            closeInstanceLock();
             LOGGER.error("后端初始化失败，无法准备目录、主题、日志或语言系统", e);
             throw new UncheckedIOException("Failed to prepare CAML directories", e);
         }
@@ -1616,6 +1621,20 @@ public final class CAMLBackend implements AutoCloseable {
             LOGGER.info("CAML backend stopped");
         }
         latestLogService.close();
+        closeInstanceLock();
+    }
+
+    private void closeInstanceLock() {
+        if (instanceLock == null) {
+            return;
+        }
+        try {
+            instanceLock.close();
+        } catch (IOException e) {
+            LOGGER.warn("释放单实例锁失败", e);
+        } finally {
+            instanceLock = null;
+        }
     }
 
     private record CachedVersionManifest(VersionManifest manifest, Instant expiresAt) {

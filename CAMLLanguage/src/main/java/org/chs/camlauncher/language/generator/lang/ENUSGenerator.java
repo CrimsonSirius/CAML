@@ -15,6 +15,7 @@ public final class ENUSGenerator extends LanguageTranslationGenerator {
         // Common
         t.put("common.back", "Back");
         t.put("common.cancel", "Cancel");
+        t.put("common.retry", "Retry");
         t.put("common.browse", "Browse");
         t.put("common.save", "Save");
         t.put("common.copy", "Copy commands");
@@ -33,6 +34,8 @@ public final class ENUSGenerator extends LanguageTranslationGenerator {
         t.put("home.username", "Offline username");
         t.put("home.launch", "Launch game");
         t.put("home.launching", "Launching...");
+        t.put("home.running", "Game running");
+        t.put("home.launchFailedTitle", "Game launch failed");
         t.put("home.browseInstances", "Browse instances");
         t.put("home.manageInstances", "Manage instances");
         t.put("home.instance.current", "Current instance: %s");

@@ -2,13 +2,15 @@ package org.chs.camlauncher.backend.mod.service;
 
 import org.chs.camlauncher.backend.error.BackendError;
 import org.chs.camlauncher.backend.error.BackendException;
+import org.chs.camlauncher.backend.io.ArchiveExtractionGuard;
 import org.chs.camlauncher.backend.io.SafePaths;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
+import java.nio.file.StandardOpenOption;
 import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Stream;
@@ -17,12 +19,28 @@ import java.util.zip.ZipInputStream;
 
 /** 将地图 ZIP 解压为 Minecraft 世界目录，并安装到实例的 saves 目录。 */
 final class WorldInstaller {
+    private final ArchiveExtractionGuard extractionGuard;
+
+    WorldInstaller() {
+        this(new ArchiveExtractionGuard());
+    }
+
+    WorldInstaller(ArchiveExtractionGuard extractionGuard) {
+        this.extractionGuard = extractionGuard;
+    }
+
     Path install(Path archive, Path savesDirectory, String fallbackName) throws IOException {
         Files.createDirectories(savesDirectory);
         Path temporary = Files.createTempDirectory(savesDirectory, ".caml-world-");
         String displayName = fallbackName == null || fallbackName.isBlank() ? "world" : fallbackName;
         try {
-            extract(archive, temporary, displayName);
+            try {
+                extract(archive, temporary, displayName);
+            } catch (BackendException e) {
+                throw e;
+            } catch (IOException | RuntimeException e) {
+                throw invalidArchive(displayName, e);
+            }
             Path worldRoot = findWorldRoot(temporary);
             if (worldRoot == null) {
                 throw invalidArchive(displayName);
@@ -38,10 +56,11 @@ final class WorldInstaller {
         }
     }
 
-    private static void extract(Path archive, Path output, String displayName) throws IOException {
+    private void extract(Path archive, Path output, String displayName) throws IOException {
         try (ZipInputStream input = new ZipInputStream(Files.newInputStream(archive))) {
             ZipEntry entry;
             while ((entry = input.getNextEntry()) != null) {
+                extractionGuard.beginEntry();
                 String name = entry.getName();
                 if (name == null || name.isBlank()) {
                     continue;
@@ -51,7 +70,12 @@ final class WorldInstaller {
                     Files.createDirectories(target);
                 } else {
                     Files.createDirectories(target.getParent());
-                    Files.copy(input, target, StandardCopyOption.REPLACE_EXISTING);
+                    try (OutputStream stream = Files.newOutputStream(target,
+                            StandardOpenOption.CREATE,
+                            StandardOpenOption.TRUNCATE_EXISTING,
+                            StandardOpenOption.WRITE)) {
+                        extractionGuard.copy(input, stream);
+                    }
                 }
                 input.closeEntry();
             }
@@ -118,6 +142,11 @@ final class WorldInstaller {
 
     private static BackendException invalidArchive(String displayName) {
         return new BackendException(BackendError.of("mod.error.worldArchiveInvalid", displayName));
+    }
+
+    private static BackendException invalidArchive(String displayName, Throwable cause) {
+        return new BackendException(
+                BackendError.of("mod.error.worldArchiveInvalid", displayName), cause);
     }
 
     private static void deleteRecursively(Path root) {

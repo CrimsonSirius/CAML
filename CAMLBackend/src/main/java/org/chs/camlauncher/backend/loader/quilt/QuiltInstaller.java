@@ -85,6 +85,7 @@ public final class QuiltInstaller {
 
         Path targetVersionDirectory = SafePaths.resolveChild(
                 gameDirectory.resolve("versions"), normalizedInstanceId, "version id");
+        InstalledVersion installed = null;
         try {
             versionInstaller.install(
                     gameVersion,
@@ -100,7 +101,7 @@ public final class QuiltInstaller {
             token.throwIfCancelled();
             String profileJson = quiltService.fetchLoaderProfile(gameVersion, loaderVersion);
             DownloadListener.notifyStage(listener, DownloadStage.of("quilt.loader.install"));
-            InstalledVersion installed = versionInstaller.installProfile(
+            installed = versionInstaller.installProfile(
                     normalizedInstanceId,
                     gameDirectory,
                     profileJson,
@@ -120,7 +121,9 @@ public final class QuiltInstaller {
             DownloadListener.notifyStage(listener, DownloadStage.of("quilt.verify"));
             return installed;
         } catch (IOException | RuntimeException | InterruptedException e) {
-            deleteRecursively(targetVersionDirectory);
+            if (installed != null) {
+                deleteRecursively(targetVersionDirectory);
+            }
             throw e;
         }
     }
