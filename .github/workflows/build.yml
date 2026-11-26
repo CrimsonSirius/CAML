@@ -120,6 +120,26 @@ jobs:
           distribution: zulu
           java-version: '25'
           cache: gradle
+      - name: Probe Java discovery
+        # 记录一次冷启动探测的耗时与输出规模：进程探测若在 runner 上不可用，
+        # JavaLocator 会回退到 release 文件，这里能看出走的是哪条路径。
+        shell: pwsh
+        run: |
+          $java = Join-Path $env:JAVA_HOME 'bin\java.exe'
+          $lines = New-Object System.Collections.Generic.List[string]
+          $lines.Add('### Java probe (Windows)')
+          $lines.Add('```text')
+          $lines.Add("java=$java exists=$(Test-Path $java)")
+          $watch = [System.Diagnostics.Stopwatch]::StartNew()
+          $output = & $java -XshowSettings:properties -version 2>&1 | Out-String
+          $watch.Stop()
+          $lines.Add("elapsed_ms=$($watch.ElapsedMilliseconds) chars=$($output.Length) exit=$LASTEXITCODE")
+          ($output -split "`n" | Select-String -Pattern 'java\.version =|os\.arch =') |
+            ForEach-Object { $lines.Add($_.Line.Trim()) }
+          $lines.Add('```')
+          $report = $lines -join "`n"
+          Write-Output $report
+          Add-Content -LiteralPath $env:GITHUB_STEP_SUMMARY -Value $report
       - name: Run all tests
         shell: pwsh
         env:
