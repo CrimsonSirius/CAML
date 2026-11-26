@@ -1,6 +1,7 @@
 package org.chs.camlauncher.backend.launch;
 
 import org.chs.camlauncher.backend.error.BackendError;
+import org.chs.camlauncher.backend.api.JavaCompatibilityCheck;
 import org.chs.camlauncher.backend.auth.AuthSession;
 import org.chs.camlauncher.backend.auth.OfflineAccount;
 import org.chs.camlauncher.backend.auth.injector.AuthlibInjector;
@@ -143,7 +144,23 @@ public final class GameLaunchService {
             ProcessListener processListener
     ) throws IOException, InterruptedException {
         return launch(versionId, gameDirectory, new OfflineAccount(username).login(),
-                Optional.empty(), options, isolationMode, downloadListener, processListener);
+                Optional.empty(), options, isolationMode, false,
+                downloadListener, processListener);
+    }
+
+    public GameLaunch launch(
+            String versionId,
+            Path gameDirectory,
+            String username,
+            LaunchOptions options,
+            VersionIsolationMode isolationMode,
+            boolean allowIncompatibleJava,
+            DownloadListener downloadListener,
+            ProcessListener processListener
+    ) throws IOException, InterruptedException {
+        return launch(versionId, gameDirectory, new OfflineAccount(username).login(),
+                Optional.empty(), options, isolationMode, allowIncompatibleJava,
+                downloadListener, processListener);
     }
 
     /**
@@ -162,6 +179,21 @@ public final class GameLaunchService {
             DownloadListener downloadListener,
             ProcessListener processListener
     ) throws IOException, InterruptedException {
+        return launch(versionId, gameDirectory, auth, injector, options, isolationMode, false,
+                downloadListener, processListener);
+    }
+
+    public GameLaunch launch(
+            String versionId,
+            Path gameDirectory,
+            AuthSession auth,
+            Optional<AuthlibInjector> injector,
+            LaunchOptions options,
+            VersionIsolationMode isolationMode,
+            boolean allowIncompatibleJava,
+            DownloadListener downloadListener,
+            ProcessListener processListener
+    ) throws IOException, InterruptedException {
         Objects.requireNonNull(gameDirectory, "gameDirectory");
         Objects.requireNonNull(auth, "auth");
         Objects.requireNonNull(isolationMode, "isolationMode");
@@ -173,7 +205,7 @@ public final class GameLaunchService {
                 downloadListener
         );
 
-        JavaRuntime java = selectJava(installed);
+        JavaRuntime java = selectJava(installed, allowIncompatibleJava);
 
         VersionIsolationMode effectiveIsolation = ModpackLayout.isModpack(installed.versionDirectory())
                 ? VersionIsolationMode.FULL
@@ -193,7 +225,8 @@ public final class GameLaunchService {
                 auth,
                 java,
                 options,
-                gameDataDirectory
+                gameDataDirectory,
+                allowIncompatibleJava
         ).withInjector(injector);
 
         plan = virtualAssetInstaller.prepare(plan);
@@ -204,7 +237,9 @@ public final class GameLaunchService {
         return new GameLaunch(installed, auth, java, plan, classpath, process);
     }
 
-    private JavaRuntime selectJava(InstalledVersion installed) throws LaunchException {
+    public JavaCompatibilityCheck inspectJava(InstalledVersion installed) throws LaunchException {
+        JavaRequirement requirement = JavaRequirement.from(installed.manifest());
+        JavaRuntime runtime;
         if (javaSelectionMode == JavaSelectionMode.MANUAL) {
             Path path = selectedJavaPath;
             if (path == null) {
@@ -214,18 +249,69 @@ public final class GameLaunchService {
                         null
                 );
             }
-            return javaLocator.inspect(path).orElseThrow(() -> new LaunchException(
+            runtime = javaLocator.inspect(path).orElseThrow(() -> new LaunchException(
                     LaunchFailure.EXECUTABLE_NOT_FOUND,
                     BackendError.of("launch.manualJavaUnavailable", path),
                     null
             ));
+        } else {
+            runtime = javaLocator.findSuitable(requirement)
+                    .or(() -> javaLocator.findClosest(requirement))
+                    .orElseThrow(() -> javaRequirementNotFound(requirement));
+        }
+        return new JavaCompatibilityCheck(
+                requirement.majorVersion(),
+                runtime.majorVersion(),
+                runtime.executable(),
+                requirement.isSatisfiedBy(runtime)
+        );
+    }
+
+    private JavaRuntime selectJava(InstalledVersion installed, boolean allowIncompatibleJava)
+            throws LaunchException {
+        JavaRequirement requirement = JavaRequirement.from(installed.manifest());
+        return selectedOrClosestJava(requirement, allowIncompatibleJava);
+    }
+
+    private JavaRuntime selectedOrClosestJava(JavaRequirement requirement,
+                                              boolean allowIncompatibleJava)
+            throws LaunchException {
+        if (javaSelectionMode == JavaSelectionMode.MANUAL) {
+            Path path = selectedJavaPath;
+            if (path == null) {
+                throw new LaunchException(
+                        LaunchFailure.EXECUTABLE_NOT_FOUND,
+                        BackendError.of("launch.manualJavaNotConfigured"),
+                        null
+                );
+            }
+            JavaRuntime runtime = javaLocator.inspect(path).orElseThrow(() -> new LaunchException(
+                    LaunchFailure.EXECUTABLE_NOT_FOUND,
+                    BackendError.of("launch.manualJavaUnavailable", path),
+                    null
+            ));
+            if (!allowIncompatibleJava && !requirement.isSatisfiedBy(runtime)) {
+                throw javaRequirementNotFound(requirement);
+            }
+            return runtime;
         }
 
-        JavaRequirement requirement = JavaRequirement.from(installed.manifest());
-        return javaLocator.findSuitable(requirement).orElseThrow(() -> new LaunchException(
+        Optional<JavaRuntime> exact = javaLocator.findSuitable(requirement);
+        if (exact.isPresent()) {
+            return exact.get();
+        }
+        if (allowIncompatibleJava) {
+            return javaLocator.findClosest(requirement)
+                    .orElseThrow(() -> javaRequirementNotFound(requirement));
+        }
+        throw javaRequirementNotFound(requirement);
+    }
+
+    private static LaunchException javaRequirementNotFound(JavaRequirement requirement) {
+        return new LaunchException(
                 LaunchFailure.EXECUTABLE_NOT_FOUND,
                 BackendError.of("launch.javaRequirementNotFound", requirement.majorVersion()),
                 null
-        ));
+        );
     }
 }

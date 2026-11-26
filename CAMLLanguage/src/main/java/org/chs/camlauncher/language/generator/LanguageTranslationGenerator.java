@@ -40,6 +40,12 @@ public abstract class LanguageTranslationGenerator {
         AboutTexts.populateDefaults(translations);
         JavaManagementTexts.populateDefaults(translations);
         ModpackTexts.populateDefaults(translations);
+        translations.putIfAbsent("launch.warning.java.title",
+                "Java version may be incompatible");
+        translations.putIfAbsent("launch.warning.java.message",
+                "This game requires Java %s, but Java %s is selected. Force launching may fail.");
+        translations.putIfAbsent("launch.warning.java.stop", "Stop");
+        translations.putIfAbsent("launch.warning.java.force", "Force launch");
     }
 
     /** 生成翻译文件，返回写入路径。 */

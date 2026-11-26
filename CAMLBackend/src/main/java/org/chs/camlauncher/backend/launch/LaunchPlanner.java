@@ -34,6 +34,17 @@ public final class LaunchPlanner {
             LaunchOptions options,
             Path gameDataDirectory
     ) {
+        return create(instance, auth, java, options, gameDataDirectory, false);
+    }
+
+    public LaunchPlan create(
+            InstalledVersion instance,
+            AuthSession auth,
+            JavaRuntime java,
+            LaunchOptions options,
+            Path gameDataDirectory,
+            boolean allowIncompatibleJava
+    ) {
         Objects.requireNonNull(instance, "instance");
         Objects.requireNonNull(auth, "auth");
         Objects.requireNonNull(java, "java");
@@ -41,7 +52,7 @@ public final class LaunchPlanner {
         Objects.requireNonNull(gameDataDirectory, "gameDataDirectory");
 
         JavaRequirement requirement = JavaRequirement.from(instance.manifest());
-        if (!requirement.isSatisfiedBy(java)) {
+        if (!allowIncompatibleJava && !requirement.isSatisfiedBy(java)) {
             throw new IllegalArgumentException(
                     "Java runtime does not satisfy version requirement: " + requirement
             );

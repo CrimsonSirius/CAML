@@ -20,6 +20,7 @@ import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import org.chs.camlauncher.backend.api.AccountSummary;
 import org.chs.camlauncher.backend.api.GameDirectoryInfo;
+import org.chs.camlauncher.backend.api.JavaCompatibilityCheck;
 import org.chs.camlauncher.front.controller.AccountController;
 import org.chs.camlauncher.front.task.AsyncTaskHandle;
 import org.chs.camlauncher.front.controller.HomeController;
@@ -281,11 +282,32 @@ final class LaunchFormView extends BorderPane {
         }
 
         setLaunchState(LaunchUiState.PREPARING);
-        onLaunchStarted.run();
 
+        launchTask = controller.checkJavaCompatibility(version, gameDirectory, check -> {
+            if (check.compatible()) {
+                startActualLaunch(version, username, accountChoice, gameDirectory, false);
+            } else if (check.hasJava()) {
+                showJavaWarning(check, () -> startActualLaunch(
+                        version, username, accountChoice, gameDirectory, true));
+            } else {
+                setLaunchState(LaunchUiState.IDLE);
+                showLaunchError(UiText.tr("launch.javaRequirementNotFound",
+                        check.requiredMajorVersion()));
+            }
+        }, message -> {
+            setLaunchState(LaunchUiState.IDLE);
+            showLaunchError(message);
+        });
+    }
+
+    private void startActualLaunch(String version, String username, String accountChoice,
+                                   Path gameDirectory, boolean allowIncompatibleJava) {
+        setLaunchState(LaunchUiState.PREPARING);
+        onLaunchStarted.run();
         launchTask = controller.startGame(version, username, accountChoice,
                 launchSettings.maxMemoryMb(), gameDirectory,
-                launchSettings.fullVersionIsolation(), launchSettings.jvmArguments());
+                launchSettings.fullVersionIsolation(), launchSettings.jvmArguments(),
+                allowIncompatibleJava);
         controller.checkXrandrWarning(version, gameDirectory, warning -> {
             if (Boolean.TRUE.equals(warning)) {
                 showXrandrWarning();
@@ -345,6 +367,37 @@ final class LaunchFormView extends BorderPane {
         dialog.setMaxHeight(Region.USE_PREF_SIZE);
         showOverlay.accept(dialog);
         Platform.runLater(close::requestFocus);
+    }
+
+    private void showJavaWarning(JavaCompatibilityCheck check, Runnable forceLaunch) {
+        Label title = new Label(UiText.tr("launch.warning.java.title"));
+        title.getStyleClass().add("app-launch-warning-title");
+
+        Label message = new Label(UiText.tr("launch.warning.java.message",
+                check.requiredMajorVersion(), check.selectedMajorVersion()));
+        message.getStyleClass().addAll("caml-body-large", "caml-on-surface");
+        message.setWrapText(true);
+
+        CamlButton stop = CamlButton.outlined(UiText.tr("launch.warning.java.stop"));
+        stop.setOnAction(event -> {
+            hideOverlay.run();
+            launchTask = null;
+            setLaunchState(LaunchUiState.IDLE);
+        });
+        CamlButton force = CamlButton.filled(UiText.tr("launch.warning.java.force"));
+        force.setOnAction(event -> {
+            hideOverlay.run();
+            forceLaunch.run();
+        });
+        HBox actions = new HBox(stop, force);
+        actions.setAlignment(Pos.CENTER_RIGHT);
+        actions.getStyleClass().add("app-launch-warning-actions");
+
+        VBox dialog = new VBox(title, message, actions);
+        dialog.getStyleClass().addAll("app-launch-warning-dialog", "app-overlay-blocking");
+        dialog.setMaxHeight(Region.USE_PREF_SIZE);
+        showOverlay.accept(dialog);
+        Platform.runLater(stop::requestFocus);
     }
 
     private void applyGameDirectoryInfo(GameDirectoryInfo info) {

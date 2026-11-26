@@ -25,7 +25,7 @@ public record JavaRequirement(int majorVersion, String architecture, int bits) {
     }
 
     public boolean isSatisfiedBy(JavaRuntime runtime) {
-        return runtime.majorVersion() >= majorVersion
+        return runtime.majorVersion() == majorVersion
                 && runtime.architecture().equals(architecture)
                 && (bits <= 0 || runtime.bits() == bits);
     }

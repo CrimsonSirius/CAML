@@ -6,6 +6,7 @@ import javafx.application.Platform;
 import org.chs.camlauncher.backend.api.GameDirectoryInfo;
 import org.chs.camlauncher.backend.api.InstanceDetails;
 import org.chs.camlauncher.backend.api.InstanceModUpdate;
+import org.chs.camlauncher.backend.api.JavaCompatibilityCheck;
 import org.chs.camlauncher.backend.download.DownloadListener;
 import org.chs.camlauncher.backend.instance.VersionIsolationMode;
 import org.chs.camlauncher.backend.launch.GameLaunch;
@@ -93,6 +94,14 @@ public final class HomeController {
 public AsyncTaskHandle<GameLaunch> startGame(String version, String username, String accountChoice,
                                        int memoryMb, Path gameDirectory,
                                        boolean fullVersionIsolation, String jvmArguments) {
+        return startGame(version, username, accountChoice, memoryMb, gameDirectory,
+                fullVersionIsolation, jvmArguments, false);
+    }
+
+    public AsyncTaskHandle<GameLaunch> startGame(String version, String username, String accountChoice,
+                                       int memoryMb, Path gameDirectory,
+                                       boolean fullVersionIsolation, String jvmArguments,
+                                       boolean allowIncompatibleJava) {
         Objects.requireNonNull(gameDirectory, "gameDirectory");
         LaunchOptions options = new LaunchOptions(
                 null, memoryMb, null, null, false,
@@ -106,7 +115,8 @@ public AsyncTaskHandle<GameLaunch> startGame(String version, String username, St
         sendStatus(UiText.tr("status.starting", version), false);
         return context.runLaunch(UiText.tr("operation.launchGame", version),
                 () -> launch(version, gameDirectory, username, accountChoice,
-                        options, isolationMode, downloadListener, processListener),
+                        options, isolationMode, allowIncompatibleJava,
+                        downloadListener, processListener),
                 launch -> {
                     saveLastLaunchedInstance(version);
                     sendStatus(UiText.tr("status.started"), false);
@@ -126,16 +136,25 @@ public AsyncTaskHandle<GameLaunch> startGame(String version, String username, St
     private GameLaunch launch(String version, Path gameDirectory, String username,
                               String accountChoice, LaunchOptions options,
                               VersionIsolationMode isolationMode,
+                              boolean allowIncompatibleJava,
                               DownloadListener downloadListener,
                               ProcessListener processListener)
             throws IOException, InterruptedException {
         if (accountChoice == null || AccountChoice.OFFLINE.equals(accountChoice)) {
             return context.backend().launchGame(version, gameDirectory, username, options,
-                    isolationMode, downloadListener, processListener);
+                    isolationMode, allowIncompatibleJava, downloadListener, processListener);
         }
         String accountId = AccountChoice.DEFAULT.equals(accountChoice) ? null : accountChoice;
         return context.backend().launchGameWithAccount(version, gameDirectory, accountId,
-                options, isolationMode, downloadListener, processListener);
+                options, isolationMode, allowIncompatibleJava, downloadListener, processListener);
+    }
+
+    public AsyncTaskHandle<JavaCompatibilityCheck> checkJavaCompatibility(
+            String version, Path gameDirectory,
+            Consumer<JavaCompatibilityCheck> onChecked, Consumer<String> onError) {
+        return context.runCheck(UiText.tr("operation.launchGame", version),
+                () -> context.backend().checkJavaCompatibility(version, gameDirectory),
+                onChecked, onError);
     }
 
     private ProcessListener createProcessListener() {

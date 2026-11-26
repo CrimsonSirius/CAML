@@ -49,7 +49,8 @@ class QuiltInstallerTest {
         Path baseDirectory = gameDirectory.resolve("versions/1.21.4");
         Files.createDirectories(baseDirectory);
         Files.writeString(baseDirectory.resolve("1.21.4.json"), """
-                {"id":"1.21.4","mainClass":"net.minecraft.client.main.Main"}
+                {"id":"1.21.4","mainClass":"net.minecraft.client.main.Main",
+                 "javaVersion":{"component":"java-runtime-gamma","majorVersion":21}}
                 """);
         Files.write(baseDirectory.resolve("1.21.4.jar"), new byte[]{1});
 

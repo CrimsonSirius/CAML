@@ -173,7 +173,11 @@ public final class MainView extends StackPane {
         shell.setBottom(buildFooter());
         overlayScrim.getStyleClass().add("app-overlay-scrim");
         overlayScrim.setPickOnBounds(true);
-        overlayScrim.setOnMouseClicked(event -> hideOverlay());
+        overlayScrim.setOnMouseClicked(event -> {
+            if (!hasBlockingOverlay()) {
+                hideOverlay();
+            }
+        });
         overlayContent.getStyleClass().add("app-overlay-content");
         overlayLayer.getStyleClass().add("app-overlay");
         overlayLayer.getChildren().addAll(overlayScrim, overlayContent);
@@ -315,6 +319,15 @@ public final class MainView extends StackPane {
         if (wasVisible) {
             FocusSupport.restoreFocus(restoreFocus, pageHost);
         }
+    }
+
+    private boolean hasBlockingOverlay() {
+        return overlayContent.getChildren().stream()
+                .anyMatch(MainView::blocksOverlayDismissal);
+    }
+
+    static boolean blocksOverlayDismissal(Node node) {
+        return node.getStyleClass().contains("app-overlay-blocking");
     }
 
     /**
