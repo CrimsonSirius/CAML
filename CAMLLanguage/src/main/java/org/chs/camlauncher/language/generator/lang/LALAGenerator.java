@@ -411,7 +411,7 @@ public final class LALAGenerator extends LanguageTranslationGenerator {
         t.put("mods.search.source", "Fons");
         t.put("mods.search.gameVersion", "Versio ludi");
         t.put("mods.search.versionHint", "ex. 1.20.1; vacuum omnes significat");
-        t.put("mods.search.loader", "Loader");
+        t.put("mods.search.loader", "Onus");
         t.put("mods.search.allSources", "Omnes fontes");
         t.put("mods.search.allLoaders", "Omnes loaders");
         t.put("mods.search.button", "Quaerere");
@@ -435,7 +435,7 @@ public final class LALAGenerator extends LanguageTranslationGenerator {
         t.put("mods.detail.count", "%d versiones fasciculorum");
         t.put("mods.detail.meta", "Deposita %s · Renovatum %s");
         t.put("mods.detail.versionFilter", "Versio ludi");
-        t.put("mods.detail.loaderFilter", "Loader");
+        t.put("mods.detail.loaderFilter", "Onus");
         t.put("mods.detail.allVersions", "Omnes versiones");
         t.put("mods.detail.allLoaders", "Omnes loaders");
         t.put("mods.detail.empty", "Nullae versiones condicionibus praesentibus congruunt");
@@ -527,5 +527,10 @@ public final class LALAGenerator extends LanguageTranslationGenerator {
         t.put("operation.fetchQuiltApi", "Versiones Quilted Fabric API petere");
         t.put("operation.installQuilt", "Instantiam Quilt %s installare");
     }
-}
 
+    @Override
+    protected void populateSharedDefaults(TranslationTable translations) {
+        LALASharedTexts.populate(translations);
+        super.populateSharedDefaults(translations);
+    }
+}

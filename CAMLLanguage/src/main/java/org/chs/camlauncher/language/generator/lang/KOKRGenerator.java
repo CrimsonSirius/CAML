@@ -527,5 +527,10 @@ public final class KOKRGenerator extends LanguageTranslationGenerator {
         t.put("operation.fetchQuiltApi", "Quilted Fabric API 버전 가져오기");
         t.put("operation.installQuilt", "Quilt 인스턴스 %s 설치");
     }
-}
 
+    @Override
+    protected void populateSharedDefaults(TranslationTable translations) {
+        KOKRSharedTexts.populate(translations);
+        super.populateSharedDefaults(translations);
+    }
+}

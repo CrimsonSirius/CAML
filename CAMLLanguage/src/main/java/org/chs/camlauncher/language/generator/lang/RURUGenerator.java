@@ -527,5 +527,10 @@ public final class RURUGenerator extends LanguageTranslationGenerator {
         t.put("operation.fetchQuiltApi", "Получить версии Quilted Fabric API");
         t.put("operation.installQuilt", "Установить сборку Quilt %s");
     }
-}
 
+    @Override
+    protected void populateSharedDefaults(TranslationTable translations) {
+        RURUSharedTexts.populate(translations);
+        super.populateSharedDefaults(translations);
+    }
+}

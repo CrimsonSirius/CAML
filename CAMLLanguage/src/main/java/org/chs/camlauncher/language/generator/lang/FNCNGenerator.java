@@ -528,4 +528,10 @@ public final class FNCNGenerator extends LanguageTranslationGenerator {
         t.put("operation.fetchQuiltApi", "揪出 Quilted Fabric API 译本");
         t.put("operation.installQuilt", "安顿 Quilt 事例 %s");
     }
+
+    @Override
+    protected void populateSharedDefaults(TranslationTable translations) {
+        FNCNSharedTexts.populate(translations);
+        super.populateSharedDefaults(translations);
+    }
 }

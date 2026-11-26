@@ -99,7 +99,7 @@ public final class FRFRGenerator extends LanguageTranslationGenerator {
 
         // Catégories et sources
         t.put("download.category.release", "Version finale");
-        t.put("download.category.snapshot", "Snapshot");
+        t.put("download.category.snapshot", "Instantané");
         t.put("download.category.old", "Ancienne");
         t.put("download.category.unknown", "Version inconnue");
         t.put("download.source.mirror", "Miroir");
@@ -411,7 +411,7 @@ public final class FRFRGenerator extends LanguageTranslationGenerator {
         t.put("mods.search.source", "Source");
         t.put("mods.search.gameVersion", "Version du jeu");
         t.put("mods.search.versionHint", "p. ex. 1.20.1 ; laissez vide pour toutes");
-        t.put("mods.search.loader", "Loader");
+        t.put("mods.search.loader", "Chargeur");
         t.put("mods.search.allSources", "Toutes les sources");
         t.put("mods.search.allLoaders", "Tous les loaders");
         t.put("mods.search.button", "Rechercher");
@@ -435,7 +435,7 @@ public final class FRFRGenerator extends LanguageTranslationGenerator {
         t.put("mods.detail.count", "%d versions de fichiers");
         t.put("mods.detail.meta", "Téléchargements %s · Mis à jour %s");
         t.put("mods.detail.versionFilter", "Version du jeu");
-        t.put("mods.detail.loaderFilter", "Loader");
+        t.put("mods.detail.loaderFilter", "Chargeur");
         t.put("mods.detail.allVersions", "Toutes les versions");
         t.put("mods.detail.allLoaders", "Tous les loaders");
         t.put("mods.detail.empty", "Aucune version ne correspond aux filtres actuels");
@@ -449,7 +449,7 @@ public final class FRFRGenerator extends LanguageTranslationGenerator {
         t.put("mods.detail.dependencies", "Dépendances :");
         t.put("mods.detail.noDependencies", "Aucune dépendance");
         t.put("mods.dependency.required", "Obligatoire");
-        t.put("mods.dependency.optional", "Facultative");
+        t.put("mods.dependency.optional", "Facultatif");
         t.put("mods.dependency.incompatible", "Incompatible");
         t.put("mods.dependency.embedded", "Intégrée");
         t.put("mods.dependency.unknown", "Inconnue");
@@ -527,5 +527,10 @@ public final class FRFRGenerator extends LanguageTranslationGenerator {
         t.put("operation.fetchQuiltApi", "Récupérer les versions de Quilted Fabric API");
         t.put("operation.installQuilt", "Installer l’instance Quilt %s");
     }
-}
 
+    @Override
+    protected void populateSharedDefaults(TranslationTable translations) {
+        FRFRSharedTexts.populate(translations);
+        super.populateSharedDefaults(translations);
+    }
+}

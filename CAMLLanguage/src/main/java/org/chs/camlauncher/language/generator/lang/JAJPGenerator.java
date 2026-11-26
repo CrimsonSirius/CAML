@@ -527,5 +527,10 @@ public final class JAJPGenerator extends LanguageTranslationGenerator {
         t.put("operation.fetchQuiltApi", "Quilted Fabric API のバージョンを取得");
         t.put("operation.installQuilt", "Quilt インスタンス %s をインストール");
     }
-}
 
+    @Override
+    protected void populateSharedDefaults(TranslationTable translations) {
+        JAJPSharedTexts.populate(translations);
+        super.populateSharedDefaults(translations);
+    }
+}

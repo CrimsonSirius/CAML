@@ -23,11 +23,15 @@ import java.io.Reader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -75,6 +79,20 @@ class LanguageTest {
     }
 
     @Test
+    void generatedPlaceholdersMatchEnglish(@TempDir Path directory) throws Exception {
+        Map<String, Map<String, String>> generated = generated(directory);
+        Map<String, String> enus = generated.get("en_us");
+
+        for (Map.Entry<String, Map<String, String>> locale : generated.entrySet()) {
+            for (Map.Entry<String, String> message : locale.getValue().entrySet()) {
+                assertEquals(placeholders(enus.get(message.getKey())),
+                        placeholders(message.getValue()),
+                        locale.getKey() + " 的占位符必须与英文一致: " + message.getKey());
+            }
+        }
+    }
+
+    @Test
     void translationTableRejectsDuplicateKeys() {
         TranslationTable table = new TranslationTable();
         table.put("duplicate.key", "first");
@@ -108,4 +126,19 @@ class LanguageTest {
                     }.getType()));
         }
     }
+
+    private static List<String> placeholders(String template) {
+        List<String> result = new ArrayList<>();
+        if (template == null) {
+            return result;
+        }
+        Matcher matcher = PLACEHOLDER.matcher(template);
+        while (matcher.find()) {
+            result.add(matcher.group());
+        }
+        Collections.sort(result);
+        return result;
+    }
+
+    private static final Pattern PLACEHOLDER = Pattern.compile("%(?:\\d+\\$)?[a-zA-Z%]");
 }
