@@ -2,8 +2,6 @@ package org.chs.camlauncher.backend.auth;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.chs.camlauncher.backend.api.AccountSummary;
-import org.chs.camlauncher.backend.api.InstanceAccountMismatch;
 import org.chs.camlauncher.backend.auth.injector.AuthlibInjector;
 import org.chs.camlauncher.backend.auth.injector.AuthlibInjectorService;
 import org.chs.camlauncher.backend.auth.microsoft.MicrosoftAuthService;

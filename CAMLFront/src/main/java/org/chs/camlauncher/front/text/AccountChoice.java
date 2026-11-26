@@ -1,6 +1,6 @@
 package org.chs.camlauncher.front.text;
 
-import org.chs.camlauncher.backend.api.AccountSummary;
+import org.chs.camlauncher.backend.auth.AccountSummary;
 
 /**
  * 账号在界面上的展示文本。

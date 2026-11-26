@@ -1,6 +1,5 @@
 package org.chs.camlauncher.backend.settings;
 
-import org.chs.camlauncher.backend.api.WindowState;
 import org.chs.camlauncher.backend.instance.VersionIsolationMode;
 import org.chs.camlauncher.backend.download.source.DownloadSourceMode;
 import org.chs.camlauncher.backend.runtime.JavaSelectionMode;

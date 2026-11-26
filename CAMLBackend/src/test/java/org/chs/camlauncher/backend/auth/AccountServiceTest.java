@@ -2,7 +2,6 @@ package org.chs.camlauncher.backend.auth;
 
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
-import org.chs.camlauncher.backend.api.AccountSummary;
 import org.chs.camlauncher.backend.auth.injector.AuthlibInjectorService;
 import org.chs.camlauncher.backend.auth.store.AccountStore;
 import org.chs.camlauncher.backend.auth.store.AuthServerStore;

@@ -3,8 +3,8 @@ package org.chs.camlauncher.front.controller;
 import org.chs.camlauncher.front.task.AsyncTaskHandle;
 
 import javafx.application.Platform;
-import org.chs.camlauncher.backend.api.AccountSummary;
-import org.chs.camlauncher.backend.api.InstanceAccountMismatch;
+import org.chs.camlauncher.backend.auth.AccountSummary;
+import org.chs.camlauncher.backend.auth.InstanceAccountMismatch;
 import org.chs.camlauncher.backend.auth.microsoft.MicrosoftDeviceCode;
 import org.chs.camlauncher.backend.auth.yggdrasil.AuthServerInfo;
 import org.chs.camlauncher.front.text.UiText;

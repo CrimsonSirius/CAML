@@ -1,7 +1,7 @@
 package org.chs.camlauncher.backend.launch;
 
 import org.chs.camlauncher.backend.error.BackendError;
-import org.chs.camlauncher.backend.api.JavaCompatibilityCheck;
+import org.chs.camlauncher.backend.runtime.JavaCompatibilityCheck;
 import org.chs.camlauncher.backend.auth.AuthSession;
 import org.chs.camlauncher.backend.auth.OfflineAccount;
 import org.chs.camlauncher.backend.auth.injector.AuthlibInjector;

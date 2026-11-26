@@ -1,4 +1,4 @@
-package org.chs.camlauncher.backend.api;
+package org.chs.camlauncher.backend.instance;
 
 /**
  * 实例 resourcepacks 目录中的一个资源包。

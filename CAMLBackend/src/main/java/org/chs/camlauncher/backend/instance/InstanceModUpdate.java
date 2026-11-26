@@ -1,4 +1,4 @@
-package org.chs.camlauncher.backend.api;
+package org.chs.camlauncher.backend.instance;
 
 import org.chs.camlauncher.backend.mod.model.ModFile;
 

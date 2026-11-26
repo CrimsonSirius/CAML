@@ -1,6 +1,5 @@
 package org.chs.camlauncher.backend.instance;
 
-import org.chs.camlauncher.backend.api.InstanceDetails;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
