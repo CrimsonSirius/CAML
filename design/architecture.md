@@ -1,6 +1,6 @@
 # CAML 总体架构
 
-> 本文按当前代码重写，最后核对时间：2026-11-23；核对基线：`c86eb05`。
+> 本文按当前代码重写，最后核对时间：2026-11-26。
 > 涉及“已实现/未实现”的表述以仓库代码和测试为准，不以历史计划为准。
 
 ## 1. 目标与硬边界
@@ -150,9 +150,10 @@ Linux + LWJGL 2 启动前会异步检查 `xrandr`；缺失时前端显示非阻�
 
 - 离线账号：稳定离线 UUID，仅本地。
 - 微软账号：OAuth 2.0 设备码 → Xbox Live → XSTS → Minecraft Services → entitlements/profile；accessToken 与 refreshToken 加密保存，启动前按过期时间刷新。
-- Yggdrasil：metadata、authenticate、refresh、validate；支持多角色切换。网络/5xx/限流按“暂不可用”分类，可继续使用已有 token。
-- 实例账号优先，其次全局默认账号；未配置账号时主页可退回输入的离线用户名。
+- Yggdrasil：metadata、authenticate、refresh、validate；支持多角色切换，启动刷新时把服务器最新角色名与角色列表写回账号。网络/5xx/限流按“暂不可用”分类，可继续使用已有 token。
+- 实例账号优先，其次全局默认账号；未配置账号时主页可退回输入的离线用户名；游戏位置变化后可检测并套用旧位置的实例绑定。
 - 第三方账号通过 authlib-injector `-javaagent` 注入，不修改版本 JSON、libraries 或 classpath。
+- 尚未提供第三方服务器的两步验证/OAuth 辅助登录、账号头像和账号导入/导出。
 
 ### 6.6 内容下载
 
@@ -212,7 +213,7 @@ UI 更新统一切回 `Platform.runLater`。下载页每 200ms 轮询遥测，�
 
 ## 10. 测试与当前限制
 
-当前测试共 103 个测试类、407 个测试方法，覆盖后端、前端和语言一致性；最近一次全量结果为 0 failure / 0 error / 0 skipped，详见 `HANDOFF.md`。
+当前测试共 122 个测试类、489 个测试方法，覆盖后端、前端和语言一致性；最近一次全量结果为 0 failure / 0 error / 0 skipped。
 
 当前明确未提供：
 
