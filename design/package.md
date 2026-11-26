@@ -288,7 +288,18 @@ build/packages/SHA256SUMS.txt
   同一份模块列表）；少列模块只会在用户机器上抛 `ClassNotFoundException`；
 - `runtime/bin/java(.exe)` 必须不存在，否则说明 `--strip-native-commands` 没生效。
 
-### 12.5 并发与超时
+### 12.5 失败诊断
+
+两个测试 job 在失败时会把 JUnit XML 里的失败用例名和首行断言消息写进 Run Summary，
+两个打包 job 则在打包前把 `JAVA_HOME`、JDK 的 `IMPLEMENTOR`/`JAVA_VERSION` 以及
+`jpackage`/`jlink`/`javac` 是否存在写进 Run Summary 并运行 `printPackagingJdk`。
+这两块信息足以区分“用例本身跨平台”与“runner 上的 JDK 不含 jpackage / 供应商不符”，
+不需要下载 artifact 才能定位。
+
+PowerShell 步骤的脚本正文保持 ASCII：GitHub 把 `run` 保存为无 BOM 的 UTF-8，
+非 ASCII 字符在 PowerShell 5.1 下会被按 ANSI 解码而破坏引号配对。
+
+### 12.6 并发与超时
 
 - `Build` 用 `cancel-in-progress: true`，同一分支连续推送取消旧运行；
 - 两个 `Package` workflow 用固定前缀 `caml-linux-packages-<ref>` /

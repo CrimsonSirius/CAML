@@ -40,6 +40,26 @@ jobs:
           sudo apt-get install -y rpm
       - name: Make Gradle wrapper executable
         run: chmod +x gradlew
+      - name: Diagnose packaging JDK
+        # 打包失败的常见根源是 runner 上的 JDK 不含 jpackage/jlink 或供应商不符；
+        # 这里把判定依据直接写进 Run Summary，省去翻日志。
+        run: |
+          set -uo pipefail
+          {
+            echo '### 打包 JDK（Linux）'
+            echo '```text'
+            echo "JAVA_HOME=${JAVA_HOME:-<unset>}"
+            if [ -f "${JAVA_HOME:-/nonexistent}/release" ]; then
+              grep -E '^(IMPLEMENTOR|JAVA_VERSION|OS_ARCH|IMAGE_TYPE)=' "$JAVA_HOME/release" || true
+            else
+              echo 'release: MISSING'
+            fi
+            for tool in jpackage jlink javac; do
+              if [ -x "${JAVA_HOME:-/nonexistent}/bin/$tool" ]; then echo "$tool: ok"; else echo "$tool: MISSING"; fi
+            done
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          ./gradlew printPackagingJdk --no-daemon || true
       - name: Resolve package identity
         id: package
         # 输入通过环境变量传入，不直接拼进 shell；并在打包前校验版本格式，
