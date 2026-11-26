@@ -15,6 +15,7 @@ public final class BOCNGenerator extends LanguageTranslationGenerator {
         // སྤྱི་ཡོངས
         t.put("common.back", "ཕྱིར་ལོག");
         t.put("common.cancel", "རྩིས་མེད");
+        t.put("common.retry", "བསྐྱར་འབད");
         t.put("common.browse", "བཤེར་བ");
         t.put("common.save", "ཉར་ཚགས");
         t.put("common.copy", "བཤུས་ཤོག");
@@ -33,6 +34,8 @@ public final class BOCNGenerator extends LanguageTranslationGenerator {
         t.put("home.username", "དྲ་མེད་བེད་སྤྱོད་མིང");
         t.put("home.launch", "རྩེད་མོ་འགོ་འཛུགས");
         t.put("home.launching", "འགོ་འཛུགས་བཞིན...");
+        t.put("home.running", "རྩེད་མོ་འཁོར་བཞིན");
+        t.put("home.launchFailedTitle", "རྩེད་མོ་འགོ་འཛུགས་མ་ཐུབ");
         t.put("home.browseInstances", "བཟོ་བཅོས་བཤེར་བ");
         t.put("home.manageInstances", "བཟོ་བཅོས་དོ་དམ");
         t.put("home.instance.current", "ད་ལྟའི་བཟོ་བཅོས: %s");

@@ -11,6 +11,7 @@ import org.chs.camlauncher.backend.error.BackendException;
 import org.chs.camlauncher.backend.instance.InstanceNameRules;
 import org.chs.camlauncher.backend.instance.SharedLibraryTransaction;
 import org.chs.camlauncher.backend.instance.VersionInstaller;
+import org.chs.camlauncher.backend.io.ArchiveExtractionGuard;
 import org.chs.camlauncher.backend.io.SafePaths;
 import org.chs.camlauncher.backend.loader.ExternalLoaderInstaller;
 import org.chs.camlauncher.backend.loader.fabric.FabricInstaller;
@@ -20,17 +21,20 @@ import org.chs.camlauncher.backend.mod.model.ModFile;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
+import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Enumeration;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
@@ -43,6 +47,7 @@ public final class ModpackInstaller {
     private final FileDownloader fileDownloader;
     private final URI manifestUri;
     private final Path manifestCacheFile;
+    private final ArchiveExtractionGuard extractionGuard;
     private volatile int downloadConcurrency = DownloadConcurrency.DEFAULT;
 
     public ModpackInstaller(
@@ -54,6 +59,20 @@ public final class ModpackInstaller {
             URI manifestUri,
             Path manifestCacheFile
     ) {
+        this(versionInstaller, fabricInstaller, quiltInstaller, externalLoaderInstaller,
+                fileDownloader, manifestUri, manifestCacheFile, new ArchiveExtractionGuard());
+    }
+
+    ModpackInstaller(
+            VersionInstaller versionInstaller,
+            FabricInstaller fabricInstaller,
+            QuiltInstaller quiltInstaller,
+            ExternalLoaderInstaller externalLoaderInstaller,
+            FileDownloader fileDownloader,
+            URI manifestUri,
+            Path manifestCacheFile,
+            ArchiveExtractionGuard extractionGuard
+    ) {
         this.versionInstaller = Objects.requireNonNull(versionInstaller, "versionInstaller");
         this.fabricInstaller = Objects.requireNonNull(fabricInstaller, "fabricInstaller");
         this.quiltInstaller = Objects.requireNonNull(quiltInstaller, "quiltInstaller");
@@ -62,6 +81,7 @@ public final class ModpackInstaller {
         this.fileDownloader = Objects.requireNonNull(fileDownloader, "fileDownloader");
         this.manifestUri = Objects.requireNonNull(manifestUri, "manifestUri");
         this.manifestCacheFile = Objects.requireNonNull(manifestCacheFile, "manifestCacheFile");
+        this.extractionGuard = Objects.requireNonNull(extractionGuard, "extractionGuard");
     }
 
     public void setDownloadConcurrency(int downloadConcurrency) {
@@ -84,6 +104,7 @@ public final class ModpackInstaller {
 
         Path archive = Files.createTempFile(gameDirectory, ".caml-modpack-", ".mrpack");
         Path instanceDirectory = gameDirectory.resolve("versions").resolve(instance);
+        boolean loaderInstalled = false;
         try {
             downloadArchive(file, archive, listener, token);
             ModrinthModpackIndex index = readIndex(archive, file.fileName());
@@ -91,16 +112,20 @@ public final class ModpackInstaller {
                 try (SharedLibraryTransaction libraryTransaction = SharedLibraryTransaction.begin(
                         gameDirectory.resolve("libraries"))) {
                     installLoader(index, instance, gameDirectory, listener, token, libraryTransaction);
+                    loaderInstalled = true;
                     installContent(archive, instanceDirectory, index, file, listener, token);
                     libraryTransaction.commit();
                 }
             } else {
                 installLoader(index, instance, gameDirectory, listener, token, null);
+                loaderInstalled = true;
                 installContent(archive, instanceDirectory, index, file, listener, token);
             }
             return new ModDownloadResult(instanceDirectory, file);
         } catch (IOException | RuntimeException | InterruptedException e) {
-            deleteRecursively(instanceDirectory);
+            if (loaderInstalled) {
+                deleteRecursively(instanceDirectory);
+            }
             throw e;
         } finally {
             Files.deleteIfExists(archive);
@@ -139,7 +164,7 @@ public final class ModpackInstaller {
         ), listener, null, token);
     }
 
-    private static ModrinthModpackIndex readIndex(Path archive, String displayName) throws IOException {
+    private ModrinthModpackIndex readIndex(Path archive, String displayName) throws IOException {
         try (ZipFile zip = new ZipFile(archive.toFile())) {
             ZipEntry entry = zip.getEntry("modrinth.index.json");
             if (entry == null) {
@@ -147,7 +172,8 @@ public final class ModpackInstaller {
             }
             byte[] bytes;
             try (InputStream input = zip.getInputStream(entry)) {
-                bytes = input.readAllBytes();
+                extractionGuard.beginEntry();
+                bytes = extractionGuard.readAll(input);
             }
             return ModrinthModpackIndex.parse(new String(bytes, StandardCharsets.UTF_8));
         } catch (BackendException e) {
@@ -243,11 +269,12 @@ public final class ModpackInstaller {
                 + loader + "/neoforge-" + loader + "-installer.jar");
     }
 
-    private static void extractOverrides(Path archive, Path instanceDirectory, String displayName)
+    void extractOverrides(Path archive, Path instanceDirectory, String displayName)
             throws IOException {
         try (ZipFile zip = new ZipFile(archive.toFile())) {
-            extractPrefix(zip, "overrides/", instanceDirectory, displayName);
-            extractPrefix(zip, "client-overrides/", instanceDirectory, displayName);
+            Set<Path> extractedFiles = new HashSet<>();
+            extractPrefix(zip, "overrides/", instanceDirectory, displayName, extractedFiles);
+            extractPrefix(zip, "client-overrides/", instanceDirectory, displayName, extractedFiles);
         } catch (BackendException e) {
             throw e;
         } catch (IOException | RuntimeException e) {
@@ -255,11 +282,12 @@ public final class ModpackInstaller {
         }
     }
 
-    private static void extractPrefix(
+    private void extractPrefix(
             ZipFile zip,
             String prefix,
             Path instanceDirectory,
-            String displayName
+            String displayName,
+            Set<Path> extractedFiles
     ) throws IOException {
         Enumeration<? extends ZipEntry> entries = zip.entries();
         while (entries.hasMoreElements()) {
@@ -268,6 +296,7 @@ public final class ModpackInstaller {
             if (!name.startsWith(prefix)) {
                 continue;
             }
+            extractionGuard.beginEntry();
             String relative = name.substring(prefix.length());
             if (relative.isBlank()) {
                 continue;
@@ -281,15 +310,23 @@ public final class ModpackInstaller {
             if (entry.isDirectory()) {
                 Files.createDirectories(target);
             } else {
+                if (!extractedFiles.add(target)) {
+                    throw invalidArchive(displayName);
+                }
                 Files.createDirectories(target.getParent());
                 try (InputStream input = zip.getInputStream(entry)) {
-                    Files.copy(input, target, StandardCopyOption.REPLACE_EXISTING);
+                    try (OutputStream output = Files.newOutputStream(target,
+                            StandardOpenOption.CREATE,
+                            StandardOpenOption.TRUNCATE_EXISTING,
+                            StandardOpenOption.WRITE)) {
+                        extractionGuard.copy(input, output);
+                    }
                 }
             }
         }
     }
 
-    private void downloadFiles(
+    void downloadFiles(
             ModrinthModpackIndex index,
             Path instanceDirectory,
             String displayName,
@@ -297,6 +334,7 @@ public final class ModpackInstaller {
             DownloadCancellationToken token
     ) throws IOException, InterruptedException {
         List<DownloadItem> items = new ArrayList<>();
+        Set<Path> destinations = new HashSet<>();
         for (ModrinthModpackIndex.File file : index.files()) {
             if (file.clientUnsupported()) {
                 continue;
@@ -305,12 +343,20 @@ public final class ModpackInstaller {
                 throw new BackendException(BackendError.of(
                         "modpack.error.missingFileUrl", file.path()));
             }
+            if (!hasText(file.sha1()) || file.size() <= 0) {
+                throw new BackendException(BackendError.of(
+                        "modpack.error.invalidFile", file.path()));
+            }
             Path target;
             try {
                 target = SafePaths.resolveUnder(instanceDirectory, file.path(), "modpack file");
             } catch (IllegalArgumentException e) {
                 throw new BackendException(BackendError.of(
                         "modpack.error.invalidFile", file.path()), e);
+            }
+            if (!destinations.add(target) || Files.exists(target)) {
+                throw new BackendException(BackendError.of(
+                        "modpack.error.invalidFile", file.path()));
             }
             items.add(new DownloadItem(
                     file.path(),
@@ -322,6 +368,10 @@ public final class ModpackInstaller {
         }
         DownloadExecutor.download(items, downloadConcurrency, listener,
                 (item, progress) -> fileDownloader.download(item, progress, null, token), token);
+    }
+
+    private static boolean hasText(String value) {
+        return value != null && !value.isBlank();
     }
 
     private static BackendException invalidArchive(String displayName) {

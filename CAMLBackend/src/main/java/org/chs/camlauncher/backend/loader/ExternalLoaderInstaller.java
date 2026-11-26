@@ -19,6 +19,7 @@ import org.chs.camlauncher.backend.download.DownloadListener;
 import org.chs.camlauncher.backend.download.FileDownloader;
 import org.chs.camlauncher.backend.io.SafePaths;
 import org.chs.camlauncher.backend.instance.InstalledVersion;
+import org.chs.camlauncher.backend.instance.InstanceInstallLock;
 import org.chs.camlauncher.backend.instance.InstanceNameRules;
 import org.chs.camlauncher.backend.instance.SharedLibraryTransaction;
 import org.chs.camlauncher.backend.instance.VersionInstaller;
@@ -157,123 +158,131 @@ public final class ExternalLoaderInstaller {
                     "安装 " + loaderName + " 时实例名不能与游戏版本号相同");
         }
 
-        InstanceNameRules.ensureNewInstance(gameDirectory, normalizedInstanceId);
-        Path targetVersionDirectory = gameDirectory
-                .resolve("versions")
-                .resolve(normalizedInstanceId)
-                .normalize();
+        try (InstanceInstallLock ignored = InstanceInstallLock.acquire(
+                gameDirectory, normalizedInstanceId)) {
+            InstanceNameRules.ensureNewInstance(gameDirectory, normalizedInstanceId);
+            Path targetVersionDirectory = gameDirectory
+                    .resolve("versions")
+                    .resolve(normalizedInstanceId)
+                    .normalize();
 
-        InstalledVersion base = versionInstaller.install(
-                gameVersion,
-                gameVersion,
-                gameDirectory,
-                manifestUri,
-                manifestCacheFile,
-                listener,
-                token
-        );
-        DownloadListener.notifyStage(listener, DownloadStage.of("loader.installer.prepare", loaderName));
-        JavaRuntime java = javaLocator.findSuitable(JavaRequirement.from(base.manifest()))
-                .orElseThrow(() -> new IOException(
-                        "找不到可用于运行 " + loaderName + " 安装器的 Java"));
-
-        Path preparedStaging = Files.createTempDirectory(
-                gameDirectory,
-                ".caml-" + loaderName.toLowerCase() + "-install-prepare-"
-        );
-        Path attemptStaging = null;
-        try {
-            prepareStaging(preparedStaging, gameVersion, base);
-            Path installerJar = preparedStaging.resolve("installer.jar");
-            String installerSha1 = resolveSha1(installerUri);
-            DownloadListener.notifyStage(listener,
-                    DownloadStage.of("loader.installer.download", loaderName));
-            token.throwIfCancelled();
-            DownloadExecutor.downloadSingle(new DownloadItem(
-                            loaderName + " installer",
-                            DownloadSources.candidates(sources, installerUri.toString()),
-                            installerJar,
-                            installerSha1,
-                            -1
-                    ),
-                    listener,
-                    (item, itemListener) -> fileDownloader.download(
-                            item, itemListener, ExternalLoaderInstaller::validateInstallerArchive, token),
-                    token);
-
-            token.throwIfCancelled();
-            String installedVersionId = readInstallerVersionId(installerJar);
-            predownloadInstallerLibraries(
-                    loaderName, installerJar, preparedStaging, listener, token);
-            DownloadListener.notifyStage(listener,
-                    DownloadStage.of("loader.installer.run", loaderName));
-            IOException lastFailure = null;
-            for (int attempt = 0; attempt < INSTALL_ATTEMPTS; attempt++) {
-                token.throwIfCancelled();
-                Path candidate = Files.createTempDirectory(
-                        gameDirectory,
-                        ".caml-" + loaderName.toLowerCase() + "-install-attempt-"
-                );
-                boolean keepCandidate = false;
-                try {
-                    copyTree(preparedStaging, candidate);
-                    String installerOutput = runInstaller(
-                            loaderName, java, candidate.resolve("installer.jar"), candidate, token);
-                    Path installedVersionDirectory = candidate.resolve("versions")
-                            .resolve(installedVersionId);
-                    if (!Files.isDirectory(installedVersionDirectory)) {
-                        throw new IOException(
-                                loaderName + " 安装器没有生成版本目录: " + installedVersionDirectory
-                                        + "\n安装器输出:\n" + installerOutput);
-                    }
-                    validateGeneratedVersion(loaderName, installedVersionDirectory, installedVersionId);
-                    attemptStaging = candidate;
-                    keepCandidate = true;
-                    break;
-                } catch (IOException e) {
-                    lastFailure = e;
-                    if (attempt + 1 < INSTALL_ATTEMPTS) {
-                        LOGGER.warn("{} 安装器第 {} 次尝试失败，将使用全新 staging 重试",
-                                loaderName, attempt + 1, e);
-                    }
-                } finally {
-                    if (!keepCandidate) {
-                        deleteRecursively(candidate);
-                    }
-                }
-            }
-            if (attemptStaging == null) {
-                throw lastFailure == null
-                        ? new IOException(loaderName + " 安装器多次尝试后仍未生成版本目录")
-                        : lastFailure;
-            }
-
-            DownloadListener.notifyStage(listener, DownloadStage.of("loader.files.merge", loaderName));
-            token.throwIfCancelled();
-            libraryTransaction.merge(attemptStaging.resolve("libraries"));
-            moveVersionDirectory(
-                    attemptStaging.resolve("versions").resolve(installedVersionId),
-                    targetVersionDirectory,
-                    installedVersionId,
-                    normalizedInstanceId
-            );
-            DownloadListener.notifyStage(listener, DownloadStage.of("loader.verify", loaderName));
-            InstalledVersion installed = versionInstaller.install(
-                    normalizedInstanceId,
+            InstalledVersion base = versionInstaller.install(
+                    gameVersion,
+                    gameVersion,
                     gameDirectory,
                     manifestUri,
                     manifestCacheFile,
                     listener,
                     token
             );
-            verifyInstalledLibraries(loaderName, installed);
-            return installed;
-        } catch (IOException | RuntimeException | InterruptedException e) {
-            deleteRecursively(targetVersionDirectory);
-            throw e;
-        } finally {
-            deleteRecursively(attemptStaging);
-            deleteRecursively(preparedStaging);
+            DownloadListener.notifyStage(listener,
+                    DownloadStage.of("loader.installer.prepare", loaderName));
+            JavaRuntime java = javaLocator.findSuitable(JavaRequirement.from(base.manifest()))
+                    .orElseThrow(() -> new IOException(
+                            "找不到可用于运行 " + loaderName + " 安装器的 Java"));
+
+            Path preparedStaging = Files.createTempDirectory(
+                    gameDirectory,
+                    ".caml-" + loaderName.toLowerCase() + "-install-prepare-"
+            );
+            Path attemptStaging = null;
+            try {
+                prepareStaging(preparedStaging, gameVersion, base);
+                Path installerJar = preparedStaging.resolve("installer.jar");
+                String installerSha1 = resolveSha1(installerUri);
+                DownloadListener.notifyStage(listener,
+                        DownloadStage.of("loader.installer.download", loaderName));
+                token.throwIfCancelled();
+                DownloadExecutor.downloadSingle(new DownloadItem(
+                                loaderName + " installer",
+                                DownloadSources.candidates(sources, installerUri.toString()),
+                                installerJar,
+                                installerSha1,
+                                -1
+                        ),
+                        listener,
+                        (item, itemListener) -> fileDownloader.download(
+                                item, itemListener,
+                                ExternalLoaderInstaller::validateInstallerArchive, token),
+                        token);
+
+                token.throwIfCancelled();
+                String installedVersionId = readInstallerVersionId(installerJar);
+                predownloadInstallerLibraries(
+                        loaderName, installerJar, preparedStaging, listener, token);
+                DownloadListener.notifyStage(listener,
+                        DownloadStage.of("loader.installer.run", loaderName));
+                IOException lastFailure = null;
+                for (int attempt = 0; attempt < INSTALL_ATTEMPTS; attempt++) {
+                    token.throwIfCancelled();
+                    Path candidate = Files.createTempDirectory(
+                            gameDirectory,
+                            ".caml-" + loaderName.toLowerCase() + "-install-attempt-"
+                    );
+                    boolean keepCandidate = false;
+                    try {
+                        copyTree(preparedStaging, candidate);
+                        String installerOutput = runInstaller(
+                                loaderName, java, candidate.resolve("installer.jar"), candidate, token);
+                        Path installedVersionDirectory = candidate.resolve("versions")
+                                .resolve(installedVersionId);
+                        if (!Files.isDirectory(installedVersionDirectory)) {
+                            throw new IOException(
+                                    loaderName + " 安装器没有生成版本目录: " + installedVersionDirectory
+                                            + "\n安装器输出:\n" + installerOutput);
+                        }
+                        validateGeneratedVersion(
+                                loaderName, installedVersionDirectory, installedVersionId);
+                        attemptStaging = candidate;
+                        keepCandidate = true;
+                        break;
+                    } catch (IOException e) {
+                        lastFailure = e;
+                        if (attempt + 1 < INSTALL_ATTEMPTS) {
+                            LOGGER.warn("{} 安装器第 {} 次尝试失败，将使用全新 staging 重试",
+                                    loaderName, attempt + 1, e);
+                        }
+                    } finally {
+                        if (!keepCandidate) {
+                            deleteRecursively(candidate);
+                        }
+                    }
+                }
+                if (attemptStaging == null) {
+                    throw lastFailure == null
+                            ? new IOException(loaderName + " 安装器多次尝试后仍未生成版本目录")
+                            : lastFailure;
+                }
+
+                DownloadListener.notifyStage(listener,
+                        DownloadStage.of("loader.files.merge", loaderName));
+                token.throwIfCancelled();
+                libraryTransaction.merge(attemptStaging.resolve("libraries"));
+                moveVersionDirectory(
+                        attemptStaging.resolve("versions").resolve(installedVersionId),
+                        targetVersionDirectory,
+                        installedVersionId,
+                        normalizedInstanceId
+                );
+                DownloadListener.notifyStage(listener,
+                        DownloadStage.of("loader.verify", loaderName));
+                InstalledVersion installed = versionInstaller.install(
+                        normalizedInstanceId,
+                        gameDirectory,
+                        manifestUri,
+                        manifestCacheFile,
+                        listener,
+                        token
+                );
+                verifyInstalledLibraries(loaderName, installed);
+                return installed;
+            } catch (IOException | RuntimeException | InterruptedException e) {
+                deleteRecursively(targetVersionDirectory);
+                throw e;
+            } finally {
+                deleteRecursively(attemptStaging);
+                deleteRecursively(preparedStaging);
+            }
         }
     }
 

@@ -127,6 +127,22 @@ class SettingsServiceTest {
     }
 
     @Test
+    void recoversCorruptSettingsAndKeepsBackup() throws Exception {
+        Files.writeString(dataDirectory.resolve("settings.properties"),
+                "jvmArguments=\\uZZZZ\n");
+        SettingsService service = new SettingsService(dataDirectory);
+
+        assertEquals(SettingsService.DEFAULT_JVM_ARGUMENTS, service.jvmArguments());
+        try (var files = Files.list(dataDirectory)) {
+            assertTrue(files.anyMatch(path -> path.getFileName().toString()
+                    .startsWith("settings.properties.corrupt-")));
+        }
+
+        service.setMaxMemoryMb(8192);
+        assertEquals(8192, new SettingsService(dataDirectory).maxMemoryMb());
+    }
+
+    @Test
     void defaultsToDefaultDownloadConcurrency() throws Exception {
         assertEquals(
                 SettingsService.DEFAULT_DOWNLOAD_CONCURRENCY,

@@ -85,9 +85,6 @@ public final class LanguageService implements LanguageTextProvider {
             throws IOException {
         try {
             Objects.requireNonNull(mode, "mode");
-            settingsService.setLanguage(mode, locale);
-            selectionMode = mode;
-            storedLocale = locale == null ? "" : locale;
             String requestedLocale = mode == LanguageSelectionMode.MANUAL
                     ? normalizeLocale(locale)
                     : detectLocale();
@@ -96,6 +93,9 @@ public final class LanguageService implements LanguageTextProvider {
                     loadCatalog(requestedLocale),
                     discovery.scan()
             );
+            settingsService.setLanguage(mode, locale);
+            selectionMode = mode;
+            storedLocale = locale == null ? "" : locale;
             snapshot = next;
             publishState(next);
             return next;
@@ -109,20 +109,28 @@ public final class LanguageService implements LanguageTextProvider {
             LanguageFallbackMode mode, String locale) throws IOException {
         try {
             Objects.requireNonNull(mode, "mode");
-            settingsService.setLanguageFallback(mode, locale);
+            LanguageFallbackMode previousMode = fallbackMode;
+            String previousLocale = fallbackLocale;
             fallbackMode = mode;
             fallbackLocale = locale == null || locale.isBlank()
                     ? LanguageConstants.DEFAULT_LOCALE
                     : normalizeLocale(locale);
-            String requestedLocale = snapshot().requestedLocale();
-            LanguageSnapshot next = createSnapshot(
-                    requestedLocale,
-                    loadCatalog(requestedLocale),
-                    discovery.scan()
-            );
-            snapshot = next;
-            publishState(next);
-            return next;
+            try {
+                String requestedLocale = snapshot().requestedLocale();
+                LanguageSnapshot next = createSnapshot(
+                        requestedLocale,
+                        loadCatalog(requestedLocale),
+                        discovery.scan()
+                );
+                settingsService.setLanguageFallback(mode, locale);
+                snapshot = next;
+                publishState(next);
+                return next;
+            } catch (IOException | RuntimeException e) {
+                fallbackMode = previousMode;
+                fallbackLocale = previousLocale;
+                throw e;
+            }
         } catch (IOException | RuntimeException e) {
             LOGGER.error("设置语言回退失败 mode={} locale={}", mode, locale, e);
             throw e;

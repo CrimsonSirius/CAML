@@ -3,6 +3,9 @@ package org.chs.camlauncher.backend.theme;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
@@ -10,6 +13,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -54,6 +58,48 @@ class ThemeServiceTest {
 
         assertEquals("night", ThemeService.DEFAULT_THEME_ID);
         assertEquals("night", service.activeTheme().id());
+    }
+
+    @Test
+    void activeThemeFallsBackWhenConfiguredThemeIsMissing() throws Exception {
+        Files.writeString(dataDirectory.resolve("theme.txt"), "missing\n");
+
+        assertEquals("night", new ThemeService(dataDirectory).activeTheme().id());
+    }
+
+    @Test
+    void interruptedThemeCopyDoesNotLeaveTargetOrPartialFile() throws Exception {
+        Path target = dataDirectory.resolve("themes").resolve("night.css");
+        InputStream interrupted = new InputStream() {
+            private int reads;
+
+            @Override
+            public int read() throws IOException {
+                if (reads++ == 0) {
+                    return 'x';
+                }
+                throw new IOException("simulated interruption");
+            }
+        };
+
+        assertThrows(IOException.class, () -> ThemeService.copyAtomically(interrupted, target));
+        assertFalse(Files.exists(target));
+        try (var files = Files.list(target.getParent())) {
+            assertFalse(files.anyMatch(path -> path.getFileName().toString().endsWith(".part")));
+        }
+    }
+
+    @Test
+    void themeCopyAtomicallyReplacesExistingTarget() throws Exception {
+        Path target = dataDirectory.resolve("themes").resolve("night.css");
+        Files.createDirectories(target.getParent());
+        Files.writeString(target, "old");
+
+        ThemeService.copyAtomically(
+                new ByteArrayInputStream("new".getBytes(java.nio.charset.StandardCharsets.UTF_8)),
+                target);
+
+        assertEquals("new", Files.readString(target));
     }
 
     @Test

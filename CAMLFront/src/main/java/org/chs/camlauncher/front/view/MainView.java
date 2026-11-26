@@ -188,17 +188,7 @@ public final class MainView extends StackPane {
 
     /** 使用当前共享状态重建视图，用于语言切换后立即刷新全部文案。 */
     public MainView recreate() {
-        LaunchSettings copiedSettings = new LaunchSettings(
-                launchSettings.maxMemoryMb(),
-                launchSettings.gameDirectory(),
-                launchSettings.fullVersionIsolation(),
-                launchSettings.selectedVersion(),
-                launchSettings.javaSelectionMode(),
-                launchSettings.selectedJavaPath(),
-                launchSettings.autoGameLanguage(),
-                launchSettings.jvmArguments()
-        );
-        return new MainView(controller, copiedSettings, systemMemory,
+        return new MainView(controller, launchSettings.copy(), systemMemory,
                 languageMode, language, languageFallbackMode, languageFallbackLocale,
                 onLanguageChanged, onLanguageFallbackChanged);
     }

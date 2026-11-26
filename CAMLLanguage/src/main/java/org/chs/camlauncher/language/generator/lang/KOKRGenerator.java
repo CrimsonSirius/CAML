@@ -15,6 +15,7 @@ public final class KOKRGenerator extends LanguageTranslationGenerator {
         // 공통
         t.put("common.back", "뒤로");
         t.put("common.cancel", "취소");
+        t.put("common.retry", "다시 시도");
         t.put("common.browse", "찾아보기");
         t.put("common.save", "저장");
         t.put("common.copy", "명령 복사");
@@ -33,6 +34,8 @@ public final class KOKRGenerator extends LanguageTranslationGenerator {
         t.put("home.username", "오프라인 사용자 이름");
         t.put("home.launch", "게임 실행");
         t.put("home.launching", "실행 중...");
+        t.put("home.running", "게임 실행 중");
+        t.put("home.launchFailedTitle", "게임 실행 실패");
         t.put("home.browseInstances", "인스턴스 찾아보기");
         t.put("home.manageInstances", "인스턴스 관리");
         t.put("home.instance.current", "현재 인스턴스: %s");

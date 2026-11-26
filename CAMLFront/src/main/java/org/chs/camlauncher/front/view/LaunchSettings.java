@@ -26,6 +26,8 @@ final class LaunchSettings {
     private String jvmArguments;
     private final StringProperty selectedAccountChoice =
             new SimpleStringProperty(this, "selectedAccountChoice", AccountChoice.DEFAULT);
+    private final StringProperty offlineUsername =
+            new SimpleStringProperty(this, "offlineUsername", "player");
 
     private int maxMemoryMb;
 
@@ -144,5 +146,33 @@ final class LaunchSettings {
 
     StringProperty selectedAccountChoiceProperty() {
         return selectedAccountChoice;
+    }
+
+    String offlineUsername() {
+        return offlineUsername.get();
+    }
+
+    void setOfflineUsername(String username) {
+        offlineUsername.set(username == null ? "" : username);
+    }
+
+    StringProperty offlineUsernameProperty() {
+        return offlineUsername;
+    }
+
+    LaunchSettings copy() {
+        LaunchSettings copy = new LaunchSettings(
+                maxMemoryMb,
+                gameDirectory(),
+                fullVersionIsolation(),
+                selectedVersion(),
+                javaSelectionMode(),
+                selectedJavaPath(),
+                autoGameLanguage(),
+                jvmArguments()
+        );
+        copy.setSelectedAccountChoice(selectedAccountChoice());
+        copy.setOfflineUsername(offlineUsername());
+        return copy;
     }
 }

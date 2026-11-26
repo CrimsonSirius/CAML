@@ -1,6 +1,7 @@
 package org.chs.camlauncher.backend.mod.service;
 
 import org.chs.camlauncher.backend.error.BackendException;
+import org.chs.camlauncher.backend.io.ArchiveExtractionGuard;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -89,6 +90,42 @@ class WorldInstallerTest {
         assertFalse(hasTemporaryWorldDirectory(saves));
     }
 
+    @Test
+    void rejectsArchiveWithTooManyEntries() throws Exception {
+        Path archive = archive(ordered(
+                "MyWorld/level.dat", bytes("level"),
+                "MyWorld/extra.txt", bytes("extra")
+        ));
+        Path saves = temporaryDirectory.resolve("saves");
+
+        assertThrows(BackendException.class, () -> new WorldInstaller(
+                new ArchiveExtractionGuard(1, 1024, 1024)).install(archive, saves, "many.zip"));
+        assertFalse(hasTemporaryWorldDirectory(saves));
+    }
+
+    @Test
+    void rejectsSingleEntryOverLimit() throws Exception {
+        Path archive = archive(Map.of("MyWorld/level.dat", bytes("toolarge")));
+        Path saves = temporaryDirectory.resolve("saves");
+
+        assertThrows(BackendException.class, () -> new WorldInstaller(
+                new ArchiveExtractionGuard(10, 4, 1024)).install(archive, saves, "large.zip"));
+        assertFalse(hasTemporaryWorldDirectory(saves));
+    }
+
+    @Test
+    void rejectsTotalExtractedSizeOverLimit() throws Exception {
+        Path archive = archive(ordered(
+                "MyWorld/level.dat", bytes("12345"),
+                "MyWorld/extra.txt", bytes("67")
+        ));
+        Path saves = temporaryDirectory.resolve("saves");
+
+        assertThrows(BackendException.class, () -> new WorldInstaller(
+                new ArchiveExtractionGuard(10, 16, 6)).install(archive, saves, "total.zip"));
+        assertFalse(hasTemporaryWorldDirectory(saves));
+    }
+
     private Path archive(Map<String, byte[]> entries) throws Exception {
         Path archive = temporaryDirectory.resolve("world-" + System.nanoTime() + ".zip");
         try (ZipOutputStream output = new ZipOutputStream(Files.newOutputStream(archive))) {
@@ -103,6 +140,14 @@ class WorldInstallerTest {
 
     private static byte[] bytes(String value) {
         return value.getBytes(StandardCharsets.UTF_8);
+    }
+
+    private static Map<String, byte[]> ordered(Object... values) {
+        Map<String, byte[]> entries = new LinkedHashMap<>();
+        for (int index = 0; index < values.length; index += 2) {
+            entries.put((String) values[index], (byte[]) values[index + 1]);
+        }
+        return entries;
     }
 
     private static boolean hasTemporaryWorldDirectory(Path saves) throws Exception {

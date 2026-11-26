@@ -10,6 +10,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -19,6 +20,7 @@ import java.util.Locale;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class LanguageServiceTest {
@@ -78,6 +80,19 @@ class LanguageServiceTest {
         assertEquals("zh_cn", snapshot.activeLocale());
         assertEquals("启动游戏", service.text("home.launch"));
         assertEquals("当前实例：1.21.5", service.text("home.instance.current", "1.21.5"));
+    }
+
+    @Test
+    void failedLanguagePersistenceKeepsActiveSnapshot() throws Exception {
+        Files.createDirectories(dataDirectory.resolve("settings.properties"));
+        LanguageService service = service();
+        LanguageSnapshot before = service.initialize();
+
+        assertThrows(IOException.class, () -> service.switchLanguage(
+                LanguageSelectionMode.MANUAL, "zh_cn"));
+
+        assertEquals(before.activeLocale(), service.activeLocale());
+        assertEquals(LanguageSelectionMode.AUTO, service.selectionMode());
     }
 
     @Test

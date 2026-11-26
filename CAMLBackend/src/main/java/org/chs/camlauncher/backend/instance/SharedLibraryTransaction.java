@@ -31,6 +31,9 @@ import java.util.stream.Stream;
 public final class SharedLibraryTransaction implements AutoCloseable {
     private static final Logger LOGGER = LogManager.getLogger(SharedLibraryTransaction.class);
     private static final String LOCK_FILE = ".caml-library.lock";
+    private static final String TRANSACTION_PREFIX = ".caml-library-backup-";
+    private static final String JOURNAL_FILE = "journal.txt";
+    private static final String COMMITTED_FILE = "committed";
     private static final Map<Path, ReentrantLock> PROCESS_LOCKS = new ConcurrentHashMap<>();
 
     private final Path librariesRoot;
@@ -38,6 +41,8 @@ public final class SharedLibraryTransaction implements AutoCloseable {
     private final ReentrantLock processLock;
     private final FileChannel lockChannel;
     private final FileLock fileLock;
+    private final Path journalFile;
+    private final Path committedFile;
     private final Map<Path, Change> changes = new LinkedHashMap<>();
     private boolean committed;
     private boolean closed;
@@ -48,7 +53,9 @@ public final class SharedLibraryTransaction implements AutoCloseable {
         this.processLock = processLock;
         this.lockChannel = lockChannel;
         this.fileLock = fileLock;
-        this.backupRoot = Files.createTempDirectory(librariesRoot, ".caml-library-backup-");
+        this.backupRoot = Files.createTempDirectory(librariesRoot, TRANSACTION_PREFIX);
+        this.journalFile = backupRoot.resolve(JOURNAL_FILE);
+        this.committedFile = backupRoot.resolve(COMMITTED_FILE);
     }
 
     public static SharedLibraryTransaction begin(Path librariesRoot)
@@ -68,6 +75,7 @@ public final class SharedLibraryTransaction implements AutoCloseable {
                     StandardOpenOption.WRITE
             );
             FileLock lock = channel.lock();
+            recoverStaleTransactions(normalizedRoot);
             return new SharedLibraryTransaction(normalizedRoot, processLock, channel, lock);
         } catch (IOException | RuntimeException e) {
             if (channel != null) {
@@ -126,6 +134,7 @@ public final class SharedLibraryTransaction implements AutoCloseable {
                     Files.createDirectories(backup.getParent());
                     Files.copy(destination, backup, StandardCopyOption.REPLACE_EXISTING);
                 }
+                appendJournal(exists ? "R\t" + relative : "C\t" + relative);
                 change = new Change(destination, backup);
                 changes.put(destination, change);
             }
@@ -143,8 +152,9 @@ public final class SharedLibraryTransaction implements AutoCloseable {
     }
 
     /** 标记事务成功；实际清理和锁释放发生在 {@link #close()}。 */
-    public void commit() {
+    public void commit() throws IOException {
         ensureOpen();
+        Files.writeString(committedFile, "committed\n", StandardOpenOption.CREATE_NEW);
         committed = true;
     }
 
@@ -239,6 +249,78 @@ public final class SharedLibraryTransaction implements AutoCloseable {
     private void ensureWithinBackup(Path path) throws IOException {
         if (!path.startsWith(backupRoot)) {
             throw new IOException("共享库备份路径越界: " + path);
+        }
+    }
+
+    private void appendJournal(String line) throws IOException {
+        Files.writeString(journalFile, line + "\n",
+                StandardOpenOption.CREATE, StandardOpenOption.APPEND);
+    }
+
+    void abandonWithoutCleanupForTest() throws IOException {
+        if (closed) {
+            return;
+        }
+        closed = true;
+        try {
+            fileLock.release();
+        } finally {
+            lockChannel.close();
+            processLock.unlock();
+        }
+    }
+
+    private static void recoverStaleTransactions(Path librariesRoot) throws IOException {
+        List<Path> stale;
+        try (Stream<Path> paths = Files.list(librariesRoot)) {
+            stale = paths.filter(Files::isDirectory)
+                    .filter(path -> path.getFileName().toString().startsWith(TRANSACTION_PREFIX))
+                    .toList();
+        }
+        for (Path backupRoot : stale) {
+            if (Files.isRegularFile(backupRoot.resolve(COMMITTED_FILE))) {
+                deleteRecursively(backupRoot);
+                continue;
+            }
+            Path journal = backupRoot.resolve(JOURNAL_FILE);
+            if (Files.isRegularFile(journal)) {
+                List<String> lines = Files.readAllLines(journal);
+                for (int index = lines.size() - 1; index >= 0; index--) {
+                    recoverEntry(librariesRoot, backupRoot, lines.get(index));
+                }
+            }
+            deleteRecursively(backupRoot);
+        }
+    }
+
+    private static void recoverEntry(Path librariesRoot, Path backupRoot, String line)
+            throws IOException {
+        if (line == null || line.length() < 3 || line.charAt(1) != '\t') {
+            throw new IOException("共享库事务 journal 损坏: " + backupRoot);
+        }
+        Path relative = Path.of(line.substring(2));
+        Path destination = librariesRoot.resolve(relative).normalize();
+        if (!destination.startsWith(librariesRoot)) {
+            throw new IOException("共享库事务 journal 路径越界: " + line);
+        }
+        switch (line.charAt(0)) {
+            case 'C' -> Files.deleteIfExists(destination);
+            case 'R' -> {
+                Path backup = backupRoot.resolve(relative).normalize();
+                if (!backup.startsWith(backupRoot) || !Files.isRegularFile(backup)) {
+                    throw new IOException("共享库事务 journal 缺少备份: " + line);
+                }
+                Files.createDirectories(destination.getParent());
+                Path temporary = Files.createTempFile(
+                        destination.getParent(), ".caml-library-recover-", ".part");
+                try {
+                    Files.copy(backup, temporary, StandardCopyOption.REPLACE_EXISTING);
+                    move(temporary, destination);
+                } finally {
+                    Files.deleteIfExists(temporary);
+                }
+            }
+            default -> throw new IOException("共享库事务 journal 动作未知: " + line);
         }
     }
 

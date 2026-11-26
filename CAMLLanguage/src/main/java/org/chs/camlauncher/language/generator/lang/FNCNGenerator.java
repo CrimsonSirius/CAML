@@ -15,6 +15,7 @@ public final class FNCNGenerator extends LanguageTranslationGenerator {
         // 通用
         t.put("common.back", "后面");
         t.put("common.cancel", "作废");
+        t.put("common.retry", "再点一次");
         t.put("common.browse", "吃草");
         t.put("common.save", "拯救");
         t.put("common.copy", "抄走命令");
@@ -33,6 +34,8 @@ public final class FNCNGenerator extends LanguageTranslationGenerator {
         t.put("home.username", "家·用户名字");
         t.put("home.launch", "发射比赛");
         t.put("home.launching", "正在发射中...");
+        t.put("home.running", "比赛运行中");
+        t.put("home.launchFailedTitle", "发射失败");
         t.put("home.browseInstances", "吃草事例们");
         t.put("home.manageInstances", "操纵事例们");
         t.put("home.instance.current", "当前事例：%s");

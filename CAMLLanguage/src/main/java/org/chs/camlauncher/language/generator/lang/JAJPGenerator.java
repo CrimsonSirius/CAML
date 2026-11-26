@@ -15,6 +15,7 @@ public final class JAJPGenerator extends LanguageTranslationGenerator {
         // 共通
         t.put("common.back", "戻る");
         t.put("common.cancel", "キャンセル");
+        t.put("common.retry", "再試行");
         t.put("common.browse", "参照");
         t.put("common.save", "保存");
         t.put("common.copy", "コマンドをコピー");
@@ -33,6 +34,8 @@ public final class JAJPGenerator extends LanguageTranslationGenerator {
         t.put("home.username", "オフラインユーザー名");
         t.put("home.launch", "ゲームを起動");
         t.put("home.launching", "起動中...");
+        t.put("home.running", "ゲーム実行中");
+        t.put("home.launchFailedTitle", "ゲーム起動失敗");
         t.put("home.browseInstances", "インスタンスを参照");
         t.put("home.manageInstances", "インスタンスを管理");
         t.put("home.instance.current", "現在のインスタンス: %s");

@@ -2,6 +2,8 @@ package org.chs.camlauncher.backend.settings;
 
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.chs.camlauncher.backend.api.WindowState;
 import org.chs.camlauncher.backend.download.DownloadConcurrency;
 import org.chs.camlauncher.backend.download.source.DownloadSourceMode;
@@ -35,6 +37,7 @@ import java.util.function.Consumer;
 
 /** 启动器设置持久化：游戏位置、内存、隔离、下载、Java 和语言选择。 */
 public final class SettingsService {
+    private static final Logger LOGGER = LogManager.getLogger(SettingsService.class);
     public static final int DEFAULT_MAX_MEMORY_MB = 4096;
     public static final int MIN_MAX_MEMORY_MB = 512;
     public static final String DEFAULT_JVM_ARGUMENTS = "";
@@ -613,10 +616,23 @@ public final class SettingsService {
             if (Files.isRegularFile(settingsFile)) {
                 try (InputStream input = Files.newInputStream(settingsFile)) {
                     properties.load(input);
+                } catch (IOException | RuntimeException e) {
+                    quarantineCorruptFile(e);
                 }
             }
             return properties;
         }
+    }
+
+    private void quarantineCorruptFile(Throwable cause) throws IOException {
+        Path backup = settingsFile.resolveSibling(
+                "settings.properties.corrupt-" + System.currentTimeMillis());
+        try {
+            Files.move(settingsFile, backup);
+        } catch (AtomicMoveNotSupportedException e) {
+            Files.move(settingsFile, backup);
+        }
+        LOGGER.warn("设置文件损坏，已备份到 {} 并使用默认值", backup, cause);
     }
     private static Optional<Path> parsePath(String raw) {
         if (raw == null || raw.isBlank()) {
