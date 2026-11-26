@@ -19,6 +19,7 @@ import java.io.InputStream;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URI;
+import java.net.http.HttpClient;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -31,6 +32,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -224,6 +227,114 @@ class ExternalLoaderInstallerTest {
     }
 
     @org.junit.jupiter.api.Test
+    void extractsBundledInstallerLibrariesWithoutNetwork() throws Exception {
+        prepareBaseVersion();
+        byte[] libraryBytes = "bundled-installer-library".getBytes(StandardCharsets.UTF_8);
+        Path installerJar = gameDirectory.resolve("fake-installer.jar");
+        createFakeInstallerJar(installerJar, """
+                [{
+                  "name": "net.minecraftforge:bundled:1.0",
+                  "downloads": {
+                    "artifact": {
+                      "url": "",
+                      "path": "net/minecraftforge/bundled/1.0/bundled-1.0.jar",
+                      "size": %d
+                    }
+                  }
+                }]
+                """.formatted(libraryBytes.length), Map.of(
+                "maven/net/minecraftforge/bundled/1.0/bundled-1.0.jar", libraryBytes));
+
+        HttpServer server = installerServer(installerJar);
+        try {
+            newInstaller().install(
+                    "Forge", "1.20.1", "bundled-instance",
+                    installerUri(server), gameDirectory, DownloadListener.NONE);
+
+            Path library = gameDirectory.resolve(
+                    "libraries/net/minecraftforge/bundled/1.0/bundled-1.0.jar");
+            assertTrue(java.util.Arrays.equals(libraryBytes, Files.readAllBytes(library)));
+        } finally {
+            server.stop(0);
+        }
+    }
+
+    @org.junit.jupiter.api.Test
+    void retriesInstallerLibrariesUntilTheySucceed() throws Exception {
+        prepareBaseVersion();
+        byte[] libraryBytes = "eventually-downloaded".getBytes(StandardCharsets.UTF_8);
+        AtomicInteger requests = new AtomicInteger();
+
+        HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        server.createContext("/flaky-lib.jar", exchange -> {
+            if (requests.incrementAndGet() <= 2) {
+                exchange.sendResponseHeaders(500, -1);
+                exchange.close();
+                return;
+            }
+            exchange.sendResponseHeaders(200, libraryBytes.length);
+            try (var output = exchange.getResponseBody()) {
+                output.write(libraryBytes);
+            }
+        });
+        server.start();
+
+        try {
+            Path installerJar = gameDirectory.resolve("fake-installer.jar");
+            server.createContext("/installer.jar", exchange -> {
+                byte[] bytes = Files.readAllBytes(installerJar);
+                exchange.sendResponseHeaders(200, bytes.length);
+                try (var output = exchange.getResponseBody()) {
+                    output.write(bytes);
+                }
+            });
+            String libraryUrl = "http://127.0.0.1:" + server.getAddress().getPort()
+                    + "/flaky-lib.jar";
+            createFakeInstallerJar(installerJar, """
+                    [{
+                      "name": "org.example:flaky:1.0",
+                      "downloads": {
+                        "artifact": {
+                          "url": "%s",
+                          "path": "org/example/flaky/1.0/flaky-1.0.jar",
+                          "size": %d
+                        }
+                      }
+                    }]
+                    """.formatted(libraryUrl, libraryBytes.length));
+
+            FileDownloader downloader = new FileDownloader(
+                    HttpClient.newBuilder().version(HttpClient.Version.HTTP_1_1).build(), 2);
+            ExternalLoaderInstaller installer = new ExternalLoaderInstaller(
+                    new VersionInstaller(
+                            new MetadataService(),
+                            new VersionManifestService(),
+                            new DownloadPlanner(),
+                            new AssetDownloadPlanner(),
+                            new FileDownloader()
+                    ),
+                    new JavaLocator(),
+                    downloader,
+                    new MetadataService(),
+                    URI.create("https://example.invalid/version_manifest_v2.json"),
+                    gameDirectory.resolve("cache/version_manifest_v2.json"),
+                    java.time.Duration.ofMillis(5)
+            );
+
+            installer.install(
+                    "Forge", "1.20.1", "retry-library-instance",
+                    installerUri(server), gameDirectory, DownloadListener.NONE);
+
+            assertTrue(requests.get() >= 3);
+            Path library = gameDirectory.resolve(
+                    "libraries/org/example/flaky/1.0/flaky-1.0.jar");
+            assertTrue(java.util.Arrays.equals(libraryBytes, Files.readAllBytes(library)));
+        } finally {
+            server.stop(0);
+        }
+    }
+
+    @org.junit.jupiter.api.Test
     void replacesSameSizeInstallerLibraryWithDifferentContent() throws Exception {
         prepareBaseVersion();
         Path library = gameDirectory.resolve(
@@ -387,6 +498,11 @@ class ExternalLoaderInstallerTest {
     }
 
     private static void createFakeInstallerJar(Path jar, String librariesJson) throws Exception {
+        createFakeInstallerJar(jar, librariesJson, Map.of());
+    }
+
+    private static void createFakeInstallerJar(
+            Path jar, String librariesJson, Map<String, byte[]> extraEntries) throws Exception {
         Manifest manifest = new Manifest();
         manifest.getMainAttributes().put(Attributes.Name.MANIFEST_VERSION, "1.0");
         manifest.getMainAttributes().put(Attributes.Name.MAIN_CLASS,
@@ -417,6 +533,12 @@ class ExternalLoaderInstallerTest {
                     : ",\n  \"libraries\": " + librariesJson))
                     .getBytes(StandardCharsets.UTF_8));
             output.closeEntry();
+
+            for (Map.Entry<String, byte[]> extra : extraEntries.entrySet()) {
+                output.putNextEntry(new JarEntry(extra.getKey()));
+                output.write(extra.getValue());
+                output.closeEntry();
+            }
         }
     }
 }

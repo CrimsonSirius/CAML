@@ -89,7 +89,24 @@ public final class FileDownloader {
     public void download(DownloadItem item, DownloadListener listener,
                          DownloadValidator validator, DownloadCancellationToken token)
             throws IOException, InterruptedException {
+        download(item, listener, validator, token, maxAttempts);
+    }
+
+    /** 按当前候选顺序让每个地址各尝试一次；供调用方实现自己的长期重试策略。 */
+    public void downloadOneRound(DownloadItem item, DownloadListener listener,
+                                 DownloadValidator validator, DownloadCancellationToken token)
+            throws IOException, InterruptedException {
+        download(item, listener, validator, token, item.candidates().size());
+    }
+
+    private void download(DownloadItem item, DownloadListener listener,
+                          DownloadValidator validator, DownloadCancellationToken token,
+                          int attemptLimit)
+            throws IOException, InterruptedException {
         Objects.requireNonNull(token, "token");
+        if (attemptLimit < 1) {
+            throw new IllegalArgumentException("attemptLimit must be positive");
+        }
         token.throwIfCancelled();
         DownloadListener progress = listener == null ? DownloadListener.NONE : listener;
         if (item.existsAndValid() && validatesExistingFile(item.destination(), validator)) {
@@ -107,10 +124,10 @@ public final class FileDownloader {
         URI lastUri = null;
         int attempted = 0;
         int round = 0;
-        while (attempted < maxAttempts) {
+        while (attempted < attemptLimit) {
             token.throwIfCancelled();
             for (URI uri : item.candidates()) {
-                if (attempted >= maxAttempts) {
+                if (attempted >= attemptLimit) {
                     break;
                 }
                 token.throwIfCancelled();
@@ -124,7 +141,7 @@ public final class FileDownloader {
                 }
             }
             round++;
-            if (attempted < maxAttempts) {
+            if (attempted < attemptLimit) {
                 Thread.sleep(200L * round);
                 token.throwIfCancelled();
             }

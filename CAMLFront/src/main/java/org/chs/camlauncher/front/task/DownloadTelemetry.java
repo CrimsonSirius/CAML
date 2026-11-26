@@ -100,6 +100,21 @@ public final class DownloadTelemetry implements DownloadListener {
     }
 
     @Override
+    public void onPlanRetry() {
+        synchronized (lock) {
+            if (finished || failed || cancelled) {
+                return;
+            }
+            lastPlanDownloaded = 0;
+            lastPlanTotalBytes = 0;
+            lastPlanCompletedItems = 0;
+            lastPlanTotalItems = 0;
+            hasPlanSummary = false;
+            currentPlanBytesKnown = false;
+        }
+    }
+
+    @Override
     public void onStage(String stage) {
         if (stage == null || stage.isBlank()) {
             return;

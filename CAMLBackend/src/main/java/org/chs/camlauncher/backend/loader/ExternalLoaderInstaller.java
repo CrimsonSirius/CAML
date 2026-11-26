@@ -9,6 +9,7 @@ import org.apache.logging.log4j.Logger;
 import org.chs.camlauncher.backend.download.DownloadConcurrency;
 import org.chs.camlauncher.backend.download.DownloadCancellationToken;
 import org.chs.camlauncher.backend.download.DownloadStage;
+import org.chs.camlauncher.backend.download.hash.HashVerifier;
 import org.chs.camlauncher.backend.download.io.DownloadExecutor;
 import org.chs.camlauncher.backend.download.model.DownloadItem;
 import org.chs.camlauncher.backend.download.source.DownloadSource;
@@ -36,6 +37,7 @@ import org.chs.camlauncher.backend.runtime.JavaRuntime;
 
 import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -66,6 +68,7 @@ public final class ExternalLoaderInstaller {
     private static final long INSTALL_TIMEOUT_MINUTES = 20;
     private static final int OUTPUT_LIMIT = 64 * 1024;
     private static final int INSTALL_ATTEMPTS = 2;
+    private static final Duration INSTALLER_LIBRARY_RETRY_DELAY = Duration.ofSeconds(5);
     private static final Pattern SHA1_PATTERN = Pattern.compile("\\b[0-9a-fA-F]{40}\\b");
     private static final Gson GSON = new Gson();
 
@@ -75,6 +78,7 @@ public final class ExternalLoaderInstaller {
     private final MetadataService metadata;
     private final URI manifestUri;
     private final Path manifestCacheFile;
+    private final Duration installerLibraryRetryDelay;
     private final SourceAwareHttpClient shaClient = new SourceAwareHttpClient(defaultClient());
     private volatile List<DownloadSource> sources = List.of(OfficialDownloadSource.INSTANCE);
     private volatile int downloadConcurrency = DownloadConcurrency.DEFAULT;
@@ -87,12 +91,30 @@ public final class ExternalLoaderInstaller {
             URI manifestUri,
             Path manifestCacheFile
     ) {
+        this(versionInstaller, javaLocator, fileDownloader, metadata, manifestUri,
+                manifestCacheFile, INSTALLER_LIBRARY_RETRY_DELAY);
+    }
+
+    ExternalLoaderInstaller(
+            VersionInstaller versionInstaller,
+            JavaLocator javaLocator,
+            FileDownloader fileDownloader,
+            MetadataService metadata,
+            URI manifestUri,
+            Path manifestCacheFile,
+            Duration installerLibraryRetryDelay
+    ) {
         this.versionInstaller = Objects.requireNonNull(versionInstaller, "versionInstaller");
         this.javaLocator = Objects.requireNonNull(javaLocator, "javaLocator");
         this.fileDownloader = Objects.requireNonNull(fileDownloader, "fileDownloader");
         this.metadata = Objects.requireNonNull(metadata, "metadata");
         this.manifestUri = Objects.requireNonNull(manifestUri, "manifestUri");
         this.manifestCacheFile = Objects.requireNonNull(manifestCacheFile, "manifestCacheFile");
+        this.installerLibraryRetryDelay = Objects.requireNonNull(
+                installerLibraryRetryDelay, "installerLibraryRetryDelay");
+        if (installerLibraryRetryDelay.isZero() || installerLibraryRetryDelay.isNegative()) {
+            throw new IllegalArgumentException("installerLibraryRetryDelay must be positive");
+        }
     }
 
     public void setSources(List<DownloadSource> sources) {
@@ -456,23 +478,34 @@ public final class ExternalLoaderInstaller {
             DownloadCancellationToken token
     ) throws IOException, InterruptedException {
         Map<Path, DownloadItem> items = new LinkedHashMap<>();
-        for (Library library : readInstallerLibraries(installerJar)) {
-            String relativePath = LibraryArtifact.relativePath(library);
-            String url = LibraryArtifact.downloadUrl(library);
-            if (relativePath == null || relativePath.isBlank() || url == null || url.isBlank()) {
-                continue;
-            }
+        try (ZipFile installerZip = new ZipFile(installerJar.toFile())) {
+            for (Library library : readInstallerLibraries(installerJar)) {
+                String relativePath = LibraryArtifact.relativePath(library);
+                if (relativePath == null || relativePath.isBlank()) {
+                    continue;
+                }
 
-            Path destination = SafePaths.resolveUnder(
-                    staging.resolve("libraries"), relativePath, "installer library");
-            Long size = LibraryArtifact.size(library);
-            items.putIfAbsent(destination.toAbsolutePath().normalize(), new DownloadItem(
-                    library.name(),
-                    DownloadSources.candidates(sources, url),
-                    destination,
-                    LibraryArtifact.sha1(library),
-                    size == null ? -1 : size
-            ));
+                Path destination = SafePaths.resolveUnder(
+                        staging.resolve("libraries"), relativePath, "installer library");
+                String sha1 = LibraryArtifact.sha1(library);
+                Long size = LibraryArtifact.size(library);
+                if (extractBundledInstallerLibrary(
+                        installerZip, relativePath, destination, sha1, size)) {
+                    continue;
+                }
+
+                String url = LibraryArtifact.downloadUrl(library);
+                if (url == null || url.isBlank()) {
+                    continue;
+                }
+                items.putIfAbsent(destination.toAbsolutePath().normalize(), new DownloadItem(
+                        library.name(),
+                        DownloadSources.candidates(sources, url),
+                        destination,
+                        sha1,
+                        size == null ? -1 : size
+                ));
+            }
         }
         if (items.isEmpty()) {
             return;
@@ -480,13 +513,107 @@ public final class ExternalLoaderInstaller {
 
         DownloadListener.notifyStage(listener,
                 DownloadStage.of("loader.libraries.download", loaderName));
-        DownloadExecutor.download(
-                items.values().stream().toList(),
-                downloadConcurrency,
-                listener,
-                (item, itemListener) -> fileDownloader.download(item, itemListener, null, token),
-                token
-        );
+        List<DownloadItem> downloads = items.values().stream().toList();
+        try {
+            DownloadExecutor.download(
+                    downloads,
+                    downloadConcurrency,
+                    listener,
+                    (item, itemListener) -> fileDownloader.download(
+                            item, itemListener, null, token),
+                    token
+            );
+            return;
+        } catch (IOException e) {
+            LOGGER.warn("{} 安装器库首轮下载失败，将每隔 {} 秒继续尝试: {}",
+                    loaderName, installerLibraryRetryDelay.toSeconds(), rootCauseMessage(e));
+        }
+
+        int retryRound = 0;
+        while (true) {
+            awaitInstallerLibraryRetry(token);
+            retryRound++;
+            try {
+                DownloadListener.notifyPlanRetry(listener);
+                DownloadExecutor.download(
+                        downloads,
+                        downloadConcurrency,
+                        listener,
+                        (item, itemListener) -> fileDownloader.downloadOneRound(
+                                item, itemListener, null, token),
+                        token
+                );
+                return;
+            } catch (IOException e) {
+                LOGGER.warn("{} 安装器库第 {} 轮重试失败，将继续等待 {} 秒: {}",
+                        loaderName, retryRound, installerLibraryRetryDelay.toSeconds(),
+                        rootCauseMessage(e));
+            }
+        }
+    }
+
+    private static String rootCauseMessage(Throwable failure) {
+        Throwable current = failure;
+        while (current.getCause() != null) {
+            current = current.getCause();
+        }
+        String message = current.getMessage();
+        return message == null || message.isBlank()
+                ? current.getClass().getSimpleName()
+                : message;
+    }
+
+    private void awaitInstallerLibraryRetry(DownloadCancellationToken token)
+            throws InterruptedException {
+        long remaining = installerLibraryRetryDelay.toNanos();
+        while (remaining > 0) {
+            token.throwIfCancelled();
+            long slice = Math.min(remaining, TimeUnit.MILLISECONDS.toNanos(200));
+            TimeUnit.NANOSECONDS.sleep(slice);
+            remaining -= slice;
+        }
+        token.throwIfCancelled();
+    }
+
+    private static boolean extractBundledInstallerLibrary(
+            ZipFile installerZip,
+            String relativePath,
+            Path destination,
+            String sha1,
+            Long size
+    ) throws IOException {
+        var entry = installerZip.getEntry("maven/" + relativePath);
+        if (entry == null || entry.isDirectory()) {
+            return false;
+        }
+
+        Files.createDirectories(destination.toAbsolutePath().getParent());
+        Path temporary = Files.createTempFile(
+                destination.toAbsolutePath().getParent(), ".caml-bundled-library-", ".part");
+        try {
+            try (InputStream input = installerZip.getInputStream(entry)) {
+                Files.copy(input, temporary, StandardCopyOption.REPLACE_EXISTING);
+            }
+            if (size != null && size >= 0 && Files.size(temporary) != size) {
+                throw new IOException("安装器内嵌库大小不匹配: " + relativePath);
+            }
+            if (sha1 != null && !sha1.isBlank() && !HashVerifier.matches(temporary, sha1)) {
+                throw new IOException("安装器内嵌库 SHA-1 不匹配: " + relativePath);
+            }
+            moveFile(temporary, destination);
+            return true;
+        } finally {
+            Files.deleteIfExists(temporary);
+        }
+    }
+
+    private static void moveFile(Path source, Path target) throws IOException {
+        try {
+            Files.move(source, target, StandardCopyOption.ATOMIC_MOVE,
+                    StandardCopyOption.REPLACE_EXISTING);
+        } catch (AtomicMoveNotSupportedException e) {
+            Files.move(source, target, StandardCopyOption.REPLACE_EXISTING);
+        }
     }
 
     private List<Library> readInstallerLibraries(Path installerJar) throws IOException {
