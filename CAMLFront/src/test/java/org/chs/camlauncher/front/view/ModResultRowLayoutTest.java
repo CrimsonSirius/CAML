@@ -32,6 +32,12 @@ class ModResultRowLayoutTest {
         FxTestSupport.ensureStarted();
     }
 
+    /**
+     * 字体行高在不同平台上按 1–3px 取整（依赖可用的字体族与字体度量），
+     * 结果行因此可能比设计行高略高。断言只固定“足够高”与“不会失控”，不固定具体像素。
+     */
+    private static final double ROW_HEIGHT_SLACK = 4.0;
+
     @Test
     void rowHeightFollowsIconAndPadding() throws Exception {
         ModDownloadLayout.Plan plan = ModDownloadLayout.plan(1020, UiScale.DEFAULT_FACTOR);
@@ -39,9 +45,13 @@ class ModResultRowLayoutTest {
         Region first = (Region) rows.getChildren().get(0);
         Region second = (Region) rows.getChildren().get(1);
 
-        assertEquals(plan.rowMinHeight(), first.getHeight(), 0.5,
-                "行高必须容纳图标与上下内边距");
-        assertEquals(plan.rowMinHeight(), second.getHeight(), 0.5);
+        assertTrue(first.getHeight() >= plan.rowMinHeight() - 0.5,
+                "行高必须容纳图标与上下内边距：实际 " + first.getHeight()
+                        + "，设计 " + plan.rowMinHeight());
+        assertTrue(second.getHeight() >= plan.rowMinHeight() - 0.5);
+        assertTrue(first.getHeight() <= plan.rowMinHeight() + ROW_HEIGHT_SLACK,
+                "行高不应被字体度量撑得过高：实际 " + first.getHeight()
+                        + "，设计 " + plan.rowMinHeight());
         assertTrue(second.getLayoutY() - first.getLayoutY() >= plan.rowMinHeight(),
                 "相邻行之间不能重叠");
         assertEquals(plan.listSpacing(),
@@ -55,8 +65,10 @@ class ModResultRowLayoutTest {
         StackPane row = (StackPane) rows.getChildren().get(0);
         HBox content = (HBox) row.getChildren().get(2);
 
-        assertEquals(plan.rowMinHeight(), content.getHeight(), 0.5);
+        // 正文层铺满行框：高度由行决定，而不是反过来撑高行。
+        assertEquals(row.getHeight(), content.getHeight(), 0.5);
         assertTrue(content.getHeight() <= row.getHeight() + 0.5, "正文不能高于行框");
+        assertTrue(row.getHeight() >= plan.rowMinHeight() - 0.5);
         Region icon = (Region) content.getChildren().get(0);
         assertEquals(plan.iconSize(), icon.getHeight(), 0.5);
         assertEquals(plan.iconSize(), icon.getWidth(), 0.5);
