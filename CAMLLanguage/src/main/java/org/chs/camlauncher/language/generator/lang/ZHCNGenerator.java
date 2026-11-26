@@ -24,11 +24,23 @@ public final class ZHCNGenerator extends LanguageTranslationGenerator {
         // 顶部导航与底栏
         t.put("nav.home", "主页");
         t.put("nav.downloads", "下载");
+        t.put("nav.tasks", "任务");
         t.put("nav.settings", "设置");
         t.put("app.subtitle", "Minecraft 启动器");
         t.put("footer.status", "CAML %s · 后端%s · 数据目录: %s");
         t.put("footer.backend.ready", "已就绪");
         t.put("footer.backend.notReady", "未就绪");
+
+        // 任务中心
+        t.put("tasks.title", "任务");
+        t.put("tasks.subtitle", "下载与安装任务");
+        t.put("tasks.empty", "暂无任务");
+        t.put("tasks.back", "返回任务列表");
+        t.put("tasks.open", "打开任务 %s · %s");
+        t.put("tasks.status.running", "进行中");
+        t.put("tasks.status.completed", "已完成");
+        t.put("tasks.status.failed", "失败");
+        t.put("tasks.status.cancelled", "已取消");
 
         // 主页启动表单
         t.put("home.username", "离线用户名");

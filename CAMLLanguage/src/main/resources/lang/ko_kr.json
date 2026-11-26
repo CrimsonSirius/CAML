@@ -432,6 +432,7 @@
   "nav.downloads": "다운로드",
   "nav.home": "홈",
   "nav.settings": "설정",
+  "nav.tasks": "작업",
   "network.httpError": "HTTP %s: %s",
   "network.noSource": "사용 가능한 다운로드 소스가 없습니다: %s",
   "network.redirectLocationMissing": "리디렉션에 Location이 없습니다: %s",
@@ -666,5 +667,14 @@
   "status.launchFailed": "실행 실패!",
   "status.launchFailedDetail": "실행 실패: %s",
   "status.started": "실행 명령이 전송되었습니다",
-  "status.starting": "%s 실행 중..."
+  "status.starting": "%s 실행 중...",
+  "tasks.back": "Back to tasks",
+  "tasks.empty": "No tasks yet",
+  "tasks.open": "Open task %s · %s",
+  "tasks.status.cancelled": "Cancelled",
+  "tasks.status.completed": "Completed",
+  "tasks.status.failed": "Failed",
+  "tasks.status.running": "Running",
+  "tasks.subtitle": "Downloads and installations",
+  "tasks.title": "Tasks"
 }

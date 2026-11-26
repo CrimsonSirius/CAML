@@ -61,6 +61,15 @@ public abstract class LanguageTranslationGenerator {
                 "Archive extraction limits saved.");
         translations.putIfAbsent("download.settings.archive.invalid",
                 "Enter valid limits. Total size must be at least the entry limit.");
+        translations.putIfAbsent("tasks.title", "Tasks");
+        translations.putIfAbsent("tasks.subtitle", "Downloads and installations");
+        translations.putIfAbsent("tasks.empty", "No tasks yet");
+        translations.putIfAbsent("tasks.back", "Back to tasks");
+        translations.putIfAbsent("tasks.open", "Open task %s · %s");
+        translations.putIfAbsent("tasks.status.running", "Running");
+        translations.putIfAbsent("tasks.status.completed", "Completed");
+        translations.putIfAbsent("tasks.status.failed", "Failed");
+        translations.putIfAbsent("tasks.status.cancelled", "Cancelled");
     }
 
     /** 生成翻译文件，返回写入路径。 */

@@ -24,6 +24,7 @@ public final class JAJPGenerator extends LanguageTranslationGenerator {
         // ナビゲーションとフッター
         t.put("nav.home", "ホーム");
         t.put("nav.downloads", "ダウンロード");
+        t.put("nav.tasks", "タスク");
         t.put("nav.settings", "設定");
         t.put("app.subtitle", "Minecraft ランチャー");
         t.put("footer.status", "CAML %s · バックエンド %s · データディレクトリ: %s");

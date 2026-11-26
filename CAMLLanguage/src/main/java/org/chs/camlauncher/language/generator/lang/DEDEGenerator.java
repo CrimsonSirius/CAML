@@ -24,6 +24,7 @@ public final class DEDEGenerator extends LanguageTranslationGenerator {
         // Navigation und Fußzeile
         t.put("nav.home", "Start");
         t.put("nav.downloads", "Downloads");
+        t.put("nav.tasks", "Aufgaben");
         t.put("nav.settings", "Einstellungen");
         t.put("app.subtitle", "Minecraft-Launcher");
         t.put("footer.status", "CAML %s · Backend %s · Datenverzeichnis: %s");

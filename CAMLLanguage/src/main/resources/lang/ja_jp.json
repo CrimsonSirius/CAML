@@ -432,6 +432,7 @@
   "nav.downloads": "ダウンロード",
   "nav.home": "ホーム",
   "nav.settings": "設定",
+  "nav.tasks": "タスク",
   "network.httpError": "HTTP %s: %s",
   "network.noSource": "利用可能なダウンロード元がありません: %s",
   "network.redirectLocationMissing": "リダイレクトに Location がありません: %s",
@@ -666,5 +667,14 @@
   "status.launchFailed": "起動に失敗しました！",
   "status.launchFailedDetail": "起動に失敗しました: %s",
   "status.started": "起動コマンドを送信しました",
-  "status.starting": "%s を起動しています..."
+  "status.starting": "%s を起動しています...",
+  "tasks.back": "Back to tasks",
+  "tasks.empty": "No tasks yet",
+  "tasks.open": "Open task %s · %s",
+  "tasks.status.cancelled": "Cancelled",
+  "tasks.status.completed": "Completed",
+  "tasks.status.failed": "Failed",
+  "tasks.status.running": "Running",
+  "tasks.subtitle": "Downloads and installations",
+  "tasks.title": "Tasks"
 }

@@ -24,6 +24,7 @@ public final class BOCNGenerator extends LanguageTranslationGenerator {
         // གོ་རིམ་དང་མཇུག་རིམ
         t.put("nav.home", "མ་ཤོག");
         t.put("nav.downloads", "ཕབ་ལེན");
+        t.put("nav.tasks", "ལས་དོན");
         t.put("nav.settings", "སྒྲིག་བཀོད");
         t.put("app.subtitle", "Minecraft འགོ་འཛུགས་ཆས");
         t.put("footer.status", "CAML %s · རྒྱབ་སྟེགས %s · གཞི་གྲངས་སྣེའུ: %s");

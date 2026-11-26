@@ -432,6 +432,7 @@
   "nav.downloads": "向下装载们",
   "nav.home": "家",
   "nav.settings": "安放们",
+  "nav.tasks": "干活们",
   "network.httpError": "HTTP %s：%s",
   "network.noSource": "没有能用的向下装载源头：%s",
   "network.redirectLocationMissing": "掉头缺少 住址：%s",
@@ -666,5 +667,14 @@
   "status.launchFailed": "发射失败！",
   "status.launchFailedDetail": "发射仆街：%s",
   "status.started": "发射命令已经送出",
-  "status.starting": "正在起始 %s..."
+  "status.starting": "正在起始 %s...",
+  "tasks.back": "Back to tasks",
+  "tasks.empty": "No tasks yet",
+  "tasks.open": "Open task %s · %s",
+  "tasks.status.cancelled": "Cancelled",
+  "tasks.status.completed": "Completed",
+  "tasks.status.failed": "Failed",
+  "tasks.status.running": "Running",
+  "tasks.subtitle": "Downloads and installations",
+  "tasks.title": "Tasks"
 }

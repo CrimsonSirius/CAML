@@ -189,33 +189,45 @@
     -fx-text-fill: -caml-on-surface;
 }
 
-.app-download-task-bar {
-    -fx-background-color: -caml-surface-container;
-    -fx-border-color: transparent transparent -caml-border-subtle transparent;
-    -fx-border-width: 0 0 1 0;
-    -fx-padding: 0.75em 2.5em;
-    -fx-spacing: 0.75em;
+.app-task-page,
+.app-task-list-page {
+    -fx-background-color: -caml-surface;
 }
 
-.app-download-task-title {
-    -fx-font-size: 0.875em;
+.app-task-title {
+    -fx-font-size: 1.875em;
     -fx-font-weight: bold;
     -fx-text-fill: -caml-on-surface;
 }
 
-.app-download-task-row {
-    -fx-spacing: 0.75em;
-    -fx-alignment: center-left;
+.app-task-list {
+    -fx-fill-width: true;
 }
 
-.app-download-task-text {
-    -fx-spacing: 0.125em;
+.app-task-icon {
+    -fx-font-size: 1.5em;
 }
 
-.app-download-task-progress {
-    -fx-min-width: 6em;
-    -fx-pref-width: 12em;
-    -fx-max-width: 12em;
+.app-task-progress {
+    -fx-min-height: 0.4em;
+    -fx-pref-height: 0.4em;
+    -fx-max-height: 0.4em;
+}
+
+.app-task-status-running {
+    -fx-text-fill: -caml-accent-text;
+}
+
+.app-task-status-completed {
+    -fx-text-fill: -caml-accent-text;
+}
+
+.app-task-status-failed {
+    -fx-text-fill: -caml-danger;
+}
+
+.app-task-status-cancelled {
+    -fx-text-fill: -caml-on-surface-muted;
 }
 
 /* 模组页卡片的几何由 ModDownloadLayout 给出；这里的内边距与它的 CARD_PADDING 相同，

@@ -432,6 +432,7 @@
   "nav.downloads": "Deposita",
   "nav.home": "Domus",
   "nav.settings": "Optiones",
+  "nav.tasks": "Munera",
   "network.httpError": "HTTP %s: %s",
   "network.noSource": "Fons depositi nullus praesto est: %s",
   "network.redirectLocationMissing": "Redirectioni deest Location: %s",
@@ -666,5 +667,14 @@
   "status.launchFailed": "Deductio defecit!",
   "status.launchFailedDetail": "Deductio defecit: %s",
   "status.started": "Mandatum deducendi missum",
-  "status.starting": "Deducitur %s..."
+  "status.starting": "Deducitur %s...",
+  "tasks.back": "Back to tasks",
+  "tasks.empty": "No tasks yet",
+  "tasks.open": "Open task %s · %s",
+  "tasks.status.cancelled": "Cancelled",
+  "tasks.status.completed": "Completed",
+  "tasks.status.failed": "Failed",
+  "tasks.status.running": "Running",
+  "tasks.subtitle": "Downloads and installations",
+  "tasks.title": "Tasks"
 }

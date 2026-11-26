@@ -14,6 +14,7 @@ import javafx.scene.layout.VBox;
 import javafx.util.Duration;
 import org.chs.camlauncher.front.text.UiText;
 import org.chs.camlauncher.front.task.DownloadTelemetry;
+import org.chs.camlauncher.front.task.DownloadTask;
 import org.chs.camlauncher.ui.control.CamlButton;
 import org.chs.camlauncher.ui.control.CamlProgressBar;
 
@@ -41,32 +42,64 @@ final class DownloadProgressView extends VBox implements PageLifecycle {
     private final List<HBox> stageRows = new ArrayList<>();
     private final List<Label> stageMarkers = new ArrayList<>();
     private final List<Label> stageTitles = new ArrayList<>();
+    private final DownloadTask task;
+    private final CamlButton cancelButton;
     private final Timeline refreshTimeline;
     private boolean disposed;
 
     DownloadProgressView(DownloadRequest request, DownloadTelemetry telemetry, Runnable onBack) {
+        this(UiText.tr("download.progress.title", request.instanceId()),
+                UiText.tr("download.progress.subtitle",
+                        request.description(), request.version().id()),
+                telemetry, onBack, UiText.tr("download.progress.back"), null);
+    }
+
+    DownloadProgressView(DownloadRequest request, DownloadTask task, Runnable onBack) {
+        this(UiText.tr("download.progress.title", request.instanceId()),
+                UiText.tr("download.progress.subtitle",
+                        request.description(), request.version().id()),
+                task.telemetry(), onBack, UiText.tr("download.progress.back"), task);
+    }
+
+    DownloadProgressView(DownloadTask task, Runnable onBack) {
+        this(task.title(), task.subject(), task.telemetry(), onBack,
+                UiText.tr("tasks.back"), task);
+    }
+
+    private DownloadProgressView(String titleText, String subtitleText,
+                                 DownloadTelemetry telemetry, Runnable onBack,
+                                 String backText, DownloadTask task) {
         this.telemetry = telemetry;
+        this.task = task;
         // 留白与间距来自 app.css 的 .app-download-progress-page（em），随根字号等比缩放。
         getStyleClass().add("app-download-progress-page");
         setMaxSize(Double.MAX_VALUE, Double.MAX_VALUE);
 
-        Label title = new Label(UiText.tr("download.progress.title", request.instanceId()));
+        Label title = new Label(titleText);
         title.getStyleClass().add("app-download-progress-heading");
         title.setWrapText(true);
-        Label subtitle = new Label(UiText.tr("download.progress.subtitle",
-                request.description(), request.version().id()));
+        Label subtitle = new Label(subtitleText);
         subtitle.getStyleClass().addAll("caml-body-medium", "caml-on-surface-muted");
         subtitle.setWrapText(true);
         VBox titleBlock = new VBox(title, subtitle);
         titleBlock.getStyleClass().add("app-download-title-block");
 
-        CamlButton back = CamlButton.outlined(UiText.tr("download.progress.back"));
+        CamlButton back = CamlButton.outlined(backText);
         back.getStyleClass().add("app-pill-button");
         back.setOnAction(event -> onBack.run());
 
+        cancelButton = CamlButton.outlined(UiText.tr("common.cancel"));
+        cancelButton.getStyleClass().add("app-pill-button");
+        cancelButton.setOnAction(event -> {
+            if (task != null) {
+                task.cancel();
+                refreshNow();
+            }
+        });
+
         Region headerSpacer = new Region();
         HBox.setHgrow(headerSpacer, Priority.ALWAYS);
-        HBox header = new HBox(titleBlock, headerSpacer, back);
+        HBox header = new HBox(titleBlock, headerSpacer, cancelButton, back);
         header.getStyleClass().add("app-download-header");
         header.setAlignment(Pos.CENTER_LEFT);
 
@@ -123,6 +156,9 @@ final class DownloadProgressView extends VBox implements PageLifecycle {
             return;
         }
         DownloadTelemetry.Snapshot snapshot = telemetry.snapshot();
+        boolean cancellable = task != null && task.isRunning();
+        cancelButton.setVisible(cancellable);
+        cancelButton.setManaged(cancellable);
         speedLabel.setText(formatSpeed(snapshot.bytesPerSecond()));
         totalsLabel.setText(snapshot.finished()
                 ? UiText.tr("download.progress.completedTotal")

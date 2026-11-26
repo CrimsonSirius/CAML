@@ -19,6 +19,7 @@ public final class CamlIcon extends StackPane {
     public enum Glyph {
         HOME,
         DOWNLOAD,
+        TASKS,
         SETTINGS,
         ACCOUNT,
         JAVA,
@@ -89,6 +90,10 @@ public final class CamlIcon extends StackPane {
                     filled(new Rectangle(10, 3, 4, 9)),
                     filled(new Polygon(7, 11, 17, 11, 12, 18)),
                     filled(new Rectangle(5, 20, 14, 2))
+            };
+            case TASKS -> new Shape[]{
+                    stroked(new Circle(12, 12, 9)),
+                    stroked(new Polyline(7.5, 12, 10.5, 15, 16.5, 8.5))
             };
             case SETTINGS -> new Shape[]{
                     filled(new Rectangle(3, 5, 18, 2)),

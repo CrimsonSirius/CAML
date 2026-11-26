@@ -16,6 +16,7 @@ import org.chs.camlauncher.front.controller.DownloadsController;
 import org.chs.camlauncher.front.controller.HomeController;
 import org.chs.camlauncher.front.controller.MainController;
 import org.chs.camlauncher.front.controller.SettingsController;
+import org.chs.camlauncher.front.task.DownloadTask;
 import org.chs.camlauncher.front.text.UiText;
 import org.chs.camlauncher.ui.control.CamlIcon;
 import org.chs.camlauncher.ui.control.CamlPageHost;
@@ -49,11 +50,13 @@ public final class MainView extends StackPane {
     private final BiConsumer<LanguageFallbackMode, String> onLanguageFallbackChanged;
     private final HomeView homeView;
     private final DownloadsView downloadsView;
+    private final TasksView tasksView;
     private final SettingsView settingsView;
     private final CamlPageHost pageHost;
     private CamlTopNav navigation;
     private CamlTopNavItem homeNavItem;
     private CamlTopNavItem downloadsNavItem;
+    private CamlTopNavItem tasksNavItem;
     private CamlTopNavItem settingsNavItem;
     private PageLifecycle activePage;
     private LanguageSelectionMode languageMode;
@@ -65,6 +68,7 @@ public final class MainView extends StackPane {
     private enum Page {
         HOME,
         DOWNLOADS,
+        TASKS,
         SETTINGS
     }
 
@@ -72,12 +76,14 @@ public final class MainView extends StackPane {
         private final Page page;
         private final SettingsView.Section settingsSection;
         private final VersionCategory downloadCategory;
+        private final DownloadTask task;
 
         private State(Page page, SettingsView.Section settingsSection,
-                      VersionCategory downloadCategory) {
+                      VersionCategory downloadCategory, DownloadTask task) {
             this.page = page;
             this.settingsSection = settingsSection;
             this.downloadCategory = downloadCategory;
+            this.task = task;
         }
     }
 
@@ -163,6 +169,7 @@ public final class MainView extends StackPane {
         homeView = new HomeView(homeController, controller.accountController(), launchSettings,
                 this::showOverlay, this::hideOverlay);
         downloadsView = new DownloadsView(downloadsController, launchSettings);
+        tasksView = new TasksView(downloadsController);
         settingsController.setOnDownloadSourceSaved(downloadsView::refreshVersions);
         pageHost = new CamlPageHost(homeView);
         activePage = homeView;
@@ -211,6 +218,8 @@ public final class MainView extends StackPane {
                 new CamlIcon(CamlIcon.Glyph.HOME), UiText.tr("nav.home"));
         downloadsNavItem = navigation.addItem(
                 new CamlIcon(CamlIcon.Glyph.DOWNLOAD), UiText.tr("nav.downloads"));
+        tasksNavItem = navigation.addItem(
+                new CamlIcon(CamlIcon.Glyph.TASKS), UiText.tr("nav.tasks"));
         settingsNavItem = navigation.addItem(
                 new CamlIcon(CamlIcon.Glyph.SETTINGS), UiText.tr("nav.settings"));
         navigation.select(homeNavItem);
@@ -219,6 +228,8 @@ public final class MainView extends StackPane {
                 showPage(homeView);
             } else if (selected == downloadsNavItem) {
                 showPage(downloadsView);
+            } else if (selected == tasksNavItem) {
+                showPage(tasksView);
             } else if (selected == settingsNavItem) {
                 showPage(settingsView);
             }
@@ -266,21 +277,29 @@ public final class MainView extends StackPane {
         CamlTopNavItem selected = navigation.selectedItemProperty().get();
         Page page = selected == downloadsNavItem
                 ? Page.DOWNLOADS
+                : selected == tasksNavItem ? Page.TASKS
                 : selected == settingsNavItem ? Page.SETTINGS : Page.HOME;
-        return new State(page, settingsView.currentSection(), downloadsView.currentCategory());
+        return new State(page, settingsView.currentSection(), downloadsView.currentCategory(),
+                tasksView.currentTask());
     }
 
     public void restoreState(State state) {
         State target = state == null
-                ? new State(Page.HOME, SettingsView.Section.GAME, VersionCategory.RELEASE)
+                ? new State(Page.HOME, SettingsView.Section.GAME, VersionCategory.RELEASE, null)
                 : state;
         navigation.select(switch (target.page) {
             case HOME -> homeNavItem;
             case DOWNLOADS -> downloadsNavItem;
+            case TASKS -> tasksNavItem;
             case SETTINGS -> settingsNavItem;
         });
         settingsView.showSection(target.settingsSection);
         downloadsView.showCategory(target.downloadCategory);
+        if (target.task != null) {
+            tasksView.showTask(target.task);
+        } else {
+            tasksView.showList();
+        }
     }
 
     /** 语言重建后把焦点交回设置页，避免焦点落回顶栏第一个导航胶囊。 */
@@ -297,6 +316,7 @@ public final class MainView extends StackPane {
         }
         homeView.dispose();
         downloadsView.dispose();
+        tasksView.dispose();
         settingsView.dispose();
     }
 

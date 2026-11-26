@@ -432,6 +432,7 @@
   "nav.downloads": "下載",
   "nav.home": "首頁",
   "nav.settings": "設定",
+  "nav.tasks": "任務",
   "network.httpError": "HTTP %s：%s",
   "network.noSource": "沒有可用的下載來源：%s",
   "network.redirectLocationMissing": "重新導向缺少 Location：%s",
@@ -666,5 +667,14 @@
   "status.launchFailed": "啟動失敗！",
   "status.launchFailedDetail": "啟動失敗：%s",
   "status.started": "啟動指令已送出",
-  "status.starting": "正在啟動 %s..."
+  "status.starting": "正在啟動 %s...",
+  "tasks.back": "返回任務列表",
+  "tasks.empty": "暫無任務",
+  "tasks.open": "開啟任務 %s · %s",
+  "tasks.status.cancelled": "已取消",
+  "tasks.status.completed": "已完成",
+  "tasks.status.failed": "失敗",
+  "tasks.status.running": "進行中",
+  "tasks.subtitle": "下載與安裝任務",
+  "tasks.title": "任務"
 }
