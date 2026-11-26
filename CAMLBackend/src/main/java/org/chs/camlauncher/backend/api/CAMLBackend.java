@@ -24,7 +24,6 @@ import org.chs.camlauncher.backend.download.plan.DownloadPlanner;
 import org.chs.camlauncher.backend.download.FileDownloader;
 import org.chs.camlauncher.backend.error.BackendError;
 import org.chs.camlauncher.backend.error.BackendException;
-import org.chs.camlauncher.backend.instance.GameDataLayout;
 import org.chs.camlauncher.backend.instance.InstalledVersion;
 import org.chs.camlauncher.backend.instance.InstanceNameCheck;
 import org.chs.camlauncher.backend.instance.InstanceNameRules;
@@ -1026,16 +1025,15 @@ public final class CAMLBackend implements AutoCloseable {
         Objects.requireNonNull(directory, "directory");
         Path normalized = directory.toAbsolutePath().normalize();
         if (!Files.isDirectory(normalized)) {
-            return new GameDirectoryInfo(normalized, false, List.of(), List.of());
+            return new GameDirectoryInfo(normalized, false, List.of());
         }
 
         Path versionsDirectory = normalized.resolve("versions");
         if (!Files.isDirectory(versionsDirectory)) {
-            return new GameDirectoryInfo(normalized, true, List.of(), List.of());
+            return new GameDirectoryInfo(normalized, true, List.of());
         }
 
         List<String> versions;
-        List<String> isolated;
         try (Stream<Path> entries = Files.list(versionsDirectory)) {
             List<Path> installed = entries
                     .filter(Files::isDirectory)
@@ -1047,28 +1045,29 @@ public final class CAMLBackend implements AutoCloseable {
                     .map(entry -> entry.getFileName().toString())
                     .sorted()
                     .toList();
-            // 标记启用“版本隔离”的版本：游戏数据（saves、options.txt 等）位于版本目录内。
-            isolated = installed.stream()
-                    .filter(GameDataLayout::isIsolated)
-                    .map(entry -> entry.getFileName().toString())
-                    .sorted()
-                    .toList();
         } catch (IOException e) {
             throw new UncheckedIOException("Failed to inspect game directory: " + normalized, e);
         }
-        return new GameDirectoryInfo(normalized, true, versions, isolated);
+        return new GameDirectoryInfo(normalized, true, versions);
     }
 
     /** 读取实例数据目录和 mods 列表。 */
     public InstanceDetails inspectInstance(Path gameDirectory, String instanceId) throws IOException {
+        return inspectInstance(gameDirectory, instanceId,
+                settingsService.versionIsolationMode());
+    }
+
+    private InstanceDetails inspectInstance(Path gameDirectory, String instanceId,
+                                            VersionIsolationMode isolationMode) throws IOException {
         String instance = InstanceNameRules.validate(instanceId);
         Set<String> disabled = settingsService.disabledMods(gameDirectory, instance);
-        return InstanceInspector.inspect(gameDirectory, instance, disabled);
+        return InstanceInspector.inspect(gameDirectory, instance, isolationMode, disabled);
     }
 
     /** 使用系统文件管理器打开实例的实际数据目录。 */
     public void openInstanceFolder(Path gameDirectory, String instanceId) throws IOException {
-        DirectoryOpener.open(InstanceInspector.dataDirectory(gameDirectory, instanceId));
+        DirectoryOpener.open(InstanceInspector.dataDirectory(
+                gameDirectory, instanceId, settingsService.versionIsolationMode()));
     }
 
     /** 打开 java/javaw 可执行文件所在目录。 */
@@ -1090,8 +1089,10 @@ public final class CAMLBackend implements AutoCloseable {
                 .toAbsolutePath()
                 .normalize();
         String instance = InstanceNameRules.validate(instanceId);
+        VersionIsolationMode isolationMode = settingsService.versionIsolationMode();
         String baseName = normalizeModFileName(fileName);
-        Path modsDirectory = InstanceInspector.dataDirectory(normalizedGameDirectory, instance)
+        Path modsDirectory = InstanceInspector.dataDirectory(
+                normalizedGameDirectory, instance, isolationMode)
                 .resolve("mods");
         Path enabledPath = SafePaths.resolveChild(modsDirectory, baseName, "mod file");
         Path disabledPath = SafePaths.resolveChild(modsDirectory, baseName + ".disabled",
@@ -1131,9 +1132,10 @@ public final class CAMLBackend implements AutoCloseable {
                 .toAbsolutePath()
                 .normalize();
         String instance = InstanceNameRules.validate(instanceId);
+        VersionIsolationMode isolationMode = settingsService.versionIsolationMode();
         String baseName = normalizeResourcePackFileName(fileName);
         Path resourcePacksDirectory = InstanceInspector.dataDirectory(
-                normalizedGameDirectory, instance).resolve("resourcepacks");
+                normalizedGameDirectory, instance, isolationMode).resolve("resourcepacks");
         Path enabledPath = SafePaths.resolveChild(
                 resourcePacksDirectory, baseName, "resource pack");
         Path disabledPath = SafePaths.resolveChild(
@@ -1154,14 +1156,17 @@ public final class CAMLBackend implements AutoCloseable {
     }
 
     /** 从本地 mod jar 读取图标；没有图标时返回空数组。 */
-    public byte[] loadInstanceModIcon(Path gameDirectory, String instanceId, String fileName) {
-        return InstanceModIconService.load(gameDirectory, instanceId, fileName);
+    public byte[] loadInstanceModIcon(Path gameDirectory, String instanceId, String fileName)
+            throws IOException {
+        return InstanceModIconService.load(gameDirectory, instanceId, fileName,
+                settingsService.versionIsolationMode());
     }
 
     /** 检查实例中每个 Mod 在当前 MC 版本/加载器下是否有更新。 */
     public List<InstanceModUpdate> checkInstanceModUpdates(
             Path gameDirectory, String instanceId) throws IOException, InterruptedException {
-        InstanceDetails details = inspectInstance(gameDirectory, instanceId);
+        VersionIsolationMode isolationMode = settingsService.versionIsolationMode();
+        InstanceDetails details = inspectInstance(gameDirectory, instanceId, isolationMode);
         InstanceEnvironment environment = InstanceEnvironmentResolver.resolve(
                 gameDirectory, instanceId, metadata);
         if (environment.loader() == null
@@ -1175,7 +1180,8 @@ public final class CAMLBackend implements AutoCloseable {
 
         Set<String> hashes = new LinkedHashSet<>();
         for (InstanceMod mod : details.mods()) {
-            Path file = InstanceInspector.modFile(gameDirectory, instanceId, mod.fileName());
+            Path file = InstanceInspector.modFile(
+                    gameDirectory, instanceId, mod.fileName(), isolationMode);
             if (Files.isRegularFile(file)) {
                 hashes.add(HashVerifier.sha1(file));
             }
@@ -1190,7 +1196,8 @@ public final class CAMLBackend implements AutoCloseable {
             Map<Long, String> fingerprintToFile = new LinkedHashMap<>();
             for (InstanceMod mod : details.mods()) {
                 String hash = null;
-                Path file = InstanceInspector.modFile(gameDirectory, instanceId, mod.fileName());
+                Path file = InstanceInspector.modFile(
+                        gameDirectory, instanceId, mod.fileName(), isolationMode);
                 if (Files.isRegularFile(file)) {
                     hash = HashVerifier.sha1(file);
                 }
@@ -1216,7 +1223,8 @@ public final class CAMLBackend implements AutoCloseable {
         List<InstanceModUpdate> updates = new ArrayList<>();
         for (InstanceMod mod : details.mods()) {
             String currentVersion = displayVersion(mod.version());
-            Path file = InstanceInspector.modFile(gameDirectory, instanceId, mod.fileName());
+            Path file = InstanceInspector.modFile(
+                    gameDirectory, instanceId, mod.fileName(), isolationMode);
             String hash = Files.isRegularFile(file) ? HashVerifier.sha1(file) : "";
             ModFile latest = latestByHash.get(hash);
             if (latest == null && Files.isRegularFile(file)) {
@@ -1243,9 +1251,11 @@ public final class CAMLBackend implements AutoCloseable {
                 .toAbsolutePath()
                 .normalize();
         String instance = InstanceNameRules.validate(instanceId);
+        VersionIsolationMode isolationMode = settingsService.versionIsolationMode();
         String oldBase = normalizeModFileName(currentFileName);
         String newBase = normalizeModFileName(latestFile.fileName());
-        Path modsDirectory = InstanceInspector.dataDirectory(normalizedGameDirectory, instance)
+        Path modsDirectory = InstanceInspector.dataDirectory(
+                normalizedGameDirectory, instance, isolationMode)
                 .resolve("mods");
         Path oldEnabled = SafePaths.resolveChild(modsDirectory, oldBase, "mod file");
         Path oldDisabled = SafePaths.resolveChild(modsDirectory, oldBase + ".disabled",
@@ -1254,7 +1264,7 @@ public final class CAMLBackend implements AutoCloseable {
                 .contains(oldBase) || Files.isRegularFile(oldDisabled);
 
         ModDownloadResult downloaded = modService.download(
-                latestFile, normalizedGameDirectory, instance, VersionIsolationMode.AUTO, listener);
+                latestFile, normalizedGameDirectory, instance, isolationMode, listener);
 
         if (!oldBase.equals(newBase)) {
             Files.deleteIfExists(oldEnabled);
@@ -1492,7 +1502,7 @@ public final class CAMLBackend implements AutoCloseable {
                 config.gameDirectory(),
                 username,
                 options,
-                VersionIsolationMode.AUTO,
+                settingsService.versionIsolationMode(),
                 downloadListener,
                 processListener
         );
@@ -1531,7 +1541,7 @@ public final class CAMLBackend implements AutoCloseable {
                 gameDirectory,
                 username,
                 options,
-                VersionIsolationMode.AUTO,
+                settingsService.versionIsolationMode(),
                 downloadListener,
                 processListener
         );

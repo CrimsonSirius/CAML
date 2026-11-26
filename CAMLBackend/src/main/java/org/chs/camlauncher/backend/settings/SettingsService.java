@@ -186,9 +186,6 @@ public final class SettingsService {
 
     public void setVersionIsolationMode(VersionIsolationMode mode) throws IOException {
         Objects.requireNonNull(mode, "mode");
-        if (mode == VersionIsolationMode.AUTO) {
-            throw new IllegalArgumentException("界面设置不能持久化自动隔离模式");
-        }
         update(properties -> properties.setProperty(
                 VERSION_ISOLATION_KEY, mode.name().toLowerCase()));
     }

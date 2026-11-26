@@ -209,10 +209,9 @@ Forge 镜像源优先读取 BMCLAPI 的 per-game JSON；官方源读取 Maven me
 `VersionIsolationMode`：
 
 - `FULL`：游戏数据目录始终为 `versions/<id>`；
-- `NONE`：始终为 `.minecraft` 根目录；
-- `AUTO`：兼容旧调用，根据 `options.txt`、`saves`、`logs`、`mods`、`config`、`resourcepacks`、`shaderpacks`、`usercache.json`、`command_history.txt` 等标记判断。
+- `NONE`：始终为 `.minecraft` 根目录。
 
-当前 UI 持久化 `FULL`/`NONE`。无论哪种模式，`libraries` 和 `assets` 都仍来自 `.minecraft` 根目录。
+不提供自动布局检测。无论哪种模式，`libraries` 和 `assets` 都仍来自 `.minecraft` 根目录。
 
 ## 13. Java 选择
 
