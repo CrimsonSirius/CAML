@@ -15,14 +15,19 @@ class ExplicitGameDirectoryApiTest {
     @Test
     void installAndLaunchEntryPointsRequireAnExplicitGameDirectory() {
         assertThrows(NoSuchMethodException.class, () -> CAMLBackend.class.getMethod(
-                "installVersion", String.class, DownloadListener.class));
+                "installVersion", String.class, Path.class, DownloadListener.class));
         assertThrows(NoSuchMethodException.class, () -> CAMLBackend.class.getMethod(
+                "launchGame", String.class, Path.class, String.class, LaunchOptions.class,
+                DownloadListener.class, ProcessListener.class));
+        assertThrows(NoSuchMethodException.class, () -> BackendDownloads.class.getMethod(
+                "installVersion", String.class, DownloadListener.class));
+        assertThrows(NoSuchMethodException.class, () -> BackendLaunch.class.getMethod(
                 "launchGame", String.class, String.class, LaunchOptions.class,
                 DownloadListener.class, ProcessListener.class));
 
-        assertDoesNotThrow(() -> CAMLBackend.class.getMethod(
+        assertDoesNotThrow(() -> BackendDownloads.class.getMethod(
                 "installVersion", String.class, Path.class, DownloadListener.class));
-        assertDoesNotThrow(() -> CAMLBackend.class.getMethod(
+        assertDoesNotThrow(() -> BackendLaunch.class.getMethod(
                 "launchGame", String.class, Path.class, String.class, LaunchOptions.class,
                 DownloadListener.class, ProcessListener.class));
     }

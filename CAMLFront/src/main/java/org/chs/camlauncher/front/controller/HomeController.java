@@ -67,7 +67,7 @@ public final class HomeController {
     public AsyncTaskHandle<Boolean> checkXrandrWarning(
             String version, Path gameDirectory, Consumer<Boolean> onChecked) {
         return context.runCheck(UiText.tr("operation.launchGame", version),
-                () -> context.backend().needsXrandrWarning(version, gameDirectory),
+                () -> context.launch().needsXrandrWarning(version, gameDirectory),
                 onChecked, null);
     }
 
@@ -105,7 +105,7 @@ public AsyncTaskHandle<GameLaunch> startGame(String version, String username, St
         Objects.requireNonNull(gameDirectory, "gameDirectory");
         LaunchOptions options = new LaunchOptions(
                 null, memoryMb, null, null, false,
-                context.backend().parseJvmArguments(jvmArguments), List.of(), Map.of()
+                context.settings().parseJvmArguments(jvmArguments), List.of(), Map.of()
         );
 
         DownloadListener downloadListener = new ThrottledDownloadLogger();
@@ -141,11 +141,11 @@ public AsyncTaskHandle<GameLaunch> startGame(String version, String username, St
                               ProcessListener processListener)
             throws IOException, InterruptedException {
         if (accountChoice == null || AccountChoice.OFFLINE.equals(accountChoice)) {
-            return context.backend().launchGame(version, gameDirectory, username, options,
+            return context.launch().launchGame(version, gameDirectory, username, options,
                     isolationMode, allowIncompatibleJava, downloadListener, processListener);
         }
         String accountId = AccountChoice.DEFAULT.equals(accountChoice) ? null : accountChoice;
-        return context.backend().launchGameWithAccount(version, gameDirectory, accountId,
+        return context.launch().launchGameWithAccount(version, gameDirectory, accountId,
                 options, isolationMode, allowIncompatibleJava, downloadListener, processListener);
     }
 
@@ -153,7 +153,7 @@ public AsyncTaskHandle<GameLaunch> startGame(String version, String username, St
             String version, Path gameDirectory,
             Consumer<JavaCompatibilityCheck> onChecked, Consumer<String> onError) {
         return context.runCheck(UiText.tr("operation.launchGame", version),
-                () -> context.backend().checkJavaCompatibility(version, gameDirectory),
+                () -> context.launch().checkJavaCompatibility(version, gameDirectory),
                 onChecked, onError);
     }
 
@@ -179,7 +179,7 @@ public AsyncTaskHandle<GameLaunch> startGame(String version, String username, St
 
     private void saveLastLaunchedInstance(String version) {
         try {
-            context.backend().setLastLaunchedInstanceId(version);
+            context.settings().setLastLaunchedInstanceId(version);
         } catch (IOException | RuntimeException e) {
             context.reportError(UiText.tr("operation.saveLastInstance"), e, null);
         }
@@ -206,7 +206,7 @@ public AsyncTaskHandle<GameLaunch> startGame(String version, String username, St
             return null;
         }
         return context.runCheck(UiText.tr("operation.inspectInstance"),
-                () -> context.backend().inspectInstance(gameDirectory, instanceId),
+                () -> context.instances().inspectInstance(gameDirectory, instanceId),
                 callback, onError);
     }
 
@@ -217,7 +217,7 @@ public AsyncTaskHandle<GameLaunch> startGame(String version, String username, St
             return null;
         }
         return context.runJava(UiText.tr("operation.openInstanceFolder"), () -> {
-            context.backend().openInstanceFolder(gameDirectory, instanceId);
+            context.instances().openInstanceFolder(gameDirectory, instanceId);
             return null;
         }, ignored -> {
             if (onOpened != null) {
@@ -233,7 +233,7 @@ public AsyncTaskHandle<GameLaunch> startGame(String version, String username, St
             return null;
         }
         return context.runIcon(UiText.tr("operation.loadInstanceModIcon"),
-                () -> context.backend().loadInstanceModIcon(gameDirectory, instanceId, fileName),
+                () -> context.instances().loadInstanceModIcon(gameDirectory, instanceId, fileName),
                 onLoaded, onError);
     }
 
@@ -244,7 +244,7 @@ public AsyncTaskHandle<GameLaunch> startGame(String version, String username, St
             return null;
         }
         return context.runSettings(UiText.tr("operation.setModDisabled"), () -> {
-            context.backend().setModDisabled(gameDirectory, instanceId, fileName, disabled);
+            context.instances().setModDisabled(gameDirectory, instanceId, fileName, disabled);
             return null;
         }, ignored -> {
             if (onSuccess != null) {
@@ -260,7 +260,7 @@ public AsyncTaskHandle<GameLaunch> startGame(String version, String username, St
             return null;
         }
         return context.runSettings(UiText.tr("operation.setResourcePackDisabled"), () -> {
-            context.backend().setResourcePackDisabled(
+            context.instances().setResourcePackDisabled(
                     gameDirectory, instanceId, fileName, disabled);
             return null;
         }, ignored -> {
@@ -277,7 +277,7 @@ public AsyncTaskHandle<GameLaunch> startGame(String version, String username, St
             return null;
         }
         return context.runMetadata(UiText.tr("operation.checkModUpdates"),
-                () -> context.backend().checkInstanceModUpdates(gameDirectory, instanceId),
+                () -> context.instances().checkInstanceModUpdates(gameDirectory, instanceId),
                 onLoaded, onError);
     }
 
@@ -286,7 +286,7 @@ public AsyncTaskHandle<GameLaunch> startGame(String version, String username, St
             DownloadListener listener,
             Consumer<ModDownloadResult> onSuccess, Consumer<String> onError) {
         return context.runDownload(UiText.tr("operation.updateMod", currentFileName),
-                () -> context.backend().updateInstanceMod(
+                () -> context.instances().updateInstanceMod(
                         gameDirectory, instanceId, currentFileName, latestFile, listener),
                 onSuccess, onError);
     }

@@ -645,34 +645,24 @@ CAML 只支持显式的 FULL/NONE，不再自动检测 PCL/HMCL 混合布局，�
 CAMLBackend backend = new CAMLBackend(BackendConfig.defaults());
 backend.start();
 
-Path gameDirectory = backend.savedGameDirectory()
+Path gameDirectory = backend.settings().savedGameDirectory()
         .orElse(backend.status().gameDirectory());
-InstalledVersion installed = backend.installVersion(
+InstalledVersion installed = backend.downloads().installVersion(
         "1.21.5", gameDirectory, DownloadListener.NONE);
 
-AuthSession auth = backend.loginOffline("Steve");
-
-JavaRuntime java = backend.javaLocator()
-        .findSuitable(JavaRequirement.from(installed.manifest()))
-        .orElseThrow();
-
-LaunchPlan plan = backend.createLaunchPlan(installed, auth, java, LaunchOptions.defaults());
-
-List<Path> classpath = backend.classpathBuilder().build(plan);
-backend.nativeExtractor().extract(plan);
-plan = backend.virtualAssetInstaller().prepare(plan);
-
-GameProcess process = backend.processLauncher().launch(plan, classpath, listener);
-
 // 一步启动（必须指定当前游戏目录）
-GameLaunch launch = backend.launchGame(
+GameLaunch launch = backend.launch().launchGame(
         "1.21.5", gameDirectory, "Steve", LaunchOptions.defaults(), listener, processListener);
 ```
+
+后端入口按领域访问：`settings()`、`java()`、`accounts()`、`downloads()`、
+`instances()` 和 `launch()`。
 
 界面侧的目录探测同样由后端完成：
 
 ```java
-GameDirectoryInfo info = backend.inspectGameDirectory(Path.of("D:/games/.minecraft"));
+GameDirectoryInfo info = backend.instances()
+        .inspectGameDirectory(Path.of("D:/games/.minecraft"));
 info.directoryExists();
 info.installedVersions();
 ```

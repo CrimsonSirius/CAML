@@ -33,16 +33,17 @@ class GameDirectoryInspectionTest {
         CAMLBackend backend = new CAMLBackend(
                 new BackendConfig(root.resolve("data"), gameDirectory));
         try (backend) {
-            GameDirectoryInfo info = backend.inspectGameDirectory(gameDirectory);
+            GameDirectoryInfo info = backend.instances().inspectGameDirectory(gameDirectory);
 
             assertTrue(info.directoryExists());
-            assertTrue(backend.directoryExists(gameDirectory));
+            assertTrue(backend.settings().directoryExists(gameDirectory));
             assertTrue(info.hasInstalledVersions());
             assertEquals(List.of("1.21.4"), info.installedVersions());
 
-            GameDirectoryInfo missing = backend.inspectGameDirectory(root.resolve("missing"));
+            GameDirectoryInfo missing = backend.instances()
+                    .inspectGameDirectory(root.resolve("missing"));
             assertFalse(missing.directoryExists());
-            assertFalse(backend.directoryExists(root.resolve("missing")));
+            assertFalse(backend.settings().directoryExists(root.resolve("missing")));
             assertTrue(missing.installedVersions().isEmpty());
         }
     }
@@ -55,7 +56,7 @@ class GameDirectoryInspectionTest {
         CAMLBackend backend = new CAMLBackend(
                 new BackendConfig(root.resolve("data"), gameDirectory));
         try (backend) {
-            assertThrows(IOException.class, () -> backend.installVersion(
+            assertThrows(IOException.class, () -> backend.downloads().installVersion(
                     "1.20.1", "existing", gameDirectory, DownloadListener.NONE));
         }
     }

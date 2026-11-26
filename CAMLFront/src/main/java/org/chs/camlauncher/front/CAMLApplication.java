@@ -79,65 +79,68 @@ public final class CAMLApplication extends Application {
         BackendConfig config = BackendConfig.defaults();
         backend = new CAMLBackend(config);
         backend.start();
+        var settingsApi = backend.settings();
+        var javaApi = backend.java();
 
-        UiText.initialize(backend.languageService());
-        var languageState = backend.languageSnapshot();
-        languageSelectionMode = backend.languageSelectionMode();
+        UiText.initialize(settingsApi.languageService());
+        var languageState = settingsApi.languageSnapshot();
+        languageSelectionMode = settingsApi.languageSelectionMode();
         language = languageState.activeLocale();
         languageFallbackMode = languageState.fallbackMode();
         languageFallbackLocale = languageState.fallbackLocale();
 
         try {
-            themes = backend.listThemes();
-            activeTheme = backend.activeTheme();
+            themes = settingsApi.listThemes();
+            activeTheme = settingsApi.activeTheme();
         } catch (IOException e) {
             logger.warn("无法加载主题，将使用组件默认结构样式", e);
         }
         try {
-            savedMaxMemoryMb = backend.maxMemoryMb();
+            savedMaxMemoryMb = settingsApi.maxMemoryMb();
         } catch (IOException e) {
             logger.warn("无法读取内存设置，使用默认值 {}", SettingsService.DEFAULT_MAX_MEMORY_MB, e);
         }
         try {
-            gameDirectory = backend.savedGameDirectory().orElse(config.gameDirectory());
+            gameDirectory = settingsApi.savedGameDirectory().orElse(config.gameDirectory());
         } catch (IOException e) {
             gameDirectory = config.gameDirectory();
             logger.warn("无法读取游戏位置设置，使用默认目录 {}", gameDirectory, e);
         }
         try {
-            fullVersionIsolation = backend.versionIsolationMode() == VersionIsolationMode.FULL;
+            fullVersionIsolation = settingsApi.versionIsolationMode() == VersionIsolationMode.FULL;
         } catch (IOException e) {
             fullVersionIsolation = SettingsService.DEFAULT_VERSION_ISOLATION
                     == VersionIsolationMode.FULL;
             logger.warn("无法读取版本隔离设置，使用默认值 {}", SettingsService.DEFAULT_VERSION_ISOLATION, e);
         }
         try {
-            jvmArguments = backend.jvmArguments();
+            jvmArguments = settingsApi.jvmArguments();
         } catch (IOException e) {
             logger.warn("无法读取 JVM 参数设置，使用默认值", e);
         }
         try {
-            autoGameLanguage = backend.autoGameLanguage();
+            autoGameLanguage = settingsApi.autoGameLanguage();
         } catch (IOException e) {
             logger.warn("无法读取自动游戏语言设置，使用默认值 true", e);
         }
         try {
-            lastLaunchedInstanceId = backend.lastLaunchedInstanceId().orElse(lastLaunchedInstanceId);
+            lastLaunchedInstanceId = settingsApi.lastLaunchedInstanceId()
+                    .orElse(lastLaunchedInstanceId);
         } catch (IOException e) {
             logger.warn("无法读取最后启动实例，使用默认实例 {}", lastLaunchedInstanceId, e);
         }
         try {
-            javaSelectionMode = backend.javaSelectionMode();
-            selectedJavaPath = backend.selectedJavaPath().orElse(null);
+            javaSelectionMode = javaApi.javaSelectionMode();
+            selectedJavaPath = javaApi.selectedJavaPath().orElse(null);
         } catch (IOException e) {
             logger.warn("无法读取 Java 选择设置，使用自动选择", e);
         }
         try {
-            savedWindowState = backend.savedWindowState().orElse(null);
+            savedWindowState = settingsApi.savedWindowState().orElse(null);
         } catch (IOException e) {
             logger.warn("无法读取窗口状态，使用默认窗口位置", e);
         }
-        systemMemory = backend.systemMemory();
+        systemMemory = settingsApi.systemMemory();
 
         logger.info("CAML frontend initialized");
     }
