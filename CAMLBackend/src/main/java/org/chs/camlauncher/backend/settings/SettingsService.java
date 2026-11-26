@@ -475,7 +475,7 @@ public final class SettingsService {
         });
     }
 
-    /** 某个实例指定的账���；没有单独设置时返回空，由调用方回退到全局默认账号。 */
+    /** 某个实例指定的账号；没有单独设置时返回空，由调用方回退到全局默认账号。 */
     public Optional<String> instanceAccountId(Path gameDirectory, String instanceId)
             throws IOException {
         Map<String, String> states = parseInstanceAccounts(
@@ -610,10 +610,12 @@ public final class SettingsService {
         update(properties -> properties.setProperty(CLIENT_TOKEN_KEY, created));
         return created;
     }
+
     /** 用户自定义的 authlib-injector jar；为空表示使用内置固定版本。 */
     public Optional<Path> authlibInjectorPath() throws IOException {
         return parsePath(load().getProperty(AUTHLIB_INJECTOR_KEY));
     }
+
     public void setAuthlibInjectorPath(Path jar) throws IOException {
         update(properties -> {
             if (jar == null) {
@@ -624,6 +626,7 @@ public final class SettingsService {
             }
         });
     }
+
     private static Map<String, String> parseInstanceAccounts(String raw) {
         if (raw == null || raw.isBlank()) {
             return new LinkedHashMap<>();
@@ -635,6 +638,7 @@ public final class SettingsService {
             return new LinkedHashMap<>();
         }
     }
+
     private static Map<String, List<String>> parseDisabledMods(String raw) {
         if (raw == null || raw.isBlank()) {
             return new LinkedHashMap<>();
@@ -645,15 +649,20 @@ public final class SettingsService {
         } catch (RuntimeException ignored) {
             return new LinkedHashMap<>();
         }
-    }    /** 一条实例账号绑定：所属游戏目录 + 实例名 + 账号 id。 */
+    }
+
+    /** 一条实例账号绑定：所属游戏目录 + 实例名 + 账号 id。 */
     public record InstanceAccountBinding(Path gameDirectory, String instanceId, String accountId) {
-    }    private static String modStateKey(Path gameDirectory, String instanceId) {
+    }
+
+    private static String modStateKey(Path gameDirectory, String instanceId) {
         Objects.requireNonNull(gameDirectory, "gameDirectory");
         Objects.requireNonNull(instanceId, "instanceId");
         String value = gameDirectory.toAbsolutePath().normalize() + "\n" + instanceId;
         return Base64.getUrlEncoder().withoutPadding().encodeToString(
                 value.getBytes(StandardCharsets.UTF_8));
     }
+
     private Properties load() throws IOException {
         synchronized (writeLock) {
             Properties properties = new Properties();
@@ -678,6 +687,7 @@ public final class SettingsService {
         }
         LOGGER.warn("设置文件损坏，已备份到 {} 并使用默认值", backup, cause);
     }
+
     private static Optional<Path> parsePath(String raw) {
         if (raw == null || raw.isBlank()) {
             return Optional.empty();
@@ -714,6 +724,7 @@ public final class SettingsService {
             return defaultValue;
         }
     }
+
     private void update(Consumer<Properties> change) throws IOException {
         synchronized (writeLock) {
             Properties properties = load();
@@ -721,6 +732,7 @@ public final class SettingsService {
             store(properties);
         }
     }
+
     private void store(Properties properties) throws IOException {
         Path parent = settingsFile.toAbsolutePath().getParent();
         Files.createDirectories(parent);

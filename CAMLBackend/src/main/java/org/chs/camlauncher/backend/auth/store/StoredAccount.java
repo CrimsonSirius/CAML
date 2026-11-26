@@ -109,12 +109,6 @@ public record StoredAccount(
                 newAccessToken, newClientToken, refreshToken, expiresAt, newProfiles);
     }
 
-    /** 主动抹掉凭据，用于“不记住登录”或退出登录。 */
-    public StoredAccount withoutToken() {
-        return new StoredAccount(id, type, displayName, uuid, apiRoot, serverName,
-                "", clientToken, "", 0, profiles);
-    }
-
     @Override
     public String toString() {
         return "StoredAccount[id=" + id

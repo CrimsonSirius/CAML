@@ -371,14 +371,17 @@ C:\Program Files\CAML\runtime\   裁剪后的 Java 运行时
 `release` 是否覆盖 `packagedRuntimeModules`、以及 `--strip-native-commands` 是否生效。
 
 GitHub Actions 的 `Build` workflow 会在所有分支 push、所有 PR 和手动触发时跑测试，但只在 PR、
-`main`/`crimson` 分支和 tag 上打包：普通功能分支 push 只跑测试，不再每次都占用
-Linux 45 分钟 + Windows 60 分钟的 runner。两个打包 workflow 的细节：
+`main`/`crimson`/`namelessgod2008` 分支和 tag 上打包：普通功能分支 push 只跑测试，
+不再每次都占用 Linux 45 分钟 + Windows 60 分钟的 runner。两个打包 workflow 的细节：
 
 - 测试：Ubuntu 上 `xvfb-run ./gradlew test :CAMLFront:distZip`，Windows 上 `.\gradlew.bat test`；失败时上传测试报告。
 - 打包：`Package Linux` 与 `Package Windows` 并行执行；**Windows 打包要求 Windows 用例先通过**，测试红了不会产出安装包。
 - 两个打包 job 在上传 artifact 前都会跑 `smokeTestPackagedApp`，以与安装包相同的模块布局启动后端，并校验裁剪运行时的模块集。
 - release 号优先使用 PR 编号，artifact 名分别为 `caml-linux-packages-pr-<PR 编号>` 和 `caml-windows-packages-pr-<PR 编号>`；无法从合并提交提取 PR 编号时回退到 run number。Windows artifact 本身是 GitHub 提供的 zip，内含安装式 EXE、便携 zip 和 `SHA256SUMS.txt`。
 - `v*` tag 同时触发两个 `Package` workflow，各自上传 GitHub Release。
+- 手动触发（`workflow_dispatch`）的 `version` 输入经环境变量传入，并在打包前校验为
+  “数字和点组成”；带后缀的 tag（例如 `v1.0.0-beta`）会在解析阶段直接报错，
+  不会拖到 Gradle 才失败。
 
 ### CAMLUI 组件库
 
@@ -686,7 +689,7 @@ info.installedVersions();
 
 ## 已知问题
 
-`./gradlew test` 目前在 Windows 与 Linux 上都是 486 个用例全部通过，CI 的 `build` 与
+`./gradlew test` 目前在 Windows 与 Linux 上都是 489 个用例全部通过，CI 的 `build` 与
 `windows-test` 两个 job 会分别在两个平台各跑一遍。
 
 历史上的平台相关失败（POSIX 路径断言、`fml.toml` 换行符、`java` / `java.exe` 文件名、

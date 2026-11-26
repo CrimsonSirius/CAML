@@ -69,12 +69,13 @@ jobs:
 
   linux-packages:
     needs: build
-    # 普通分支 push 只跑测试：同一提交在 PR 里还会再跑一次打包，
-    # 让每次 push 都占用 Linux 45min + Windows 60min runner 没有收益。
+    # 普通功能分支 push 只跑测试（同一提交在 PR 里还会再跑一次打包），
+    # 长期开发分支与 tag 才出包：main / crimson / namelessgod2008。
     if: >-
       github.event_name != 'push'
       || github.ref == 'refs/heads/main'
       || github.ref == 'refs/heads/crimson'
+      || github.ref == 'refs/heads/namelessgod2008'
     permissions:
       # tag 发布需要写权限；普通分支运行由上面的 if 拦住，不会因放宽而多做写入。
       contents: write
@@ -88,6 +89,7 @@ jobs:
       github.event_name != 'push'
       || github.ref == 'refs/heads/main'
       || github.ref == 'refs/heads/crimson'
+      || github.ref == 'refs/heads/namelessgod2008'
     permissions:
       contents: write
     uses: ./.github/workflows/package-windows.yml

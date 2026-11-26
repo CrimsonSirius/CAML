@@ -178,13 +178,16 @@ public final class AccountController {
                 () -> context.backend().authlibInjectorPath().orElse(null),
                 onLoaded, onError);
     }
+
     public AsyncTaskHandle<Void> saveInjectorPath(
             Path jar, Runnable onSaved, Consumer<String> onError) {
         return context.runSettings(UiText.tr("operation.saveInjectorPath"), () -> {
             context.backend().setAuthlibInjectorPath(jar);
             return null;
         }, ignored -> run(onSaved), onError);
-    }    private static void run(Runnable action) {
+    }
+
+    private static void run(Runnable action) {
         if (action != null) {
             action.run();
         }

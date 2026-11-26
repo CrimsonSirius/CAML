@@ -42,13 +42,17 @@ jobs:
         run: chmod +x gradlew
       - name: Resolve package identity
         id: package
+        # 输入通过环境变量传入，不直接拼进 shell；并在打包前校验版本格式，
+        # 免得 tag 带后缀（v1.0.0-beta）时直到 Gradle 阶段才报错。
+        env:
+          INPUT_VERSION: ${{ github.event.inputs.version }}
         run: |
           if [ "$GITHUB_REF_TYPE" = "tag" ]; then
             version="${GITHUB_REF_NAME#v}"
             release="1"
             artifact="caml-linux-packages"
           elif [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
-            version="${{ github.event.inputs.version }}"
+            version="$INPUT_VERSION"
             if [ -z "$version" ]; then
               version="1.0.0"
             fi
@@ -72,6 +76,10 @@ jobs:
               release="$GITHUB_RUN_NUMBER"
               artifact="caml-linux-packages-run-$GITHUB_RUN_NUMBER"
             fi
+          fi
+          if ! printf '%s' "$version" | grep -Eq '^[0-9]+(\.[0-9]+)*$'; then
+            echo "::error::版本号必须是数字和点组成（例如 1.0.0），当前：$version"
+            exit 1
           fi
           echo "version=$version" >> "$GITHUB_OUTPUT"
           echo "release=$release" >> "$GITHUB_OUTPUT"
@@ -123,6 +131,9 @@ jobs:
       - name: Upload release assets
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # release job 没有 checkout，工作目录里没有 .git，gh 无法从 remote 推断仓库，
+          # 必须显式指定，否则 gh release 会以 "no git remotes found" 失败。
+          GH_REPO: ${{ github.repository }}
         run: |
           gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1 || \
             gh release create "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" --notes "CAML $GITHUB_REF_NAME" || \

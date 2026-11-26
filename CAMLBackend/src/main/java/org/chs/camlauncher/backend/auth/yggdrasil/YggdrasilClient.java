@@ -18,6 +18,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -284,12 +285,31 @@ public final class YggdrasilClient {
         if (object == null) {
             return null;
         }
-        String id = stringValue(object.get("id"));
-        if (id == null || id.isBlank()) {
+        String id = canonicalProfileId(stringValue(object.get("id")));
+        if (id == null) {
             return null;
         }
         String name = stringValue(object.get("name"));
         return new YggdrasilProfile(id, name == null ? "" : name);
+    }
+
+    /**
+     * 把角色 id 规范化为 32 位小写十六进制。
+     *
+     * <p>Yggdrasil 规范里 {@code id} 是 32 位无横线字符串，但个别实现会返回带横线的
+     * UUID 或大写十六进制。统一规范化后，账号存储里的 {@code uuid}、角色列表和
+     * {@code selectedProfile} 比较才能始终一致；格式不合法时返回 {@code null}，
+     * 由调用方按“响应里没有这个角色”处理，而不是在启动时才抛 UUID 解析异常。</p>
+     */
+    private static String canonicalProfileId(String value) {
+        if (value == null) {
+            return null;
+        }
+        String raw = value.trim().replace("-", "");
+        if (raw.length() != 32 || !raw.matches("[0-9a-fA-F]{32}")) {
+            return null;
+        }
+        return raw.toLowerCase(Locale.ROOT);
     }
 
     private HttpResponse<String> post(String url, JsonObject body, String apiRoot)
@@ -381,4 +401,3 @@ public final class YggdrasilClient {
                 .build();
     }
 }
-

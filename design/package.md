@@ -247,8 +247,8 @@ build/packages/SHA256SUMS.txt
   （`distZip` 必须一起跑，否则上传 debug distribution 的步骤永远拿不到文件）；
 - Windows job 执行 `.\gradlew.bat test`；两个平台都跑全量用例，失败时上传测试报告；
 - 注入 `CURSEFORGE_API_KEY`、`CAML_MICROSOFT_CLIENT_ID` secret；
-- 打包 job 只在 PR、`main`/`crimson` 分支和 tag 上运行：普通功能分支 push 只跑测试，
-  避免每次 push 都占用 Linux 45 分钟 + Windows 60 分钟的 runner；
+- 打包 job 只在 PR、`main`/`crimson`/`namelessgod2008` 分支和 tag 上运行：普通功能分支
+  push 只跑测试，避免每次 push 都占用 Linux 45 分钟 + Windows 60 分钟的 runner；
 - `windows-packages` 额外要求 `windows-test` 成功，测试红了不产出安装包。
 
 ### 12.2 `Package Linux`
@@ -256,7 +256,8 @@ build/packages/SHA256SUMS.txt
 - 可被 Build 调用、手动、tag 触发；
 - Ubuntu 22.04，Zulu 25；
 - 安装 `rpm`（`dpkg-deb` 由 runner 自带）；
-- 版本来源：tag 去掉 `v`、手动输入、PR 号或 run number；
+- 版本来源：tag 去掉 `v`、手动输入、PR 号或 run number；手动输入经环境变量传入并以
+  `^[0-9]+(\.[0-9]+)*$` 预先校验，带后缀的 tag（`v1.0.0-beta`）在解析阶段即失败；
 - 打包并检查 deb/rpm；
 - 调用根工程的 `smokeTestPackagedApp` 执行发布冒烟测试；
 - tag 时上传 GitHub Release。
@@ -269,6 +270,9 @@ build/packages/SHA256SUMS.txt
 - 检查 EXE/ZIP；
 - 调用根工程的 `smokeTestPackagedApp` 执行发布冒烟测试；
 - tag 时上传 GitHub Release。
+
+两个 `release` job 都不 checkout，因此显式设置 `GH_REPO: ${{ github.repository }}`，
+否则 `gh release` 会以 “no git remotes found” 失败。
 
 ### 12.4 发布冒烟测试
 

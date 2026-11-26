@@ -1,6 +1,6 @@
 # CAML 当前实现情况
 
-> 本文按当前代码与构建产物重写，最后核对时间：2026-11-23；基线提交：`c86eb05`。
+> 本文按当前代码与构建产物重写，最后核对时间：2026-11-26。
 
 ## 1. 总体状态
 
@@ -37,8 +37,7 @@ CAML/
 ├─ CAMLFront/      JavaFX 应用、控制器、页面
 ├─ packaging/      图标、许可证、Linux/Windows 打包资源
 ├─ gradle/         packaging.gradle.kts、版本目录
-├─ design/         设计/实现文档
-└─ HANDOFF.md      当前交接说明
+└─ design/         设计/实现文档
 ```
 
 ## 3. 后端实现
@@ -88,9 +87,9 @@ CAML/
 
 - 离线账号稳定 UUID。
 - Microsoft OAuth 设备码 + Xbox/XSTS/Minecraft Services。
-- Yggdrasil authenticate/refresh/validate、多角色切换和 `selectedProfile` 修复。
+- Yggdrasil authenticate/refresh/validate、多角色切换和 `selectedProfile` 修复；每次启动 refresh 后把最新角色名与角色列表写回账号，角色 id 统一规范化为 32 位小写十六进制。
 - accessToken/refreshToken AES-GCM 加密落盘；密码不保存。
-- 实例账号优先于全局默认账号。
+- 实例账号优先于全局默认账号；游戏位置变化后可检测并一键套用旧位置的实例绑定。
 - authlib-injector 1.2.5 自动缓存、SHA-256 校验、可覆盖。
 
 ### 3.6 Java
@@ -171,7 +170,7 @@ CAML/
 
 ## 6. 测试与验证
 
-当前构建产物中共有 **103 个测试类、407 个测试方法**，最近一次全量测试无失败/错误/跳过（`HANDOFF.md` 记录具体时间）。
+当前构建产物中共有 **122 个测试类、489 个测试方法**，最近一次全量测试无失败/错误/跳过。
 
 测试覆盖重点：
 
@@ -194,6 +193,7 @@ CAML/
 - 下载任务的暂停/继续 UI；自动断点续传已存在。
 - 完整 CurseForge Key 获取渠道：需要构建环境或系统属性提供。
 - Microsoft Client ID 未注入时无法登录微软账号。
+- 第三方服务器的两步验证/OAuth 辅助登录、账号头像和账号导入/导出。
 
 ## 8. 构建与运行
 
@@ -229,4 +229,3 @@ CAML/
 - [runtime.md](runtime.md)：游戏 Java；
 - [ui.md](ui.md)：界面、布局、主题和测试；
 - [package.md](package.md)：打包与发布；
-- [../HANDOFF.md](../HANDOFF.md)：当前工作树、近期修复与接手顺序。

@@ -153,8 +153,11 @@ final class InstanceAccountView extends VBox implements PageLifecycle {
             choiceBox.getItems().setAll(choices);
             choiceBox.setValue(AccountChoice.DEFAULT);
 
+            // 读取已保存的绑定会触发 valueProperty 变化：用这个开关避免“打开页面就写一次设置”
+            // 并把“已保存”提示刷到状态栏。
+            boolean[] restoring = {true};
             choiceBox.valueProperty().addListener((observable, oldValue, value) -> {
-                if (disposed || value == null || value.equals(oldValue)) {
+                if (restoring[0] || disposed || value == null || value.equals(oldValue)) {
                     return;
                 }
                 String accountId = AccountChoice.DEFAULT.equals(value) ? null : value;
@@ -165,11 +168,15 @@ final class InstanceAccountView extends VBox implements PageLifecycle {
             });
 
             tasks.add(accountController.loadInstanceAccount(gameDirectory, instanceId, accountId -> {
+                restoring[0] = false;
                 if (disposed) {
                     return;
                 }
                 choiceBox.setValue(accountId == null ? AccountChoice.DEFAULT : accountId);
-            }, message -> statusLabel.setText(message)));
+            }, message -> {
+                restoring[0] = false;
+                statusLabel.setText(message);
+            }));
 
             HBox row = new HBox(name, choiceBox);
             row.getStyleClass().add("app-settings-row");
@@ -194,6 +201,7 @@ final class InstanceAccountView extends VBox implements PageLifecycle {
                     statusLabel.setText(message);
                 }));
     }
+
     private void applyMismatch(InstanceAccountMismatch mismatch) {
         if (disposed) {
             return;
@@ -207,10 +215,12 @@ final class InstanceAccountView extends VBox implements PageLifecycle {
         mismatchRow.setVisible(true);
         mismatchRow.setManaged(true);
     }
+
     private void hideMismatch() {
         mismatchRow.setVisible(false);
         mismatchRow.setManaged(false);
     }
+
     /** 一键把旧位置的绑定套用到当前游戏位置，成功后重新读取每一行的绑定。 */
     private void applyMismatch() {
         if (disposed || gameDirectory == null || instances.isEmpty()) {
@@ -226,9 +236,12 @@ final class InstanceAccountView extends VBox implements PageLifecycle {
             rebuildRows();
         }, message -> statusLabel.setText(message)));
     }
+
     private void rebuildRows() {
         buildRows(instances);
-    }    @Override
+    }
+
+    @Override
     public void dispose() {
         disposed = true;
         for (AsyncTaskHandle<?> task : tasks) {
