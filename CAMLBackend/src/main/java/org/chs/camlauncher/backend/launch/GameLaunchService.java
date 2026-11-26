@@ -32,8 +32,6 @@ import java.util.Objects;
 import java.util.Optional;
 
 public final class GameLaunchService {
-    /** 未显式指定游戏目录时使用的默认目录。 */
-    private final Path defaultGameDirectory;
     private final URI manifestUri;
     private final Path manifestCacheFile;
     private final VersionInstaller versionInstaller;
@@ -49,7 +47,6 @@ public final class GameLaunchService {
     private volatile String launcherLocale = LanguageConstants.DEFAULT_LOCALE;
 
     public GameLaunchService(
-            Path gameDirectory,
             URI manifestUri,
             Path manifestCacheFile,
             VersionInstaller versionInstaller,
@@ -60,7 +57,6 @@ public final class GameLaunchService {
             VirtualAssetInstaller virtualAssetInstaller,
             ProcessLauncher processLauncher
     ) {
-        this.defaultGameDirectory = Objects.requireNonNull(gameDirectory, "gameDirectory");
         this.manifestUri = Objects.requireNonNull(manifestUri, "manifestUri");
         this.manifestCacheFile = Objects.requireNonNull(manifestCacheFile, "manifestCacheFile");
         this.versionInstaller = Objects.requireNonNull(versionInstaller, "versionInstaller");
@@ -84,27 +80,6 @@ public final class GameLaunchService {
         this.launcherLocale = launcherLocale == null || launcherLocale.isBlank()
                 ? LanguageConstants.DEFAULT_LOCALE
                 : launcherLocale;
-    }
-
-    /**
-     * 使用默认游戏目录启动游戏。
-     */
-    public GameLaunch launch(
-            String versionId,
-            String username,
-            LaunchOptions options,
-            DownloadListener downloadListener,
-            ProcessListener processListener
-    ) throws IOException, InterruptedException {
-        return launch(
-                versionId,
-                defaultGameDirectory,
-                username,
-                options,
-                VersionIsolationMode.FULL,
-                downloadListener,
-                processListener
-        );
     }
 
     /**

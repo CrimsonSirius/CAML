@@ -249,7 +249,7 @@ build/packages/SHA256SUMS.txt
 - 注入 `CURSEFORGE_API_KEY`、`CAML_MICROSOFT_CLIENT_ID` secret；
 - 打包 job 只在 PR、`main`/`crimson`/`namelessgod2008` 分支和 tag 上运行：普通功能分支
   push 只跑测试，避免每次 push 都占用 Linux 45 分钟 + Windows 60 分钟的 runner；
-- `windows-packages` 额外要求 `windows-test` 成功，测试红了不产出安装包。
+- `windows-packages` 依赖统一的 `build` 矩阵；任一平台测试失败都不会产出安装包。
 
 ### 12.2 `Package Linux`
 

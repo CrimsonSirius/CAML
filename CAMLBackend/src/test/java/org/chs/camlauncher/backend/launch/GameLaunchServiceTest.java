@@ -105,7 +105,6 @@ class GameLaunchServiceTest {
 
         try {
             GameLaunchService service = new GameLaunchService(
-                    gameDirectory,
                     URI.create(baseUrl + "/manifest.json"),
                     rootDirectory.resolve("cache/version_manifest_v2.json"),
                     new VersionInstaller(
