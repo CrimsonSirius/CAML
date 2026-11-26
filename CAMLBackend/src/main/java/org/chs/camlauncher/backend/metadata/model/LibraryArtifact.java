@@ -3,6 +3,8 @@ package org.chs.camlauncher.backend.metadata.model;
 /** 旧式 Forge library 的 Maven 路径、下载地址和去重键推导。 */
 public final class LibraryArtifact {
     public static final String DEFAULT_LIBRARY_URL = "https://libraries.minecraft.net/";
+    public static final String FORGE_LIBRARY_URL = "https://maven.minecraftforge.net/";
+    public static final String NEOFORGE_LIBRARY_URL = "https://maven.neoforged.net/releases/";
 
     private LibraryArtifact() {
     }
@@ -74,9 +76,22 @@ public final class LibraryArtifact {
             return null;
         }
         String repository = library.url() == null || library.url().isBlank()
-                ? DEFAULT_LIBRARY_URL
+                ? defaultRepository(library.name())
                 : library.url();
         return repository.endsWith("/") ? repository + path : repository + "/" + path;
+    }
+
+    private static String defaultRepository(String name) {
+        if (name == null) {
+            return DEFAULT_LIBRARY_URL;
+        }
+        if (name.startsWith("net.minecraftforge:") || name.startsWith("cpw.mods:")) {
+            return FORGE_LIBRARY_URL;
+        }
+        if (name.startsWith("net.neoforged:")) {
+            return NEOFORGE_LIBRARY_URL;
+        }
+        return DEFAULT_LIBRARY_URL;
     }
 
     public static String sha1(Library library) {

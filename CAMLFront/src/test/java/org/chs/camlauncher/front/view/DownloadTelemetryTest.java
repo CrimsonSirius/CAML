@@ -133,6 +133,22 @@ class DownloadTelemetryTest {
     }
 
     @Test
+    void retryingSamePlanDoesNotAccumulateItsBytesAgain() {
+        DownloadTelemetry telemetry = new DownloadTelemetry();
+        telemetry.onSummary(new DownloadListener.DownloadSummary(0, 100, 0, 2));
+        telemetry.onSummary(new DownloadListener.DownloadSummary(60, 100, 1, 2));
+
+        telemetry.onPlanRetry();
+        telemetry.onSummary(new DownloadListener.DownloadSummary(0, 100, 0, 2));
+
+        DownloadTelemetry.Snapshot retry = telemetry.snapshot();
+        assertEquals(0, retry.downloadedBytes());
+        assertEquals(100, retry.totalBytes());
+        assertEquals(2, retry.totalItems());
+        assertEquals(0, retry.completedItems());
+    }
+
+    @Test
     void reportsWhenCurrentPlanLearnsItsByteTotal() {
         DownloadTelemetry telemetry = new DownloadTelemetry();
         telemetry.onSummary(new DownloadListener.DownloadSummary(0, 0, 0, 4));
