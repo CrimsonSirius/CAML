@@ -58,7 +58,8 @@ class LaunchArgumentsBuilderTest {
         assertTrue(result.contains("-Dgame=" + gameDirectory));
         assertTrue(result.contains("-Djava.library.path=" + plan.nativesDirectory()));
         assertTrue(result.contains("-cp"));
-        assertTrue(result.contains("/tmp/a.jar" + java.io.File.pathSeparator + "/tmp/b.jar"));
+        // 期望值由 Path 拼出，Windows 上会自动使用 "\" 分隔符。
+        assertTrue(result.contains(classpath.get(0) + java.io.File.pathSeparator + classpath.get(1)));
     }
 
     @Test

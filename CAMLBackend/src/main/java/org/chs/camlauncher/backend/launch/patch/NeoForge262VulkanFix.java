@@ -29,6 +29,11 @@ public final class NeoForge262VulkanFix {
     private static final Pattern EARLY_WINDOW_CONTROL_LINE = Pattern.compile(
             "(?m)^([ \\t]*earlyWindowControl[ \\t]*=[ \\t]*)(true|false)([ \\t]*(?:#.*)?)$"
     );
+    /**
+     * fml.toml 固定用 LF 写入：TOML 与 NeoForge 的解析器在 Windows 上也接受 LF，
+     * 而固定分隔符能让生成内容可复现、便于比对，不受运行平台换行习惯影响。
+     */
+    private static final String LINE_SEPARATOR = "\n";
 
     private NeoForge262VulkanFix() {
     }
@@ -101,9 +106,9 @@ public final class NeoForge262VulkanFix {
             content = matcher.replaceFirst("$1false$3");
         } else {
             if (!content.isEmpty() && !content.endsWith("\n") && !content.endsWith("\r")) {
-                content += System.lineSeparator();
+                content += LINE_SEPARATOR;
             }
-            content += EARLY_WINDOW_CONTROL + " = false" + System.lineSeparator();
+            content += EARLY_WINDOW_CONTROL + " = false" + LINE_SEPARATOR;
         }
         Files.createDirectories(configFile.getParent());
         Files.writeString(configFile, content, StandardCharsets.UTF_8);

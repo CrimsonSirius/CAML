@@ -33,7 +33,8 @@ class LaunchCommandBuilderTest {
         int cp = command.arguments().indexOf("-cp");
         int main = command.arguments().indexOf("fake.Main");
         assertTrue(cp >= 0 && main > cp);
-        assertEquals("/tmp/a.jar", command.arguments().get(cp + 1));
+        // 用 Path.toString() 而不是字面量：Windows 上 "/tmp/a.jar" 会变成 "\tmp\a.jar"。
+        assertEquals(classpath.get(0).toString(), command.arguments().get(cp + 1));
     }
 
     @Test
