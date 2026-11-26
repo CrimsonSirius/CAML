@@ -24,6 +24,7 @@ public final class LALAGenerator extends LanguageTranslationGenerator {
         // Navigatio et pedis
         t.put("nav.home", "Domus");
         t.put("nav.downloads", "Deposita");
+        t.put("nav.tasks", "Munera");
         t.put("nav.settings", "Optiones");
         t.put("app.subtitle", "Deductor Minecraft");
         t.put("footer.status", "CAML %s · Tergum %s · Directorium datorum: %s");

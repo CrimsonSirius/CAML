@@ -432,6 +432,7 @@
   "nav.downloads": "Загрузки",
   "nav.home": "Главная",
   "nav.settings": "Настройки",
+  "nav.tasks": "Задачи",
   "network.httpError": "HTTP %s: %s",
   "network.noSource": "Нет доступного источника загрузки: %s",
   "network.redirectLocationMissing": "В перенаправлении отсутствует заголовок Location: %s",
@@ -666,5 +667,14 @@
   "status.launchFailed": "Не удалось запустить игру!",
   "status.launchFailedDetail": "Не удалось запустить игру: %s",
   "status.started": "Команда запуска отправлена",
-  "status.starting": "Запуск %s..."
+  "status.starting": "Запуск %s...",
+  "tasks.back": "Back to tasks",
+  "tasks.empty": "No tasks yet",
+  "tasks.open": "Open task %s · %s",
+  "tasks.status.cancelled": "Cancelled",
+  "tasks.status.completed": "Completed",
+  "tasks.status.failed": "Failed",
+  "tasks.status.running": "Running",
+  "tasks.subtitle": "Downloads and installations",
+  "tasks.title": "Tasks"
 }

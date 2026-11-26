@@ -24,6 +24,7 @@ public final class ENUSGenerator extends LanguageTranslationGenerator {
         // Top navigation and footer
         t.put("nav.home", "Home");
         t.put("nav.downloads", "Downloads");
+        t.put("nav.tasks", "Tasks");
         t.put("nav.settings", "Settings");
         t.put("app.subtitle", "Minecraft Launcher");
         t.put("footer.status", "CAML %s · Backend %s · Data directory: %s");

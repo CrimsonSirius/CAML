@@ -432,6 +432,7 @@
   "nav.downloads": "Downloads",
   "nav.home": "Start",
   "nav.settings": "Einstellungen",
+  "nav.tasks": "Aufgaben",
   "network.httpError": "HTTP %s: %s",
   "network.noSource": "Keine Download-Quelle verfügbar: %s",
   "network.redirectLocationMissing": "Weiterleitung ohne Location: %s",
@@ -666,5 +667,14 @@
   "status.launchFailed": "Start fehlgeschlagen!",
   "status.launchFailedDetail": "Start fehlgeschlagen: %s",
   "status.started": "Startbefehl gesendet",
-  "status.starting": "Starte %s..."
+  "status.starting": "Starte %s...",
+  "tasks.back": "Back to tasks",
+  "tasks.empty": "No tasks yet",
+  "tasks.open": "Open task %s · %s",
+  "tasks.status.cancelled": "Cancelled",
+  "tasks.status.completed": "Completed",
+  "tasks.status.failed": "Failed",
+  "tasks.status.running": "Running",
+  "tasks.subtitle": "Downloads and installations",
+  "tasks.title": "Tasks"
 }

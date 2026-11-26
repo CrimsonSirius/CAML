@@ -55,7 +55,6 @@ public final class DownloadsController {
 
     public void registerDownloadTask(DownloadTask task) {
         Objects.requireNonNull(task, "task");
-        downloadTasks.removeIf(existing -> !existing.isRunning());
         if (!downloadTasks.contains(task)) {
             downloadTasks.add(task);
         }

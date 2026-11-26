@@ -24,6 +24,7 @@ public final class KOKRGenerator extends LanguageTranslationGenerator {
         // 내비게이션과 하단 표시줄
         t.put("nav.home", "홈");
         t.put("nav.downloads", "다운로드");
+        t.put("nav.tasks", "작업");
         t.put("nav.settings", "설정");
         t.put("app.subtitle", "Minecraft 런처");
         t.put("footer.status", "CAML %s · 백엔드 %s · 데이터 디렉터리: %s");

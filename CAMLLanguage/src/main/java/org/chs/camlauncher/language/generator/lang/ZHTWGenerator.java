@@ -33,11 +33,23 @@ public final class ZHTWGenerator extends LanguageTranslationGenerator {
         // 頂端導覽與底欄
         t.put("nav.home", "首頁");
         t.put("nav.downloads", "下載");
+        t.put("nav.tasks", "任務");
         t.put("nav.settings", "設定");
         t.put("app.subtitle", "Minecraft 啟動器");
         t.put("footer.status", "CAML %s · 後端%s · 資料目錄: %s");
         t.put("footer.backend.ready", "已就緒");
         t.put("footer.backend.notReady", "未就緒");
+
+        // 任務中心
+        t.put("tasks.title", "任務");
+        t.put("tasks.subtitle", "下載與安裝任務");
+        t.put("tasks.empty", "暫無任務");
+        t.put("tasks.back", "返回任務列表");
+        t.put("tasks.open", "開啟任務 %s · %s");
+        t.put("tasks.status.running", "進行中");
+        t.put("tasks.status.completed", "已完成");
+        t.put("tasks.status.failed", "失敗");
+        t.put("tasks.status.cancelled", "已取消");
 
         // 首頁啟動表單
         t.put("home.username", "離線使用者名稱");

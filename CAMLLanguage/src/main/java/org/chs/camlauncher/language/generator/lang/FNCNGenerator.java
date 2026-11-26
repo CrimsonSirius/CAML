@@ -24,6 +24,7 @@ public final class FNCNGenerator extends LanguageTranslationGenerator {
         // 顶部导航与底栏
         t.put("nav.home", "家");
         t.put("nav.downloads", "向下装载们");
+        t.put("nav.tasks", "干活们");
         t.put("nav.settings", "安放们");
         t.put("app.subtitle", "Minecraft 发射器");
         t.put("footer.status", "CAML %s · 后部末端 %s · 数据簿：%s");

@@ -24,6 +24,7 @@ public final class RURUGenerator extends LanguageTranslationGenerator {
         // Навигация и подвал
         t.put("nav.home", "Главная");
         t.put("nav.downloads", "Загрузки");
+        t.put("nav.tasks", "Задачи");
         t.put("nav.settings", "Настройки");
         t.put("app.subtitle", "Лаунчер Minecraft");
         t.put("footer.status", "CAML %s · Бэкенд %s · Каталог данных: %s");

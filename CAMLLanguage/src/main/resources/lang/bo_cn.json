@@ -432,6 +432,7 @@
   "nav.downloads": "ཕབ་ལེན",
   "nav.home": "མ་ཤོག",
   "nav.settings": "སྒྲིག་བཀོད",
+  "nav.tasks": "ལས་དོན",
   "network.httpError": "HTTP %s: %s",
   "network.noSource": "ཕབ་ལེན་གྱི་འབྱུང་ཁུངས་མི་འདུག: %s",
   "network.redirectLocationMissing": "ལོག་ཕྱོགས་ལ་ Location མི་འདུག: %s",
@@ -666,5 +667,14 @@
   "status.launchFailed": "འགོ་འཛུགས་ཕམ་ཉེས!",
   "status.launchFailedDetail": "འགོ་འཛུགས་ཕམ་ཉེས: %s",
   "status.started": "འགོ་འཛུགས་ཀྱི་བཀའ་ཚིག་བཏང་ཟིན",
-  "status.starting": "%s འགོ་འཛུགས་བཞིན..."
+  "status.starting": "%s འགོ་འཛུགས་བཞིན...",
+  "tasks.back": "Back to tasks",
+  "tasks.empty": "No tasks yet",
+  "tasks.open": "Open task %s · %s",
+  "tasks.status.cancelled": "Cancelled",
+  "tasks.status.completed": "Completed",
+  "tasks.status.failed": "Failed",
+  "tasks.status.running": "Running",
+  "tasks.subtitle": "Downloads and installations",
+  "tasks.title": "Tasks"
 }

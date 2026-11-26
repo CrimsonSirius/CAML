@@ -24,6 +24,7 @@ public final class FRFRGenerator extends LanguageTranslationGenerator {
         // Navigation et pied de page
         t.put("nav.home", "Accueil");
         t.put("nav.downloads", "Téléchargements");
+        t.put("nav.tasks", "Tâches");
         t.put("nav.settings", "Paramètres");
         t.put("app.subtitle", "Lanceur Minecraft");
         t.put("footer.status", "CAML %s · Backend %s · Répertoire de données : %s");
