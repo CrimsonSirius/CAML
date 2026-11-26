@@ -1,6 +1,6 @@
 # CAML 打包与发布
 
-> 本文按当前 `gradle/packaging.gradle.kts`、`packaging/` 和 GitHub Actions 重写，最后核对时间：2026-11-23；基线提交：`c86eb05`。
+> 本文按当前 `gradle/packaging.gradle.kts`、`packaging/` 和 GitHub Actions 重写，最后核对时间：2026-11-26；基线提交：`cf7ef33`。
 
 ## 1. 边界
 
@@ -179,11 +179,13 @@ CI 在 Ubuntu 22.04（glibc 2.35）构建，以提高跨发行版兼容性。
 stageWindowsInput
 generateWindowsIcon
 stageWindowsZuluNotices → stageWindowsLicenses
-  → packageWindowsAppImage
-      ├─ packageWindowsPortable
-      └─ packageWindowsExe
-  → packageWindows
+  ├─ packageWindowsAppImage → packageWindowsPortable
+  └─ packageWindowsExe（独立再跑一次 jpackage）
+packageWindows = packageWindowsExe + packageWindowsPortable
 ```
+
+`packageWindowsExe` 与 `packageWindowsAppImage` 都直接依赖三个 staging 任务，各自调用一次
+jpackage（`--type exe` 与 `--type app-image`），因此 EXE 不依赖 app-image 的中间产物。
 
 辅助任务：
 
@@ -194,7 +196,8 @@ stageWindowsZuluNotices → stageWindowsLicenses
 - `packageWindowsAppImage`；
 - `packageWindowsPortable`：不需要 WiX；
 - `packageWindowsExe`：需要 WiX；
-- `packageWindows`：EXE + ZIP + SHA256SUMS。
+- `packageWindows`：EXE + ZIP + SHA256SUMS；
+- `smokeTestPackagedApp`：读取 app-image 的 `*.cfg` 启动后端，并校验裁剪运行时。
 
 Windows 任务只在 Windows 主机执行；当前只支持 x64/amd64。
 
@@ -240,34 +243,54 @@ build/packages/SHA256SUMS.txt
 
 - 触发：所有分支 push、PR、手动；
 - Ubuntu + Zulu 25；
-- 执行 `:CAMLBackend:test :CAMLFront:assemble`；
-- 失败上传测试报告；
-- 上传 `CAMLFront` debug distribution；
-- 成功后并行调用 Linux/Windows 打包 workflow；
-- 注入 `CURSEFORGE_API_KEY` secret。
+- 执行 `xvfb-run ./gradlew test :CAMLFront:distZip`
+  （`distZip` 必须一起跑，否则上传 debug distribution 的步骤永远拿不到文件）；
+- Windows job 执行 `.\gradlew.bat test`；两个平台都跑全量用例，失败时上传测试报告；
+- 注入 `CURSEFORGE_API_KEY`、`CAML_MICROSOFT_CLIENT_ID` secret；
+- 打包 job 只在 PR、`main`/`crimson` 分支和 tag 上运行：普通功能分支 push 只跑测试，
+  避免每次 push 都占用 Linux 45 分钟 + Windows 60 分钟的 runner；
+- `windows-packages` 额外要求 `windows-test` 成功，测试红了不产出安装包。
 
 ### 12.2 `Package Linux`
 
 - 可被 Build 调用、手动、tag 触发；
 - Ubuntu 22.04，Zulu 25；
-- 安装 `rpm`、`dpkg-deb` 环境；
+- 安装 `rpm`（`dpkg-deb` 由 runner 自带）；
 - 版本来源：tag 去掉 `v`、手动输入、PR 号或 run number；
 - 打包并检查 deb/rpm；
-- 用与安装包相同的 `--module-path` 布局执行后端冒烟测试；
+- 调用根工程的 `smokeTestPackagedApp` 执行发布冒烟测试；
 - tag 时上传 GitHub Release。
 
 ### 12.3 `Package Windows`
 
 - Windows runner，Zulu 25；
-- 自动安装/定位 WiX 3.14；
+- 自动安装/定位 WiX 3.14，并校验 `light.exe` 存在；
 - 打包 EXE 和 portable ZIP；
 - 检查 EXE/ZIP；
-- 用命名模块布局执行后端冒烟测试；
+- 调用根工程的 `smokeTestPackagedApp` 执行发布冒烟测试；
 - tag 时上传 GitHub Release。
 
 ### 12.4 发布冒烟测试
 
+`./gradlew smokeTestPackagedApp` 读取 app-image 自己的 `*.cfg`，把其中的 `--module-path`
+展开为实际路径后启动 `BackendSmoke`，因此校验用的 JVM 参数与安装包完全一致，
+改 `--java-options` 时校验不会失效。
+
 `packaging/smoke/BackendSmoke.java` 会断言 `CAMLBackend` 以命名模块加载，启动后端，检查 11 个内置语言和 `lang/zh_cn.json`。它专门捕获 jpackage 模块路径下跨 jar 资源不可见的问题，普通 classpath 单元测试无法覆盖。
+
+任务在启动成功后还会校验裁剪运行时：
+
+- `runtime/release` 的 `MODULES` 必须覆盖 `packagedRuntimeModules`（Linux 与 Windows 共用
+  同一份模块列表）；少列模块只会在用户机器上抛 `ClassNotFoundException`；
+- `runtime/bin/java(.exe)` 必须不存在，否则说明 `--strip-native-commands` 没生效。
+
+### 12.5 并发与超时
+
+- `Build` 用 `cancel-in-progress: true`，同一分支连续推送取消旧运行；
+- 两个 `Package` workflow 用固定前缀 `caml-linux-packages-<ref>` /
+  `caml-windows-packages-<ref>` 且 `cancel-in-progress: false`：
+  被 `workflow_call` 调用时 `github.workflow` 是调用方名字，用它会让两个平台互相排队；
+- 超时：测试 30 分钟、Linux 打包 45 分钟、Windows 打包 60 分钟、发布 15 分钟。
 
 ## 13. 本地命令
 
@@ -283,6 +306,12 @@ Windows：
 ```powershell
 .\gradlew.bat packageWindows "-PcamlJdkHome=$env:JAVA_HOME" `
   "-PcamlVersion=1.0.0" "-PcamlRelease=1"
+```
+
+冒烟校验（打包完成后，两个平台命令相同）：
+
+```bash
+./gradlew smokeTestPackagedApp      # 或 .\gradlew.bat smokeTestPackagedApp
 ```
 
 清理：
@@ -331,3 +360,5 @@ Get-Content build/packages/windows/SHA256SUMS.txt
 - 修改升级 UUID 会让新旧版本并存。
 - 修改 `camlVersion`/`camlRelease` 后重新生成校验文件。
 - 发布 tag 前先跑 `./gradlew test` 和当前平台打包任务。
+- 修改 `--add-modules` 时必须同步 `packagedRuntimeModules`（Linux/Windows 共用），
+  并运行 `smokeTestPackagedApp` 确认裁剪运行时的 `MODULES` 覆盖该列表。

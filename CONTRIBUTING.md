@@ -119,7 +119,7 @@ PR 由维护者人工审查后合并，不依赖自动提交规范检查。审�
 
 ## 代码与文档约定
 
-项目架构和模块边界见 [AGENTS.md](AGENTS.md) 与 `design/` 目录。提交前尤其注意：
+项目架构和模块边界见 [design/architecture.md](design/architecture.md) 与 `design/` 目录。提交前尤其注意：
 
 - `CAMLBackend` 保持纯 Java，不依赖 JavaFX 或 `CAMLFront`；
 - `CAMLFront` 不直接读写文件、发 HTTP 或启动进程；
