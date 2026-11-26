@@ -94,7 +94,7 @@ public final class FNCNGenerator extends LanguageTranslationGenerator {
         t.put("launch.manualJavaUnavailable", "肉手揪出的爪哇不能用：%s");
         t.put("launch.javaRequirementNotFound", "撞不见满足译本要求的爪哇 %s，请打进或揪出爪哇。");
         t.put("launch.warning.xrandr.title", "xrandr 跑丢了");
-        t.put("launch.warning.xrandr.message", "这锅是 LWJGL 2 的：它非得找 xrandr，系统里却没这玩意。游戏照常往下冲，但多半会在摆弄显示模式时扑街。把 xrandr 打进去再开一次就行。");
+        t.put("launch.warning.xrandr.message", "这锅是 LWJGL 2 的：它非得找 xrandr，系统里却没这玩意。比赛照常往下冲，但多半会在摆弄显示模式时扑街。把 xrandr 打进去再开一次就行。");
         t.put("launch.warning.xrandr.commands", "Arch Linux：sudo pacman -S xorg-xrandr\nDebian/Ubuntu：sudo apt install x11-xserver-utils\nFedora/RHEL：sudo dnf install xrandr");
 
         // 下载版本类别与来源
@@ -375,20 +375,20 @@ public final class FNCNGenerator extends LanguageTranslationGenerator {
         t.put("instances.manage.resourcePacks.version", "版本：%s");
 
         // 零件下载
-        t.put("downloads.section.instances", "游戏实例");
-        t.put("downloads.section.content", "游戏内容");
+        t.put("downloads.section.instances", "比赛事例们");
+        t.put("downloads.section.content", "比赛内容们");
         t.put("maps.nav", "地图");
-        t.put("maps.search.title", "搜索地图");
-        t.put("maps.search.nameHint", "输入地图名称");
-        t.put("maps.search.loading", "正在搜索地图...");
-        t.put("maps.search.empty", "没有找到匹配的地图");
-        t.put("maps.search.failed", "加载地图失败：%s");
+        t.put("maps.search.title", "找地图");
+        t.put("maps.search.nameHint", "写上地图名");
+        t.put("maps.search.loading", "正在翻找地图...");
+        t.put("maps.search.empty", "没找着合适的地图");
+        t.put("maps.search.failed", "地图翻不开：%s");
         t.put("maps.list.meta", "版本：%s · 下载 %s · 更新 %s");
-        t.put("maps.detail.loading", "正在加载地图详情...");
-        t.put("operation.searchMaps", "搜索地图 %s");
-        t.put("operation.fetchMapProject", "获取地图项目 %s");
-        t.put("operation.downloadMap", "下载地图 %s");
-        t.put("mod.error.worldArchiveInvalid", "地图压缩包无效：%s");
+        t.put("maps.detail.loading", "正在瞅地图详情...");
+        t.put("operation.searchMaps", "翻找地图：%s");
+        t.put("operation.fetchMapProject", "拿来地图工程：%s");
+        t.put("operation.downloadMap", "向下装载地图：%s");
+        t.put("mod.error.worldArchiveInvalid", "地图压缩包不对劲：%s");
         t.put("mods.nav", "零件");
         t.put("shaders.nav", "光影包");
         t.put("shaders.search.title", "找光影包");
@@ -433,14 +433,14 @@ public final class FNCNGenerator extends LanguageTranslationGenerator {
         t.put("mods.value.unknown", "不知道");
         t.put("mods.list.meta", "装载器：%s · 译本：%s · 向下装载 %s · 更新 %s");
         t.put("mods.detail.loading", "正在撬开零件详情...");
-        t.put("mods.detail.count", "总共 %d 个文件译本");
+        t.put("mods.detail.count", "总共 %d 个公文译本");
         t.put("mods.detail.meta", "向下装载 %s · 更新 %s");
         t.put("mods.detail.versionFilter", "比赛译本");
         t.put("mods.detail.loaderFilter", "装载器");
         t.put("mods.detail.allVersions", "全部译本");
         t.put("mods.detail.allLoaders", "全部装载器");
         t.put("mods.detail.empty", "当前陷阱里没有能用的译本");
-        t.put("mods.detail.versionMeta", "发布 %s · 向下装载 %s · 文件 %s");
+        t.put("mods.detail.versionMeta", "发布 %s · 向下装载 %s · 公文 %s");
         t.put("mods.detail.download", "向下装载");
         t.put("mods.detail.downloading", "正在向下装载 %s...");
         t.put("mods.detail.downloaded", "已经塞进：%s");
@@ -506,27 +506,27 @@ public final class FNCNGenerator extends LanguageTranslationGenerator {
         t.put("operation.saveLastInstance", "拯救最后发射的事例");
         t.put("operation.launchGame", "发射比赛 %s");
 
-        // Quilt 装载零件
-        t.put("download.description.quilt", "Quilt Loader %s");
-        t.put("download.description.quiltWithApi", "Quilt Loader %s + Quilted Fabric API %s");
-        t.put("download.setup.option.quilt", "挑三拣四 Quilt 译本");
-        t.put("download.setup.option.quiltApi", "挑三拣四 Quilted Fabric API 译本");
-        t.put("download.prompt.loading.quilt", "正在揪出 Quilt 译本...");
-        t.put("download.prompt.quiltFirst", "先挑三拣四 Quilt 译本");
-        t.put("download.prompt.select.quilt", "挑三拣四 Quilt 译本");
-        t.put("download.prompt.select.quiltApi", "挑三拣四 Quilted Fabric API 译本");
-        t.put("download.prompt.empty.quilt", "没有可揪出的 Quilt 译本");
-        t.put("download.prompt.empty.quiltApi", "没有可揪出的 Quilted Fabric API 译本");
-        t.put("download.prompt.error.quilt", "揪出 Quilt 译本失败");
-        t.put("download.prompt.error.quiltApi", "揪出 Quilted Fabric API 译本失败");
-        t.put("download.stage.quilt.config.fetch", "正在揪出 Quilt 摆弄");
-        t.put("download.stage.quilt.loader.install", "正在安顿 Quilt Loader");
-        t.put("download.stage.quilt.api.download", "正在向下装载 Quilted Fabric API");
-        t.put("download.stage.quilt.verify", "正在验明 Quilt 安顿");
-        t.put("log.download.installed.quilt", "[向下装载] 已安顿 Quilt 事例 %s（Loader %s）");
-        t.put("operation.fetchQuiltLoader", "揪出 Quilt Loader 译本");
-        t.put("operation.fetchQuiltApi", "揪出 Quilted Fabric API 译本");
-        t.put("operation.installQuilt", "安顿 Quilt 事例 %s");
+        // 被褥装载零件
+        t.put("download.description.quilt", "被褥装载器 %s");
+        t.put("download.description.quiltWithApi", "被褥装载器 %s + 被褥布料应用编程接口 %s");
+        t.put("download.setup.option.quilt", "揪出被褥版本");
+        t.put("download.setup.option.quiltApi", "揪出被褥布料应用编程接口版本");
+        t.put("download.prompt.loading.quilt", "正在获取被褥版本...");
+        t.put("download.prompt.quiltFirst", "请先揪出被褥版本");
+        t.put("download.prompt.select.quilt", "请揪出被褥版本");
+        t.put("download.prompt.select.quiltApi", "请揪出被褥布料应用编程接口版本");
+        t.put("download.prompt.empty.quilt", "没有能用的被褥版本");
+        t.put("download.prompt.empty.quiltApi", "没有能用的被褥布料应用编程接口版本");
+        t.put("download.prompt.error.quilt", "获取被褥版本失败");
+        t.put("download.prompt.error.quiltApi", "获取被褥布料应用编程接口版本失败");
+        t.put("download.stage.quilt.config.fetch", "获取 被褥 配置");
+        t.put("download.stage.quilt.loader.install", "打进 被褥装载器");
+        t.put("download.stage.quilt.api.download", "向下装载 被褥布料应用编程接口");
+        t.put("download.stage.quilt.verify", "查验 被褥 打进后果");
+        t.put("log.download.installed.quilt", "[向下装载] 已经打进被褥事例 %s（被褥装载器 %s）");
+        t.put("operation.fetchQuiltLoader", "获取被褥装载器版本");
+        t.put("operation.fetchQuiltApi", "获取被褥布料应用编程接口版本");
+        t.put("operation.installQuilt", "打进被褥事例 %s");
     }
 
     @Override
