@@ -361,7 +361,24 @@ C:\Program Files\CAML\runtime\   裁剪后的 Java 运行时
 
 应用图标由 `packaging/icons/caml-512.png` 在构建期缩放生成多尺寸
 `caml.ico`（16/24/32/48/64/128/256），因此仓库里不需要保存二进制图标。
-GitHub Actions 的 `Build` workflow 会在所有 PR 和所有分支 push（包括普通分支 push 和合并后的 push）时构建并上传 Linux deb/rpm 与 Windows EXE/便携 ZIP。release 号优先使用 PR 编号，artifact 名称分别为 `caml-linux-packages-pr-<PR 编号>` 和 `caml-windows-packages-pr-<PR 编号>`；无法从合并提交提取 PR 编号时回退到 run number。Windows artifact 本身是 GitHub 提供的 zip，内含安装式 EXE、便携 zip 和 `SHA256SUMS.txt`。`v*` tag 和手动发布继续由 `Package Linux` workflow 处理。
+打包完成后可以复跑冒烟校验：
+
+```bash
+./gradlew smokeTestPackagedApp      # 或 .\gradlew.bat smokeTestPackagedApp
+```
+
+它读取 app-image 自己的 `*.cfg`，用其中的 `--module-path` 启动后端，并检查裁剪运行时的
+`release` 是否覆盖 `packagedRuntimeModules`、以及 `--strip-native-commands` 是否生效。
+
+GitHub Actions 的 `Build` workflow 会在所有分支 push、所有 PR 和手动触发时跑测试，但只在 PR、
+`main`/`crimson` 分支和 tag 上打包：普通功能分支 push 只跑测试，不再每次都占用
+Linux 45 分钟 + Windows 60 分钟的 runner。两个打包 workflow 的细节：
+
+- 测试：Ubuntu 上 `xvfb-run ./gradlew test :CAMLFront:distZip`，Windows 上 `.\gradlew.bat test`；失败时上传测试报告。
+- 打包：`Package Linux` 与 `Package Windows` 并行执行；**Windows 打包要求 Windows 用例先通过**，测试红了不会产出安装包。
+- 两个打包 job 在上传 artifact 前都会跑 `smokeTestPackagedApp`，以与安装包相同的模块布局启动后端，并校验裁剪运行时的模块集。
+- release 号优先使用 PR 编号，artifact 名分别为 `caml-linux-packages-pr-<PR 编号>` 和 `caml-windows-packages-pr-<PR 编号>`；无法从合并提交提取 PR 编号时回退到 run number。Windows artifact 本身是 GitHub 提供的 zip，内含安装式 EXE、便携 zip 和 `SHA256SUMS.txt`。
+- `v*` tag 同时触发两个 `Package` workflow，各自上传 GitHub Release。
 
 ### CAMLUI 组件库
 
@@ -505,19 +522,22 @@ CurseForge `classId=17`。下载的 ZIP 会解压为实例数据目录下的 `sa
     build:
       runs-on: ubuntu-latest
       steps:
-        - uses: actions/checkout@v4
-        - uses: actions/setup-java@v4
+        - uses: actions/checkout@v5
+        - uses: actions/setup-java@v5
           with:
             distribution: zulu
             java-version: '25'
         - name: Build
           env:
             CURSEFORGE_API_KEY: ${{ secrets.CURSEFORGE_API_KEY }}
-          run: ./gradlew :CAMLBackend:test :CAMLFront:assemble --no-daemon
+            CAML_MICROSOFT_CLIENT_ID: ${{ secrets.CAML_MICROSOFT_CLIENT_ID }}
+          # distZip 必须和 test 一起跑：只跑 test 不会产出 distributions/*.zip。
+          run: ./gradlew test :CAMLFront:distZip --no-daemon
         - uses: actions/upload-artifact@v4
           with:
             name: CAML-Debug-Distribution
             path: CAMLFront/build/distributions/*.zip
+            if-no-files-found: error
   ```
 
   Key 会嵌入客户端 jar，和 HMCL/PCL 的做法相同；请使用专用 Key，泄露后及时在
@@ -666,20 +686,13 @@ info.installedVersions();
 
 ## 已知问题
 
-以下后端测试在当前 Windows 开发环境下会失败（281 个用例中 3 个），均与账号、前端和翻译无关：
+`./gradlew test` 目前在 Windows 与 Linux 上都是 486 个用例全部通过，CI 的 `build` 与
+`windows-test` 两个 job 会分别在两个平台各跑一遍。
 
-- 使用 POSIX 路径作为断言，Windows 路径分隔符不同：
-  - `LaunchCommandBuilderTest#placesMainClassBetweenJvmAndGameArguments`
-  - `LaunchArgumentsBuilderTest#buildsJvmArgumentsWithMemoryDefaultsAndClasspath`
-- 在 JDK 环境异常时，依赖子进程的端到端/加载器测试也可能失败
-  （`LinkageError`），并影响 `GameLaunchServiceTest#installsAndLaunchesFakeClientEndToEnd`
-  的退出码断言不符：
-  - `ExternalLoaderInstallerTest`（3 个用例）
-  - `GameLaunchServiceTest#installsAndLaunchesFakeClientEndToEnd`
-- 文本比较未归一化换行符：
-  - `NeoForge262VulkanFixTest#createsFmlConfigWhenMissing`
-
-账号相关的 `AccountModelTest`、`AccountServiceTest`、`AuthServerStoreTest`、`YggdrasilClientTest` 全部通过；前端测试（含 `LanguageTest` 与 `DownloadTelemetryTest`）也全部通过。
+历史上的平台相关失败（POSIX 路径断言、`fml.toml` 换行符、`java` / `java.exe` 文件名、
+JavaFX 文本节点里的路径分隔符）都已修掉。新增用例如果出现平台相关失败，请用
+`Path.toString()`、`File.pathSeparator` 或平台可执行文件名拼期望值来修复，
+不要跳过测试，也不要只在 Linux 上保留用例。
 
 ---
 

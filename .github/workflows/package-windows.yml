@@ -99,6 +99,7 @@ jobs:
         shell: pwsh
         env:
           CURSEFORGE_API_KEY: ${{ secrets.CURSEFORGE_API_KEY }}
+          CAML_MICROSOFT_CLIENT_ID: ${{ secrets.CAML_MICROSOFT_CLIENT_ID }}
           WIX_BIN: ${{ steps.wix.outputs.path }}
         run: |
           $env:PATH = "$env:WIX_BIN;$env:PATH"
@@ -118,28 +119,10 @@ jobs:
           $exe | Format-List Name, Length
           $zip | Format-List Name, Length
           Get-Content build/packages/windows/SHA256SUMS.txt
-      - name: Smoke test packaged backend
+      - name: Smoke test packaged app-image
         shell: pwsh
-        # 用与安装包相同的 --module-path 布局启动后端，验证跨模块资源在命名模块下仍可读取。
-        run: |
-          $image = "build/packages/windows/app-image/CAML"
-          if (-not (Test-Path $image)) { throw "missing app-image: $image" }
-          # 自动定位 jar 所在目录，不依赖 jpackage 的具体布局。
-          $jar = Get-ChildItem $image -Recurse -Filter 'CAMLBackend-*.jar' | Select-Object -First 1
-          if (-not $jar) { throw "CAMLBackend jar not found under $image" }
-          $app = $jar.DirectoryName
-          Write-Host "app dir: $app"
-          $classes = Join-Path $env:RUNNER_TEMP "smoke-classes"
-          Remove-Item -Recurse -Force $classes -ErrorAction SilentlyContinue
-          New-Item -ItemType Directory -Force -Path $classes | Out-Null
-          & "$env:JAVA_HOME\bin\javac.exe" -encoding UTF-8 -d $classes -cp "$app\*" "packaging/smoke/BackendSmoke.java"
-          if ($LASTEXITCODE -ne 0) { throw "javac failed: $LASTEXITCODE" }
-          & "$env:JAVA_HOME\bin\java.exe" `
-            --module-path $app `
-            --add-modules=javafx.controls,javafx.fxml `
-            -cp "$classes;$app\*" `
-            BackendSmoke (Join-Path $env:RUNNER_TEMP "smoke-data") (Join-Path $env:RUNNER_TEMP "smoke-game")
-          if ($LASTEXITCODE -ne 0) { throw "packaged backend failed to start: $LASTEXITCODE" }
+        # 用 app-image 自身的 CAML.cfg 启动后端，并校验裁剪运行时的模块集与 --strip-native-commands。
+        run: .\gradlew.bat smokeTestPackagedApp "-PcamlJdkHome=$env:JAVA_HOME" --no-daemon
       - name: Upload Windows packages
         uses: actions/upload-artifact@v4
         with:

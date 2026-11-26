@@ -14,11 +14,15 @@ class JavaLocatorTest {
     @TempDir
     Path tempDirectory;
 
+    /** Windows 的可执行文件带 .exe，JavaLocator 也只在对应平台匹配该文件名。 */
+    private static String javaExecutableName() {
+        return System.getProperty("os.name").toLowerCase().contains("win") ? "java.exe" : "java";
+    }
+
     @Test
     void inspectsCurrentJavaRuntime() {
         Path home = Path.of(System.getProperty("java.home"));
-        Path executable = home.resolve("bin").resolve(
-                System.getProperty("os.name").toLowerCase().contains("win") ? "java.exe" : "java");
+        Path executable = home.resolve("bin").resolve(javaExecutableName());
         assertTrue(Files.isRegularFile(executable));
 
         JavaRuntime runtime = new JavaLocator().inspect(executable).orElseThrow();
@@ -30,8 +34,7 @@ class JavaLocatorTest {
     @Test
     void mergesManualAndScannedJavaWithoutDuplicates() {
         Path home = Path.of(System.getProperty("java.home"));
-        Path executable = home.resolve("bin").resolve(
-                System.getProperty("os.name").toLowerCase().contains("win") ? "java.exe" : "java");
+        Path executable = home.resolve("bin").resolve(javaExecutableName());
 
         List<JavaCandidate> candidates = new JavaLocator().discoverCandidates(
                 List.of(executable, executable), executable);
@@ -46,7 +49,7 @@ class JavaLocatorTest {
     @Test
     void scansNestedManagedJavaRepository() throws Exception {
         Path repository = tempDirectory.resolve("java");
-        Path executable = repository.resolve("linux-x86_64/zulu-8-jdk/bin/java");
+        Path executable = repository.resolve("linux-x86_64/zulu-8-jdk/bin").resolve(javaExecutableName());
         Files.createDirectories(executable.getParent());
         Files.createFile(executable);
 

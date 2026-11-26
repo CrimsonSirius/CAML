@@ -118,9 +118,11 @@ class AboutSettingsViewTest {
             gameDirectory.set(Path.of("/tmp/other-game"));
             root.applyCss();
             root.layout();
+            // 用 Path.toString() 比较：Windows 上 "/tmp/other-game" 会渲染成 "\tmp\other-game"。
+            String updatedGameDirectory = Path.of("/tmp/other-game").toString();
             long updatedPaths = view.lookupAll(".app-about-value").stream()
                     .filter(node -> node instanceof Label label
-                            && "/tmp/other-game".equals(label.getText()))
+                            && updatedGameDirectory.equals(label.getText()))
                     .count();
             return new long[]{
                     groups, kernelLabels, updatedPaths, runtimeTitles, memoryValues,
