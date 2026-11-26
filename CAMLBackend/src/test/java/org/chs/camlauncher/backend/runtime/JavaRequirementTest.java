@@ -22,7 +22,8 @@ class JavaRequirementTest {
         JavaRequirement requirement = JavaRequirement.from(version);
 
         assertTrue(requirement.isSatisfiedBy(java(17, "x86_64", 64)));
-        assertTrue(requirement.isSatisfiedBy(java(21, "x86_64", 64)));
+        assertFalse(requirement.isSatisfiedBy(java(21, "x86_64", 64)));
+        assertFalse(requirement.isSatisfiedBy(java(25, "x86_64", 64)));
         assertFalse(requirement.isSatisfiedBy(java(8, "x86_64", 64)));
         assertFalse(requirement.isSatisfiedBy(java(17, "arm64", 64)));
     }

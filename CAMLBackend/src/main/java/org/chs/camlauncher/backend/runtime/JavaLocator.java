@@ -107,6 +107,19 @@ public final class JavaLocator {
                         .thenComparing(runtime -> runtime.executable().toString()));
     }
 
+    /** 找到架构/位数匹配且主版本最接近的 Java，允许版本不满足要求。 */
+    public Optional<JavaRuntime> findClosest(JavaRequirement requirement) {
+        return discover().stream()
+                .filter(runtime -> runtime.architecture().equals(requirement.architecture()))
+                .filter(runtime -> requirement.bits() <= 0 || runtime.bits() == requirement.bits())
+                .min(Comparator
+                        .comparingInt((JavaRuntime runtime) ->
+                                Math.abs(runtime.majorVersion() - requirement.majorVersion()))
+                        .thenComparing(Comparator.comparingInt(JavaRuntime::majorVersion).reversed())
+                        .thenComparing(runtime -> runtime.jdk() ? 0 : 1)
+                        .thenComparing(runtime -> runtime.executable().toString()));
+    }
+
     public Optional<JavaRuntime> inspect(Path executable) {
         if (executable == null || !Files.isRegularFile(executable)) {
             return Optional.empty();

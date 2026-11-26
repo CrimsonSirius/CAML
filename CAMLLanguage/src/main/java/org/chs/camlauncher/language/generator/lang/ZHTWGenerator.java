@@ -104,6 +104,10 @@ public final class ZHTWGenerator extends LanguageTranslationGenerator {
         t.put("launch.warning.xrandr.title", "缺少 xrandr");
         t.put("launch.warning.xrandr.message", "目前實例使用 LWJGL 2，但系統中找不到 xrandr。遊戲仍會繼續啟動，但可能在初始化顯示模式時結束。安裝 xrandr 後重新啟動遊戲即可。");
         t.put("launch.warning.xrandr.commands", "Arch Linux：sudo pacman -S xorg-xrandr\nDebian/Ubuntu：sudo apt install x11-xserver-utils\nFedora/RHEL：sudo dnf install xrandr");
+        t.put("launch.warning.java.title", "Java 版本可能不相容");
+        t.put("launch.warning.java.message", "此遊戲需要 Java %s，目前選擇的是 Java %s。強制啟動可能導致遊戲崩潰。");
+        t.put("launch.warning.java.stop", "停止");
+        t.put("launch.warning.java.force", "強制啟動");
 
         // 下載版本類別與來源
         t.put("download.category.release", "正式版");

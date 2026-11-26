@@ -1564,6 +1564,20 @@ public final class CAMLBackend implements AutoCloseable {
             DownloadListener downloadListener,
             ProcessListener processListener
     ) throws IOException, InterruptedException {
+        return launchGame(versionId, gameDirectory, username, options, isolationMode, false,
+                downloadListener, processListener);
+    }
+
+    public GameLaunch launchGame(
+            String versionId,
+            Path gameDirectory,
+            String username,
+            LaunchOptions options,
+            VersionIsolationMode isolationMode,
+            boolean allowIncompatibleJava,
+            DownloadListener downloadListener,
+            ProcessListener processListener
+    ) throws IOException, InterruptedException {
         gameLaunchService.configureGameLanguage(
                 autoGameLanguage, languageService.activeLocale());
         return gameLaunchService.launch(
@@ -1572,6 +1586,7 @@ public final class CAMLBackend implements AutoCloseable {
                 username,
                 options,
                 isolationMode,
+                allowIncompatibleJava,
                 downloadListener,
                 processListener
         );
@@ -1594,6 +1609,20 @@ public final class CAMLBackend implements AutoCloseable {
             DownloadListener downloadListener,
             ProcessListener processListener
     ) throws IOException, InterruptedException {
+        return launchGameWithAccount(versionId, gameDirectory, accountId, options, isolationMode,
+                false, downloadListener, processListener);
+    }
+
+    public GameLaunch launchGameWithAccount(
+            String versionId,
+            Path gameDirectory,
+            String accountId,
+            LaunchOptions options,
+            VersionIsolationMode isolationMode,
+            boolean allowIncompatibleJava,
+            DownloadListener downloadListener,
+            ProcessListener processListener
+    ) throws IOException, InterruptedException {
         gameLaunchService.configureGameLanguage(
                 autoGameLanguage, languageService.activeLocale());
         AccountService.ResolvedAccount resolved = accountId == null
@@ -1609,9 +1638,23 @@ public final class CAMLBackend implements AutoCloseable {
                 resolved.injector(),
                 options,
                 isolationMode,
+                allowIncompatibleJava,
                 downloadListener,
                 processListener
         );
+    }
+
+    public JavaCompatibilityCheck checkJavaCompatibility(String versionId, Path gameDirectory)
+            throws IOException, InterruptedException {
+        InstalledVersion installed = versionInstaller.install(
+                versionId,
+                gameDirectory,
+                VersionManifestService.DEFAULT_MANIFEST_URI,
+                config.dataDirectory().resolve("cache").resolve("version_manifest_v2.json"),
+                DownloadListener.NONE,
+                new DownloadCancellationToken()
+        );
+        return gameLaunchService.inspectJava(installed);
     }
 
     @Override
