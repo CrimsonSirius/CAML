@@ -2,9 +2,6 @@ package org.chs.camlauncher.backend.instance;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.chs.camlauncher.backend.api.InstanceDetails;
-import org.chs.camlauncher.backend.api.InstanceMod;
-import org.chs.camlauncher.backend.api.InstanceResourcePack;
 import org.chs.camlauncher.backend.io.SafePaths;
 
 import java.io.IOException;

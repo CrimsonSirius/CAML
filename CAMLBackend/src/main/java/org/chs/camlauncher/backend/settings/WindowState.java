@@ -1,4 +1,4 @@
-package org.chs.camlauncher.backend.api;
+package org.chs.camlauncher.backend.settings;
 
 /** 启动器窗口的持久化位置、尺寸和最大化状态。 */
 public record WindowState(double x, double y, double width, double height, boolean maximized) {

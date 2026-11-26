@@ -12,7 +12,7 @@ import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.stage.FileChooser;
 import javafx.stage.Window;
-import org.chs.camlauncher.backend.api.AccountSummary;
+import org.chs.camlauncher.backend.auth.AccountSummary;
 import org.chs.camlauncher.backend.auth.AccountType;
 import org.chs.camlauncher.backend.auth.microsoft.MicrosoftDeviceCode;
 import org.chs.camlauncher.front.controller.AccountController;

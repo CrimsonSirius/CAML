@@ -6,7 +6,7 @@ import javafx.application.Platform;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.chs.camlauncher.backend.api.CAMLBackend;
-import org.chs.camlauncher.backend.api.GameDirectoryInfo;
+import org.chs.camlauncher.backend.instance.GameDirectoryInfo;
 import org.chs.camlauncher.backend.error.BackendError;
 import org.chs.camlauncher.backend.error.BackendErrorCarrier;
 import org.chs.camlauncher.front.text.UiText;

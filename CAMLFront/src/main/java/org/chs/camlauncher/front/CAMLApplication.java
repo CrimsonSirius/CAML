@@ -14,7 +14,7 @@ import javafx.util.Duration;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.chs.camlauncher.backend.api.CAMLBackend;
-import org.chs.camlauncher.backend.api.WindowState;
+import org.chs.camlauncher.backend.settings.WindowState;
 import org.chs.camlauncher.backend.config.BackendConfig;
 import org.chs.camlauncher.backend.instance.VersionIsolationMode;
 import org.chs.camlauncher.backend.runtime.JavaSelectionMode;

@@ -2,6 +2,7 @@ package org.chs.camlauncher.backend.api;
 
 import org.chs.camlauncher.backend.download.DownloadListener;
 import org.chs.camlauncher.backend.config.BackendConfig;
+import org.chs.camlauncher.backend.instance.GameDirectoryInfo;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 

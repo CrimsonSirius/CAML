@@ -1,4 +1,4 @@
-package org.chs.camlauncher.backend.api;
+package org.chs.camlauncher.backend.instance;
 
 import java.nio.file.Path;
 import java.util.List;

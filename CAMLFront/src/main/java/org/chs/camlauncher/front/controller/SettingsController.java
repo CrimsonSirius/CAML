@@ -4,8 +4,8 @@ import org.chs.camlauncher.front.task.AsyncTaskHandle;
 
 import javafx.application.Platform;
 import org.chs.camlauncher.backend.api.BackendStatus;
-import org.chs.camlauncher.backend.api.GameDirectoryInfo;
-import org.chs.camlauncher.backend.api.WindowState;
+import org.chs.camlauncher.backend.instance.GameDirectoryInfo;
+import org.chs.camlauncher.backend.settings.WindowState;
 import org.chs.camlauncher.backend.download.source.DownloadSourceMode;
 import org.chs.camlauncher.backend.instance.VersionIsolationMode;
 import org.chs.camlauncher.backend.language.LanguageSnapshot;

@@ -3,10 +3,10 @@ package org.chs.camlauncher.front.controller;
 import org.chs.camlauncher.front.task.AsyncTaskHandle;
 
 import javafx.application.Platform;
-import org.chs.camlauncher.backend.api.GameDirectoryInfo;
-import org.chs.camlauncher.backend.api.InstanceDetails;
-import org.chs.camlauncher.backend.api.InstanceModUpdate;
-import org.chs.camlauncher.backend.api.JavaCompatibilityCheck;
+import org.chs.camlauncher.backend.instance.GameDirectoryInfo;
+import org.chs.camlauncher.backend.instance.InstanceDetails;
+import org.chs.camlauncher.backend.instance.InstanceModUpdate;
+import org.chs.camlauncher.backend.runtime.JavaCompatibilityCheck;
 import org.chs.camlauncher.backend.download.DownloadListener;
 import org.chs.camlauncher.backend.instance.VersionIsolationMode;
 import org.chs.camlauncher.backend.launch.GameLaunch;

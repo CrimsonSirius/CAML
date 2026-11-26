@@ -1,6 +1,5 @@
-package org.chs.camlauncher.backend.api;
+package org.chs.camlauncher.backend.auth;
 
-import org.chs.camlauncher.backend.auth.AccountType;
 import org.chs.camlauncher.backend.auth.yggdrasil.YggdrasilProfile;
 
 import java.util.List;
