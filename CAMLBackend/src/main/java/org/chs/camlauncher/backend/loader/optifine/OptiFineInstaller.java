@@ -5,6 +5,8 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.chs.camlauncher.backend.download.DownloadCancellationToken;
 import org.chs.camlauncher.backend.download.DownloadListener;
 import org.chs.camlauncher.backend.download.DownloadStage;
@@ -17,6 +19,7 @@ import org.chs.camlauncher.backend.download.source.DownloadSources;
 import org.chs.camlauncher.backend.download.source.OfficialDownloadSource;
 import org.chs.camlauncher.backend.instance.InstalledVersion;
 import org.chs.camlauncher.backend.instance.InstanceNameRules;
+import org.chs.camlauncher.backend.instance.SharedLibraryTransaction;
 import org.chs.camlauncher.backend.instance.VersionInstaller;
 import org.chs.camlauncher.backend.io.SafePaths;
 import org.chs.camlauncher.backend.loader.ExternalLoaderInstaller;
@@ -55,9 +58,11 @@ import java.util.zip.ZipFile;
  * 生成补丁库，最后把 OptiFine 库和启动参数合并进 Forge 版本 JSON。</p>
  */
 public final class OptiFineInstaller {
+    private static final Logger LOGGER = LogManager.getLogger(OptiFineInstaller.class);
     private static final String LAUNCH_WRAPPER_MAIN = "net.minecraft.launchwrapper.Launch";
     private static final String OPTIFINE_FORGE_TWEAKER = "optifine.OptiFineForgeTweaker";
     private static final long INSTALL_TIMEOUT_MINUTES = 20;
+    private static final int INSTALL_ATTEMPTS = 2;
 
     private final VersionInstaller versionInstaller;
     private final ExternalLoaderInstaller externalLoaderInstaller;
@@ -124,7 +129,29 @@ public final class OptiFineInstaller {
             DownloadListener listener,
             DownloadCancellationToken token
     ) throws IOException, InterruptedException {
+        Objects.requireNonNull(gameDirectory, "gameDirectory");
+        try (SharedLibraryTransaction libraryTransaction = SharedLibraryTransaction.begin(
+                gameDirectory.resolve("libraries"))) {
+            InstalledVersion installed = install(
+                    gameVersion, instanceId, forgeVersion, optiFineVersion,
+                    gameDirectory, listener, token, libraryTransaction);
+            libraryTransaction.commit();
+            return installed;
+        }
+    }
+
+    private InstalledVersion install(
+            String gameVersion,
+            String instanceId,
+            ForgeVersion forgeVersion,
+            OptiFineVersion optiFineVersion,
+            Path gameDirectory,
+            DownloadListener listener,
+            DownloadCancellationToken token,
+            SharedLibraryTransaction libraryTransaction
+    ) throws IOException, InterruptedException {
         Objects.requireNonNull(token, "token");
+        Objects.requireNonNull(libraryTransaction, "libraryTransaction");
         token.throwIfCancelled();
         Objects.requireNonNull(gameDirectory, "gameDirectory");
         InstanceNameRules.ensureNewInstance(gameDirectory, instanceId);
@@ -133,7 +160,7 @@ public final class OptiFineInstaller {
         try {
             return installInternal(
                     gameVersion, instanceId, forgeVersion, optiFineVersion, gameDirectory,
-                    listener, token);
+                    listener, token, libraryTransaction);
         } catch (IOException | RuntimeException | InterruptedException e) {
             deleteRecursively(targetVersionDirectory);
             throw e;
@@ -147,7 +174,8 @@ public final class OptiFineInstaller {
             OptiFineVersion optiFineVersion,
             Path gameDirectory,
             DownloadListener listener,
-            DownloadCancellationToken token
+            DownloadCancellationToken token,
+            SharedLibraryTransaction libraryTransaction
     ) throws IOException, InterruptedException {
         token.throwIfCancelled();
         Objects.requireNonNull(forgeVersion, "forgeVersion");
@@ -174,7 +202,8 @@ public final class OptiFineInstaller {
                 forgeVersion.installerUri(),
                 gameDirectory,
                 listener,
-                token
+                token,
+                libraryTransaction
         );
 
         JavaRuntime java = javaLocator.findSuitable(JavaRequirement.from(base.manifest()))
@@ -182,7 +211,7 @@ public final class OptiFineInstaller {
 
         Path installerDirectory = Files.createTempDirectory("caml-optifine-");
         Path installer = installerDirectory.resolve("installer.jar");
-        Path staging = Files.createTempDirectory(gameDirectory, ".caml-optifine-install-");
+        Path staging = null;
         try {
             URI installerUri = optiFineService.resolveDownloadUri(optiFineVersion);
             DownloadListener.notifyStage(listener, DownloadStage.of("optifine.installer.download"));
@@ -200,31 +229,60 @@ public final class OptiFineInstaller {
                     token);
 
             token.throwIfCancelled();
-            prepareStaging(staging, gameVersion, base);
             DownloadListener.notifyStage(listener, DownloadStage.of("optifine.installer.run"));
-            runInstaller(java, installer, staging, token);
-            OptiFineVersionFiles generated = findGeneratedVersion(staging, gameVersion);
+            OptiFineVersionFiles generated = null;
+            IOException lastFailure = null;
+            for (int attempt = 0; attempt < INSTALL_ATTEMPTS; attempt++) {
+                token.throwIfCancelled();
+                Path candidate = Files.createTempDirectory(
+                        gameDirectory, ".caml-optifine-install-");
+                boolean keepCandidate = false;
+                try {
+                    prepareStaging(candidate, gameVersion, base);
+                    runInstaller(java, installer, candidate, token);
+                    generated = findGeneratedVersion(candidate, gameVersion);
+                    staging = candidate;
+                    keepCandidate = true;
+                    break;
+                } catch (IOException e) {
+                    lastFailure = e;
+                    if (attempt + 1 < INSTALL_ATTEMPTS) {
+                        LOGGER.warn("OptiFine 安装器第 {} 次尝试失败，将使用全新 staging 重试",
+                                attempt + 1, e);
+                    }
+                } finally {
+                    if (!keepCandidate) {
+                        deleteRecursively(candidate);
+                    }
+                }
+            }
+            if (staging == null) {
+                throw lastFailure == null
+                        ? new IOException("OptiFine 安装器多次尝试后仍未生成版本 JSON")
+                        : lastFailure;
+            }
             DownloadListener.notifyStage(listener, DownloadStage.of("optifine.files.merge"));
             token.throwIfCancelled();
-            mergeLibraries(staging.resolve("libraries"), gameDirectory.resolve("libraries"));
-            removeModsToml(gameDirectory.resolve("libraries").resolve("optifine"));
+            removeModsToml(staging.resolve("libraries").resolve("optifine"));
+            libraryTransaction.merge(staging.resolve("libraries"));
 
             JsonObject forgeJson = parseJson(forge.versionJson());
             mergeManifest(forgeJson, generated.json());
             writeJson(forge.versionJson(), forgeJson);
+            InstalledVersion installed = versionInstaller.install(
+                    instanceId,
+                    gameDirectory,
+                    manifestUri,
+                    manifestCacheFile,
+                    listener,
+                    token
+            );
+            ExternalLoaderInstaller.verifyInstalledLibraries("OptiFine", installed);
+            return installed;
         } finally {
             deleteRecursively(installerDirectory);
             deleteRecursively(staging);
         }
-
-        return versionInstaller.install(
-                instanceId,
-                gameDirectory,
-                manifestUri,
-                manifestCacheFile,
-                listener,
-                token
-        );
     }
 
     private static void prepareStaging(Path staging, String gameVersion, InstalledVersion base)
@@ -432,27 +490,6 @@ public final class OptiFineInstaller {
             move(temporary, file);
         } finally {
             Files.deleteIfExists(temporary);
-        }
-    }
-
-    private static void mergeLibraries(Path source, Path target) throws IOException {
-        if (!Files.isDirectory(source)) {
-            return;
-        }
-        Path normalizedTarget = target.toAbsolutePath().normalize();
-        try (Stream<Path> files = Files.walk(source)) {
-            for (Path file : files.filter(Files::isRegularFile).toList()) {
-                Path destination = normalizedTarget.resolve(source.relativize(file)).normalize();
-                if (!destination.startsWith(normalizedTarget)) {
-                    throw new IOException("OptiFine 库路径越界: " + file);
-                }
-                Files.createDirectories(destination.getParent());
-                if (Files.isRegularFile(destination)
-                        && Files.size(destination) == Files.size(file)) {
-                    continue;
-                }
-                Files.copy(file, destination, StandardCopyOption.REPLACE_EXISTING);
-            }
         }
     }
 

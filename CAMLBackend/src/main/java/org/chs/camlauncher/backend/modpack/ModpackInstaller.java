@@ -9,6 +9,7 @@ import org.chs.camlauncher.backend.download.model.DownloadItem;
 import org.chs.camlauncher.backend.error.BackendError;
 import org.chs.camlauncher.backend.error.BackendException;
 import org.chs.camlauncher.backend.instance.InstanceNameRules;
+import org.chs.camlauncher.backend.instance.SharedLibraryTransaction;
 import org.chs.camlauncher.backend.instance.VersionInstaller;
 import org.chs.camlauncher.backend.io.SafePaths;
 import org.chs.camlauncher.backend.loader.ExternalLoaderInstaller;
@@ -86,10 +87,17 @@ public final class ModpackInstaller {
         try {
             downloadArchive(file, archive, listener, token);
             ModrinthModpackIndex index = readIndex(archive, file.fileName());
-            installLoader(index, instance, gameDirectory, listener, token);
-            extractOverrides(archive, instanceDirectory, file.fileName());
-            downloadFiles(index, instanceDirectory, file.fileName(), listener, token);
-            ModpackLayout.writeMarker(instanceDirectory, index, file);
+            if (usesExternalLoader(index)) {
+                try (SharedLibraryTransaction libraryTransaction = SharedLibraryTransaction.begin(
+                        gameDirectory.resolve("libraries"))) {
+                    installLoader(index, instance, gameDirectory, listener, token, libraryTransaction);
+                    installContent(archive, instanceDirectory, index, file, listener, token);
+                    libraryTransaction.commit();
+                }
+            } else {
+                installLoader(index, instance, gameDirectory, listener, token, null);
+                installContent(archive, instanceDirectory, index, file, listener, token);
+            }
             return new ModDownloadResult(instanceDirectory, file);
         } catch (IOException | RuntimeException | InterruptedException e) {
             deleteRecursively(instanceDirectory);
@@ -97,6 +105,19 @@ public final class ModpackInstaller {
         } finally {
             Files.deleteIfExists(archive);
         }
+    }
+
+    private void installContent(
+            Path archive,
+            Path instanceDirectory,
+            ModrinthModpackIndex index,
+            ModFile file,
+            DownloadListener listener,
+            DownloadCancellationToken token
+    ) throws IOException, InterruptedException {
+        extractOverrides(archive, instanceDirectory, file.fileName());
+        downloadFiles(index, instanceDirectory, file.fileName(), listener, token);
+        ModpackLayout.writeMarker(instanceDirectory, index, file);
     }
 
     private void downloadArchive(
@@ -141,7 +162,8 @@ public final class ModpackInstaller {
             String instance,
             Path gameDirectory,
             DownloadListener listener,
-            DownloadCancellationToken token
+            DownloadCancellationToken token,
+            SharedLibraryTransaction libraryTransaction
     ) throws IOException, InterruptedException {
         String minecraft = index.dependencies().get("minecraft");
         if (minecraft == null || minecraft.isBlank()) {
@@ -166,15 +188,48 @@ public final class ModpackInstaller {
         } else if (quilt != null && !quilt.isBlank()) {
             quiltInstaller.install(minecraft, instance, quilt, null, gameDirectory, listener, token);
         } else if (neoforge != null && !neoforge.isBlank()) {
-            externalLoaderInstaller.install("neoforge", minecraft, instance,
-                    neoforgeInstaller(neoforge), gameDirectory, listener, token);
+            installExternalLoader(
+                    "neoforge", minecraft, instance, neoforgeInstaller(neoforge),
+                    gameDirectory, listener, token, libraryTransaction);
         } else if (forge != null && !forge.isBlank()) {
-            externalLoaderInstaller.install("forge", minecraft, instance,
-                    forgeInstaller(minecraft, forge), gameDirectory, listener, token);
+            installExternalLoader(
+                    "forge", minecraft, instance, forgeInstaller(minecraft, forge),
+                    gameDirectory, listener, token, libraryTransaction);
         } else {
             versionInstaller.install(minecraft, instance, gameDirectory,
                     manifestUri, manifestCacheFile, listener, token);
         }
+    }
+
+    private void installExternalLoader(
+            String loaderName,
+            String minecraft,
+            String instance,
+            URI installerUri,
+            Path gameDirectory,
+            DownloadListener listener,
+            DownloadCancellationToken token,
+            SharedLibraryTransaction libraryTransaction
+    ) throws IOException, InterruptedException {
+        if (libraryTransaction == null) {
+            externalLoaderInstaller.install(
+                    loaderName, minecraft, instance, installerUri,
+                    gameDirectory, listener, token);
+        } else {
+            externalLoaderInstaller.install(
+                    loaderName, minecraft, instance, installerUri,
+                    gameDirectory, listener, token, libraryTransaction);
+        }
+    }
+
+    private static boolean usesExternalLoader(ModrinthModpackIndex index) {
+        for (String key : List.of("forge", "neoforge", "neo-forge")) {
+            String version = index.dependencies().get(key);
+            if (version != null && !version.isBlank()) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static URI forgeInstaller(String minecraft, String loader) {
