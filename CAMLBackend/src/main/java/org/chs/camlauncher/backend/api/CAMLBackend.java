@@ -284,7 +284,6 @@ public final class CAMLBackend implements AutoCloseable {
         this.latestLogService = new LatestLogService(
                 config.dataDirectory().resolve("logs").resolve("latest.log"));
         this.gameLaunchService = new GameLaunchService(
-                config.gameDirectory(),
                 VersionManifestService.DEFAULT_MANIFEST_URI,
                 config.dataDirectory().resolve("cache").resolve("version_manifest_v2.json"),
                 versionInstaller,
@@ -799,11 +798,6 @@ public final class CAMLBackend implements AutoCloseable {
 
     public VersionInstaller versionInstaller() {
         return versionInstaller;
-    }
-
-    public InstalledVersion installVersion(String versionId, DownloadListener listener)
-            throws java.io.IOException, InterruptedException {
-        return installVersion(versionId, config.gameDirectory(), listener);
     }
 
     /**
@@ -1532,27 +1526,6 @@ public final class CAMLBackend implements AutoCloseable {
 
     public GameLaunchService gameLaunchService() {
         return gameLaunchService;
-    }
-
-    /**
-     * 使用后端配置中的默认游戏目录启动游戏。
-     */
-    public GameLaunch launchGame(
-            String versionId,
-            String username,
-            LaunchOptions options,
-            DownloadListener downloadListener,
-            ProcessListener processListener
-    ) throws IOException, InterruptedException {
-        return launchGame(
-                versionId,
-                config.gameDirectory(),
-                username,
-                options,
-                settingsService.versionIsolationMode(),
-                downloadListener,
-                processListener
-        );
     }
 
     /**

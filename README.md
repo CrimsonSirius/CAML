@@ -645,7 +645,10 @@ CAML 只支持显式的 FULL/NONE，不再自动检测 PCL/HMCL 混合布局，�
 CAMLBackend backend = new CAMLBackend(BackendConfig.defaults());
 backend.start();
 
-InstalledVersion installed = backend.installVersion("1.21.5", DownloadListener.NONE);
+Path gameDirectory = backend.savedGameDirectory()
+        .orElse(backend.status().gameDirectory());
+InstalledVersion installed = backend.installVersion(
+        "1.21.5", gameDirectory, DownloadListener.NONE);
 
 AuthSession auth = backend.loginOffline("Steve");
 
@@ -661,7 +664,7 @@ plan = backend.virtualAssetInstaller().prepare(plan);
 
 GameProcess process = backend.processLauncher().launch(plan, classpath, listener);
 
-// 一步启动（可选指定游戏目录）
+// 一步启动（必须指定当前游戏目录）
 GameLaunch launch = backend.launchGame(
         "1.21.5", gameDirectory, "Steve", LaunchOptions.defaults(), listener, processListener);
 ```
@@ -689,8 +692,8 @@ info.installedVersions();
 
 ## 已知问题
 
-`./gradlew test` 目前在 Windows 与 Linux 上都是 491 个用例全部通过，CI 的 `build` 与
-`windows-test` 两个 job 会分别在两个平台各跑一遍。
+`./gradlew test` 目前在 Windows 与 Linux 上全部通过，CI 的 `build` 会在两个平台
+通过矩阵各跑一遍。
 
 历史上的平台相关失败（POSIX 路径断言、`fml.toml` 换行符、`java` / `java.exe` 文件名、
 JavaFX 文本节点里的路径分隔符）都已修掉。新增用例如果出现平台相关失败，请用

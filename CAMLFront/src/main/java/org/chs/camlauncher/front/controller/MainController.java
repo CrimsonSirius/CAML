@@ -3,7 +3,6 @@ package org.chs.camlauncher.front.controller;
 import org.chs.camlauncher.backend.api.BackendStatus;
 import org.chs.camlauncher.backend.api.CAMLBackend;
 
-import java.nio.file.Path;
 import java.util.Objects;
 
 /**
@@ -41,10 +40,6 @@ public final class MainController {
 
     public AccountController accountController() {
         return accountController;
-    }
-
-    public Path defaultGameDirectory() {
-        return settingsController.defaultGameDirectory();
     }
 
     public BackendStatus status() {

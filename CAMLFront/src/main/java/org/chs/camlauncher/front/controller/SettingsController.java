@@ -53,10 +53,6 @@ public final class SettingsController {
         this.context = Objects.requireNonNull(context, "context");
     }
 
-    public Path defaultGameDirectory() {
-        return context.backend().status().gameDirectory();
-    }
-
     public BackendStatus backendStatus() {
         return context.backend().status();
     }
