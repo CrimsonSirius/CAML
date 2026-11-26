@@ -17,101 +17,11 @@ concurrency:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-java@v5
-        with:
-          distribution: zulu
-          java-version: '25'
-          cache: gradle
-      - name: Make Gradle wrapper executable
-        run: chmod +x gradlew
-      - name: Install Xvfb
-        run: sudo apt-get update && sudo apt-get install -y xvfb
-      - name: Build and test
-        env:
-          CURSEFORGE_API_KEY: ${{ secrets.CURSEFORGE_API_KEY }}
-          CAML_MICROSOFT_CLIENT_ID: ${{ secrets.CAML_MICROSOFT_CLIENT_ID }}
-        # distZip 一起构建，保证下面的 debug 产物一定存在（只跑 test 不会产出 distZip）。
-        run: xvfb-run -a ./gradlew test :CAMLFront:distZip --no-daemon --stacktrace
-      - name: Upload test reports
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: test-reports
-          path: |
-            CAMLBackend/build/reports/tests/test
-            CAMLBackend/build/test-results/test
-            CAMLFront/build/reports/tests/test
-            CAMLFront/build/test-results/test
-            CAMLLanguage/build/reports/tests/test
-            CAMLLanguage/build/test-results/test
-      - name: Upload coverage reports
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage-reports
-          path: |
-            CAMLBackend/build/reports/jacoco/test/html
-            CAMLBackend/build/reports/jacoco/test/jacocoTestReport.xml
-            CAMLFront/build/reports/jacoco/test/html
-            CAMLFront/build/reports/jacoco/test/jacocoTestReport.xml
-            CAMLLanguage/build/reports/jacoco/test/html
-            CAMLLanguage/build/reports/jacoco/test/jacocoTestReport.xml
-      - name: Upload debug distribution
-        uses: actions/upload-artifact@v4
-        with:
-          name: CAML-Debug-Distribution
-          path: CAMLFront/build/distributions/*.zip
-          if-no-files-found: error
-      - name: Report failing tests
-        # 失败原因同时写进 Run Summary 和日志，避免只能下载 artifact 才能看到用例名。
-        if: failure()
-        run: |
-          set -uo pipefail
-          {
-            echo '### 失败用例（Linux）'
-            echo '```text'
-            matches=$(grep -l -E '<failure|<error' */build/test-results/test/TEST-*.xml 2>/dev/null || true)
-            for f in $matches; do
-              echo "== $(basename "$f" .xml)"
-              grep -E -A3 '<failure|<error' "$f" | head -20
-            done
-            echo '```'
-          } >> "$GITHUB_STEP_SUMMARY"
-
-  linux-packages:
-    needs: build
-    # 普通功能分支 push 只跑测试（同一提交在 PR 里还会再跑一次打包），
-    # 长期开发分支与 tag 才出包：main / crimson / namelessgod2008。
-    if: >-
-      github.event_name != 'push'
-      || github.ref == 'refs/heads/main'
-      || github.ref == 'refs/heads/crimson'
-      || github.ref == 'refs/heads/namelessgod2008'
-    permissions:
-      # tag 发布需要写权限；普通分支运行由上面的 if 拦住，不会因放宽而多做写入。
-      contents: write
-    uses: ./.github/workflows/package-linux.yml
-    secrets: inherit
-
-  windows-packages:
-    # Windows 用例失败时不再产出安装包：测试红了仍然上传产物等于把问题直接发给用户。
-    needs: [build, windows-test]
-    if: >-
-      github.event_name != 'push'
-      || github.ref == 'refs/heads/main'
-      || github.ref == 'refs/heads/crimson'
-      || github.ref == 'refs/heads/namelessgod2008'
-    permissions:
-      contents: write
-    uses: ./.github/workflows/package-windows.yml
-    secrets: inherit
-
-  windows-test:
-    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
@@ -121,6 +31,7 @@ jobs:
           java-version: '25'
           cache: gradle
       - name: Probe Java discovery
+        if: runner.os == 'Windows'
         # 记录一次冷启动探测的耗时与输出规模：进程探测若在 runner 上不可用，
         # JavaLocator 会回退到 release 文件，这里能看出走的是哪条路径。
         shell: pwsh
@@ -140,7 +51,21 @@ jobs:
           $report = $lines -join "`n"
           Write-Output $report
           Add-Content -LiteralPath $env:GITHUB_STEP_SUMMARY -Value $report
-      - name: Run all tests
+      - name: Make Gradle wrapper executable
+        if: runner.os == 'Linux'
+        run: chmod +x gradlew
+      - name: Install Xvfb
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y xvfb
+      - name: Build and test (Linux)
+        if: runner.os == 'Linux'
+        env:
+          CURSEFORGE_API_KEY: ${{ secrets.CURSEFORGE_API_KEY }}
+          CAML_MICROSOFT_CLIENT_ID: ${{ secrets.CAML_MICROSOFT_CLIENT_ID }}
+        # distZip 一起构建，保证下面的 debug 产物一定存在（只跑 test 不会产出 distZip）。
+        run: xvfb-run -a ./gradlew test :CAMLFront:distZip --no-daemon --stacktrace
+      - name: Run all tests (Windows)
+        if: runner.os == 'Windows'
         shell: pwsh
         env:
           CURSEFORGE_API_KEY: ${{ secrets.CURSEFORGE_API_KEY }}
@@ -150,7 +75,7 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: windows-test-reports
+          name: test-reports-${{ runner.os }}
           path: |
             CAMLBackend/build/reports/tests/test
             CAMLBackend/build/test-results/test
@@ -158,11 +83,44 @@ jobs:
             CAMLFront/build/test-results/test
             CAMLLanguage/build/reports/tests/test
             CAMLLanguage/build/test-results/test
+      - name: Upload coverage reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-reports-${{ runner.os }}
+          path: |
+            CAMLBackend/build/reports/jacoco/test/html
+            CAMLBackend/build/reports/jacoco/test/jacocoTestReport.xml
+            CAMLFront/build/reports/jacoco/test/html
+            CAMLFront/build/reports/jacoco/test/jacocoTestReport.xml
+            CAMLLanguage/build/reports/jacoco/test/html
+            CAMLLanguage/build/reports/jacoco/test/jacocoTestReport.xml
+      - name: Upload debug distribution
+        if: runner.os == 'Linux'
+        uses: actions/upload-artifact@v4
+        with:
+          name: CAML-Debug-Distribution
+          path: CAMLFront/build/distributions/*.zip
+          if-no-files-found: error
       - name: Report failing tests
         # 失败原因同时写进 Run Summary 和日志，避免只能下载 artifact 才能看到用例名。
+        if: failure() && runner.os == 'Linux'
+        run: |
+          set -uo pipefail
+          {
+            echo '### 失败用例（Linux）'
+            echo '```text'
+            matches=$(grep -l -E '<failure|<error' */build/test-results/test/TEST-*.xml 2>/dev/null || true)
+            for f in $matches; do
+              echo "== $(basename "$f" .xml)"
+              grep -E -A3 '<failure|<error' "$f" | head -20
+            done
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Report failing tests (Windows)
         # 脚本正文保持 ASCII：GitHub 把 run 保存为无 BOM 的 UTF-8，
         # 非 ASCII 字符在不同 PowerShell 版本下的解码方式可能不一致。
-        if: failure()
+        if: failure() && runner.os == 'Windows'
         shell: pwsh
         run: |
           $lines = New-Object System.Collections.Generic.List[string]
@@ -187,3 +145,31 @@ jobs:
           $report = $lines -join "`n"
           Write-Output $report
           Add-Content -LiteralPath $env:GITHUB_STEP_SUMMARY -Value $report
+
+  linux-packages:
+    needs: build
+    # 普通功能分支 push 只跑测试（同一提交在 PR 里还会再跑一次打包），
+    # 长期开发分支与 tag 才出包：main / crimson / namelessgod2008。
+    if: >-
+      github.event_name != 'push'
+      || github.ref == 'refs/heads/main'
+      || github.ref == 'refs/heads/crimson'
+      || github.ref == 'refs/heads/namelessgod2008'
+    permissions:
+      # tag 发布需要写权限；普通分支运行由上面的 if 拦住，不会因放宽而多做写入。
+      contents: write
+    uses: ./.github/workflows/package-linux.yml
+    secrets: inherit
+
+  windows-packages:
+    # Windows 用例失败时不再产出安装包：测试红了仍然上传产物等于把问题直接发给用户。
+    needs: build
+    if: >-
+      github.event_name != 'push'
+      || github.ref == 'refs/heads/main'
+      || github.ref == 'refs/heads/crimson'
+      || github.ref == 'refs/heads/namelessgod2008'
+    permissions:
+      contents: write
+    uses: ./.github/workflows/package-windows.yml
+    secrets: inherit
