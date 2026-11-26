@@ -28,7 +28,8 @@ class InstanceModIconServiceTest {
                 "{\"icon\":\"assets/demo/custom-icon.png\"}".getBytes(StandardCharsets.UTF_8)
         ), new Entry("assets/demo/custom-icon.png", icon));
 
-        assertArrayEquals(icon, InstanceModIconService.load(game, "1.21.4", "demo.jar"));
+        assertArrayEquals(icon, InstanceModIconService.load(
+                game, "1.21.4", "demo.jar", VersionIsolationMode.FULL));
     }
 
     @Test
@@ -42,7 +43,8 @@ class InstanceModIconServiceTest {
                 "logoFile=\"assets/demo/logo.png\"".getBytes(StandardCharsets.UTF_8)
         ), new Entry("assets/demo/logo.png", icon));
 
-        assertArrayEquals(icon, InstanceModIconService.load(game, "1.21.4", "demo.jar"));
+        assertArrayEquals(icon, InstanceModIconService.load(
+                game, "1.21.4", "demo.jar", VersionIsolationMode.FULL));
     }
 
     @Test
@@ -53,7 +55,8 @@ class InstanceModIconServiceTest {
         byte[] icon = new byte[]{8, 9};
         writeJar(mods.resolve("demo.jar"), new Entry("icon.png", icon));
 
-        assertArrayEquals(icon, InstanceModIconService.load(game, "1.21.4", "demo.jar"));
+        assertArrayEquals(icon, InstanceModIconService.load(
+                game, "1.21.4", "demo.jar", VersionIsolationMode.FULL));
     }
 
     @Test
@@ -64,7 +67,8 @@ class InstanceModIconServiceTest {
         byte[] icon = new byte[]{10, 11};
         writeJar(mods.resolve("demo.jar.disabled"), new Entry("icon.png", icon));
 
-        assertArrayEquals(icon, InstanceModIconService.load(game, "1.21.4", "demo.jar"));
+        assertArrayEquals(icon, InstanceModIconService.load(
+                game, "1.21.4", "demo.jar", VersionIsolationMode.FULL));
     }
 
     @Test
@@ -77,7 +81,8 @@ class InstanceModIconServiceTest {
                 "{}".getBytes(StandardCharsets.UTF_8)
         ));
 
-        assertEquals(0, InstanceModIconService.load(game, "1.21.4", "demo.jar").length);
+        assertEquals(0, InstanceModIconService.load(
+                game, "1.21.4", "demo.jar", VersionIsolationMode.FULL).length);
     }
 
     private static void writeJar(Path path, Entry... entries) throws IOException {

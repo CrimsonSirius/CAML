@@ -28,7 +28,8 @@ class InstanceInspectorTest {
         Files.writeString(version.resolve("mods").resolve("iris.jar.disabled"), "1234567");
         Files.writeString(version.resolve("mods").resolve("readme.txt"), "ignored");
 
-        InstanceDetails details = InstanceInspector.inspect(game, "1.21.4-test");
+        InstanceDetails details = InstanceInspector.inspect(
+                game, "1.21.4-test", VersionIsolationMode.FULL, java.util.Set.of());
 
         assertEquals(version, details.gameDataDirectory());
         assertEquals(version.resolve("mods"), details.modsDirectory());
@@ -53,7 +54,8 @@ class InstanceInspectorTest {
         Files.createDirectories(game.resolve("mods"));
         Files.writeString(game.resolve("mods").resolve("test.jar"), "1");
 
-        InstanceDetails details = InstanceInspector.inspect(game, "1.21.4");
+        InstanceDetails details = InstanceInspector.inspect(
+                game, "1.21.4", VersionIsolationMode.NONE, java.util.Set.of());
 
         assertEquals(game, details.gameDataDirectory());
         assertEquals(1, details.modCount());
@@ -73,7 +75,8 @@ class InstanceInspectorTest {
                 "{\"pack\":{\"pack_format\":22}}", StandardCharsets.UTF_8);
         Files.writeString(resourcePacks.resolve("readme.txt"), "ignored");
 
-        InstanceDetails details = InstanceInspector.inspect(game, "1.21.4-test");
+        InstanceDetails details = InstanceInspector.inspect(
+                game, "1.21.4-test", VersionIsolationMode.FULL, java.util.Set.of());
 
         assertEquals(resourcePacks, details.resourcePacksDirectory());
         assertEquals(3, details.resourcePackCount());
@@ -90,7 +93,9 @@ class InstanceInspectorTest {
     @Test
     void rejectsInvalidInstanceId() {
         assertThrows(InstanceNameException.class,
-                () -> InstanceInspector.inspect(root.resolve("game"), "../escape"));
+                () -> InstanceInspector.inspect(
+                        root.resolve("game"), "../escape", VersionIsolationMode.FULL,
+                        java.util.Set.of()));
     }
 
     private static void writeResourcePack(Path path, int packFormat) throws Exception {

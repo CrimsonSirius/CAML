@@ -24,7 +24,7 @@ CAML 是一个基于 **Java 25 + JavaFX** 的 Minecraft 启动器，采用前后
 | 资源包下载 | 下载页新增资源包子页；Modrinth 使用 `project_type:resourcepack`，CurseForge 使用 `classId=12`，按游戏版本筛选并下载到当前实例 `resourcepacks` 目录 |
 | 地图下载 | 下载页新增地图子页；仅使用 CurseForge `classId=17`，按游戏版本筛选；下载 ZIP 后解压到当前实例 `saves/<世界名>`，重名自动追加序号，失败时清理临时文件 |
 | 实例管理 | “管理实例”提供 Mod 与资源包两个入口；Mod 显示本地版本、支持启停和更新检查；资源包扫描实例 `resourcepacks` 中的 zip/目录，读取 `pack.mcmeta` 的 `pack_format` 显示版本，并用 `.disabled` 后缀切换启用状态 |
-| 版本安装 | 本地已安装版本直接复用（支持第三方启动器/整合包的自定义版本 ID），下载时可用自定义实例名；官方版本 ID 负责元数据，实例 ID 作为 `versions/<id>` 目录名；支持 Fabric Loader/Fabric API、Quilt Loader/Quilted Fabric API、Forge、NeoForge、OptiFine（仅 Forge）安装；Forge/NeoForge 版本列表优先从 BMCLAPI JSON 接口获取，官方源使用 Maven 元数据和 NeoForge 版本号映射匹配 Minecraft 版本；支持旧式 Forge library、Maven 路径推导和子版本库优先去重；缺失文件自动补齐；兼容 PCL/HMCL 版本隔离布局；基础文件完成后才写入版本 JSON |
+| 版本安装 | 本地已安装版本直接复用（支持第三方启动器/整合包的自定义版本 ID），下载时可用自定义实例名；官方版本 ID 负责元数据，实例 ID 作为 `versions/<id>` 目录名；支持 Fabric Loader/Fabric API、Quilt Loader/Quilted Fabric API、Forge、NeoForge、OptiFine（仅 Forge）安装；Forge/NeoForge 版本列表优先从 BMCLAPI JSON 接口获取，官方源使用 Maven 元数据和 NeoForge 版本号映射匹配 Minecraft 版本；支持旧式 Forge library、Maven 路径推导和子版本库优先去重；缺失文件自动补齐；版本隔离仅使用 FULL/NONE；基础文件完成后才写入版本 JSON |
 | 整合包下载 | 下载页“游戏实例”分组新增整合包；首期支持 Modrinth `.mrpack` 搜索、详情和安装为新实例；解析 `minecraft`、`fabric-loader`、`quilt-loader`、`forge`、`neoforge` 依赖，下载清单文件、解压 `overrides`，写入整合包标记并强制完全隔离 |
 | 账号 | 离线登录、稳定离线 UUID；微软设备码登录，OAuth → Xbox Live → XSTS → Minecraft Services，启动时按过期时间自动 refresh；第三方 Yggdrasil（LittleSkin 等）账密登录，启动时 `refresh` 自动续期并自愈未绑定角色的 token；支持多角色切换；authlib-injector 运行时按需下载一次、每次启动 SHA-256 校验后以 `-javaagent` 注入；metadata 三级缓存（网络/内存/磁盘）保证皮肤站不可用时仍能启动；设置页维护全局账号与默认账号，主页二级页为每个实例单独指定账号，未指定时回退默认；accessToken/refresh token 使用 AES-GCM 加密落盘（未勾选“记住登录”时只留在内存），密码不保存 |
 | Java | 扫描 `java.home`、`JAVA_HOME`、`PATH` 及常见 JDK 目录；读取版本、供应商、架构、位数；按版本要求选择运行时；Windows 优先 `javaw.exe` |
@@ -590,22 +590,9 @@ CurseForge `classId=17`。下载的 ZIP 会解压为实例数据目录下的 `sa
 “完全版本隔离”后，旧存档仍留在 `.minecraft/saves`，新存档写入
 `versions/<id>/saves`。需要沿用旧存档时应手动复制。
 
-后端仍保留对 PCL/HMCL 隔离布局的自动检测重载，用于旧 API 和目录扫描；界面启动
-使用用户选择的显式模式，不再根据版本目录中是否已有 `saves` 来猜测。
-
-自动检测会检查 `versions/<id>` 中是否存在：
-
-```text
-saves
-options.txt
-logs
-mods
-config
-resourcepacks
-shaderpacks
-usercache.json
-command_history.txt
-```
+CAML 只支持显式的 FULL/NONE，不再自动检测 PCL/HMCL 混合布局，也不会根据
+`versions/<id>` 中已有的 `saves`、`options.txt` 等文件猜测模式。导入第三方实例时，
+需要自行选择与目录实际布局匹配的模式。
 
 无论选择哪种模式，`libraries`、`assets` 都来自 `.minecraft` 根目录。游戏进程继承系统环境
 （不再改写 `APPDATA`）。主页会根据当前选择显示实际存档位置。
@@ -662,7 +649,6 @@ GameLaunch launch = backend.launchGame(
 GameDirectoryInfo info = backend.inspectGameDirectory(Path.of("D:/games/.minecraft"));
 info.directoryExists();
 info.installedVersions();
-info.isolatedVersions();
 ```
 
 ---

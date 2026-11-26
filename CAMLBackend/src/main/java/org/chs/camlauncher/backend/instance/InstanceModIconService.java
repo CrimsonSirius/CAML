@@ -29,9 +29,11 @@ public final class InstanceModIconService {
     private InstanceModIconService() {
     }
 
-    public static byte[] load(Path gameDirectory, String instanceId, String fileName) {
+    public static byte[] load(Path gameDirectory, String instanceId, String fileName,
+                              VersionIsolationMode isolationMode) {
         try {
-            Path modsDirectory = InstanceInspector.dataDirectory(gameDirectory, instanceId)
+            Path modsDirectory = InstanceInspector.dataDirectory(
+                    gameDirectory, instanceId, isolationMode)
                     .resolve("mods");
             String baseName = fileName != null && fileName.endsWith(".disabled")
                     ? fileName.substring(0, fileName.length() - ".disabled".length())

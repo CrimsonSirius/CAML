@@ -27,21 +27,19 @@ public final class InstanceInspector {
     private InstanceInspector() {
     }
 
-    public static InstanceDetails inspect(Path gameDirectory, String instanceId) throws IOException {
-        return inspect(gameDirectory, instanceId, Set.of());
-    }
-
     public static InstanceDetails inspect(Path gameDirectory, String instanceId,
+                                          VersionIsolationMode isolationMode,
                                           Set<String> configuredDisabled) throws IOException {
         Path normalizedGameDirectory = Objects.requireNonNull(gameDirectory, "gameDirectory")
                 .toAbsolutePath()
                 .normalize();
+        Objects.requireNonNull(isolationMode, "isolationMode");
         Objects.requireNonNull(configuredDisabled, "configuredDisabled");
         String instance = InstanceNameRules.validate(instanceId);
         Path versionDirectory = SafePaths.resolveChild(
                 normalizedGameDirectory.resolve("versions"), instance, "instance id");
         Path dataDirectory = GameDataLayout.resolve(
-                normalizedGameDirectory, versionDirectory, VersionIsolationMode.AUTO);
+                normalizedGameDirectory, versionDirectory, isolationMode);
         Path modsDirectory = dataDirectory.resolve("mods");
         Path resourcePacksDirectory = dataDirectory.resolve("resourcepacks");
 
@@ -57,23 +55,26 @@ public final class InstanceInspector {
     }
 
     /** 解析打开实例文件夹时需要使用的数据目录。 */
-    public static Path dataDirectory(Path gameDirectory, String instanceId) {
+    public static Path dataDirectory(Path gameDirectory, String instanceId,
+                                     VersionIsolationMode isolationMode) {
         Path normalizedGameDirectory = Objects.requireNonNull(gameDirectory, "gameDirectory")
                 .toAbsolutePath()
                 .normalize();
+        Objects.requireNonNull(isolationMode, "isolationMode");
         String instance = InstanceNameRules.validate(instanceId);
         Path versionDirectory = SafePaths.resolveChild(
                 normalizedGameDirectory.resolve("versions"), instance, "instance id");
         return GameDataLayout.resolve(
-                normalizedGameDirectory, versionDirectory, VersionIsolationMode.AUTO);
+                normalizedGameDirectory, versionDirectory, isolationMode);
     }
 
     /** 解析本地 Mod 的实际文件路径，兼容 .jar 和 .jar.disabled。 */
-    public static Path modFile(Path gameDirectory, String instanceId, String fileName) {
+    public static Path modFile(Path gameDirectory, String instanceId, String fileName,
+                               VersionIsolationMode isolationMode) {
         String baseName = fileName != null && fileName.endsWith(".disabled")
                 ? fileName.substring(0, fileName.length() - ".disabled".length())
                 : fileName;
-        Path modsDirectory = dataDirectory(gameDirectory, instanceId).resolve("mods");
+        Path modsDirectory = dataDirectory(gameDirectory, instanceId, isolationMode).resolve("mods");
         Path enabled = SafePaths.resolveChild(modsDirectory, baseName, "mod file");
         if (Files.isRegularFile(enabled)) {
             return enabled;

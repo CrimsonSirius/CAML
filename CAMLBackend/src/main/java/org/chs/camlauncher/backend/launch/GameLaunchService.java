@@ -100,7 +100,7 @@ public final class GameLaunchService {
                 defaultGameDirectory,
                 username,
                 options,
-                VersionIsolationMode.AUTO,
+                VersionIsolationMode.FULL,
                 downloadListener,
                 processListener
         );
@@ -124,7 +124,7 @@ public final class GameLaunchService {
                 gameDirectory,
                 username,
                 options,
-                VersionIsolationMode.AUTO,
+                VersionIsolationMode.FULL,
                 downloadListener,
                 processListener
         );

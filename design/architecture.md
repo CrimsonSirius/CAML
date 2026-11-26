@@ -43,7 +43,7 @@ CAMLFront ──> CAMLBackend ──> CAMLLanguage
 | `download` | 下载模型、监听器、文件下载器、并发执行、哈希校验、下载源 |
 | `download.plan` | 版本文件与资源对象下载计划 |
 | `error` | 稳定错误码 `BackendError` 和结构化异常 |
-| `instance` | 实例名规则、版本安装、继承解析、隔离布局、实例检查、图标/元数据 |
+| `instance` | 实例名规则、版本安装、继承解析、FULL/NONE 隔离、实例检查、图标/元数据 |
 | `io` | 路径越界防护 `SafePaths` |
 | `json` | Gson 文件读写 |
 | `language` | 语言初始化、发现、目录加载、回退、格式化与事件发布 |

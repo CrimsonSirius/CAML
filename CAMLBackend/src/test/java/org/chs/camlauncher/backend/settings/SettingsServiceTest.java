@@ -127,16 +127,6 @@ class SettingsServiceTest {
     }
 
     @Test
-    void rejectsAutomaticVersionIsolationPersistence() {
-        SettingsService service = new SettingsService(dataDirectory);
-
-        assertThrows(
-                IllegalArgumentException.class,
-                () -> service.setVersionIsolationMode(VersionIsolationMode.AUTO)
-        );
-    }
-
-    @Test
     void defaultsToDefaultDownloadConcurrency() throws Exception {
         assertEquals(
                 SettingsService.DEFAULT_DOWNLOAD_CONCURRENCY,
