@@ -104,28 +104,28 @@ final class ModSearchView extends VBox implements PageLifecycle {
         queryField.setPromptText(text("search.nameHint"));
         gameVersionField.setPromptText(UiText.tr("mods.search.versionHint"));
         if (type.supportsModrinth() && type.supportsCurseForge()) {
-            sourceBox.getItems().setAll(
+            sourceBox.getItems().setAll(List.of(
                     new ModChoice<>(UiText.tr("mods.search.allSources"), null),
                     new ModChoice<>(UiText.tr("mods.source.modrinth"), ModSource.MODRINTH),
                     new ModChoice<>(UiText.tr("mods.source.curseforge"), ModSource.CURSEFORGE)
-            );
+            ));
         } else if (type.supportsModrinth()) {
-            sourceBox.getItems().setAll(
+            sourceBox.getItems().setAll(List.of(
                     new ModChoice<>(UiText.tr("mods.source.modrinth"), ModSource.MODRINTH)
-            );
+            ));
         } else {
-            sourceBox.getItems().setAll(
+            sourceBox.getItems().setAll(List.of(
                     new ModChoice<>(UiText.tr("mods.source.curseforge"), ModSource.CURSEFORGE)
-            );
+            ));
         }
         sourceBox.setValue(sourceBox.getItems().getFirst());
-        loaderBox.getItems().setAll(
+        loaderBox.getItems().setAll(List.of(
                 new ModChoice<>(UiText.tr("mods.search.allLoaders"), null),
                 new ModChoice<>(UiText.tr("mods.loader.fabric"), ModLoader.FABRIC),
                 new ModChoice<>(UiText.tr("mods.loader.forge"), ModLoader.FORGE),
                 new ModChoice<>(UiText.tr("mods.loader.neoforge"), ModLoader.NEOFORGE),
                 new ModChoice<>(UiText.tr("mods.loader.quilt"), ModLoader.QUILT)
-        );
+        ));
         loaderBox.setValue(loaderBox.getItems().getFirst());
 
         searchButton = CamlButton.filled(UiText.tr("mods.search.button"));

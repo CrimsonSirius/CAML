@@ -213,14 +213,15 @@ final class ModDetailView extends VBox implements PageLifecycle {
         List<String> sortedLoaders = new ArrayList<>(loaders);
         sortedLoaders.sort(String::compareTo);
 
-        versionBox.getItems().setAll(new ModChoice<>(UiText.tr("mods.detail.allVersions"), null));
+        versionBox.getItems().setAll(List.of(
+                new ModChoice<>(UiText.tr("mods.detail.allVersions"), null)));
         sortedVersions.forEach(version -> versionBox.getItems().add(
                 new ModChoice<>(version, version)));
         versionBox.setValue(versionBox.getItems().getFirst());
 
         if (type == ModContentType.MOD) {
-            loaderBox.getItems().setAll(new ModChoice<>(
-                    UiText.tr("mods.detail.allLoaders"), null));
+            loaderBox.getItems().setAll(List.of(
+                    new ModChoice<>(UiText.tr("mods.detail.allLoaders"), null)));
             sortedLoaders.forEach(loader -> loaderBox.getItems().add(
                     new ModChoice<>(ModViewSupport.loaderLabel(loader), loader)));
             loaderBox.setValue(loaderBox.getItems().getFirst());
