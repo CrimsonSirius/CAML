@@ -79,6 +79,7 @@ jobs:
       - name: Build Linux packages
         env:
           CURSEFORGE_API_KEY: ${{ secrets.CURSEFORGE_API_KEY }}
+          CAML_MICROSOFT_CLIENT_ID: ${{ secrets.CAML_MICROSOFT_CLIENT_ID }}
         run: |
           ./gradlew packageLinux \
             "-PcamlJdkHome=$JAVA_HOME" \
@@ -100,35 +101,9 @@ jobs:
           rpm --dbpath "$dbpath" -qpi "$rpm"
           rpm --dbpath "$dbpath" -qpl "$rpm" >/dev/null
           cat build/packages/linux/SHA256SUMS.txt
-      - name: Smoke test packaged backend
-        # 用与安装包相同的 --module-path 布局启动后端：
-        # app 目录下的 jar 会以命名（自动）模块加载，跨模块资源可见性问题只在这里暴露。
-        run: |
-          set -euo pipefail
-          image="build/packages/linux/app-image/CAML"
-          test -d "$image"
-          # 自动定位 jar 所在目录，避免依赖 jpackage 的具体布局（Linux 为 lib/app）。
-          jar=$(find "$image" -name 'CAMLBackend-*.jar' -print -quit)
-          test -n "$jar"
-          app=$(dirname "$jar")
-          echo "app dir: $app"
-          classes="$RUNNER_TEMP/smoke-classes"
-          rm -rf "$classes"
-          mkdir -p "$classes"
-          javac -encoding UTF-8 -d "$classes" -cp "$app/*" packaging/smoke/BackendSmoke.java
-          java --module-path "$app" \
-            --add-modules=javafx.controls,javafx.fxml \
-            -cp "$classes:$app/*" \
-            BackendSmoke "$RUNNER_TEMP/smoke-data" "$RUNNER_TEMP/smoke-game"
-      - name: Upload Linux packages
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ steps.package.outputs.artifact }}
-          path: |
-            build/packages/linux/*.deb
-            build/packages/linux/*.rpm
-            build/packages/linux/SHA256SUMS.txt
-          if-no-files-found: error
+      - name: Smoke test packaged app-image
+        # 用 app-image 自身的启动配置启动后端，并校验裁剪运行时的模块集与 --strip-native-commands。
+        run: ./gradlew smokeTestPackagedApp "-PcamlJdkHome=$JAVA_HOME" --no-daemon
 
   release:
     if: startsWith(github.ref, 'refs/tags/')

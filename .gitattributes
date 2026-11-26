@@ -1,0 +1,17 @@
+# Store everything with LF so Windows checkouts cannot inject CRLF into deb/rpm payloads.
+* text=auto eol=lf
+
+# Windows batch files must stay CRLF or cmd.exe misparses them.
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Binary assets: never convert line endings.
+*.jar binary
+*.png binary
+*.ico binary
+*.webp binary
+*.zip binary
+*.exe binary
+*.msi binary
+*.deb binary
+*.rpm binary
