@@ -1,5 +1,8 @@
 package org.chs.camlauncher.backend.modpack;
 
+import com.google.gson.Gson;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import org.chs.camlauncher.backend.download.DownloadCancellationToken;
 import org.chs.camlauncher.backend.download.DownloadConcurrency;
 import org.chs.camlauncher.backend.download.DownloadListener;
@@ -8,8 +11,10 @@ import org.chs.camlauncher.backend.download.io.DownloadExecutor;
 import org.chs.camlauncher.backend.download.model.DownloadItem;
 import org.chs.camlauncher.backend.error.BackendError;
 import org.chs.camlauncher.backend.error.BackendException;
+import org.chs.camlauncher.backend.instance.InstanceInstallLock;
 import org.chs.camlauncher.backend.instance.InstanceNameRules;
 import org.chs.camlauncher.backend.instance.SharedLibraryTransaction;
+import org.chs.camlauncher.backend.instance.VersionDirectoryStage;
 import org.chs.camlauncher.backend.instance.VersionInstaller;
 import org.chs.camlauncher.backend.io.ArchiveExtractionGuard;
 import org.chs.camlauncher.backend.io.SafePaths;
@@ -24,17 +29,19 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.Enumeration;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.UUID;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
@@ -94,31 +101,32 @@ public final class ModpackInstaller {
         Objects.requireNonNull(gameDirectory, "gameDirectory");
         Objects.requireNonNull(token, "token");
         String instance = InstanceNameRules.validate(instanceName);
-        InstanceNameRules.ensureNewInstance(gameDirectory, instance);
         Files.createDirectories(gameDirectory);
 
         Path archive = Files.createTempFile(gameDirectory, ".caml-modpack-", ".mrpack");
-        Path instanceDirectory = gameDirectory.resolve("versions").resolve(instance);
-        boolean loaderInstalled = false;
+        String stagedInstance = ".caml-modpack-stage-" + UUID.randomUUID().toString().replace("-", "");
+        Path stagedDirectory = gameDirectory.resolve("versions").resolve(stagedInstance);
         ArchiveExtractionGuard extractionGuard = new ArchiveExtractionGuard(
                 archiveMaxEntries, archiveMaxEntryBytes, archiveMaxTotalBytes);
         try {
-            downloadArchive(file, archive, listener, token);
-            ModrinthModpackIndex index = readIndex(archive, file.fileName(), extractionGuard);
-            try (SharedLibraryTransaction libraryTransaction = SharedLibraryTransaction.begin(
-                    gameDirectory.resolve("libraries"))) {
-                installLoader(index, instance, gameDirectory, listener, token, libraryTransaction);
-                loaderInstalled = true;
-                installContent(archive, instanceDirectory, index, file, listener, token,
-                        extractionGuard);
-                libraryTransaction.commit();
+            try (InstanceInstallLock ignored = InstanceInstallLock.acquire(gameDirectory, instance)) {
+                InstanceNameRules.ensureNewInstance(gameDirectory, instance);
+                downloadArchive(file, archive, listener, token);
+                ModrinthModpackIndex index = readIndex(archive, file.fileName(), extractionGuard);
+                try (SharedLibraryTransaction libraryTransaction = SharedLibraryTransaction.begin(
+                        gameDirectory.resolve("libraries"));
+                     VersionDirectoryStage stage = VersionDirectoryStage.adopt(
+                             gameDirectory, instance, stagedDirectory)) {
+                    installLoader(index, stagedInstance, gameDirectory, listener, token,
+                            libraryTransaction);
+                    installContent(archive, stagedDirectory, index, file, listener, token,
+                            extractionGuard);
+                    finalizeStagedVersion(stagedDirectory, stagedInstance, instance);
+                    libraryTransaction.commit();
+                    Path finalDirectory = stage.commitDirectory();
+                    return new ModDownloadResult(finalDirectory, file);
+                }
             }
-            return new ModDownloadResult(instanceDirectory, file);
-        } catch (IOException | RuntimeException | InterruptedException e) {
-            if (loaderInstalled) {
-                deleteRecursively(instanceDirectory);
-            }
-            throw e;
         } finally {
             Files.deleteIfExists(archive);
         }
@@ -136,6 +144,69 @@ public final class ModpackInstaller {
         extractOverrides(archive, instanceDirectory, file.fileName(), extractionGuard);
         downloadFiles(index, instanceDirectory, file.fileName(), listener, token);
         ModpackLayout.writeMarker(instanceDirectory, index, file);
+    }
+
+    static void finalizeStagedVersion(
+            Path versionDirectory, String stagedId, String finalId) throws IOException {
+        Path stagedJson = SafePaths.resolveChild(
+                versionDirectory, stagedId + ".json", "staged version json");
+        if (!Files.isRegularFile(stagedJson)) {
+            throw new IOException("整合包 staging 缺少版本 JSON: " + stagedJson);
+        }
+
+        JsonObject manifest;
+        try {
+            var parsed = JsonParser.parseString(Files.readString(stagedJson, StandardCharsets.UTF_8));
+            if (!parsed.isJsonObject()) {
+                throw new IOException("整合包版本 JSON 不是对象: " + stagedJson);
+            }
+            manifest = parsed.getAsJsonObject();
+        } catch (RuntimeException e) {
+            throw new IOException("整合包版本 JSON 无法解析: " + stagedJson, e);
+        }
+        manifest.addProperty("id", finalId);
+        var jar = manifest.get("jar");
+        if (jar != null && jar.isJsonPrimitive() && stagedId.equals(jar.getAsString())) {
+            manifest.addProperty("jar", finalId);
+        }
+
+        writeAtomically(stagedJson, new Gson().toJson(manifest));
+        Path finalJson = SafePaths.resolveChild(
+                versionDirectory, finalId + ".json", "final version json");
+        move(stagedJson, finalJson);
+
+        Path stagedJar = SafePaths.resolveChild(
+                versionDirectory, stagedId + ".jar", "staged client jar");
+        if (Files.isRegularFile(stagedJar)) {
+            move(stagedJar, SafePaths.resolveChild(
+                    versionDirectory, finalId + ".jar", "final client jar"));
+        }
+    }
+
+    private static void writeAtomically(Path target, String text) throws IOException {
+        Path parent = target.toAbsolutePath().getParent();
+        Files.createDirectories(parent);
+        Path temporary = Files.createTempFile(parent, "caml-modpack-json-", ".tmp");
+        try {
+            Files.writeString(temporary, text, StandardCharsets.UTF_8);
+            try {
+                Files.move(temporary, target,
+                        StandardCopyOption.ATOMIC_MOVE,
+                        StandardCopyOption.REPLACE_EXISTING);
+            } catch (AtomicMoveNotSupportedException e) {
+                Files.move(temporary, target, StandardCopyOption.REPLACE_EXISTING);
+            }
+        } finally {
+            Files.deleteIfExists(temporary);
+        }
+    }
+
+    private static void move(Path source, Path target) throws IOException {
+        try {
+            Files.move(source, target, StandardCopyOption.ATOMIC_MOVE);
+        } catch (AtomicMoveNotSupportedException e) {
+            Files.move(source, target);
+        }
     }
 
     private void downloadArchive(
@@ -383,20 +454,4 @@ public final class ModpackInstaller {
         return new BackendException(BackendError.of("modpack.error.invalidArchive", displayName), cause);
     }
 
-    private static void deleteRecursively(Path root) {
-        if (!Files.exists(root)) {
-            return;
-        }
-        try (var paths = Files.walk(root)) {
-            paths.sorted(Comparator.reverseOrder()).forEach(path -> {
-                try {
-                    Files.deleteIfExists(path);
-                } catch (IOException ignored) {
-                    // 清理失败不覆盖原始安装异常。
-                }
-            });
-        } catch (IOException ignored) {
-            // 清理失败不覆盖原始安装异常。
-        }
-    }
 }

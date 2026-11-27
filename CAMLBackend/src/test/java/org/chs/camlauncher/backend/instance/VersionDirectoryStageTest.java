@@ -66,6 +66,23 @@ class VersionDirectoryStageTest {
         assertTrue(Files.isRegularFile(installed.clientJar()));
     }
 
+    @Test
+    void adoptsCallerCreatedStageAndPublishesItAtomically() throws Exception {
+        Path staged = gameDirectory.resolve("versions/.stage-demo");
+        Files.createDirectories(staged);
+        Files.writeString(staged.resolve("demo.json"), "{}");
+        Path target;
+
+        try (VersionDirectoryStage stage = VersionDirectoryStage.adopt(
+                gameDirectory, "demo", staged)) {
+            target = stage.commitDirectory();
+        }
+
+        assertEquals(gameDirectory.resolve("versions/demo").toAbsolutePath().normalize(), target);
+        assertTrue(Files.isRegularFile(target.resolve("demo.json")));
+        assertFalse(Files.exists(staged));
+    }
+
     private InstalledVersion installedVersion(String id) {
         return new InstalledVersion(id, manifest(id), gameDirectory, null, null,
                 null, null, null, null);

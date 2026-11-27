@@ -32,11 +32,32 @@ public final class VersionDirectoryStage implements AutoCloseable {
         return new VersionDirectoryStage(staged, target);
     }
 
+    /** 接管调用方已创建（或即将创建）的版本 staging 目录。 */
+    public static VersionDirectoryStage adopt(
+            Path gameDirectory, String instanceId, Path stagedDirectory) throws IOException {
+        Objects.requireNonNull(gameDirectory, "gameDirectory");
+        Objects.requireNonNull(stagedDirectory, "stagedDirectory");
+        String instance = InstanceNameRules.validate(instanceId);
+        Path versionsDirectory = gameDirectory.resolve("versions").toAbsolutePath().normalize();
+        Path target = SafePaths.resolveChild(versionsDirectory, instance, "version id");
+        Path staged = stagedDirectory.toAbsolutePath().normalize();
+        if (!versionsDirectory.equals(staged.getParent()) || staged.equals(target)) {
+            throw new IOException("版本 staging 目录无效: " + stagedDirectory);
+        }
+        return new VersionDirectoryStage(staged, target);
+    }
+
     public Path directory() {
         return directory;
     }
 
     public InstalledVersion commit(InstalledVersion installed) throws IOException {
+        Path target = commitDirectory();
+        return installed.relocateVersionDirectory(target);
+    }
+
+    /** 原子发布 staging 目录并返回最终目录。 */
+    public Path commitDirectory() throws IOException {
         if (committed) {
             throw new IllegalStateException("版本 staging 已提交");
         }
@@ -50,7 +71,7 @@ public final class VersionDirectoryStage implements AutoCloseable {
             Files.move(directory, target);
         }
         committed = true;
-        return installed.relocateVersionDirectory(target);
+        return target;
     }
 
     @Override

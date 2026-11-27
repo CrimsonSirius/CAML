@@ -21,7 +21,7 @@ CAML 已经覆盖一条可运行的完整链路：
 
 - Forge、NeoForge、Fabric、Quilt、OptiFine 组合安装；
 - 多来源 Mod/光影/资源包/地图搜索与下载；
-- Modrinth `.mrpack` 整合包搜索与安装为新实例；
+- Modrinth `.mrpack` 整合包搜索与安装为新实例，先在隐藏 staging 完成加载器和内容，再原子发布；
 - Microsoft/Yggdrasil/离线账号；
 - Java 扫描、手动添加、Foojay 托管下载；
 - 外部 CSS 主题和 11 种内置语言；
@@ -76,7 +76,7 @@ CAML/
 - 原版、Fabric/Quilt/OptiFine/Forge/NeoForge 共用实例锁和版本目录 staging；加载器同时使用共享库事务，失败会回滚库并清理 staging。
 - Forge/NeoForge 优先提取 installer 内嵌 Maven 库；缺失 URL 的库按 Forge/NeoForge 坐标回退正确仓库。
 - 安装器库首轮 6 次下载失败后，每 5 秒按候选源重试一轮，直到成功或取消；进度统计不会重复累计整批字节。
-- Modrinth 与地图解压使用条目数、单条目大小和总解压量限制。
+- Modrinth 与地图解压使用条目数、单条目大小和总解压量限制；整合包最终实例目录只在加载器、overrides、清单文件和标记全部完成后原子出现。
 
 ### 3.4 启动
 
@@ -178,7 +178,7 @@ CAML/
 
 ## 6. 测试与验证
 
-当前构建产物中共有 **125 个测试类、505 个测试方法**，最近一次全量测试无失败/错误/跳过。
+当前构建产物中共有 **125 个测试类、508 个测试方法**，最近一次全量测试无失败/错误/跳过。
 
 测试覆盖重点：
 

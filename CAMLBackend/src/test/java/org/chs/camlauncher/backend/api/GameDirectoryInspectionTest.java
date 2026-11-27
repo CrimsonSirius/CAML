@@ -29,6 +29,9 @@ class GameDirectoryInspectionTest {
         Files.writeString(installedVersion.resolve("1.21.4.json"), "{}");
         // 没有版本 JSON 的目录不算安装完成。
         Files.createDirectories(gameDirectory.resolve("versions").resolve("incomplete"));
+        Path modpackStage = gameDirectory.resolve("versions/.caml-modpack-stage-test");
+        Files.createDirectories(modpackStage);
+        Files.writeString(modpackStage.resolve(".caml-modpack-stage-test.json"), "{}");
 
         CAMLBackend backend = new CAMLBackend(
                 new BackendConfig(root.resolve("data"), gameDirectory));
