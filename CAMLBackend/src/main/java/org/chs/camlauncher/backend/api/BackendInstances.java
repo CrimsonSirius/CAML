@@ -2,12 +2,15 @@ package org.chs.camlauncher.backend.api;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.chs.camlauncher.backend.download.DownloadCancellationToken;
+import org.chs.camlauncher.backend.download.DownloadListener;
 import org.chs.camlauncher.backend.download.hash.HashVerifier;
 import org.chs.camlauncher.backend.instance.GameDirectoryInfo;
 import org.chs.camlauncher.backend.instance.InstanceDetails;
 import org.chs.camlauncher.backend.instance.InstanceEnvironment;
 import org.chs.camlauncher.backend.instance.InstanceEnvironmentResolver;
 import org.chs.camlauncher.backend.instance.InstanceInspector;
+import org.chs.camlauncher.backend.instance.InstanceInstallLock;
 import org.chs.camlauncher.backend.instance.InstanceMod;
 import org.chs.camlauncher.backend.instance.InstanceModIconService;
 import org.chs.camlauncher.backend.instance.InstanceModUpdate;
@@ -22,7 +25,6 @@ import org.chs.camlauncher.backend.mod.service.ModService;
 import org.chs.camlauncher.backend.mod.source.CurseForgeFingerprint;
 import org.chs.camlauncher.backend.settings.SettingsService;
 import org.chs.camlauncher.backend.system.DirectoryOpener;
-import org.chs.camlauncher.backend.download.DownloadListener;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -31,6 +33,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -267,38 +270,62 @@ public final class BackendInstances {
                 .toAbsolutePath()
                 .normalize();
         String instance = InstanceNameRules.validate(instanceId);
-        VersionIsolationMode isolationMode = settingsService.versionIsolationMode();
+        Objects.requireNonNull(latestFile, "latestFile");
         String oldBase = normalizeModFileName(currentFileName);
         String newBase = normalizeModFileName(latestFile.fileName());
-        Path modsDirectory = InstanceInspector.dataDirectory(
-                normalizedGameDirectory, instance, isolationMode).resolve("mods");
-        Path oldEnabled = SafePaths.resolveChild(modsDirectory, oldBase, "mod file");
-        Path oldDisabled = SafePaths.resolveChild(modsDirectory, oldBase + ".disabled",
-                "disabled mod file");
-        boolean wasDisabled = settingsService.disabledMods(normalizedGameDirectory, instance)
-                .contains(oldBase) || Files.isRegularFile(oldDisabled);
 
-        ModDownloadResult downloaded = modService.download(
-                latestFile, normalizedGameDirectory, instance, isolationMode, listener);
+        try (InstanceInstallLock ignored = InstanceInstallLock.acquire(
+                normalizedGameDirectory, instance)) {
+            VersionIsolationMode isolationMode = settingsService.versionIsolationMode();
+            Path modsDirectory = InstanceInspector.dataDirectory(
+                    normalizedGameDirectory, instance, isolationMode).resolve("mods");
+            Path oldEnabled = SafePaths.resolveChild(modsDirectory, oldBase, "mod file");
+            Path oldDisabled = SafePaths.resolveChild(modsDirectory, oldBase + ".disabled",
+                    "disabled mod file");
+            Path newEnabled = SafePaths.resolveChild(modsDirectory, newBase, "mod file");
+            Path newDisabled = SafePaths.resolveChild(modsDirectory, newBase + ".disabled",
+                    "disabled mod file");
+            List<Path> candidates = List.copyOf(new LinkedHashSet<>(
+                    List.of(oldEnabled, oldDisabled, newEnabled, newDisabled)));
+            for (Path candidate : candidates) {
+                if (Files.exists(candidate) && !Files.isRegularFile(candidate)) {
+                    throw new IOException("Mod 更新目标不是普通文件: " + candidate);
+                }
+            }
 
-        if (!oldBase.equals(newBase)) {
-            Files.deleteIfExists(oldEnabled);
-            Files.deleteIfExists(oldDisabled);
-        }
-        Path newEnabled = SafePaths.resolveChild(modsDirectory, newBase, "mod file");
-        Path newDisabled = SafePaths.resolveChild(modsDirectory, newBase + ".disabled",
-                "disabled mod file");
-        Path resultPath = downloaded.path();
-        if (wasDisabled && Files.isRegularFile(newEnabled)) {
-            Files.move(newEnabled, newDisabled, StandardCopyOption.REPLACE_EXISTING);
-            resultPath = newDisabled;
-        }
+            boolean wasDisabled = settingsService.disabledMods(normalizedGameDirectory, instance)
+                    .contains(oldBase) || Files.isRegularFile(oldDisabled);
+            Path target = wasDisabled ? newDisabled : newEnabled;
+            Files.createDirectories(modsDirectory);
+            Path staging = Files.createTempDirectory(modsDirectory, ".caml-mod-update-");
+            boolean cleanupStaging = true;
+            try {
+                Path downloaded = modService.downloadTo(
+                        latestFile,
+                        staging.resolve("download.jar"),
+                        listener,
+                        new DownloadCancellationToken()
+                );
+                Map<Path, Path> backups = backupCandidates(candidates, staging.resolve("backup"));
+                try {
+                    moveReplacing(downloaded, target);
+                    deleteOtherCandidates(candidates, target);
+                    settingsService.replaceModState(
+                            normalizedGameDirectory, instance, oldBase, newBase, wasDisabled);
+                } catch (IOException | RuntimeException e) {
+                    cleanupStaging = rollbackCandidates(candidates, backups, e);
+                    throw e;
+                }
 
-        settingsService.setModDisabled(normalizedGameDirectory, instance, newBase, wasDisabled);
-        if (!oldBase.equals(newBase)) {
-            settingsService.setModDisabled(normalizedGameDirectory, instance, oldBase, false);
+                return new ModDownloadResult(target, latestFile);
+            } finally {
+                if (cleanupStaging) {
+                    deleteRecursivelyQuietly(staging);
+                } else {
+                    LOGGER.warn("Mod 更新回滚未完成，保留 staging 以便人工恢复: {}", staging);
+                }
+            }
         }
-        return new ModDownloadResult(resultPath, latestFile);
     }
 
     public Path modsDirectory(Path gameDirectory, String instanceId,
@@ -348,6 +375,83 @@ public final class BackendInstances {
             Files.move(source, target, StandardCopyOption.ATOMIC_MOVE);
         } catch (AtomicMoveNotSupportedException e) {
             Files.move(source, target);
+        }
+    }
+
+    private static void moveReplacing(Path source, Path target) throws IOException {
+        try {
+            Files.move(source, target,
+                    StandardCopyOption.ATOMIC_MOVE,
+                    StandardCopyOption.REPLACE_EXISTING);
+        } catch (AtomicMoveNotSupportedException e) {
+            Files.move(source, target, StandardCopyOption.REPLACE_EXISTING);
+        }
+    }
+
+    private static Map<Path, Path> backupCandidates(List<Path> candidates, Path backupDirectory)
+            throws IOException {
+        Files.createDirectories(backupDirectory);
+        Map<Path, Path> backups = new LinkedHashMap<>();
+        int index = 0;
+        for (Path candidate : candidates) {
+            if (!Files.isRegularFile(candidate)) {
+                continue;
+            }
+            Path backup = backupDirectory.resolve(index++ + "-" + candidate.getFileName());
+            Files.copy(candidate, backup, StandardCopyOption.REPLACE_EXISTING);
+            backups.put(candidate, backup);
+        }
+        return backups;
+    }
+
+    private static boolean rollbackCandidates(List<Path> candidates, Map<Path, Path> backups,
+                                              Throwable failure) {
+        boolean complete = true;
+        for (Path candidate : candidates) {
+            if (backups.containsKey(candidate)) {
+                continue;
+            }
+            try {
+                Files.deleteIfExists(candidate);
+            } catch (IOException | RuntimeException e) {
+                complete = false;
+                failure.addSuppressed(e);
+            }
+        }
+        for (Map.Entry<Path, Path> backup : backups.entrySet()) {
+            try {
+                moveReplacing(backup.getValue(), backup.getKey());
+            } catch (IOException | RuntimeException e) {
+                complete = false;
+                failure.addSuppressed(e);
+            }
+        }
+        return complete;
+    }
+
+    private static void deleteOtherCandidates(List<Path> candidates, Path target) throws IOException {
+        for (Path candidate : candidates) {
+            if (candidate.equals(target)) {
+                continue;
+            }
+            Files.deleteIfExists(candidate);
+        }
+    }
+
+    private static void deleteRecursivelyQuietly(Path root) {
+        if (root == null || !Files.exists(root)) {
+            return;
+        }
+        try (Stream<Path> paths = Files.walk(root)) {
+            for (Path path : paths.sorted(Comparator.reverseOrder()).toList()) {
+                try {
+                    Files.deleteIfExists(path);
+                } catch (IOException | RuntimeException ignored) {
+                    // 不影响已经提交的更新结果。
+                }
+            }
+        } catch (IOException | RuntimeException e) {
+            LOGGER.warn("无法清理 Mod 更新临时目录: {}", root, e);
         }
     }
 }

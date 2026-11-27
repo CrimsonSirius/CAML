@@ -112,7 +112,7 @@ CAML/
 - MOD/SHADER/RESOURCE_PACK/WORLD 四类内容；地图下载后解压到 `saves/<世界名>`。
 - SHA-1；CurseForge 可回退 MD5。
 - Mod API 图标下载和 WebP→PNG 缓存。
-- 本地 Mod 更新检查：Modrinth hash、CurseForge MurmurHash2 fingerprint。
+- 本地 Mod 更新检查：Modrinth hash、CurseForge MurmurHash2 fingerprint；更新在实例锁内 staging、备份、原子替换，设置失败时恢复旧文件。
 
 ### 3.8 设置、语言、主题、日志
 
@@ -178,7 +178,7 @@ CAML/
 
 ## 6. 测试与验证
 
-当前构建产物中共有 **125 个测试类、502 个测试方法**，最近一次全量测试无失败/错误/跳过。
+当前构建产物中共有 **125 个测试类、504 个测试方法**，最近一次全量测试无失败/错误/跳过。
 
 测试覆盖重点：
 

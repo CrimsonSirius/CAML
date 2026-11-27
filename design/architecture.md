@@ -170,7 +170,7 @@ Linux + LWJGL 2 启动前会异步检查 `xrandr`；缺失时前端显示非阻�
 - 文件下载支持 SHA-1，CURSEFORGE 文件缺少 SHA-1 时可回退 MD5。
 - 图标由后端下载并缓存；Modrinth WebP 在后端转 PNG 后交给 JavaFX。
 - 地图下载 ZIP 后由后端安全解压为实例数据目录下的 `saves/<世界名>`，已有同名世界不覆盖。
-- 管理实例页可检查本地 Mod 更新：Modrinth 使用哈希匹配，CurseForge 使用 MurmurHash2 指纹匹配。
+- 管理实例页可检查本地 Mod 更新：Modrinth 使用哈希匹配，CurseForge 使用 MurmurHash2 指纹匹配；更新在实例锁内 staging，备份旧文件后原子替换，设置失败时恢复。
 
 ### 6.7 设置、主题、语言和日志
 
@@ -220,7 +220,7 @@ UI 更新统一切回 `Platform.runLater`。下载详情页每 200ms 轮询遥�
 
 ## 10. 测试与当前限制
 
-当前测试共 125 个测试类、502 个测试方法，覆盖后端、前端和语言一致性；最近一次全量结果为 0 failure / 0 error / 0 skipped。
+当前测试共 125 个测试类、504 个测试方法，覆盖后端、前端和语言一致性；最近一次全量结果为 0 failure / 0 error / 0 skipped。
 
 当前明确未提供：
 
