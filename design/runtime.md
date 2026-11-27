@@ -1,6 +1,6 @@
 # CAML 游戏 Java 运行时
 
-> 本文按当前 `runtime` 包与相关启动逻辑重写，最后核对时间：2026-11-23；基线提交：`c86eb05`。
+> 本文按当前 `runtime` 包与相关启动逻辑重写，最后核对时间：2026-11-27；基线提交：`5d56e08`。
 
 ## 1. 范围
 
@@ -18,7 +18,7 @@ JavaRequirement ──> JavaLocator.findSuitable
         │                   ├─ 常见 JDK 目录
         │                   └─ ~/.caml/java 嵌套仓库
         │
-        ├─ 自动模式：选择满足要求的最近 Java
+        ├─ 自动模式：要求主版本严格匹配
         └─ 手动模式：使用用户指定路径
 ```
 
@@ -46,11 +46,13 @@ JavaRequirement ──> JavaLocator.findSuitable
 
 `isSatisfiedBy()` 要求：
 
-- `runtime.majorVersion >= requirement.majorVersion`；
+- `runtime.majorVersion == requirement.majorVersion`；
 - 架构完全相同；
 - 要求位数大于 0 时位数相同。
 
-选择时 `JavaLocator.findSuitable()` 优先精确匹配主版本，再选择主版本差最小的运行时；同分时优先 JDK，再按路径稳定排序。因此旧版本明确要求 Java 8 时，存在 Java 8 会优先于 Java 25。
+`JavaLocator.findSuitable()` 只返回满足严格主版本的运行时。前端启动前若找不到精确版本，
+会显示阻塞确认窗口：用户可停止，或选择“强制启动”让 `findClosest()` 使用主版本最接近的
+可用 Java。因此旧版本要求 Java 8 时不会静默使用 Java 25。
 
 ## 4. 扫描来源
 
@@ -188,6 +190,9 @@ Linux UI 会提示优先使用 `apt`、`dnf`、`pacman` 等包管理器；Window
 
 自动模式在每次启动时重新按版本要求选择 Java，不固定某个旧路径。手动模式只使用用户选定路径；路径缺失或无法识别时抛出结构化启动错误，不静默回退。
 
+Java 下载不会在启动失败时自动触发；用户需进入 Java 管理页下载或手动添加。下载完成后仍由
+同一设置页保存选择。
+
 ## 11. Linux 启动环境提示
 
 `LaunchCompatibilityService` 检查：
@@ -212,7 +217,7 @@ Linux UI 会提示优先使用 `apt`、`dnf`、`pacman` 等包管理器；Window
 
 限制：
 
-- 不自动下载缺失的 Java；需要用户进入 Java 管理页下载或手动添加。
+- 不自动下载缺失的 Java；启动前只做兼容性检查，需用户进入 Java 管理页下载或手动添加。
 - 托管仓库只使用 Foojay 提供的 glibc Linux 包；musl/Alpine 不在当前筛选范围内。
 - Java 下载未提供暂停/续传 UI；文件下载层仍支持断点续传。
 - Windows 没有注册表级 JDK 全量枚举，只扫描常见目录与 PATH。

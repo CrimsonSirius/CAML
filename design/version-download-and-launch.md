@@ -1,6 +1,6 @@
 # CAML 版本下载、安装与启动链路
 
-> 本文按当前下载/实例/启动代码重写，最后核对时间：2026-11-23；基线提交：`c86eb05`。
+> 本文按当前下载/实例/启动代码重写，最后核对时间：2026-11-27；基线提交：`5d56e08`。
 
 ## 1. 范围
 
@@ -46,7 +46,8 @@
 
 ## 3. 版本安装入口
 
-`CAMLBackend` 调用 `VersionInstaller.install(...)`。`DownloadsController` 按加载器分派：
+`CAMLBackend.downloads()` 暴露下载 facade，内部调用 `VersionInstaller.install(...)`。
+`DownloadsController` 按加载器分派：
 
 - 原版：`downloadVersion`
 - Fabric：`downloadFabricVersion`
@@ -117,7 +118,8 @@
 
 ### 8.1 文件下载
 
-`FileDownloader`：
+`FileDownloader` 只负责候选地址轮换和重试；单次尝试由 `DownloadAttempt`、
+`SingleStreamDownload`、`SegmentedDownload`、`SegmentResumeState` 和 `DownloadIo` 分工完成：
 
 - 已有且大小/SHA-1 校验通过的文件直接跳过；
 - 最多 6 次尝试，逐个候选地址循环；轮次之间有递增退避；
@@ -138,9 +140,9 @@
 - 对总字节数、文件完成数发送 `DownloadSummary`；
 - 每文件进度发送 `DownloadProgress`；
 - 安装器库缺少 `size` 时，从实际响应动态增加总字节数；
-- 单文件下载也走 `downloadSingle()`，保证进度页汇总覆盖 Forge/NeoForge installer、OptiFine installer、Fabric/Quilt API。
+- 单文件下载也走统一执行器，保证进度页汇总覆盖 Forge/NeoForge installer、OptiFine installer、Fabric/Quilt API。
 
-`DownloadCancellationToken` 贯穿下载、安装器进程、OptiFine/Forge 子进程和下载页任务条；取消后不继续向 UI 提交成功回调。
+`DownloadCancellationToken` 贯穿下载、安装器进程、OptiFine/Forge 子进程和任务中心；取消后不继续向 UI 提交成功回调。
 
 ## 9. 资源对象与索引
 
@@ -168,9 +170,9 @@
 
 1. 安装基础原版。
 2. 从 Meta 获取 loader profile JSON。
-3. `VersionInstaller.installProfile()` 写入实例并补齐文献库/client/assets。
+3. 在实例锁内把 profile 写入 staging，loader 库登记到共享库事务；校验后原子移动版本目录。
 4. 若选择了 API，从 Modrinth 获取 API 文件，写入实例 `mods`，同时复制到根目录 `mods`。
-5. 失败删除目标版本目录。
+5. 失败回滚 loader 库、删除目标版本目录和 staging。
 
 Fabric 版本列表来自 `v2/versions/loader/<game>`；Quilt 来自 `v3/versions/loader/<game>`。Quilt 版本按语义化版本排序，不以 `build` 号代表新旧。
 
@@ -182,10 +184,12 @@ Fabric 版本列表来自 `v2/versions/loader/<game>`；Quilt 来自 `v3/version
 2. 按基础版本 Java 要求选择 installer 运行 Java。
 3. 在游戏目录创建 staging，准备父版本 JSON/jar。
 4. 下载 installer；优先读取 `.sha1`，没有时至少校验 ZIP 内存在 `version.json` 或 `install_profile.json`。
-5. 从 installer 的 `version.json` / `install_profile.json` 预下载声明的 libraries 到 staging。
-6. 运行 installer headless，最多重试 2 次；20 分钟超时。
-7. 校验生成的版本 JSON、合并 staging libraries、移动版本目录。
-8. 再次用 `VersionInstaller` 补齐/验证库文件。
+5. 从 installer 的 `version.json` / `install_profile.json` 收集 libraries；优先提取 installer JAR 内嵌 `maven/` 文件，其余预下载到 staging。
+6. 缺失 URL 的 Forge/NeoForge 库按坐标回退到对应 Maven，而不是 Mojang 库站。
+7. 安装器库首轮最多 6 次下载，失败后每 5 秒按候选源重试一轮，直到成功或取消。
+8. 运行 installer headless，最多重试 2 次；每次使用全新 staging，20 分钟超时。
+9. 校验生成的版本 JSON、合并 staging libraries、移动版本目录。
+10. 再次用 `VersionInstaller` 补齐/验证库文件。
 
 Forge 镜像源优先读取 BMCLAPI 的 per-game JSON；官方源读取 Maven metadata。NeoForge 支持新坐标 `net.neoforged:neoforge` 与旧坐标 `net.neoforged:forge`，并从版本号推导 Minecraft 版本。
 
@@ -194,10 +198,10 @@ Forge 镜像源优先读取 BMCLAPI 的 per-game JSON；官方源读取 Maven me
 流程：
 
 1. 检查 Forge/OptiFine 已知兼容性。
-2. 安装基础版本和 Forge。
+2. 安装基础版本和 Forge；二者与 OptiFine 共用实例锁和共享库事务。
 3. 下载 OptiFine installer（官方下载页或 BMCLAPI）。
 4. 用独立 Java 子进程运行 `optifine.Installer.doInstall(staging)`。
-5. 查找生成的 OptiFine 版本 JSON，合并它的 libraries。
+5. 查找生成的 OptiFine 版本 JSON，合并它的 libraries；先写 staging，完成库校验后再原子替换 Forge JSON。
 6. 对 LaunchWrapper Forge 注入 `--tweakClass optifine.OptiFineForgeTweaker`。
 7. 删除 OptiFine 库中的 `META-INF/mods.toml`，避免被现代 Forge 当普通 Mod 加载。
 8. 最后重新走 `VersionInstaller` 补齐文件。
@@ -219,7 +223,8 @@ Forge 镜像源优先读取 BMCLAPI 的 per-game JSON；官方源读取 Maven me
 
 - `JavaRequirement.from(installed.manifest())` 读取版本要求；
 - `JavaLocator.findSuitable()` 在系统、PATH、常见目录和 `~/.caml/java` 中查找；
-- 精确主版本优先，然后选最接近且满足要求的 Java。
+- 只选择主版本严格匹配的 Java；没有精确版本时前端弹出阻塞确认。
+- 用户选择“强制启动”时使用主版本最接近的可用运行时。
 
 手动模式：
 
@@ -334,7 +339,7 @@ CAML 处理：
 
 ## 21. 已知限制
 
-- 没有整合包导入。
+- 没有 CurseForge/HMCL/MultiMC 整合包导入、导出、更新和修复；Modrinth `.mrpack` 安装已可用。
 - 下载任务可取消，但大型文件没有暂停/继续 UI；断点续传由文件层自动使用 `.part.json`。
 - 游戏启动后没有前端停止按钮；后端 `GameProcess.stop()` 已存在。
 - OptiFine 仅支持 Forge 组合。
@@ -351,6 +356,7 @@ CAML 处理：
 - `AssetDownloadPlannerTest`
 - `FileDownloaderTest`
 - `DownloadExecutorTest`
+- `SharedLibraryTransactionTest` / `InstanceInstallLockTest`
 - `LocalVersionInstallerTest`
 - `VersionInstallerTest`
 - `ExternalLoaderInstallerTest`
@@ -365,4 +371,4 @@ CAML 处理：
 
 - `DownloadViewsLayoutTest`
 - `DownloadTelemetryTest`
-- `ProcessLauncher` 相关进度页、任务条和焦点回归测试
+- `ProcessLauncher` 相关进度页、任务中心和焦点回归测试

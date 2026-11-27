@@ -1,6 +1,6 @@
 # CAML 打包与发布
 
-> 本文按当前 `gradle/packaging.gradle.kts`、`packaging/` 和 GitHub Actions 重写，最后核对时间：2026-11-26；基线提交：`cf7ef33`。
+> 本文按当前 `gradle/packaging.gradle.kts`、`packaging/` 和 GitHub Actions 重写，最后核对时间：2026-11-27；基线提交：`5d56e08`。
 
 ## 1. 边界
 
@@ -242,10 +242,10 @@ build/packages/SHA256SUMS.txt
 ### 12.1 `Build`
 
 - 触发：所有分支 push、PR、手动；
-- Ubuntu + Zulu 25；
-- 执行 `xvfb-run ./gradlew test :CAMLFront:distZip`
+- `build` 使用 `ubuntu-latest` / `windows-latest` OS matrix，矩阵单元都使用 Zulu 25 并跑全量测试；
+- Linux 单元执行 `xvfb-run ./gradlew test :CAMLFront:distZip`
   （`distZip` 必须一起跑，否则上传 debug distribution 的步骤永远拿不到文件）；
-- Windows job 执行 `.\gradlew.bat test`；两个平台都跑全量用例，失败时上传测试报告；
+- Windows 单元执行 `.\gradlew.bat test`；失败时按操作系统上传独立测试报告；
 - 注入 `CURSEFORGE_API_KEY`、`CAML_MICROSOFT_CLIENT_ID` secret；
 - 打包 job 只在 PR、`main`/`crimson`/`namelessgod2008` 分支和 tag 上运行：普通功能分支
   push 只跑测试，避免每次 push 都占用 Linux 45 分钟 + Windows 60 分钟的 runner；
@@ -290,7 +290,7 @@ build/packages/SHA256SUMS.txt
 
 ### 12.5 失败诊断
 
-两个测试 job 在失败时会把 JUnit XML 里的失败用例名和首行断言消息写进 Run Summary，
+`build` 的 Linux/Windows 矩阵单元在失败时会把 JUnit XML 里的失败用例名和首行断言消息写进 Run Summary，
 两个打包 job 则在打包前把 `JAVA_HOME`、JDK 的 `IMPLEMENTOR`/`JAVA_VERSION` 以及
 `jpackage`/`jlink`/`javac` 是否存在写进 Run Summary 并运行 `printPackagingJdk`。
 这两块信息足以区分“用例本身跨平台”与“runner 上的 JDK 不含 jpackage / 供应商不符”，
@@ -305,7 +305,7 @@ PowerShell 步骤的脚本正文保持 ASCII：GitHub 把 `run` 保存为无 BOM
 - 两个 `Package` workflow 用固定前缀 `caml-linux-packages-<ref>` /
   `caml-windows-packages-<ref>` 且 `cancel-in-progress: false`：
   被 `workflow_call` 调用时 `github.workflow` 是调用方名字，用它会让两个平台互相排队；
-- 超时：测试 30 分钟、Linux 打包 45 分钟、Windows 打包 60 分钟、发布 15 分钟。
+- 超时：每个 `build` 矩阵单元 30 分钟、Linux 打包 45 分钟、Windows 打包 60 分钟、发布 15 分钟。
 
 ## 13. 本地命令
 
