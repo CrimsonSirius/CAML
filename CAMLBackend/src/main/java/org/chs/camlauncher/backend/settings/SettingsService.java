@@ -432,28 +432,46 @@ public final class SettingsService {
     public void setModDisabled(Path gameDirectory, String instanceId, String fileName,
                                boolean disabled) throws IOException {
         Objects.requireNonNull(fileName, "fileName");
-        update(properties -> {
-            Map<String, List<String>> states = parseDisabledMods(
-                    properties.getProperty(DISABLED_MODS_KEY));
-            String key = modStateKey(gameDirectory, instanceId);
-            LinkedHashSet<String> files = new LinkedHashSet<>(
-                    states.getOrDefault(key, List.of()));
-            if (disabled) {
-                files.add(fileName);
-            } else {
-                files.remove(fileName);
-            }
-            if (files.isEmpty()) {
-                states.remove(key);
-            } else {
-                states.put(key, List.copyOf(files));
-            }
-            if (states.isEmpty()) {
-                properties.remove(DISABLED_MODS_KEY);
-            } else {
-                properties.setProperty(DISABLED_MODS_KEY, GSON.toJson(states));
-            }
-        });
+        update(properties -> updateModState(
+                properties, gameDirectory, instanceId, null, fileName, disabled));
+    }
+
+    /** 在一次设置写入中移除旧 Mod 名并写入新 Mod 名及其禁用状态。 */
+    public void replaceModState(Path gameDirectory, String instanceId,
+                                String oldFileName, String newFileName, boolean disabled)
+            throws IOException {
+        Objects.requireNonNull(oldFileName, "oldFileName");
+        Objects.requireNonNull(newFileName, "newFileName");
+        update(properties -> updateModState(
+                properties, gameDirectory, instanceId, oldFileName, newFileName, disabled));
+    }
+
+    private static void updateModState(Properties properties, Path gameDirectory,
+                                       String instanceId, String oldFileName,
+                                       String newFileName, boolean disabled) {
+        Map<String, List<String>> states = parseDisabledMods(
+                properties.getProperty(DISABLED_MODS_KEY));
+        String key = modStateKey(gameDirectory, instanceId);
+        LinkedHashSet<String> files = new LinkedHashSet<>(
+                states.getOrDefault(key, List.of()));
+        if (oldFileName != null) {
+            files.remove(oldFileName);
+        }
+        if (disabled) {
+            files.add(newFileName);
+        } else {
+            files.remove(newFileName);
+        }
+        if (files.isEmpty()) {
+            states.remove(key);
+        } else {
+            states.put(key, List.copyOf(files));
+        }
+        if (states.isEmpty()) {
+            properties.remove(DISABLED_MODS_KEY);
+        } else {
+            properties.setProperty(DISABLED_MODS_KEY, GSON.toJson(states));
+        }
     }
 
     // ------------------------------------------------------------------ 账号

@@ -163,6 +163,31 @@ public final class ModService {
                 gameDirectory, instance, isolationMode, type);
         Path destination = SafePaths.resolveChild(
                 contentDirectory, file.fileName(), type.directoryName() + " file");
+        downloadTo(file, destination, listener, token);
+        String contentType = switch (type) {
+            case MOD -> "Mod";
+            case MODPACK -> "整合包";
+            case SHADER -> "光影包";
+            case RESOURCE_PACK -> "资源包";
+            case WORLD -> "地图";
+        };
+        LOGGER.info("{} 下载完成: {} -> {}", contentType, file.name(), destination);
+        return new ModDownloadResult(destination, file);
+    }
+
+    /** 把 Mod 文件下载到调用方指定的目标路径，供需要 staging 的更新事务复用。 */
+    public Path downloadTo(
+            ModFile file,
+            Path destination,
+            DownloadListener listener,
+            DownloadCancellationToken token
+    ) throws IOException, InterruptedException {
+        Objects.requireNonNull(file, "file");
+        Objects.requireNonNull(destination, "destination");
+        Objects.requireNonNull(token, "token");
+        if (!file.hasDownloadUri()) {
+            throw new BackendException(BackendError.of("mod.error.downloadUrlMissing", file.name()));
+        }
         Map<String, String> headers = file.source() == ModSource.CURSEFORGE
                 ? curseForge.downloadHeaders()
                 : Map.of();
@@ -176,15 +201,7 @@ public final class ModService {
         );
         DownloadValidator validator = md5Validator(file);
         fileDownloader.download(item, listener, validator, token);
-        String contentType = switch (type) {
-            case MOD -> "Mod";
-            case MODPACK -> "整合包";
-            case SHADER -> "光影包";
-            case RESOURCE_PACK -> "资源包";
-            case WORLD -> "地图";
-        };
-        LOGGER.info("{} 下载完成: {} -> {}", contentType, file.name(), destination);
-        return new ModDownloadResult(destination, file);
+        return destination;
     }
 
     private ModDownloadResult downloadWorld(

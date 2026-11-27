@@ -10,6 +10,7 @@ import org.chs.camlauncher.backend.settings.SettingsService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
@@ -17,7 +18,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class InstanceModUpdateTest {
@@ -27,14 +30,7 @@ class InstanceModUpdateTest {
     @Test
     void replacesModAndKeepsDisabledState() throws Exception {
         byte[] content = "new-mod".getBytes(StandardCharsets.UTF_8);
-        HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
-        server.createContext("/new.jar", exchange -> {
-            exchange.sendResponseHeaders(200, content.length);
-            try (var output = exchange.getResponseBody()) {
-                output.write(content);
-            }
-        });
-        server.start();
+        HttpServer server = server(content);
 
         try {
             Path game = root.resolve("game");
@@ -44,12 +40,7 @@ class InstanceModUpdateTest {
             CAMLBackend backend = new CAMLBackend(new BackendConfig(root.resolve("data"), game));
             try (backend) {
                 backend.instances().setModDisabled(game, "1.21.4", "old.jar", true);
-                ModFile latest = new ModFile(
-                        ModSource.MODRINTH, "project", "version", "New", "2.0", "new.jar",
-                        List.of(URI.create("http://127.0.0.1:" + server.getAddress().getPort()
-                                + "/new.jar")),
-                        HashVerifier.sha1(content), null, content.length,
-                        List.of("1.21.4"), List.of("fabric"), List.of(), "", 1);
+                ModFile latest = latestFile(server, "new.jar", content);
 
                 backend.instances().updateInstanceMod(
                         game, "1.21.4", "old.jar", latest, DownloadListener.NONE);
@@ -59,9 +50,95 @@ class InstanceModUpdateTest {
                 assertTrue(Files.isRegularFile(mods.resolve("new.jar.disabled")));
                 assertTrue(new SettingsService(root.resolve("data"))
                         .disabledMods(game, "1.21.4").contains("new.jar"));
+                assertNoUpdateStaging(mods);
             }
         } finally {
             server.stop(0);
+        }
+    }
+
+    @Test
+    void restoresOldModWhenSettingsWriteFails() throws Exception {
+        byte[] content = "new-mod".getBytes(StandardCharsets.UTF_8);
+        HttpServer server = server(content);
+
+        try {
+            Path game = root.resolve("game");
+            Path mods = game.resolve("versions").resolve("1.21.4").resolve("mods");
+            Files.createDirectories(mods);
+            Files.writeString(mods.resolve("old.jar"), "old-mod");
+            Path data = root.resolve("data");
+            Files.createDirectories(data.resolve("settings.properties"));
+            CAMLBackend backend = new CAMLBackend(new BackendConfig(data, game));
+            try (backend) {
+                ModFile latest = latestFile(server, "new.jar", content);
+
+                assertThrows(IOException.class, () -> backend.instances().updateInstanceMod(
+                        game, "1.21.4", "old.jar", latest, DownloadListener.NONE));
+
+                assertEquals("old-mod", Files.readString(mods.resolve("old.jar")));
+                assertFalse(Files.exists(mods.resolve("new.jar")));
+                assertFalse(Files.exists(mods.resolve("new.jar.disabled")));
+                assertNoUpdateStaging(mods);
+            }
+        } finally {
+            server.stop(0);
+        }
+    }
+
+    @Test
+    void restoresSameNamedModWhenSettingsWriteFails() throws Exception {
+        byte[] content = "new-mod".getBytes(StandardCharsets.UTF_8);
+        HttpServer server = server(content);
+
+        try {
+            Path game = root.resolve("game");
+            Path mods = game.resolve("versions").resolve("1.21.4").resolve("mods");
+            Files.createDirectories(mods);
+            Files.writeString(mods.resolve("same.jar"), "old-mod");
+            Path data = root.resolve("data");
+            Files.createDirectories(data.resolve("settings.properties"));
+            CAMLBackend backend = new CAMLBackend(new BackendConfig(data, game));
+            try (backend) {
+                ModFile latest = latestFile(server, "same.jar", content);
+
+                assertThrows(IOException.class, () -> backend.instances().updateInstanceMod(
+                        game, "1.21.4", "same.jar", latest, DownloadListener.NONE));
+
+                assertEquals("old-mod", Files.readString(mods.resolve("same.jar")));
+                assertFalse(Files.exists(mods.resolve("same.jar.disabled")));
+                assertNoUpdateStaging(mods);
+            }
+        } finally {
+            server.stop(0);
+        }
+    }
+
+    private static HttpServer server(byte[] content) throws IOException {
+        HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        server.createContext("/new.jar", exchange -> {
+            exchange.sendResponseHeaders(200, content.length);
+            try (var output = exchange.getResponseBody()) {
+                output.write(content);
+            }
+        });
+        server.start();
+        return server;
+    }
+
+    private static ModFile latestFile(HttpServer server, String fileName, byte[] content) {
+        return new ModFile(
+                ModSource.MODRINTH, "project", "version", "New", "2.0", fileName,
+                List.of(URI.create("http://127.0.0.1:" + server.getAddress().getPort()
+                        + "/new.jar")),
+                HashVerifier.sha1(content), null, content.length,
+                List.of("1.21.4"), List.of("fabric"), List.of(), "", 1);
+    }
+
+    private static void assertNoUpdateStaging(Path mods) throws IOException {
+        try (var entries = Files.list(mods)) {
+            assertTrue(entries.noneMatch(path ->
+                    path.getFileName().toString().startsWith(".caml-mod-update-")));
         }
     }
 }
