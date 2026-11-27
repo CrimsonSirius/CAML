@@ -76,6 +76,7 @@ public final class BackendInstances {
         try (Stream<Path> entries = Files.list(versionsDirectory)) {
             List<Path> installed = entries
                     .filter(Files::isDirectory)
+                    .filter(entry -> !isStagingInstance(entry.getFileName().toString()))
                     .filter(entry -> Files.isRegularFile(
                             entry.resolve(entry.getFileName().toString() + ".json")))
                     .toList();
@@ -87,6 +88,11 @@ public final class BackendInstances {
             throw new UncheckedIOException("Failed to inspect game directory: " + normalized, e);
         }
         return new GameDirectoryInfo(normalized, true, versions);
+    }
+
+    private static boolean isStagingInstance(String name) {
+        return name.startsWith(".caml-version-install-")
+                || name.startsWith(".caml-modpack-stage-");
     }
 
     public InstanceDetails inspectInstance(Path gameDirectory, String instanceId) throws IOException {

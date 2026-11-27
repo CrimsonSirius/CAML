@@ -1,5 +1,6 @@
 package org.chs.camlauncher.backend.modpack;
 
+import com.google.gson.JsonParser;
 import com.sun.net.httpserver.HttpServer;
 import org.chs.camlauncher.backend.download.DownloadCancellationToken;
 import org.chs.camlauncher.backend.download.DownloadListener;
@@ -19,6 +20,7 @@ import org.chs.camlauncher.backend.loader.quilt.QuiltInstaller;
 import org.chs.camlauncher.backend.loader.quilt.QuiltService;
 import org.chs.camlauncher.backend.metadata.MetadataService;
 import org.chs.camlauncher.backend.metadata.VersionManifestService;
+import org.chs.camlauncher.backend.mod.model.ModDownloadResult;
 import org.chs.camlauncher.backend.mod.model.ModFile;
 import org.chs.camlauncher.backend.mod.model.ModSource;
 import org.chs.camlauncher.backend.runtime.JavaLocator;
@@ -45,6 +47,7 @@ import java.util.zip.ZipOutputStream;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ModpackInstallerTest {
     @TempDir
@@ -68,6 +71,141 @@ class ModpackInstallerTest {
                 assertFalse(files.anyMatch(path -> path.getFileName().toString()
                         .startsWith(".caml-modpack-")));
             }
+        } finally {
+            server.stop(0);
+        }
+    }
+
+    @Test
+    void finalizesStagedVersionIdJsonAndJarNames() throws Exception {
+        Path versionDirectory = temporaryDirectory.resolve("versions/.caml-modpack-stage-demo");
+        Files.createDirectories(versionDirectory);
+        Files.writeString(versionDirectory.resolve(".caml-modpack-stage-demo.json"), """
+                {
+                  "id": ".caml-modpack-stage-demo",
+                  "jar": ".caml-modpack-stage-demo",
+                  "inheritsFrom": "1.20.1",
+                  "mainClass": "test.Main"
+                }
+                """);
+        Files.write(versionDirectory.resolve(".caml-modpack-stage-demo.jar"), new byte[]{1});
+
+        ModpackInstaller.finalizeStagedVersion(
+                versionDirectory, ".caml-modpack-stage-demo", "Final Pack");
+
+        Path finalJson = versionDirectory.resolve("Final Pack.json");
+        assertTrue(Files.isRegularFile(finalJson));
+        assertTrue(Files.isRegularFile(versionDirectory.resolve("Final Pack.jar")));
+        assertFalse(Files.exists(versionDirectory.resolve(".caml-modpack-stage-demo.json")));
+        assertFalse(Files.exists(versionDirectory.resolve(".caml-modpack-stage-demo.jar")));
+        var json = JsonParser.parseString(Files.readString(finalJson)).getAsJsonObject();
+        assertEquals("Final Pack", json.get("id").getAsString());
+        assertEquals("Final Pack", json.get("jar").getAsString());
+        assertEquals("1.20.1", json.get("inheritsFrom").getAsString());
+    }
+
+    @Test
+    void publishesModpackOnlyAfterLoaderAndContentComplete() throws Exception {
+        Path gameDirectory = temporaryDirectory.resolve("game-modpack-success");
+        Path baseDirectory = gameDirectory.resolve("versions/1.20.1");
+        Files.createDirectories(baseDirectory);
+        Files.writeString(baseDirectory.resolve("1.20.1.json"), """
+                {
+                  "id": "1.20.1",
+                  "mainClass": "base.Main",
+                  "javaVersion": {"component": "test", "majorVersion": 25}
+                }
+                """, StandardCharsets.UTF_8);
+
+        Path installerJar = temporaryDirectory.resolve("success-forge-installer.jar");
+        createFakeInstallerJar(installerJar);
+        byte[] installerSha1 = HashVerifier.sha1(installerJar)
+                .getBytes(StandardCharsets.UTF_8);
+        byte[] contentJar = "content".getBytes(StandardCharsets.UTF_8);
+
+        HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        String root = serverRoot(server);
+        byte[] modpack = zipEntries(ordered(
+                "modrinth.index.json", """
+                        {
+                          "name":"Final Pack",
+                          "versionId":"1",
+                          "dependencies":{"minecraft":"1.20.1","forge":"47.2.0"},
+                          "files":[{
+                            "path":"mods/example.jar",
+                            "downloads":["%scontent.jar"],
+                            "hashes":{"sha1":"%s"},
+                            "fileSize":%d,
+                            "env":{"client":"required"}
+                          }]
+                        }
+                        """.formatted(root, HashVerifier.sha1(contentJar), contentJar.length)
+                        .getBytes(StandardCharsets.UTF_8),
+                "overrides/config/example.txt", "configured".getBytes(StandardCharsets.UTF_8)
+        ));
+        server.createContext("/installer.jar", exchange -> respond(exchange,
+                Files.readAllBytes(installerJar)));
+        server.createContext("/installer.jar.sha1", exchange -> respond(exchange, installerSha1));
+        server.createContext("/success.mrpack", exchange -> respond(exchange, modpack));
+        server.createContext("/content.jar", exchange -> respond(exchange, contentJar));
+        server.start();
+
+        try {
+            VersionInstaller versionInstaller = new VersionInstaller(
+                    new MetadataService(), new VersionManifestService(),
+                    new DownloadPlanner(), new AssetDownloadPlanner(), new FileDownloader());
+            FileDownloader downloader = new FileDownloader();
+            URI manifest = URI.create("https://example.invalid/version_manifest_v2.json");
+            Path cache = temporaryDirectory.resolve("success-manifest.json");
+            ExternalLoaderInstaller external = new ExternalLoaderInstaller(
+                    versionInstaller, new JavaLocator(), downloader,
+                    new MetadataService(), manifest, cache);
+            String forgeInstaller = "https://maven.minecraftforge.net/net/minecraftforge/forge/"
+                    + "1.20.1-47.2.0/forge-1.20.1-47.2.0-installer.jar";
+            String localInstaller = root + "installer.jar";
+            external.setSources(List.of(new DownloadSource() {
+                @Override
+                public String name() {
+                    return "test";
+                }
+
+                @Override
+                public List<URI> candidates(URI original) {
+                    String value = original.toString();
+                    if (value.equals(forgeInstaller) || value.equals(forgeInstaller + ".sha1")) {
+                        return List.of(URI.create(localInstaller + (value.endsWith(".sha1")
+                                ? ".sha1" : "")));
+                    }
+                    return List.of();
+                }
+            }));
+
+            ModpackInstaller modpackInstaller = new ModpackInstaller(
+                    versionInstaller,
+                    new FabricInstaller(versionInstaller, new FabricService(), downloader, manifest, cache),
+                    new QuiltInstaller(versionInstaller, new QuiltService(), downloader, manifest, cache),
+                    external, downloader, manifest, cache);
+            ModFile file = modFile(server, "success.mrpack", modpack);
+            Path finalDirectory = gameDirectory.resolve("versions/Final Pack");
+            DownloadListener listener = progress -> {
+                if ("mods/example.jar".equals(progress.label())) {
+                    assertFalse(Files.exists(finalDirectory));
+                }
+            };
+
+            ModDownloadResult result = modpackInstaller.install(
+                    file, gameDirectory, "Final Pack", listener, new DownloadCancellationToken());
+
+            assertEquals(finalDirectory.toAbsolutePath().normalize(),
+                    result.path().toAbsolutePath().normalize());
+            assertTrue(Files.isRegularFile(finalDirectory.resolve("Final Pack.json")));
+            assertTrue(Files.isRegularFile(finalDirectory.resolve("mods/example.jar")));
+            assertTrue(Files.isRegularFile(finalDirectory.resolve("config/example.txt")));
+            assertTrue(ModpackLayout.isModpack(finalDirectory));
+            var json = JsonParser.parseString(Files.readString(
+                    finalDirectory.resolve("Final Pack.json"))).getAsJsonObject();
+            assertEquals("Final Pack", json.get("id").getAsString());
+            assertNoModpackStaging(gameDirectory.resolve("versions"));
         } finally {
             server.stop(0);
         }
@@ -188,6 +326,7 @@ class ModpackInstallerTest {
             assertFalse(Files.exists(gameDirectory.resolve(
                     "libraries/org/example/loader-lib/1.0/loader-lib-1.0.jar")));
             assertFalse(Files.exists(gameDirectory.resolve("versions/Rollback Pack")));
+            assertNoModpackStaging(gameDirectory.resolve("versions"));
         } finally {
             server.stop(0);
         }
@@ -394,5 +533,15 @@ class ModpackInstallerTest {
 
     private static String serverRoot(HttpServer server) {
         return "http://127.0.0.1:" + server.getAddress().getPort() + "/";
+    }
+
+    private static void assertNoModpackStaging(Path versionsDirectory) throws Exception {
+        if (!Files.isDirectory(versionsDirectory)) {
+            return;
+        }
+        try (var entries = Files.list(versionsDirectory)) {
+            assertFalse(entries.anyMatch(path -> path.getFileName().toString()
+                    .startsWith(".caml-modpack-stage-")));
+        }
     }
 }
