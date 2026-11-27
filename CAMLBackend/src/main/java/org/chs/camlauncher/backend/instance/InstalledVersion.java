@@ -17,13 +17,21 @@ public record InstalledVersion(
 ) {
     public InstalledVersion relocateVersionDirectory(Path directory) {
         Path normalized = directory.toAbsolutePath().normalize();
+        Path relocatedClientJar = clientJar;
+        if (clientJar != null && versionDirectory != null) {
+            Path previousDirectory = versionDirectory.toAbsolutePath().normalize();
+            Path normalizedClientJar = clientJar.toAbsolutePath().normalize();
+            if (normalizedClientJar.startsWith(previousDirectory)) {
+                relocatedClientJar = normalized.resolve(previousDirectory.relativize(normalizedClientJar));
+            }
+        }
         return new InstalledVersion(
                 id,
                 manifest,
                 gameDirectory,
                 normalized,
                 normalized.resolve(id + ".json"),
-                clientJar,
+                relocatedClientJar,
                 librariesDirectory,
                 assetsDirectory,
                 assetIndexFile

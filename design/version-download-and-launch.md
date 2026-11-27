@@ -68,7 +68,7 @@
 
 因此 PCL/HMCL/整合包留下的自定义实例 ID 只要目录里有同名 JSON 就能直接启动；JSON 内部 `id` 与文件夹名不一致时，启动使用的 ID 统一改成文件夹名。
 
-远程安装失败时，如果目标版本目录是本次新建的，整个目录删除，避免半成品残留。
+远程原版和直接 profile 安装先写 `versions/.caml-version-install-*` staging；client jar 在需要时也下载到 staging。全部文件校验完成后才把 staging 原子移动到 `versions/<instanceId>`，失败时删除 staging，不会提前占用最终实例名。
 
 ## 5. 版本清单与版本 JSON
 
@@ -158,7 +158,7 @@
 ## 10. 实例命名与目录
 
 - 实例 ID 不能为空、不能包含路径分隔符/Windows 非法字符，拒绝已存在实例目录。
-- 原版和加载器安装统一使用 `versions/<instanceId>`。
+- 原版和加载器安装最终统一使用 `versions/<instanceId>`；新实例先写 staging，再原子发布。
 - 安装 Forge/NeoForge 时实例名不能等于游戏版本号，避免与基础版本目录冲突。
 - 加载器 installer 生成自己的版本 ID 时，移动到 `versions/<instanceId>` 并把 JSON/jar 重命名为实例 ID。
 

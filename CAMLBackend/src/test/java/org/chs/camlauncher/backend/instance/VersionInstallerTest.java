@@ -143,13 +143,20 @@ class VersionInstallerTest {
                     new FileDownloader()
             );
 
+            Path finalVersionDirectory = gameDirectory.resolve("versions").resolve(instanceId);
+            DownloadListener listener = progress -> {
+                if (("client " + instanceId).equals(progress.label())) {
+                    assertFalse(Files.exists(finalVersionDirectory),
+                            "client jar 必须先在 staging 中下载");
+                }
+            };
             InstalledVersion installed = installer.install(
                     officialVersionId,
                     instanceId,
                     gameDirectory,
                     URI.create("http://127.0.0.1:" + port + "/version_manifest_v2.json"),
                     gameDirectory.resolve("cache/version_manifest_v2.json"),
-                    DownloadListener.NONE
+                    listener
             );
 
             assertEquals(instanceId, installed.id());
@@ -165,6 +172,7 @@ class VersionInstallerTest {
             assertArrayEquals(assetIndexBytes, Files.readAllBytes(installed.assetIndexFile()));
             assertArrayEquals(content, Files.readAllBytes(
                     gameDirectory.resolve("assets/objects/aa/" + contentSha1)));
+            assertNoVersionStaging(gameDirectory.resolve("versions"));
         } finally {
             server.stop(0);
         }
@@ -271,6 +279,7 @@ class VersionInstallerTest {
         assertThrows(IOException.class, () -> installer.installProfile(
                 "failed-instance", gameDirectory, versionJson, DownloadListener.NONE));
         assertFalse(Files.exists(gameDirectory.resolve("versions/failed-instance")));
+        assertNoVersionStaging(gameDirectory.resolve("versions"));
     }
 
     private static void respond(HttpExchange exchange, byte[] content) throws IOException {
@@ -283,5 +292,12 @@ class VersionInstallerTest {
     private static String sha1(byte[] content) throws Exception {
         MessageDigest digest = MessageDigest.getInstance("SHA-1");
         return HexFormat.of().formatHex(digest.digest(content));
+    }
+
+    private static void assertNoVersionStaging(Path versionsDirectory) throws IOException {
+        try (var entries = Files.list(versionsDirectory)) {
+            assertTrue(entries.noneMatch(path -> path.getFileName().toString()
+                    .startsWith(".caml-version-install-")));
+        }
     }
 }
