@@ -1,6 +1,6 @@
 # CAML 总体架构
 
-> 本文按当前代码重写，最后核对时间：2026-11-26。
+> 本文按当前代码重写，最后核对时间：2026-11-27；基线提交：`5d56e08`。
 > 涉及“已实现/未实现”的表述以仓库代码和测试为准，不以历史计划为准。
 
 ## 1. 目标与硬边界
@@ -13,7 +13,7 @@ CAML 是 Java 25 + JavaFX 的 Minecraft 启动器，架构目标是把协议、�
 - `CAMLFront` 只负责 JavaFX 页面、交互和状态绑定，不直接读写文件、不直接发 HTTP、不直接启动进程。
 - `CAMLUI` 只包含 JavaFX 控件、布局和结构 CSS，不依赖后端业务模块。
 - `CAMLLanguage` 只包含语言契约、生成器工具和语言 JSON，不在运行时读取文件、检测语言、执行回退或格式化文本。
-- 前后端通过 `CAMLBackend`、DTO、`CompletableFuture`、下载/进程监听器和语言事件交互。
+- 前后端通过 `CAMLBackend` 及其领域 facade、DTO、`CompletableFuture`、下载/进程监听器和语言事件交互。
 - 游戏安装与启动不得依赖第三方 Minecraft 启动库，元数据和启动逻辑按公开协议自行实现。
 
 ## 2. 模块与依赖
@@ -27,7 +27,7 @@ CAMLFront ──> CAMLBackend ──> CAMLLanguage
 | 模块 | 职责 | 主要依赖 |
 |---|---|---|
 | `CAMLLanguage` | 语言标识、语言文本契约、生成期翻译工具、11 套内置 JSON | Gson |
-| `CAMLBackend` | 元数据、下载、安装、实例、启动、认证、Java、主题、设置、日志 | CAMLLanguage、Gson、Log4j API、TwelveMonkeys WebP |
+| `CAMLBackend` | 组合服务、生命周期、状态；按领域暴露 facade | CAMLLanguage、Gson、Log4j API、TwelveMonkeys WebP |
 | `CAMLUI` | JavaFX 控件库、页面宿主、缩放工具、结构样式 | JavaFX Controls |
 | `CAMLFront` | JavaFX 应用入口、页面、控制器、异步任务、进程日志展示 | CAMLBackend、CAMLUI、CAMLLanguage、JavaFX |
 
@@ -37,10 +37,10 @@ CAMLFront ──> CAMLBackend ──> CAMLLanguage
 
 | 包 | 职责 |
 |---|---|
-| `api` | `CAMLBackend` facade、状态 DTO、实例/目录/账号/窗口 DTO |
+| `api` | `CAMLBackend` 组合根、六个领域 facade、`BackendStatus` |
 | `auth` | 离线、微软、Yggdrasil、authlib-injector、账号存储和实例账号解析 |
 | `config` | `BackendConfig`、默认数据/游戏目录和启动目录创建 |
-| `download` | 下载模型、监听器、文件下载器、并发执行、哈希校验、下载源 |
+| `download` | 下载模型、监听器、重试入口、单流/分片下载、续传状态、并发执行和下载源 |
 | `download.plan` | 版本文件与资源对象下载计划 |
 | `error` | 稳定错误码 `BackendError` 和结构化异常 |
 | `instance` | 实例名规则、版本安装、继承解析、FULL/NONE 隔离、实例检查、图标/元数据 |
@@ -64,12 +64,17 @@ CAMLFront ──> CAMLBackend ──> CAMLLanguage
 `CAMLBackend.start()` 的固定顺序：
 
 1. `BackendPaths.ensure()` 创建数据目录、`logs`、`cache`、`themes`、`java`、游戏目录和 `versions`。
-2. `ThemeService.ensureBundledThemes()` 复制缺失的内置主题 `coffee.css` / `night.css`，默认主题为 `night`；旧版 `mango.css` 会自动迁移为 `coffee.css`，不覆盖已有文件。
-3. `LatestLogService.start()` 截断并打开 `logs/latest.log`。
-4. `LanguageService.initialize()` 同步内置语言、读取语言设置并建立语言快照。
-5. 读取下载并发数和下载源，应用到版本安装器、外部加载器安装器和全部 HTTP 客户端。
-6. 读取自动游戏语言、Java 选择和 authlib-injector 覆盖路径。
-7. 标记 backend ready。
+2. `SingleInstanceLock.tryAcquire()` 获取启动器单实例锁。
+3. `BackendSettings.ensureThemes()` 复制缺失的内置主题；旧版 `mango.css` 自动迁移为 `coffee.css`，不覆盖已有文件。
+4. `LatestLogService.start()` 截断并打开 `logs/latest.log`。
+5. `BackendSettings.initializeLanguage()` 同步内置语言、读取语言设置并建立语言快照。
+6. 读取自动游戏语言。
+7. `BackendDownloads.initialize()` 读取下载并发、解压限制和下载源，并应用到安装器与 HTTP 客户端。
+8. `BackendJava.initialize()` 应用 Java 选择；`BackendAccounts.initialize()` 应用 authlib-injector 覆盖路径。
+9. 标记 backend ready。
+
+`CAMLBackend` 只保留组合和生命周期，领域调用通过 `settings()`、`java()`、
+`accounts()`、`downloads()`、`instances()`、`launch()` 进入对应 facade。
 
 `close()` 关闭日志写入器；前端 `CAMLApplication.stop()` 还会先提交窗口/设置、释放页面、关闭控制器线程池。
 
@@ -83,7 +88,7 @@ CAMLFront ──> CAMLBackend ──> CAMLLanguage
 
 | 路径 | 内容 |
 |---|---|
-| `~/.caml/settings.properties` | 游戏位置、隔离、内存、JVM 参数、下载、Java、语言、窗口、账号绑定、禁用 Mod 等 |
+| `~/.caml/settings.properties` | 游戏位置、隔离、内存、JVM 参数、下载、Java、语言、窗口、账号绑定、禁用 Mod 等；损坏文件会改名为 `settings.properties.corrupt-*` 后从默认值恢复 |
 | `~/.caml/theme.txt` | 当前主题 ID |
 | `~/.caml/themes/*.css` | 外部主题；内置 `coffee.css` / `night.css` 首次启动复制 |
 | `~/.caml/lang/*.json` | 运行时语言文件；内置语言随启动器版本同步 |
@@ -115,7 +120,7 @@ CAMLFront ──> CAMLBackend ──> CAMLLanguage
 ### 6.2 下载
 
 - 下载源模式：镜像、官方、自定义。镜像默认 BMCLAPI，最终仍追加原始官方 URL 作为兜底。
-- `FileDownloader` 对已有且校验通过的文件直接跳过。
+- `FileDownloader` 只保留候选源轮换和重试；`DownloadAttempt` 选择单流/分片，`SingleStreamDownload`、`SegmentedDownload` 和 `SegmentResumeState` 分别处理普通下载、分片与续传检查点。
 - 已知大小且不少于 4 MiB 的文件先探测 HTTP Range；支持时最多 4 段并行，全局最多 8 个分段槽位。
 - 分片下载使用 `.part` 和 `.part.json` 检查点，校验 ETag/Last-Modified，支持断点续传；Range 失效时清理分片并回退单流。
 - 所有路径使用临时文件，大小与哈希/自定义校验通过后原子移动到目标；失败或取消清理临时文件。
@@ -126,8 +131,9 @@ CAMLFront ──> CAMLBackend ──> CAMLLanguage
 - 本地已有 `versions/<id>/<id>.json` 时优先使用本地版本，不重写 JSON。
 - 远程安装使用官方版本 ID 拉元数据，可用独立实例 ID 命名目录；失败时删除新建的半成品目录。
 - 基础版本安装补齐 client、libraries、natives、asset index、assets objects 和 Logging 配置。
-- Fabric/Quilt 通过 Meta profile + `VersionInstaller.installProfile` 安装，API 文件写入实例与根目录 `mods`。
-- Forge/NeoForge 下载官方 installer，先预下载 installer 声明的库，再运行 installer processor，合并 staging 库并校验结果。
+- Fabric/Quilt 通过 Meta profile 安装：loader 库登记到共享库事务，版本目录先写 staging，校验成功后原子移动。
+- Forge/NeoForge 下载官方 installer，优先提取 installer 内嵌 `maven/` 库，其余依赖使用共享库事务；installer 子进程失败时使用全新 staging 重试。
+- Forge/NeoForge 安装器库首轮沿用 6 次下载，之后每 5 秒重试一轮，直到成功或取消；重试轮不会重复累计进度总字节。
 - OptiFine 仅在 Forge 组合中启用：先装 Forge，再运行 OptiFine 官方 installer，合并库、tweak 参数并移除会误加载的 `META-INF/mods.toml`。
 - 已知兼容冲突：OptiFine 1.20.1 HD U I6 不允许 Forge 47.4.27 及以上。
 
@@ -168,7 +174,8 @@ Linux + LWJGL 2 启动前会异步检查 `xrandr`；缺失时前端显示非阻�
 
 ### 6.7 设置、主题、语言和日志
 
-- 设置写入由写锁串行化，使用临时文件 + 原子替换；读取失败按默认值降级。
+- 设置写入由写锁串行化，使用临时文件 + 原子替换；损坏的 properties 会隔离后按默认值恢复。
+- `theme.txt` 和首次主题文件复制使用临时文件 + 原子移动。
 - 主题来自 `<data>/themes/*.css`，后端只持久化 ID，前端负责加载 CSS。
 - 内置语言为 `zh_cn`、`zh_tw`、`en_us`、`fn_cn`、`ja_jp`、`ko_kr`、`fr_fr`、`de_de`、`ru_ru`、`la_la`、`bo_cn`；语言文件由生成器生成，前后端不手改 JSON。
 - `LatestLogService` 异步写入 UI 日志；检测到异常/失败关键字或显式标记失败时，退出后额外压缩归档。
@@ -177,7 +184,7 @@ Linux + LWJGL 2 启动前会异步检查 `xrandr`；缺失时前端显示非阻�
 
 `CAMLApplication` 负责后端初始化、主题/语言加载、窗口几何、场景根切换和关闭清理。`MainView` 是应用壳层：
 
-- 顶栏主导航：主页 / 下载 / 设置。
+- 顶栏主导航：主页 / 下载 / 任务 / 设置。
 - 页面内容交给 `CamlPageHost`，支持页面与侧栏的淡入/位移过渡。
 - 全局 `StackPane` 遮罩层承载 Java 下载、xrandr 提示等应用内弹窗。
 - 底栏显示版本、后端就绪状态和数据目录。
@@ -201,7 +208,7 @@ Linux + LWJGL 2 启动前会异步检查 `xrandr`；缺失时前端显示非阻�
 | `caml-java-worker` | 1 | Java 扫描、添加、下载 |
 | `caml-launch-worker` | 1 | 游戏安装/启动 |
 
-UI 更新统一切回 `Platform.runLater`。下载页每 200ms 轮询遥测，下载任务条每 250ms 刷新，设置页内存监视每 500ms 读取一次。
+UI 更新统一切回 `Platform.runLater`。下载详情页每 200ms 轮询遥测，任务中心列表每 250ms 刷新，设置页内存监视每 500ms 读取一次。
 
 ## 9. 错误与安全
 
@@ -213,11 +220,11 @@ UI 更新统一切回 `Platform.runLater`。下载页每 200ms 轮询遥测，�
 
 ## 10. 测试与当前限制
 
-当前测试共 122 个测试类、489 个测试方法，覆盖后端、前端和语言一致性；最近一次全量结果为 0 failure / 0 error / 0 skipped。
+当前测试共 125 个测试类、502 个测试方法，覆盖后端、前端和语言一致性；最近一次全量结果为 0 failure / 0 error / 0 skipped。
 
 当前明确未提供：
 
-- 整合包导入/导出和整合包依赖自动安装。
+- 整合包导入/导出、更新/修复；Modrinth `.mrpack` 安装已经可用。
 - Mod 依赖的递归下载；详情页只展示依赖信息。
 - 游戏进程停止按钮；后端 `GameProcess.stop()` 已有，前端未接入。
 - 启动器自更新、代码签名和 macOS 正式包。

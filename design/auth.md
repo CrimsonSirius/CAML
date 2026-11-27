@@ -1,6 +1,6 @@
 # CAML 账号与认证
 
-> 本文按当前认证代码重写，最后核对时间：2026-11-26。
+> 本文按当前认证代码重写，最后核对时间：2026-11-27；基线提交：`5d56e08`。
 
 ## 1. 支持范围
 
@@ -27,7 +27,8 @@
 - `AuthServerService` / `AuthServerStore`：Yggdrasil metadata 的内存和磁盘缓存。
 - `AuthlibInjectorService`：authlib-injector 下载、缓存、校验和覆盖路径。
 
-`CAMLBackend` 对前端暴露账号摘要、默认账号、实例账号和第三方服务器预设；登录和刷新都在后端线程执行。
+`CAMLBackend.accounts()` 对前端暴露账号摘要、默认账号、实例账号和第三方服务器预设；
+登录和刷新都在后端线程执行。`AccountSummary` / `InstanceAccountMismatch` 位于 `auth` 包。
 
 ## 3. 离线账号
 
@@ -148,7 +149,7 @@ metadata 失败不能阻塞 Yggdrasil 密码登录或已有 token 启动；只�
 
 - `AccountModelTest`
 - `OfflineAccountTest`
-- `AccountServiceTest`
+  - `AccountServiceTest`
 - `MicrosoftAuthServiceTest`
 - `YggdrasilClientTest`
 - `AuthServerStoreTest`
