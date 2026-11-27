@@ -48,11 +48,32 @@ class VersionDirectoryStageTest {
         assertEquals("keep", Files.readString(target.resolve("existing.txt")));
     }
 
+    @Test
+    void relocatesClientJarInsideVersionDirectory() throws Exception {
+        Path target = gameDirectory.resolve("versions/demo");
+        InstalledVersion installed;
+        try (VersionDirectoryStage stage = VersionDirectoryStage.create(gameDirectory, "demo")) {
+            Path stagedClientJar = stage.directory().resolve("demo.jar");
+            Files.write(stagedClientJar, new byte[]{1});
+            installed = stage.commit(new InstalledVersion(
+                    "demo", manifest("demo"), gameDirectory, stage.directory(),
+                    stage.directory().resolve("demo.json"), stagedClientJar,
+                    null, null, null));
+        }
+
+        assertEquals(target.resolve("demo.jar").toAbsolutePath().normalize(),
+                installed.clientJar());
+        assertTrue(Files.isRegularFile(installed.clientJar()));
+    }
+
     private InstalledVersion installedVersion(String id) {
-        VersionInfo manifest = new VersionInfo(
+        return new InstalledVersion(id, manifest(id), gameDirectory, null, null,
+                null, null, null, null);
+    }
+
+    private static VersionInfo manifest(String id) {
+        return new VersionInfo(
                 id, "release", null, "example.Main", null, null, null, null,
                 null, null, null, null, null, null, null, null, null);
-        return new InstalledVersion(id, manifest, gameDirectory, null, null,
-                null, null, null, null);
     }
 }

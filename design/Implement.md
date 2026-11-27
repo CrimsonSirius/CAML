@@ -71,9 +71,9 @@ CAML/
 - 下载器已拆分为 `FileDownloader` 重试入口、`DownloadAttempt`、`SingleStreamDownload`、`SegmentedDownload`、`SegmentResumeState` 和 `DownloadIo`。
 - 支持分段 Range、`.part.json` 续传、SHA-1/自定义校验、原子移动、取消清理。
 - `DownloadExecutor` 聚合批量进度；未知大小从实际响应动态补齐。
-- 原版本安装支持自定义实例 ID、本地版本优先、父版本继承。
+- 原版本安装支持自定义实例 ID、本地版本优先、父版本继承；新实例先写版本 staging，client jar 随目录原子发布。
 - 加载器安装支持 Fabric/Quilt Meta profile、Forge/NeoForge installer、OptiFine Forge 组合。
-- Fabric/Quilt/OptiFine/Forge/NeoForge 共用实例锁、共享库事务和版本目录 staging；失败会回滚库并清理版本目录。
+- 原版、Fabric/Quilt/OptiFine/Forge/NeoForge 共用实例锁和版本目录 staging；加载器同时使用共享库事务，失败会回滚库并清理 staging。
 - Forge/NeoForge 优先提取 installer 内嵌 Maven 库；缺失 URL 的库按 Forge/NeoForge 坐标回退正确仓库。
 - 安装器库首轮 6 次下载失败后，每 5 秒按候选源重试一轮，直到成功或取消；进度统计不会重复累计整批字节。
 - Modrinth 与地图解压使用条目数、单条目大小和总解压量限制。
@@ -178,7 +178,7 @@ CAML/
 
 ## 6. 测试与验证
 
-当前构建产物中共有 **125 个测试类、504 个测试方法**，最近一次全量测试无失败/错误/跳过。
+当前构建产物中共有 **125 个测试类、505 个测试方法**，最近一次全量测试无失败/错误/跳过。
 
 测试覆盖重点：
 

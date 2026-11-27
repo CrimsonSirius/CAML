@@ -29,7 +29,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.stream.Stream;
 
 public final class VersionInstaller {
     private final MetadataService metadata;
@@ -247,17 +246,18 @@ public final class VersionInstaller {
             DownloadCancellationToken token,
             SharedLibraryTransaction libraryTransaction
     ) throws IOException, InterruptedException {
-        Path versionDirectory = SafePaths.resolveChild(
-                gameDirectory.resolve("versions"), instanceId, "version id");
-        boolean existed = Files.exists(versionDirectory);
-        try {
-            return complete(instanceId, gameDirectory, versionJson, listener, token, true,
-                    libraryTransaction, null);
-        } catch (IOException | RuntimeException | InterruptedException e) {
-            if (!existed) {
-                deleteRecursively(versionDirectory);
-            }
-            throw e;
+        try (VersionDirectoryStage stage = VersionDirectoryStage.create(gameDirectory, instanceId)) {
+            InstalledVersion installed = complete(
+                    instanceId,
+                    gameDirectory,
+                    versionJson,
+                    listener,
+                    token,
+                    true,
+                    libraryTransaction,
+                    stage.directory()
+            );
+            return stage.commit(installed);
         }
     }
 
@@ -291,13 +291,20 @@ public final class VersionInstaller {
                 versionsDirectory, clientJarId, "client jar id");
         Path clientJar = SafePaths.resolveChild(
                 clientJarDirectory, clientJarId + ".jar", "client jar");
+        Path stagedClientJar = versionDirectoryOverride != null && clientJarId.equals(versionId)
+                ? SafePaths.resolveChild(versionDirectoryOverride, versionId + ".jar", "client jar")
+                : null;
+        Path installedClientJar = stagedClientJar == null ? clientJar : stagedClientJar;
         Path librariesDirectory = gameDirectory.resolve("libraries");
         Path assetsDirectory = gameDirectory.resolve("assets");
 
         token.throwIfCancelled();
         DownloadListener.notifyStage(listener, DownloadStage.of("version.downloadFiles"));
-        downloadPlan(downloadPlanner.plan(resolved, gameDirectory, clientJarId), gameDirectory,
-                listener, token, libraryTransaction);
+        DownloadPlan plan = downloadPlanner.plan(resolved, gameDirectory, clientJarId);
+        if (stagedClientJar != null) {
+            plan = redirectClientJar(plan, clientJar, stagedClientJar);
+        }
+        downloadPlan(plan, gameDirectory, listener, token, libraryTransaction);
 
         Path assetIndexFile = null;
         if (resolved.assetIndex() != null) {
@@ -324,11 +331,28 @@ public final class VersionInstaller {
                 gameDirectory,
                 versionDirectory,
                 versionFile,
-                clientJar,
+                installedClientJar,
                 librariesDirectory,
                 assetsDirectory,
                 assetIndexFile
         );
+    }
+
+    private static DownloadPlan redirectClientJar(DownloadPlan plan, Path current, Path replacement) {
+        Path currentPath = current.toAbsolutePath().normalize();
+        Path replacementPath = replacement.toAbsolutePath().normalize();
+        List<DownloadItem> items = plan.items().stream()
+                .map(item -> item.destination().toAbsolutePath().normalize().equals(currentPath)
+                        ? new DownloadItem(
+                                item.label(),
+                                item.candidates(),
+                                replacementPath,
+                                item.sha1(),
+                                item.size(),
+                                item.headers())
+                        : item)
+                .toList();
+        return new DownloadPlan(items);
     }
 
     /** @return {@code versions/<id>/<id>.json} 的标准路径 */
@@ -454,20 +478,4 @@ public final class VersionInstaller {
         }
     }
 
-    private static void deleteRecursively(Path root) {
-        if (root == null || !Files.exists(root)) {
-            return;
-        }
-        try (Stream<Path> paths = Files.walk(root)) {
-            for (Path path : paths.sorted((left, right) -> right.compareTo(left)).toList()) {
-                try {
-                    Files.deleteIfExists(path);
-                } catch (IOException ignored) {
-                    // 失败清理不能覆盖原始安装异常。
-                }
-            }
-        } catch (IOException ignored) {
-            // 失败清理不能覆盖原始安装异常。
-        }
-    }
 }

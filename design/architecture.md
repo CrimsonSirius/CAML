@@ -129,7 +129,7 @@ CAMLFront ──> CAMLBackend ──> CAMLLanguage
 ### 6.3 实例与加载器
 
 - 本地已有 `versions/<id>/<id>.json` 时优先使用本地版本，不重写 JSON。
-- 远程安装使用官方版本 ID 拉元数据，可用独立实例 ID 命名目录；失败时删除新建的半成品目录。
+- 远程安装使用官方版本 ID 拉元数据，可用独立实例 ID 命名目录；新实例先写版本 staging，client jar 一并暂存，成功后才原子发布。
 - 基础版本安装补齐 client、libraries、natives、asset index、assets objects 和 Logging 配置。
 - Fabric/Quilt 通过 Meta profile 安装：loader 库登记到共享库事务，版本目录先写 staging，校验成功后原子移动。
 - Forge/NeoForge 下载官方 installer，优先提取 installer 内嵌 `maven/` 库，其余依赖使用共享库事务；installer 子进程失败时使用全新 staging 重试。
@@ -220,7 +220,7 @@ UI 更新统一切回 `Platform.runLater`。下载详情页每 200ms 轮询遥�
 
 ## 10. 测试与当前限制
 
-当前测试共 125 个测试类、504 个测试方法，覆盖后端、前端和语言一致性；最近一次全量结果为 0 failure / 0 error / 0 skipped。
+当前测试共 125 个测试类、505 个测试方法，覆盖后端、前端和语言一致性；最近一次全量结果为 0 failure / 0 error / 0 skipped。
 
 当前明确未提供：
 
