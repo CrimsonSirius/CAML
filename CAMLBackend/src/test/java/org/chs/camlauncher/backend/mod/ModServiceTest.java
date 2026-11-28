@@ -6,6 +6,7 @@ import org.chs.camlauncher.backend.download.DownloadListener;
 import org.chs.camlauncher.backend.download.FileDownloader;
 import org.chs.camlauncher.backend.download.hash.HashVerifier;
 import org.chs.camlauncher.backend.error.BackendException;
+import org.chs.camlauncher.backend.instance.InstanceInstallLock;
 import org.chs.camlauncher.backend.instance.VersionIsolationMode;
 import org.chs.camlauncher.backend.mod.model.ModDependencyType;
 import org.chs.camlauncher.backend.mod.model.ModContentType;
@@ -29,6 +30,12 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
@@ -499,6 +506,60 @@ class ModServiceTest {
             assertArrayEquals(content, Files.readAllBytes(result.path()));
             assertFalse(Files.exists(gameDirectory.resolve("mods/fresh.zip")));
         } finally {
+            server.stop(0);
+        }
+    }
+
+    @Test
+    void contentDownloadWaitsForInstanceLock() throws Exception {
+        byte[] content = "shader-content".getBytes(StandardCharsets.UTF_8);
+        HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        server.createContext("/shaders/fresh.zip", exchange -> {
+            exchange.sendResponseHeaders(200, content.length);
+            try (var output = exchange.getResponseBody()) {
+                output.write(content);
+            }
+        });
+        server.start();
+        ExecutorService executor = Executors.newSingleThreadExecutor();
+        InstanceInstallLock lock = null;
+        boolean released = false;
+
+        try {
+            Path gameDirectory = tempDirectory.resolve("locked-shader-game");
+            ModFile file = new ModFile(
+                    ModSource.MODRINTH, "project", "version", "Fresh", "1.0",
+                    "fresh.zip", List.of(URI.create(serverRoot(server) + "shaders/fresh.zip")),
+                    HashVerifier.sha1(content), null, content.length,
+                    List.of("1.21"), List.of(), List.of(), "", 1
+            );
+            ModService service = service("https://example.invalid/v2/",
+                    "https://example.invalid/v1/", "");
+            lock = InstanceInstallLock.acquire(gameDirectory, "instance");
+            CountDownLatch started = new CountDownLatch(1);
+            Future<?> future = executor.submit(() -> {
+                started.countDown();
+                try {
+                    service.download(file, ModContentType.SHADER, gameDirectory,
+                            "instance", VersionIsolationMode.NONE, DownloadListener.NONE);
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
+            });
+
+            assertTrue(started.await(1, TimeUnit.SECONDS));
+            assertThrows(TimeoutException.class, () -> future.get(200, TimeUnit.MILLISECONDS));
+            lock.close();
+            released = true;
+            future.get(5, TimeUnit.SECONDS);
+
+            assertArrayEquals(content, Files.readAllBytes(
+                    gameDirectory.resolve("shaderpacks/fresh.zip")));
+        } finally {
+            if (!released && lock != null) {
+                lock.close();
+            }
+            executor.shutdownNow();
             server.stop(0);
         }
     }
