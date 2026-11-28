@@ -32,4 +32,26 @@ class ModpackLayoutTest {
         assertTrue(Files.readString(temporaryDirectory.resolve(ModpackLayout.MARKER_FILE))
                 .contains("\"source\":\"modrinth\""));
     }
+
+    @Test
+    void curseForgeMarkerRecordsSource() throws Exception {
+        ModFile file = new ModFile(
+                ModSource.CURSEFORGE, "project", "version", "Curse Pack", "1.0",
+                "curse-pack.zip", List.of(), null, null, 0,
+                List.of(), List.of(), List.of(), "", 0
+        );
+        CurseForgeModpackManifest manifest = CurseForgeModpackManifest.parse("""
+                {
+                  "name": "Curse Pack",
+                  "version": "1.0",
+                  "minecraft": {"version": "1.20.1"}
+                }
+                """);
+
+        ModpackLayout.writeMarker(temporaryDirectory, manifest, file);
+
+        assertTrue(ModpackLayout.isModpack(temporaryDirectory));
+        assertTrue(Files.readString(temporaryDirectory.resolve(ModpackLayout.MARKER_FILE))
+                .contains("\"source\":\"curseforge\""));
+    }
 }

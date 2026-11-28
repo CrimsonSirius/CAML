@@ -593,7 +593,7 @@ class ModServiceTest {
     }
 
     @Test
-    void searchesModpacksOnlyThroughModrinth() throws Exception {
+    void searchesModpacksThroughModrinthWhenCurseForgeUnconfigured() throws Exception {
         HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
         server.createContext("/v2/search", exchange -> {
             assertTrue(exchange.getRequestURI().getRawQuery()
@@ -615,6 +615,43 @@ class ModServiceTest {
 
             assertEquals(1, page.items().size());
             assertEquals("Test Pack", page.items().getFirst().name());
+        } finally {
+            server.stop(0);
+        }
+    }
+
+    @Test
+    void searchesModpacksAcrossBothSources() throws Exception {
+        HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        server.createContext("/v2/search", exchange -> respond(exchange, """
+                {"hits":[{"project_id":"pack","slug":"pack","title":"Modrinth Pack",
+                "description":"A modpack","categories":["fabric"],"versions":["1.20.1"],
+                "downloads":100,"date_modified":"2026-01-01T00:00:00Z"}],
+                "offset":0,"limit":10,"total_hits":1}
+                """));
+        server.createContext("/v1/mods/search", exchange -> {
+            assertTrue(exchange.getRequestURI().getRawQuery().contains("classId=4471"));
+            respond(exchange, """
+                    {"data":[{"id":222,"slug":"curse-pack","name":"Curse Pack",
+                    "summary":"Another modpack","downloadCount":200,
+                    "dateModified":"2026-01-01T00:00:00Z","categories":[],
+                    "latestFilesIndexes":[{"gameVersion":"1.20.1"}]}],
+                    "pagination":{"totalCount":1}}
+                    """);
+        });
+        server.start();
+
+        try {
+            ModService service = service(serverRoot(server) + "v2/",
+                    serverRoot(server) + "v1/", "test-key");
+            ModSearchPage page = service.search(new ModSearchQuery(
+                    "pack", null, "1.20.1", null, 0, 20, ModContentType.MODPACK));
+
+            assertEquals(2, page.items().size());
+            assertEquals(2, page.items().stream()
+                    .map(item -> item.source())
+                    .distinct()
+                    .count());
         } finally {
             server.stop(0);
         }

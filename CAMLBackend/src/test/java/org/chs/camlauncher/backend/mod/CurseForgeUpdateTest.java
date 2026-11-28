@@ -17,6 +17,36 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 class CurseForgeUpdateTest {
     @Test
+    void resolvesFilesAndClassIdsInBulk() throws Exception {
+        HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        server.createContext("/v1/mods/files", exchange -> respond(exchange, """
+                {"data":[{"id":456,"modId":123,"displayName":"Test Mod",
+                "fileName":"test.jar","gameVersions":["1.20.1","Forge"],
+                "fileLength":10,"fileDate":"2026-01-01T00:00:00Z","downloadCount":1,
+                "downloadUrl":"https://example.invalid/test.jar",
+                "hashes":[{"algo":1,"value":"sha1-value"},{"algo":2,"value":"md5-value"}]}]}
+                """));
+        server.createContext("/v1/mods", exchange -> respond(exchange, """
+                {"data":[{"id":123,"classId":6}]}
+                """));
+        server.start();
+        try {
+            CurseForgeClient client = new CurseForgeClient(
+                    HttpClient.newHttpClient(),
+                    URI.create("http://127.0.0.1:" + server.getAddress().getPort() + "/v1/"),
+                    "test-key");
+
+            ModFile file = client.filesByIds(List.of(456L, 456L)).get(456L);
+            assertEquals("test.jar", file.fileName());
+            assertEquals("sha1-value", file.sha1());
+            assertEquals("md5-value", file.md5());
+            assertEquals(6, client.classIdsByModIds(List.of(123L)).get(123L));
+        } finally {
+            server.stop(0);
+        }
+    }
+
+    @Test
     void resolvesFingerprintAndLatestFile() throws Exception {
         HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
         server.createContext("/v1/fingerprints/432", exchange -> respond(exchange, """

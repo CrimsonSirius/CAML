@@ -21,7 +21,7 @@ CAML 已经覆盖一条可运行的完整链路：
 
 - Forge、NeoForge、Fabric、Quilt、OptiFine 组合安装；
 - 多来源 Mod/光影/资源包/地图搜索与下载；
-- Modrinth `.mrpack` 整合包搜索与安装为新实例，先在隐藏 staging 完成加载器和内容，再原子发布；
+- Modrinth `.mrpack` 与 CurseForge `manifest.json` ZIP 整合包搜索与安装为新实例，先在隐藏 staging 完成加载器和内容，再原子发布；
 - Microsoft/Yggdrasil/离线账号；
 - Java 扫描、手动添加、Foojay 托管下载；
 - 外部 CSS 主题和 11 种内置语言；
@@ -179,7 +179,7 @@ CAML/
 
 ## 6. 测试与验证
 
-当前构建产物中共有 **126 个测试类、514 个测试方法**，最近一次全量测试无失败/错误/跳过。
+当前构建产物中共有 **127 个测试类、521 个测试方法**，最近一次全量测试无失败/错误/跳过。
 
 测试覆盖重点：
 
@@ -194,7 +194,7 @@ CAML/
 
 ## 7. 当前明确未实现
 
-- 整合包导入/导出、更新和修复；Modrinth `.mrpack` 安装已可用。
+- 本地整合包导入/导出、更新和修复；Modrinth `.mrpack` 与 CurseForge 整合包安装已可用。
 - Mod 依赖递归下载。
 - 游戏进程停止按钮（后端已有停止能力）。
 - 启动器自更新和代码签名。

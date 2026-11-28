@@ -24,12 +24,25 @@ public final class ModpackLayout {
 
     public static void writeMarker(Path instanceDirectory, ModrinthModpackIndex index, ModFile file)
             throws IOException {
+        writeMarker(instanceDirectory, "modrinth", file,
+                index.name(), index.versionId());
+    }
+
+    public static void writeMarker(
+            Path instanceDirectory, CurseForgeModpackManifest manifest, ModFile file)
+            throws IOException {
+        writeMarker(instanceDirectory, "curseforge", file,
+                manifest.name(), manifest.version());
+    }
+
+    private static void writeMarker(Path instanceDirectory, String source, ModFile file,
+                                    String name, String version) throws IOException {
         JsonObject marker = new JsonObject();
-        marker.addProperty("source", "modrinth");
+        marker.addProperty("source", source);
         marker.addProperty("projectId", file.projectId());
         marker.addProperty("versionId", file.versionId());
-        marker.addProperty("name", index.name());
-        marker.addProperty("version", index.versionId());
+        marker.addProperty("name", name == null || name.isBlank() ? file.name() : name);
+        marker.addProperty("version", version == null ? "" : version);
         marker.addProperty("file", file.fileName());
         Files.writeString(
                 instanceDirectory.resolve(MARKER_FILE),
