@@ -11,6 +11,7 @@ import org.chs.camlauncher.backend.download.model.DownloadItem;
 import org.chs.camlauncher.backend.error.BackendError;
 import org.chs.camlauncher.backend.error.BackendException;
 import org.chs.camlauncher.backend.instance.GameDataLayout;
+import org.chs.camlauncher.backend.instance.InstanceInstallLock;
 import org.chs.camlauncher.backend.instance.InstanceNameRules;
 import org.chs.camlauncher.backend.instance.VersionIsolationMode;
 import org.chs.camlauncher.backend.io.ArchiveExtractionGuard;
@@ -150,32 +151,36 @@ public final class ModService {
     ) throws IOException, InterruptedException {
         Objects.requireNonNull(file, "file");
         Objects.requireNonNull(type, "type");
+        Objects.requireNonNull(gameDirectory, "gameDirectory");
         Objects.requireNonNull(isolationMode, "isolationMode");
         Objects.requireNonNull(token, "token");
-        if (type == ModContentType.WORLD) {
-            return downloadWorld(file, gameDirectory, instanceId, isolationMode, listener, token);
-        }
-        if (!file.hasDownloadUri()) {
-            throw new BackendException(BackendError.of("mod.error.downloadUrlMissing", file.name()));
-        }
         String instance = InstanceNameRules.validate(instanceId);
-        Path contentDirectory = contentDirectory(
-                gameDirectory, instance, isolationMode, type);
-        Path destination = SafePaths.resolveChild(
-                contentDirectory, file.fileName(), type.directoryName() + " file");
-        downloadTo(file, destination, listener, token);
-        String contentType = switch (type) {
-            case MOD -> "Mod";
-            case MODPACK -> "整合包";
-            case SHADER -> "光影包";
-            case RESOURCE_PACK -> "资源包";
-            case WORLD -> "地图";
-        };
-        LOGGER.info("{} 下载完成: {} -> {}", contentType, file.name(), destination);
-        return new ModDownloadResult(destination, file);
+        try (InstanceInstallLock ignored = InstanceInstallLock.acquire(gameDirectory, instance)) {
+            if (type == ModContentType.WORLD) {
+                return downloadWorld(file, gameDirectory, instance, isolationMode, listener, token);
+            }
+            if (!file.hasDownloadUri()) {
+                throw new BackendException(
+                        BackendError.of("mod.error.downloadUrlMissing", file.name()));
+            }
+            Path contentDirectory = contentDirectory(
+                    gameDirectory, instance, isolationMode, type);
+            Path destination = SafePaths.resolveChild(
+                    contentDirectory, file.fileName(), type.directoryName() + " file");
+            downloadTo(file, destination, listener, token);
+            String contentType = switch (type) {
+                case MOD -> "Mod";
+                case MODPACK -> "整合包";
+                case SHADER -> "光影包";
+                case RESOURCE_PACK -> "资源包";
+                case WORLD -> "地图";
+            };
+            LOGGER.info("{} 下载完成: {} -> {}", contentType, file.name(), destination);
+            return new ModDownloadResult(destination, file);
+        }
     }
 
-    /** 把 Mod 文件下载到调用方指定的目标路径，供需要 staging 的更新事务复用。 */
+    /** 把 Mod 文件下载到指定目标路径；调用方必须持有对应实例的写锁。 */
     public Path downloadTo(
             ModFile file,
             Path destination,

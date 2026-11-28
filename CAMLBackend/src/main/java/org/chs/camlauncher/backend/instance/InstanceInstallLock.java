@@ -16,7 +16,7 @@ import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantLock;
 
-/** 同一实例的安装互斥锁；同一线程可重入。 */
+/** 同一实例的写操作互斥锁；安装、内容下载与启停共用，同一线程可重入。 */
 public final class InstanceInstallLock implements AutoCloseable {
     private static final Map<String, ReentrantLock> PROCESS_LOCKS = new ConcurrentHashMap<>();
     private static final ThreadLocal<Map<String, Integer>> HOLD_COUNTS =

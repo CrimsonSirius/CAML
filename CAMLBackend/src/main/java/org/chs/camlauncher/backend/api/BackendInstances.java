@@ -113,74 +113,81 @@ public final class BackendInstances {
     }
 
     public void setModDisabled(Path gameDirectory, String instanceId, String fileName,
-                               boolean disabled) throws IOException {
+                               boolean disabled) throws IOException, InterruptedException {
         Path normalizedGameDirectory = Objects.requireNonNull(gameDirectory, "gameDirectory")
                 .toAbsolutePath()
                 .normalize();
         String instance = InstanceNameRules.validate(instanceId);
-        VersionIsolationMode isolationMode = settingsService.versionIsolationMode();
-        String baseName = normalizeModFileName(fileName);
-        Path modsDirectory = InstanceInspector.dataDirectory(
-                normalizedGameDirectory, instance, isolationMode)
-                .resolve("mods");
-        Path enabledPath = SafePaths.resolveChild(modsDirectory, baseName, "mod file");
-        Path disabledPath = SafePaths.resolveChild(modsDirectory, baseName + ".disabled",
-                "disabled mod file");
+        try (InstanceInstallLock ignored = InstanceInstallLock.acquire(
+                normalizedGameDirectory, instance)) {
+            VersionIsolationMode isolationMode = settingsService.versionIsolationMode();
+            String baseName = normalizeModFileName(fileName);
+            Path modsDirectory = InstanceInspector.dataDirectory(
+                    normalizedGameDirectory, instance, isolationMode)
+                    .resolve("mods");
+            Path enabledPath = SafePaths.resolveChild(modsDirectory, baseName, "mod file");
+            Path disabledPath = SafePaths.resolveChild(modsDirectory, baseName + ".disabled",
+                    "disabled mod file");
 
-        boolean moved = false;
-        Path source = disabled ? enabledPath : disabledPath;
-        Path target = disabled ? disabledPath : enabledPath;
-        if (Files.isRegularFile(source)) {
-            if (Files.exists(target)) {
-                throw new IOException("目标 Mod 文件已存在: " + target);
-            }
-            move(source, target);
-            moved = true;
-        } else if (!Files.isRegularFile(target)) {
-            throw new IOException("Mod 文件不存在: " + source);
-        }
-
-        try {
-            settingsService.setModDisabled(normalizedGameDirectory, instance, baseName, disabled);
-        } catch (IOException | RuntimeException e) {
-            if (moved) {
-                try {
-                    move(target, source);
-                } catch (IOException rollbackFailure) {
-                    LOGGER.warn("回滚 Mod 文件状态失败: {}", target, rollbackFailure);
+            boolean moved = false;
+            Path source = disabled ? enabledPath : disabledPath;
+            Path target = disabled ? disabledPath : enabledPath;
+            if (Files.isRegularFile(source)) {
+                if (Files.exists(target)) {
+                    throw new IOException("目标 Mod 文件已存在: " + target);
                 }
+                move(source, target);
+                moved = true;
+            } else if (!Files.isRegularFile(target)) {
+                throw new IOException("Mod 文件不存在: " + source);
             }
-            throw e;
+
+            try {
+                settingsService.setModDisabled(
+                        normalizedGameDirectory, instance, baseName, disabled);
+            } catch (IOException | RuntimeException e) {
+                if (moved) {
+                    try {
+                        move(target, source);
+                    } catch (IOException rollbackFailure) {
+                        LOGGER.warn("回滚 Mod 文件状态失败: {}", target, rollbackFailure);
+                    }
+                }
+                throw e;
+            }
         }
     }
 
     public void setResourcePackDisabled(Path gameDirectory, String instanceId, String fileName,
-                                        boolean disabled) throws IOException {
+                                        boolean disabled) throws IOException, InterruptedException {
         Path normalizedGameDirectory = Objects.requireNonNull(gameDirectory, "gameDirectory")
                 .toAbsolutePath()
                 .normalize();
         String instance = InstanceNameRules.validate(instanceId);
-        VersionIsolationMode isolationMode = settingsService.versionIsolationMode();
-        String baseName = normalizeResourcePackFileName(fileName);
-        Path resourcePacksDirectory = InstanceInspector.dataDirectory(
-                normalizedGameDirectory, instance, isolationMode).resolve("resourcepacks");
-        Path enabledPath = SafePaths.resolveChild(
-                resourcePacksDirectory, baseName, "resource pack");
-        Path disabledPath = SafePaths.resolveChild(
-                resourcePacksDirectory, baseName + ".disabled", "disabled resource pack");
+        try (InstanceInstallLock ignored = InstanceInstallLock.acquire(
+                normalizedGameDirectory, instance)) {
+            VersionIsolationMode isolationMode = settingsService.versionIsolationMode();
+            String baseName = normalizeResourcePackFileName(fileName);
+            Path resourcePacksDirectory = InstanceInspector.dataDirectory(
+                    normalizedGameDirectory, instance, isolationMode).resolve("resourcepacks");
+            Path enabledPath = SafePaths.resolveChild(
+                    resourcePacksDirectory, baseName, "resource pack");
+            Path disabledPath = SafePaths.resolveChild(
+                    resourcePacksDirectory, baseName + ".disabled", "disabled resource pack");
 
-        Path source = disabled ? enabledPath : disabledPath;
-        Path target = disabled ? disabledPath : enabledPath;
-        if (!Files.exists(source)) {
-            if (Files.exists(target)) {
-                return;
+            Path source = disabled ? enabledPath : disabledPath;
+            Path target = disabled ? disabledPath : enabledPath;
+            if (!Files.exists(source)) {
+                if (Files.exists(target)) {
+                    return;
+                }
+                throw new IOException("资源包不存在: " + source);
             }
-            throw new IOException("资源包不存在: " + source);
+            if (Files.exists(target)) {
+                throw new IOException("目标资源包已存在: " + target);
+            }
+            move(source, target);
         }
-        if (Files.exists(target)) {
-            throw new IOException("目标资源包已存在: " + target);
-        }
-        move(source, target);
     }
 
     public byte[] loadInstanceModIcon(Path gameDirectory, String instanceId, String fileName)
