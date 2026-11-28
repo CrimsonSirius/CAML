@@ -1,5 +1,6 @@
 package org.chs.camlauncher.backend.io;
 
+import org.chs.camlauncher.backend.download.DownloadCancellationToken;
 import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayInputStream;
@@ -54,6 +55,19 @@ class ArchiveExtractionGuardTest {
         guard.copy(stream("5678"), output);
 
         assertEquals("12345678", output.toString(StandardCharsets.UTF_8));
+    }
+
+    @Test
+    void cancellationStopsCopyBeforeWriting() {
+        ArchiveExtractionGuard guard = new ArchiveExtractionGuard(10, 1024, 1024);
+        DownloadCancellationToken token = new DownloadCancellationToken();
+        ByteArrayOutputStream output = new ByteArrayOutputStream();
+        token.cancel();
+
+        assertThrows(InterruptedException.class, () -> guard.copy(
+                stream("1234"), output, token));
+
+        assertEquals(0, output.size());
     }
 
     private static ByteArrayInputStream stream(String value) {

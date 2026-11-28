@@ -235,7 +235,7 @@ public final class ModService {
             fileDownloader.download(item, listener, md5Validator(file), token);
             Path installed = new WorldInstaller(new ArchiveExtractionGuard(
                     archiveMaxEntries, archiveMaxEntryBytes, archiveMaxTotalBytes))
-                    .install(archive, savesDirectory, file.fileName());
+                    .install(archive, savesDirectory, file.fileName(), token);
             LOGGER.info("地图下载完成: {} -> {}", file.name(), installed);
             return new ModDownloadResult(installed, file);
         } finally {

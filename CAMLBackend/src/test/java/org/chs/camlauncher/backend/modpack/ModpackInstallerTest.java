@@ -370,7 +370,7 @@ class ModpackInstallerTest {
         Path instance = temporaryDirectory.resolve("content-override");
         ModpackInstaller installer = installer();
         installer.extractOverrides(archive, instance, "Conflict.mrpack",
-                new ArchiveExtractionGuard());
+                new ArchiveExtractionGuard(), new DownloadCancellationToken());
         ModrinthModpackIndex index = new ModrinthModpackIndex(
                 "Conflict", "1", "", Map.of("minecraft", "1.20.1"),
                 List.of(new ModrinthModpackIndex.File(
@@ -391,7 +391,7 @@ class ModpackInstallerTest {
 
         assertThrows(BackendException.class, () -> installer().extractOverrides(
                 archive, temporaryDirectory.resolve("duplicate-override"), "Duplicate.mrpack",
-                new ArchiveExtractionGuard()));
+                new ArchiveExtractionGuard(), new DownloadCancellationToken()));
     }
 
     @Test
@@ -403,7 +403,7 @@ class ModpackInstallerTest {
 
         assertThrows(BackendException.class, () -> installer().extractOverrides(
                 archive, temporaryDirectory.resolve("many"), "Many.mrpack",
-                new ArchiveExtractionGuard(1, 1024, 1024)));
+                new ArchiveExtractionGuard(1, 1024, 1024), new DownloadCancellationToken()));
     }
 
     @Test
@@ -414,7 +414,23 @@ class ModpackInstallerTest {
 
         assertThrows(BackendException.class, () -> installer().extractOverrides(
                 archive, temporaryDirectory.resolve("large"), "Large.mrpack",
-                new ArchiveExtractionGuard(10, 4, 1024)));
+                new ArchiveExtractionGuard(10, 4, 1024), new DownloadCancellationToken()));
+    }
+
+    @Test
+    void cancellationStopsOverrideExtraction() throws Exception {
+        Path archive = writeZip("cancelled-overrides.mrpack", zipEntries(ordered(
+                "overrides/mods/example.jar", "override".getBytes(StandardCharsets.UTF_8)
+        )));
+        Path instance = temporaryDirectory.resolve("cancelled-overrides");
+        DownloadCancellationToken token = new DownloadCancellationToken();
+        token.cancel();
+
+        assertThrows(InterruptedException.class, () -> installer().extractOverrides(
+                archive, instance, "Cancelled.mrpack",
+                new ArchiveExtractionGuard(), token));
+
+        assertFalse(Files.exists(instance.resolve("mods/example.jar")));
     }
 
     private ModpackInstaller installer() {

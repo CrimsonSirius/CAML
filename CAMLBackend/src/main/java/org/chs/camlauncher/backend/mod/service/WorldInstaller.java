@@ -1,5 +1,6 @@
 package org.chs.camlauncher.backend.mod.service;
 
+import org.chs.camlauncher.backend.download.DownloadCancellationToken;
 import org.chs.camlauncher.backend.error.BackendError;
 import org.chs.camlauncher.backend.error.BackendException;
 import org.chs.camlauncher.backend.io.ArchiveExtractionGuard;
@@ -13,6 +14,7 @@ import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Stream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
@@ -29,18 +31,22 @@ final class WorldInstaller {
         this.extractionGuard = extractionGuard;
     }
 
-    Path install(Path archive, Path savesDirectory, String fallbackName) throws IOException {
+    Path install(Path archive, Path savesDirectory, String fallbackName,
+                 DownloadCancellationToken token) throws IOException, InterruptedException {
+        Objects.requireNonNull(token, "token");
+        token.throwIfCancelled();
         Files.createDirectories(savesDirectory);
         Path temporary = Files.createTempDirectory(savesDirectory, ".caml-world-");
         String displayName = fallbackName == null || fallbackName.isBlank() ? "world" : fallbackName;
         try {
             try {
-                extract(archive, temporary, displayName);
+                extract(archive, temporary, displayName, token);
             } catch (BackendException e) {
                 throw e;
             } catch (IOException | RuntimeException e) {
                 throw invalidArchive(displayName, e);
             }
+            token.throwIfCancelled();
             Path worldRoot = findWorldRoot(temporary);
             if (worldRoot == null) {
                 throw invalidArchive(displayName);
@@ -49,6 +55,7 @@ final class WorldInstaller {
                     ? sanitize(baseName(fallbackName))
                     : sanitize(worldRoot.getFileName().toString());
             Path target = uniqueTarget(savesDirectory, name);
+            token.throwIfCancelled();
             Files.move(worldRoot, target);
             return target;
         } finally {
@@ -56,10 +63,13 @@ final class WorldInstaller {
         }
     }
 
-    private void extract(Path archive, Path output, String displayName) throws IOException {
+    private void extract(Path archive, Path output, String displayName,
+                         DownloadCancellationToken token)
+            throws IOException, InterruptedException {
         try (ZipInputStream input = new ZipInputStream(Files.newInputStream(archive))) {
             ZipEntry entry;
             while ((entry = input.getNextEntry()) != null) {
+                token.throwIfCancelled();
                 extractionGuard.beginEntry();
                 String name = entry.getName();
                 if (name == null || name.isBlank()) {
@@ -74,7 +84,7 @@ final class WorldInstaller {
                             StandardOpenOption.CREATE,
                             StandardOpenOption.TRUNCATE_EXISTING,
                             StandardOpenOption.WRITE)) {
-                        extractionGuard.copy(input, stream);
+                        extractionGuard.copy(input, stream, token);
                     }
                 }
                 input.closeEntry();

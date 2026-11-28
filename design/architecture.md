@@ -164,7 +164,7 @@ Linux + LWJGL 2 启动前会异步检查 `xrandr`；缺失时前端显示非阻�
 ### 6.6 内容下载
 
 - `ModService` 聚合 Modrinth 与 CurseForge，支持 MOD、SHADER、RESOURCE_PACK、WORLD 四种内容类型；地图仅使用 CurseForge。
-- Modrinth `.mrpack` 整合包由独立安装器处理：先在隐藏 staging 实例安装依赖加载器、下载清单文件、解压 overrides 并写入整合包标记，改写版本 JSON/jar 后原子发布最终目录。
+- Modrinth `.mrpack` 整合包由独立安装器处理：先在隐藏 staging 实例安装依赖加载器、下载清单文件、解压 overrides 并写入整合包标记，改写版本 JSON/jar 后原子发布最终目录；地图和整合包解压都传播取消令牌。
 - Modrinth 使用官方 v2 API；CurseForge 使用官方 v1 API，要求 API Key。
 - 搜索结果按 50 条上限分页；双来源模式按下载量合并。
 - 文件下载支持 SHA-1，CURSEFORGE 文件缺少 SHA-1 时可回退 MD5。
@@ -220,7 +220,7 @@ UI 更新统一切回 `Platform.runLater`。下载详情页每 200ms 轮询遥�
 
 ## 10. 测试与当前限制
 
-当前测试共 125 个测试类、508 个测试方法，覆盖后端、前端和语言一致性；最近一次全量结果为 0 failure / 0 error / 0 skipped。
+当前测试共 125 个测试类、511 个测试方法，覆盖后端、前端和语言一致性；最近一次全量结果为 0 failure / 0 error / 0 skipped。
 
 当前明确未提供：
 

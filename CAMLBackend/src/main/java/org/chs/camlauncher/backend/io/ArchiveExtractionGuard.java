@@ -1,5 +1,7 @@
 package org.chs.camlauncher.backend.io;
 
+import org.chs.camlauncher.backend.download.DownloadCancellationToken;
+
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -39,10 +41,30 @@ public final class ArchiveExtractionGuard {
     }
 
     public void copy(InputStream input, OutputStream output) throws IOException {
+        try {
+            copy(input, output, null);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IOException("压缩包解压被中断", e);
+        }
+    }
+
+    public void copy(InputStream input, OutputStream output, DownloadCancellationToken token)
+            throws IOException, InterruptedException {
         byte[] buffer = new byte[8192];
         long entryBytes = 0;
         int read;
-        while ((read = input.read(buffer)) != -1) {
+        while (true) {
+            if (token != null) {
+                token.throwIfCancelled();
+            }
+            read = input.read(buffer);
+            if (read == -1) {
+                return;
+            }
+            if (token != null) {
+                token.throwIfCancelled();
+            }
             entryBytes += read;
             totalBytes += read;
             if (entryBytes > maxEntryBytes) {
@@ -56,8 +78,18 @@ public final class ArchiveExtractionGuard {
     }
 
     public byte[] readAll(InputStream input) throws IOException {
+        try {
+            return readAll(input, null);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IOException("压缩包读取被中断", e);
+        }
+    }
+
+    public byte[] readAll(InputStream input, DownloadCancellationToken token)
+            throws IOException, InterruptedException {
         ByteArrayOutputStream output = new ByteArrayOutputStream();
-        copy(input, output);
+        copy(input, output, token);
         return output.toByteArray();
     }
 }
