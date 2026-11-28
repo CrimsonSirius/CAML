@@ -48,7 +48,7 @@ public final class ForgeService {
         this.metadataUri = metadataUri;
         this.mavenBase = mavenBase.endsWith("/") ? mavenBase : mavenBase + "/";
         this.httpClient = HttpClient.newBuilder()
-                .version(HttpClient.Version.HTTP_1_1)
+                .version(HttpClient.Version.HTTP_2)
                 .followRedirects(HttpClient.Redirect.NORMAL)
                 .connectTimeout(Duration.ofSeconds(15))
                 .build();
