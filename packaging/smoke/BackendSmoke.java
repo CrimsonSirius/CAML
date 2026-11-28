@@ -48,7 +48,7 @@ public final class BackendSmoke {
         CAMLBackend backend = new CAMLBackend(new BackendConfig(dataDirectory, gameDirectory));
         try {
             backend.start();
-            int languages = backend.languageService().availableLocales().size();
+            int languages = backend.settings().languageService().availableLocales().size();
             System.out.println("backend started, bundled languages: " + languages);
             if (languages < EXPECTED_LANGUAGES) {
                 throw new IllegalStateException(
