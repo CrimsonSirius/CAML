@@ -23,6 +23,7 @@ import org.chs.camlauncher.backend.metadata.VersionManifestService;
 import org.chs.camlauncher.backend.mod.model.ModDownloadResult;
 import org.chs.camlauncher.backend.mod.model.ModFile;
 import org.chs.camlauncher.backend.mod.model.ModSource;
+import org.chs.camlauncher.backend.mod.source.CurseForgeClient;
 import org.chs.camlauncher.backend.runtime.JavaLocator;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -31,6 +32,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.net.InetSocketAddress;
 import java.net.URI;
+import java.net.http.HttpClient;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -205,6 +207,135 @@ class ModpackInstallerTest {
             var json = JsonParser.parseString(Files.readString(
                     finalDirectory.resolve("Final Pack.json"))).getAsJsonObject();
             assertEquals("Final Pack", json.get("id").getAsString());
+            assertNoModpackStaging(gameDirectory.resolve("versions"));
+        } finally {
+            server.stop(0);
+        }
+    }
+
+    @Test
+    void installsCurseForgeManifestWithBulkContentResolution() throws Exception {
+        Path gameDirectory = temporaryDirectory.resolve("game-curseforge");
+        Path baseDirectory = gameDirectory.resolve("versions/1.20.1");
+        Files.createDirectories(baseDirectory);
+        Files.writeString(baseDirectory.resolve("1.20.1.json"), """
+                {
+                  "id": "1.20.1",
+                  "mainClass": "base.Main",
+                  "javaVersion": {"component": "test", "majorVersion": 25}
+                }
+                """, StandardCharsets.UTF_8);
+
+        Path installerJar = temporaryDirectory.resolve("curse-forge-installer.jar");
+        createFakeInstallerJar(installerJar);
+        byte[] installerSha1 = HashVerifier.sha1(installerJar)
+                .getBytes(StandardCharsets.UTF_8);
+        byte[] contentJar = "content".getBytes(StandardCharsets.UTF_8);
+        byte[] resourcePack = "pack".getBytes(StandardCharsets.UTF_8);
+
+        HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        String root = serverRoot(server);
+        byte[] modpack = zipEntries(ordered(
+                "manifest.json", """
+                        {
+                          "manifestType": "minecraftModpack",
+                          "name": "Curse Pack",
+                          "version": "1.0",
+                          "minecraft": {
+                            "version": "1.20.1",
+                            "modLoaders": [{"id": "forge-47.2.0", "primary": true}]
+                          },
+                          "files": [
+                            {"projectID": 123, "fileID": 456, "required": true},
+                            {"projectID": 124, "fileID": 457, "required": true},
+                            {"projectID": 125, "fileID": 458, "required": false}
+                          ],
+                          "overrides": "overrides"
+                        }
+                        """.getBytes(StandardCharsets.UTF_8),
+                "overrides/config/example.txt", "configured".getBytes(StandardCharsets.UTF_8)
+        ));
+        server.createContext("/curse-pack.zip", exchange -> respond(exchange, modpack));
+        server.createContext("/installer.jar", exchange -> respond(exchange,
+                Files.readAllBytes(installerJar)));
+        server.createContext("/installer.jar.sha1", exchange -> respond(exchange, installerSha1));
+        server.createContext("/content.jar", exchange -> respond(exchange, contentJar));
+        server.createContext("/resourcepack.zip", exchange -> respond(exchange, resourcePack));
+        server.createContext("/v1/mods/files", exchange -> respond(exchange, """
+                {"data":[
+                  {"id":456,"modId":123,"displayName":"Example Mod","fileName":"example.jar",
+                   "gameVersions":["1.20.1","Forge"],"fileLength":%d,
+                   "fileDate":"2026-01-01T00:00:00Z","downloadCount":1,
+                   "downloadUrl":"%scontent.jar","hashes":[{"algo":1,"value":"%s"}]},
+                  {"id":457,"modId":124,"displayName":"Example Pack","fileName":"pack.zip",
+                   "gameVersions":["1.20.1"],"fileLength":%d,
+                   "fileDate":"2026-01-01T00:00:00Z","downloadCount":1,
+                   "downloadUrl":"%sresourcepack.zip","hashes":[{"algo":1,"value":"%s"}]}
+                ]}
+                """.formatted(contentJar.length, root, HashVerifier.sha1(contentJar),
+                resourcePack.length, root, HashVerifier.sha1(resourcePack))));
+        server.createContext("/v1/mods", exchange -> respond(exchange, """
+                {"data":[{"id":123,"classId":6},{"id":124,"classId":12}]}
+                """));
+        server.start();
+
+        try {
+            VersionInstaller versionInstaller = new VersionInstaller(
+                    new MetadataService(), new VersionManifestService(),
+                    new DownloadPlanner(), new AssetDownloadPlanner(), new FileDownloader());
+            FileDownloader downloader = new FileDownloader();
+            URI manifest = URI.create("https://example.invalid/version_manifest_v2.json");
+            Path cache = temporaryDirectory.resolve("curse-manifest.json");
+            ExternalLoaderInstaller external = new ExternalLoaderInstaller(
+                    versionInstaller, new JavaLocator(), downloader,
+                    new MetadataService(), manifest, cache);
+            String forgeInstaller = "https://maven.minecraftforge.net/net/minecraftforge/forge/"
+                    + "1.20.1-47.2.0/forge-1.20.1-47.2.0-installer.jar";
+            String localInstaller = root + "installer.jar";
+            external.setSources(List.of(new DownloadSource() {
+                @Override
+                public String name() {
+                    return "test";
+                }
+
+                @Override
+                public List<URI> candidates(URI original) {
+                    String value = original.toString();
+                    if (value.equals(forgeInstaller) || value.equals(forgeInstaller + ".sha1")) {
+                        return List.of(URI.create(localInstaller + (value.endsWith(".sha1")
+                                ? ".sha1" : "")));
+                    }
+                    return List.of();
+                }
+            }));
+
+            CurseForgeClient curseForge = new CurseForgeClient(
+                    HttpClient.newHttpClient(), URI.create(root + "v1/"), "test-key");
+            ModpackInstaller modpackInstaller = new ModpackInstaller(
+                    versionInstaller,
+                    new FabricInstaller(versionInstaller, new FabricService(), downloader, manifest, cache),
+                    new QuiltInstaller(versionInstaller, new QuiltService(), downloader, manifest, cache),
+                    external, downloader, curseForge, manifest, cache);
+            ModFile file = new ModFile(
+                    ModSource.CURSEFORGE, "999", "1000", "Curse Pack", "1.0",
+                    "curse-pack.zip", List.of(URI.create(root + "curse-pack.zip")),
+                    HashVerifier.sha1(modpack), null, modpack.length,
+                    List.of("1.20.1"), List.of("forge"), List.of(), "", 0);
+
+            ModDownloadResult result = modpackInstaller.install(
+                    file, gameDirectory, "Curse Pack",
+                    DownloadListener.NONE, new DownloadCancellationToken());
+
+            Path finalDirectory = gameDirectory.resolve("versions/Curse Pack");
+            assertEquals(finalDirectory, result.path());
+            assertEquals("content", Files.readString(finalDirectory.resolve("mods/example.jar")));
+            assertEquals("pack", Files.readString(
+                    finalDirectory.resolve("resourcepacks/pack.zip")));
+            assertEquals("configured", Files.readString(
+                    finalDirectory.resolve("config/example.txt")));
+            assertTrue(ModpackLayout.isModpack(finalDirectory));
+            assertTrue(Files.readString(finalDirectory.resolve(ModpackLayout.MARKER_FILE))
+                    .contains("\"source\":\"curseforge\""));
             assertNoModpackStaging(gameDirectory.resolve("versions"));
         } finally {
             server.stop(0);
@@ -473,6 +604,11 @@ class ModpackInstallerTest {
         try (var output = exchange.getResponseBody()) {
             output.write(content);
         }
+    }
+
+    private static void respond(com.sun.net.httpserver.HttpExchange exchange, String content)
+            throws java.io.IOException {
+        respond(exchange, content.getBytes(StandardCharsets.UTF_8));
     }
 
     private static byte[] zip(String index) throws Exception {

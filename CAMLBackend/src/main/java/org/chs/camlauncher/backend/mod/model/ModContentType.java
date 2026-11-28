@@ -35,8 +35,8 @@ public enum ModContentType {
         return this != WORLD;
     }
 
-    /** 当前整合包首期只支持 Modrinth .mrpack。 */
+    /** 整合包同时支持 Modrinth .mrpack 与 CurseForge manifest.json ZIP。 */
     public boolean supportsCurseForge() {
-        return this != MODPACK;
+        return true;
     }
 }

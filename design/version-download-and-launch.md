@@ -339,7 +339,7 @@ CAML 处理：
 
 ## 21. 已知限制
 
-- 没有 CurseForge/HMCL/MultiMC 整合包导入、导出、更新和修复；Modrinth `.mrpack` 安装已可用。
+- 没有本地整合包导入、导出、更新和修复；Modrinth `.mrpack` 与 CurseForge 整合包安装已可用。
 - 下载任务可取消，但大型文件没有暂停/继续 UI；断点续传由文件层自动使用 `.part.json`。
 - 游戏启动后没有前端停止按钮；后端 `GameProcess.stop()` 已存在。
 - OptiFine 仅支持 Forge 组合。

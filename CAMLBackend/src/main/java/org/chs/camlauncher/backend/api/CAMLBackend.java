@@ -91,8 +91,9 @@ public final class CAMLBackend implements AutoCloseable {
         FileDownloader fileDownloader = new FileDownloader();
         JavaDownloadService javaDownloadService = new JavaDownloadService(
                 managedJavaRepository, fileDownloader);
+        CurseForgeClient curseForgeClient = new CurseForgeClient();
         ModService modService = new ModService(
-                new ModrinthClient(), new CurseForgeClient(), fileDownloader);
+                new ModrinthClient(), curseForgeClient, fileDownloader);
         ModIconService modIconService = new ModIconService(config.dataDirectory());
         VersionInstaller versionInstaller = new VersionInstaller(
                 metadata, versionManifestService, downloadPlanner,
@@ -116,7 +117,8 @@ public final class CAMLBackend implements AutoCloseable {
                 manifestCache());
         ModpackInstaller modpackInstaller = new ModpackInstaller(
                 versionInstaller, fabricInstaller, quiltInstaller, externalLoaderInstaller,
-                fileDownloader, VersionManifestService.DEFAULT_MANIFEST_URI,
+                fileDownloader, curseForgeClient,
+                VersionManifestService.DEFAULT_MANIFEST_URI,
                 manifestCache());
         OptiFineInstaller optiFineInstaller = new OptiFineInstaller(
                 versionInstaller, externalLoaderInstaller, javaLocator, fileDownloader,

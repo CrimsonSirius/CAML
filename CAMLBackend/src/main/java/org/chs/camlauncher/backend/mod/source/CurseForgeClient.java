@@ -37,6 +37,7 @@ public final class CurseForgeClient {
     private static final URI DEFAULT_BASE = URI.create("https://api.curseforge.com/v1/");
     private static final int MINECRAFT_GAME_ID = 432;
     private static final int FILE_PAGE_SIZE = 10_000;
+    private static final int API_BATCH_SIZE = 100;
 
     private static final String BUNDLED_KEY_RESOURCE = "/caml.properties";
     /** 构建期写入的编码 Key，见 CAMLBackend/build.gradle.kts 的 generateBuildProperties。 */
@@ -262,6 +263,80 @@ public final class CurseForgeClient {
             }
         }
         return Map.copyOf(result);
+    }
+
+    /** 批量获取文件元数据；整合包 manifest 只保存 projectID/fileID。 */
+    public Map<Long, ModFile> filesByIds(List<Long> fileIds)
+            throws IOException, InterruptedException {
+        requireApiKey();
+        List<Long> ids = positiveDistinct(fileIds);
+        Map<Long, ModFile> result = new java.util.LinkedHashMap<>();
+        for (int start = 0; start < ids.size(); start += API_BATCH_SIZE) {
+            List<Long> batch = ids.subList(start, Math.min(ids.size(), start + API_BATCH_SIZE));
+            JsonObject body = new JsonObject();
+            JsonArray values = new JsonArray();
+            batch.forEach(values::add);
+            body.add("fileIds", values);
+            JsonObject root = http.post(base.resolve("mods/files"), body.toString(), headers())
+                    .getAsJsonObject();
+            JsonArray data = root.getAsJsonArray("data");
+            if (data == null) {
+                continue;
+            }
+            for (JsonElement element : data) {
+                if (!element.isJsonObject()) {
+                    continue;
+                }
+                JsonObject file = element.getAsJsonObject();
+                long fileId = longValue(file, "id");
+                if (fileId > 0) {
+                    result.put(fileId, parseFile(file, Map.of(), false));
+                }
+            }
+        }
+        return Map.copyOf(result);
+    }
+
+    /** 批量获取项目 classId，用于决定整合包文件应放入哪个内容目录。 */
+    public Map<Long, Integer> classIdsByModIds(List<Long> modIds)
+            throws IOException, InterruptedException {
+        requireApiKey();
+        List<Long> ids = positiveDistinct(modIds);
+        Map<Long, Integer> result = new java.util.LinkedHashMap<>();
+        for (int start = 0; start < ids.size(); start += API_BATCH_SIZE) {
+            List<Long> batch = ids.subList(start, Math.min(ids.size(), start + API_BATCH_SIZE));
+            JsonObject body = new JsonObject();
+            JsonArray values = new JsonArray();
+            batch.forEach(values::add);
+            body.add("modIds", values);
+            JsonObject root = http.post(base.resolve("mods"), body.toString(), headers())
+                    .getAsJsonObject();
+            JsonArray data = root.getAsJsonArray("data");
+            if (data == null) {
+                continue;
+            }
+            for (JsonElement element : data) {
+                if (!element.isJsonObject()) {
+                    continue;
+                }
+                JsonObject project = element.getAsJsonObject();
+                long modId = longValue(project, "id");
+                if (modId > 0) {
+                    result.put(modId, intValue(project, "classId"));
+                }
+            }
+        }
+        return Map.copyOf(result);
+    }
+
+    private static List<Long> positiveDistinct(List<Long> values) {
+        if (values == null || values.isEmpty()) {
+            return List.of();
+        }
+        return values.stream()
+                .filter(value -> value != null && value > 0)
+                .distinct()
+                .toList();
     }
 
     private List<JsonObject> fetchAllFiles(String projectId)
