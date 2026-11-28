@@ -1,5 +1,6 @@
 package org.chs.camlauncher.backend.mod.service;
 
+import org.chs.camlauncher.backend.download.DownloadCancellationToken;
 import org.chs.camlauncher.backend.error.BackendException;
 import org.chs.camlauncher.backend.io.ArchiveExtractionGuard;
 import org.junit.jupiter.api.Test;
@@ -30,7 +31,8 @@ class WorldInstallerTest {
         ));
         Path saves = temporaryDirectory.resolve("saves");
 
-        Path installed = new WorldInstaller().install(archive, saves, "fallback.zip");
+        Path installed = new WorldInstaller().install(
+                archive, saves, "fallback.zip", new DownloadCancellationToken());
 
         assertEquals(saves.resolve("MyWorld"), installed);
         assertEquals("level", Files.readString(installed.resolve("level.dat")));
@@ -45,7 +47,8 @@ class WorldInstallerTest {
         ));
         Path saves = temporaryDirectory.resolve("saves");
 
-        Path installed = new WorldInstaller().install(archive, saves, "My Map.zip");
+        Path installed = new WorldInstaller().install(
+                archive, saves, "My Map.zip", new DownloadCancellationToken());
 
         assertEquals(saves.resolve("My Map"), installed);
         assertTrue(Files.isRegularFile(installed.resolve("level.dat")));
@@ -58,7 +61,8 @@ class WorldInstallerTest {
         Files.writeString(saves.resolve("MyWorld/level.dat"), "existing");
         Path archive = archive(Map.of("MyWorld/level.dat", bytes("new")));
 
-        Path installed = new WorldInstaller().install(archive, saves, "fallback.zip");
+        Path installed = new WorldInstaller().install(
+                archive, saves, "fallback.zip", new DownloadCancellationToken());
 
         assertEquals(saves.resolve("MyWorld (2)"), installed);
         assertEquals("existing", Files.readString(saves.resolve("MyWorld/level.dat")));
@@ -71,7 +75,8 @@ class WorldInstallerTest {
         Path saves = temporaryDirectory.resolve("saves");
 
         BackendException error = assertThrows(BackendException.class,
-                () -> new WorldInstaller().install(archive, saves, "invalid.zip"));
+                () -> new WorldInstaller().install(
+                        archive, saves, "invalid.zip", new DownloadCancellationToken()));
 
         assertEquals("mod.error.worldArchiveInvalid", error.error().code());
         assertFalse(hasTemporaryWorldDirectory(saves));
@@ -83,7 +88,8 @@ class WorldInstallerTest {
         Path saves = temporaryDirectory.resolve("saves");
 
         BackendException error = assertThrows(BackendException.class,
-                () -> new WorldInstaller().install(archive, saves, "traversal.zip"));
+                () -> new WorldInstaller().install(
+                        archive, saves, "traversal.zip", new DownloadCancellationToken()));
 
         assertEquals("mod.error.worldArchiveInvalid", error.error().code());
         assertFalse(Files.exists(temporaryDirectory.resolve("evil.txt")));
@@ -99,7 +105,8 @@ class WorldInstallerTest {
         Path saves = temporaryDirectory.resolve("saves");
 
         assertThrows(BackendException.class, () -> new WorldInstaller(
-                new ArchiveExtractionGuard(1, 1024, 1024)).install(archive, saves, "many.zip"));
+                new ArchiveExtractionGuard(1, 1024, 1024)).install(
+                        archive, saves, "many.zip", new DownloadCancellationToken()));
         assertFalse(hasTemporaryWorldDirectory(saves));
     }
 
@@ -109,7 +116,8 @@ class WorldInstallerTest {
         Path saves = temporaryDirectory.resolve("saves");
 
         assertThrows(BackendException.class, () -> new WorldInstaller(
-                new ArchiveExtractionGuard(10, 4, 1024)).install(archive, saves, "large.zip"));
+                new ArchiveExtractionGuard(10, 4, 1024)).install(
+                        archive, saves, "large.zip", new DownloadCancellationToken()));
         assertFalse(hasTemporaryWorldDirectory(saves));
     }
 
@@ -122,7 +130,22 @@ class WorldInstallerTest {
         Path saves = temporaryDirectory.resolve("saves");
 
         assertThrows(BackendException.class, () -> new WorldInstaller(
-                new ArchiveExtractionGuard(10, 16, 6)).install(archive, saves, "total.zip"));
+                new ArchiveExtractionGuard(10, 16, 6)).install(
+                        archive, saves, "total.zip", new DownloadCancellationToken()));
+        assertFalse(hasTemporaryWorldDirectory(saves));
+    }
+
+    @Test
+    void cancellationPreventsWorldPublicationAndCleansTemporaryDirectory() throws Exception {
+        Path archive = archive(Map.of("MyWorld/level.dat", bytes("level")));
+        Path saves = temporaryDirectory.resolve("saves");
+        DownloadCancellationToken token = new DownloadCancellationToken();
+        token.cancel();
+
+        assertThrows(InterruptedException.class, () -> new WorldInstaller().install(
+                archive, saves, "cancelled.zip", token));
+
+        assertFalse(Files.exists(saves.resolve("MyWorld")));
         assertFalse(hasTemporaryWorldDirectory(saves));
     }
 

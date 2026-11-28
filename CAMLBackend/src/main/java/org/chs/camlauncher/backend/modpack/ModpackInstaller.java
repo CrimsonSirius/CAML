@@ -100,6 +100,7 @@ public final class ModpackInstaller {
         Objects.requireNonNull(file, "file");
         Objects.requireNonNull(gameDirectory, "gameDirectory");
         Objects.requireNonNull(token, "token");
+        token.throwIfCancelled();
         String instance = InstanceNameRules.validate(instanceName);
         Files.createDirectories(gameDirectory);
 
@@ -112,7 +113,10 @@ public final class ModpackInstaller {
             try (InstanceInstallLock ignored = InstanceInstallLock.acquire(gameDirectory, instance)) {
                 InstanceNameRules.ensureNewInstance(gameDirectory, instance);
                 downloadArchive(file, archive, listener, token);
-                ModrinthModpackIndex index = readIndex(archive, file.fileName(), extractionGuard);
+                token.throwIfCancelled();
+                ModrinthModpackIndex index = readIndex(
+                        archive, file.fileName(), extractionGuard, token);
+                token.throwIfCancelled();
                 try (SharedLibraryTransaction libraryTransaction = SharedLibraryTransaction.begin(
                         gameDirectory.resolve("libraries"));
                      VersionDirectoryStage stage = VersionDirectoryStage.adopt(
@@ -121,8 +125,11 @@ public final class ModpackInstaller {
                             libraryTransaction);
                     installContent(archive, stagedDirectory, index, file, listener, token,
                             extractionGuard);
+                    token.throwIfCancelled();
                     finalizeStagedVersion(stagedDirectory, stagedInstance, instance);
+                    token.throwIfCancelled();
                     libraryTransaction.commit();
+                    token.throwIfCancelled();
                     Path finalDirectory = stage.commitDirectory();
                     return new ModDownloadResult(finalDirectory, file);
                 }
@@ -141,9 +148,13 @@ public final class ModpackInstaller {
             DownloadCancellationToken token,
             ArchiveExtractionGuard extractionGuard
     ) throws IOException, InterruptedException {
-        extractOverrides(archive, instanceDirectory, file.fileName(), extractionGuard);
+        token.throwIfCancelled();
+        extractOverrides(archive, instanceDirectory, file.fileName(), extractionGuard, token);
+        token.throwIfCancelled();
         downloadFiles(index, instanceDirectory, file.fileName(), listener, token);
+        token.throwIfCancelled();
         ModpackLayout.writeMarker(instanceDirectory, index, file);
+        token.throwIfCancelled();
     }
 
     static void finalizeStagedVersion(
@@ -229,8 +240,9 @@ public final class ModpackInstaller {
     }
 
     private ModrinthModpackIndex readIndex(Path archive, String displayName,
-                                           ArchiveExtractionGuard extractionGuard)
-            throws IOException {
+                                           ArchiveExtractionGuard extractionGuard,
+                                           DownloadCancellationToken token)
+            throws IOException, InterruptedException {
         try (ZipFile zip = new ZipFile(archive.toFile())) {
             ZipEntry entry = zip.getEntry("modrinth.index.json");
             if (entry == null) {
@@ -239,7 +251,7 @@ public final class ModpackInstaller {
             byte[] bytes;
             try (InputStream input = zip.getInputStream(entry)) {
                 extractionGuard.beginEntry();
-                bytes = extractionGuard.readAll(input);
+                bytes = extractionGuard.readAll(input, token);
             }
             return ModrinthModpackIndex.parse(new String(bytes, StandardCharsets.UTF_8));
         } catch (BackendException e) {
@@ -338,14 +350,16 @@ public final class ModpackInstaller {
     }
 
     void extractOverrides(Path archive, Path instanceDirectory, String displayName,
-                          ArchiveExtractionGuard extractionGuard)
-            throws IOException {
+                          ArchiveExtractionGuard extractionGuard,
+                          DownloadCancellationToken token)
+            throws IOException, InterruptedException {
+        token.throwIfCancelled();
         try (ZipFile zip = new ZipFile(archive.toFile())) {
             Set<Path> extractedFiles = new HashSet<>();
             extractPrefix(zip, "overrides/", instanceDirectory, displayName,
-                    extractedFiles, extractionGuard);
+                    extractedFiles, extractionGuard, token);
             extractPrefix(zip, "client-overrides/", instanceDirectory, displayName,
-                    extractedFiles, extractionGuard);
+                    extractedFiles, extractionGuard, token);
         } catch (BackendException e) {
             throw e;
         } catch (IOException | RuntimeException e) {
@@ -359,10 +373,12 @@ public final class ModpackInstaller {
             Path instanceDirectory,
             String displayName,
             Set<Path> extractedFiles,
-            ArchiveExtractionGuard extractionGuard
-    ) throws IOException {
+            ArchiveExtractionGuard extractionGuard,
+            DownloadCancellationToken token
+    ) throws IOException, InterruptedException {
         Enumeration<? extends ZipEntry> entries = zip.entries();
         while (entries.hasMoreElements()) {
+            token.throwIfCancelled();
             ZipEntry entry = entries.nextElement();
             String name = entry.getName();
             if (!name.startsWith(prefix)) {
@@ -391,7 +407,7 @@ public final class ModpackInstaller {
                             StandardOpenOption.CREATE,
                             StandardOpenOption.TRUNCATE_EXISTING,
                             StandardOpenOption.WRITE)) {
-                        extractionGuard.copy(input, output);
+                        extractionGuard.copy(input, output, token);
                     }
                 }
             }
@@ -405,6 +421,7 @@ public final class ModpackInstaller {
             DownloadListener listener,
             DownloadCancellationToken token
     ) throws IOException, InterruptedException {
+        token.throwIfCancelled();
         List<DownloadItem> items = new ArrayList<>();
         Set<Path> destinations = new HashSet<>();
         for (ModrinthModpackIndex.File file : index.files()) {
@@ -440,6 +457,7 @@ public final class ModpackInstaller {
         }
         DownloadExecutor.download(items, downloadConcurrency, listener,
                 (item, progress) -> fileDownloader.download(item, progress, null, token), token);
+        token.throwIfCancelled();
     }
 
     private static boolean hasText(String value) {
