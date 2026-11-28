@@ -35,7 +35,7 @@ public final class ModIconService {
     public ModIconService(Path dataDirectory) {
         this.cacheDirectory = dataDirectory.resolve("cache").resolve("mod-icons");
         this.httpClient = HttpClient.newBuilder()
-                .version(HttpClient.Version.HTTP_1_1)
+                .version(HttpClient.Version.HTTP_2)
                 .followRedirects(HttpClient.Redirect.NORMAL)
                 .connectTimeout(CONNECT_TIMEOUT)
                 .build();
